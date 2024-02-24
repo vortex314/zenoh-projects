@@ -1,0 +1,19 @@
+
+```
+ >>> Starting Zenoh-Pico Publisher...
+ Opening Zenoh Session...  
+␛[0;32mI (43207) uart: queue free spaces: 100␛[0m
+[1970-01-01T00:00:42Z INFO ::_z_unicast_open_client] Sending Z_INIT(Syn)
+[1970-01-01T00:00:42Z DEBUG ::_z_init_encode] Encoding _Z_MID_T_INIT
+[1970-01-01T00:00:44Z DEBUG ::_z_keep_alive_decode] Decoding _Z_MID_T_KEEP_ALIVE
+Unable to open session!
+ >>> Starting Zenoh-Pico Publisher...
+ Opening Zenoh Session...  
+␛[0;32mI (45717) uart: queue free spaces: 100␛[0m
+[1970-01-01T00:00:45Z INFO ::_z_unicast_open_client] Sending Z_INIT(Syn)
+[1970-01-01T00:00:45Z DEBUG ::_z_init_encode] Encoding _Z_MID_T_INIT
+[1970-01-01T00:00:46Z DEBUG ::_z_keep_alive_decode] Decoding _Z_MID_T_KEEP_ALIVE
+Unable to open session!
+ >>> Starting Zenoh-Pico Publisher...
+ Opening Zenoh Session...  
+```
