@@ -26,7 +26,7 @@ const char *value = "Hello, Zenoh-Pico!";
 
 #define CONNECT1 "serial/UART_2#baudrate=115200"
 #define KEYEXPR "demo/example/zenoh-pico-pub"
-#define VALUE "[ESPIDF]{ESP32} Publication from Zenoh-Pico!"
+#define VALUE "[ESPIDF]{ESP32}  Zenoh-Pico!"
 
 void data_handler(const z_sample_t *sample, void *arg) {
   z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
@@ -101,8 +101,8 @@ extern "C" void app_main() {
       printf("OK\n");
 
       char buf[256];
-      for (int idx = 0; 1; ++idx) {
-        sleep(1);
+      for (int idx = 0; idx < 1000 ; ++idx) {
+        vTaskDelay(1 / portTICK_PERIOD_MS);  
         sprintf(buf, "[%4d] %s", idx, VALUE);
         printf("Putting Data ('%s': '%s')...\n", KEYEXPR, buf);
         z_publisher_put_options_t options = z_publisher_put_options_default();
@@ -110,12 +110,12 @@ extern "C" void app_main() {
         z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), NULL);
       }
 
-      printf("Closing Zenoh Session...");
+      printf("Closing Zenoh Session...\n");
       z_undeclare_publisher(z_move(pub));
       zp_stop_read_task(z_loan(s));
       zp_stop_lease_task(z_loan(s));
       z_close(z_move(s));
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(15000 / portTICK_PERIOD_MS);
   }
 }

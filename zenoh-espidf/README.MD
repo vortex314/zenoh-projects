@@ -87,4 +87,80 @@ Backtrace: 0x40084CE1:0x3FFB0CD0 0x40082721:0x3FFB0CF0 0x4000BFED:0x3FFB65A0 0x4
 
 
 ```
+After increasing the wait time between sessions to 10 sec 
+```
+>>> Starting Zenoh-Pico Publisher...
+ Opening Zenoh Session...  
+␛[0;32mI (476) uart: queue free spaces: 100␛[0m
+[1970-01-01T00:00:00Z INFO ::_z_unicast_open_client] Sending Z_INIT(Syn)
+[1970-01-01T00:00:00Z DEBUG ::_z_init_encode] Encoding _Z_MID_T_INIT
+[1970-01-01T00:00:00Z DEBUG ::_z_init_decode] Decoding _Z_MID_T_INIT
+[1970-01-01T00:00:00Z INFO ::_z_unicast_open_client] Received Z_INIT(Ack)
+[1970-01-01T00:00:00Z INFO ::_z_unicast_open_client] Sending Z_OPEN(Syn)
+[1970-01-01T00:00:00Z DEBUG ::_z_open_encode] Encoding _Z_MID_T_OPEN
+[1970-01-01T00:00:00Z DEBUG ::_z_open_decode] Decoding _Z_MID_T_OPEN
+[1970-01-01T00:00:00Z INFO ::_z_unicast_open_client] Received Z_OPEN(Ack)
+OK
+Declaring publisher for 'demo/example/zenoh-pico-pub'...[1970-01-01T00:00:00Z DEBUG ::_z_send_n_msg] >> send network message
+[1970-01-01T00:00:00Z DEBUG ::_z_unicast_send_n_msg] >> send network message
+[1970-01-01T00:00:00Z DEBUG ::_z_keyexpr_encode] Encoding _RESKEY
+OK
+[1970-01-01T00:00:00Z DEBUG ::_z_keyexpr_decode] Decoding _RESKEY
+[1970-01-01T00:00:00Z DEBUG ::_z_keyexpr_decode] Decoding _RESKEY
+[1970-01-01T00:00:00Z DEBUG ::_z_keyexpr_decode] Decoding _RESKEY
+[1970-01-01T00:00:00Z INFO ::_z_unicast_handle_transport_message] Received Z_FRAME message
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:00Z DEBUG ::_z_handle_network_message] Handling _Z_N_DECLARE
+[1970-01-01T00:00:02Z DEBUG ::_z_keep_alive_decode] Decoding _Z_MID_T_KEEP_ALIVE
+[1970-01-01T00:00:02Z INFO ::_z_unicast_handle_transport_message] Received Z_KEEP_ALIVE message
+␛[0;31mE (5426) task_wdt: Task watchdog got triggered. The following tasks did not reset the watchdog in time:␛[0m
+␛[0;31mE (5426) task_wdt:  - IDLE (CPU 0)␛[0m
+␛[0;31mE (5426) task_wdt: Tasks currently running:␛[0m
+␛[0;31mE (5426) task_wdt: CPU 0: ␛[0m
+␛[0;31mE (5426) task_wdt: CPU 1: IDLE␛[0m
+␛[0;31mE (5426) task_wdt: Print CPU 0 (current core) backtrace␛[0m
+
+
+Backtrace: 0x400F8552:0x3FFB06D0 0x40082721:0x3FFB06F0 0x40008541:0x3FFC9E30 0x400F3912:0x3FFC9E50 0x400D4FFD:0x3FFC9E70 0x400D509B:0x3FFC9E90 0x400DAA85:0x3FFC9EC0 0x400D6AED:0x3FFC9EF0 0x400D6668:0x3FFC9F10 0x400D545D:0x3FFC9F30 0x400D4F2D:0x3FFCA010 0x40089859:0x3FFCA030
+
+␛[0;31mE (5426) task_wdt: Print CPU 1 backtrace␛[0m
+
+
+Backtrace: 0x40084CE1:0x3FFB0CD0 0x40082721:0x3FFB0CF0 0x4000BFED:0x3FFB65A0 0x40089B0A:0x3FFB65B0 0x400F8817:0x3FFB65D0 0x400F8823:0x3FFB6600 0x400E0E29:0x3FFB6620 0x4008818D:0x3FFB6640 0x40089859:0x3FFB6660
+
+[1970-01-01T00:00:05Z DEBUG ::_z_keep_alive_decode] Decoding _Z_MID_T_KEEP_ALIVE
+[1970-01-01T00:00:05Z INFO ::_z_unicast_handle_transport_message] Received Z_KEEP_ALIVE message
+ *  Terminal will be reused by tasks, press any key to close it. 
+ ```
+
+ Watchdog timeouts
+ ```
+ 0x400f8552: task_wdt_isr at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/task_wdt.c line 186
+0x400f3912: usleep at /home/lieven/.platformio/packages/framework-espidf/components/newlib/time.c line 212
+0x400d4ffd: zp_sleep_us at lib/zenoh-pico/src/system/espidf/system.c line 119
+0x400d509b: zp_sleep_ms at lib/zenoh-pico/src/system/espidf/system.c line 128
+0x400daa85: _z_read_serial at lib/zenoh-pico/src/system/espidf/network.c line 637
+0x400d6aed: _z_f_link_read_serial at lib/zenoh-pico/src/link/unicast/serial.c line 106
+0x400d6668: _z_link_recv_zbuf at lib/zenoh-pico/src/link/link.c line 139
+0x400d545d: _zp_unicast_read_task at lib/zenoh-pico/src/transport/unicast/read.c line 85
+0x400d4f2d: z_task_wrapper at lib/zenoh-pico/src/system/espidf/system.c line 58
+0x40089859: vPortTaskWrapper at /home/lieven/.platformio/packages/framework-espidf/components/freertos/port/xtensa/port.c line 142
+
+```
+
+```
+Decoding stack results
+0x40084ce1: esp_crosscore_isr at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c line 92
+0x40089b0a: vPortExitCritical at /home/lieven/.platformio/packages/framework-espidf/components/freertos/port/xtensa/include/freertos/portmacro.h line 571
+0x400f8817: idle_hook_cb at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/task_wdt.c line 81
+0x400f8823: spi_flash_hal_init at /home/lieven/.platformio/packages/framework-espidf/components/soc/include/soc/soc_memory_types.h line 92
+0x400e0e29: esp_vApplicationIdleHook at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/freertos_hooks.c line 51
+0x4008818d: prvIdleTask at /home/lieven/.platformio/packages/framework-espidf/components/freertos/tasks.c line 3987
+0x40089859: vPortTaskWrapper at /home/lieven/.platformio/packages/framework-espidf/components/freertos/port/xtensa/port.c line 142
+```
+
 
