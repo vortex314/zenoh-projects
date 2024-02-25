@@ -22,6 +22,8 @@ const char *keyexpr = "demo/example/zenoh-pico-pub";
 const char *value = "Hello, Zenoh-Pico!";
 #define MODE "client"
 #define CONNECT0 "serial/1.3#baudrate=115200"
+#define CONNECT2 "serial/17.16#baudrate=115200" // UART2
+
 #define CONNECT1 "serial/UART_2#baudrate=115200"
 #define KEYEXPR "demo/example/zenoh-pico-pub"
 #define VALUE "[ESPIDF]{ESP32} Publication from Zenoh-Pico!"
