@@ -17,7 +17,16 @@ Looks good on paper, letś go.
 ## Regrets
 ### Serial doesn´t work or is not fully implemented yet.
 See zenoh-serial README.MD
-Do I again implement a proxy ?
+Zenoh is missing a lot in the serial implementation :
+- zenohd doesn´t recover from a closed session on the serial port and never reads again
+- when zenohd receives an InitSyn after the session starts, it creates an error and doesn´t go back in the state of a new session. It simply doesn´t expect an InitSyn and doesn´t handle it correctly.
+- the espidf client I tried is incomplete and doesn´t do a retransmission retry. 
+- some smaller bugs see : https://github.com/eclipse-zenoh/roadmap/discussions/120
+- blocking threads in esp , kicks the watchdog timer
+
+## So putting zenoh discovery on hold, awaiting forum feedback or issue reporting on github. 
+Which is a pity because I like enormously the concepts behind this work. 
+
 
 ### Redis implementation stack
 - redis server
