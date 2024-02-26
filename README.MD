@@ -27,6 +27,8 @@ Zenoh is missing a lot in the serial implementation :
 ## So putting zenoh discovery on hold, awaiting forum feedback or issue reporting on github. 
 Which is a pity because I like enormously the concepts behind this work. 
 
+## BTW : I noticed that also programs like z_sub don´t detect that zenohd was gone. 
+
 
 ### Redis implementation stack
 - redis server
