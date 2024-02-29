@@ -55,11 +55,17 @@ void nvs_init() {
 }
 
 extern "C" void app_main() {
+  uint32_t sessions_ok = 0;
+  uint32_t sessions_fail = 0;
+  uint32_t publish_ok = 0;
+  uint32_t publish_fail = 0;
   nvs_init();
   while (true) {
     printf(" >>> Starting Zenoh-Pico Publisher...\n ");
     while (true) {
-      printf("Opening Zenoh Session...  \n");
+      printf("Opening Zenoh Session... session_ok= %u sessions_fail=%u "
+             "publish_ok=%u  \n",
+             sessions_ok, sessions_fail, publish_ok);
       z_owned_config_t config = z_config_default();
       zp_config_insert(z_config_loan(&config), Z_CONFIG_MODE_KEY,
                        z_string_make(MODE));
@@ -109,8 +115,11 @@ extern "C" void app_main() {
         options.encoding.prefix = Z_ENCODING_PREFIX_TEXT_PLAIN;
         z_publisher_put(z_loan(pub), (const uint8_t *)buf, strlen(buf), NULL);
       }
+      publish_ok += 1000;
 
-      printf("Closing Zenoh Session...\n");
+      printf("Closing Zenoh Session... sessions_ok= %u sessions_fail=%u "
+             "publish_ok=%u  \n",
+             sessions_ok, sessions_fail, publish_ok);
       z_undeclare_publisher(z_move(pub));
 
       vTaskDelay(1000 / portTICK_PERIOD_MS); // wait flush ?
@@ -119,7 +128,9 @@ extern "C" void app_main() {
       zp_stop_lease_task(z_loan(s));
       z_close(z_move(s));
       vTaskDelay(1000 / portTICK_PERIOD_MS); // wait flush ?
+      sessions_ok++;
     }
+    sessions_fail++;
     vTaskDelay(15000 / portTICK_PERIOD_MS);
   }
 }
