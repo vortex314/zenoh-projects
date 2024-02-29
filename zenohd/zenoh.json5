@@ -30,7 +30,7 @@
   /// peers, or client can use to establish a zenoh session.
   listen: {
     endpoints: [
-        "serial//dev/ttyUSB2#baudrate=115200",
+ ///       "serial//dev/ttyUSB2#baudrate=115200",
         "tcp/localhost:7447",
       // "<proto>/<address>"
     ],

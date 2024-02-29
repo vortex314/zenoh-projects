@@ -32,8 +32,8 @@ void data_handler(const z_sample_t *sample, void *arg) {
   z_owned_str_t keystr = z_keyexpr_to_string(sample->keyexpr);
   std::string val((const char *)sample->payload.start, sample->payload.len);
 
-  printf(" >> [Subscription listener] Received (%s, %s)\n",
-         z_str_loan(&keystr), val.c_str());
+  printf(" >> [Subscription listener] Received (%s, %s)\n", z_str_loan(&keystr),
+         val.c_str());
 
   /* Serial.print(" >> [Subscription listener] Received (");
    Serial.print(z_str_loan(&keystr));
@@ -101,9 +101,9 @@ extern "C" void app_main() {
       printf("OK\n");
 
       char buf[256];
-      for (int idx = 0; idx < 100 ; ++idx) {
-        vTaskDelay(1 / portTICK_PERIOD_MS);  
-        sprintf(buf, "[%4d] %s", idx, VALUE);
+      for (int idx = 0; idx < 1000; ++idx) {
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+        sprintf(buf, "[%7d] %s", idx, VALUE);
         printf("Putting Data ('%s': '%s')...\n", KEYEXPR, buf);
         z_publisher_put_options_t options = z_publisher_put_options_default();
         options.encoding.prefix = Z_ENCODING_PREFIX_TEXT_PLAIN;
@@ -112,9 +112,13 @@ extern "C" void app_main() {
 
       printf("Closing Zenoh Session...\n");
       z_undeclare_publisher(z_move(pub));
+
+      vTaskDelay(1000 / portTICK_PERIOD_MS); // wait flush ?
       zp_stop_read_task(z_loan(s));
+      vTaskDelay(1000 / portTICK_PERIOD_MS); // wait flush ?
       zp_stop_lease_task(z_loan(s));
       z_close(z_move(s));
+      vTaskDelay(1000 / portTICK_PERIOD_MS); // wait flush ?
     }
     vTaskDelay(15000 / portTICK_PERIOD_MS);
   }
