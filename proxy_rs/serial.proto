@@ -1,0 +1,95 @@
+message Message {
+    oneof message_type {
+        string_message string_message = 1;
+        int_message int_message = 2;
+    }
+}
+
+enum State {
+    ON = 0;
+    OFF = 1;
+}
+
+enum Field {
+    TIMESTAMP = 0;
+    MESSAGE = 1;
+    DEVICE = 2;
+    LEVEL = 3;
+    FILE = 4;
+    LINE = 5;
+    FUNCTION = 6;
+}
+
+message Log {
+    long timestamp;
+    string text;
+    optional string device;
+    optional State level;
+    optional string file;
+    optional int32 line;
+    optional string function;
+}
+
+message Publish {
+    const id=PUBLISH;
+    optional string topic;
+    optional uint32 id;
+    any value;
+}
+
+message Subscribe {
+    const id=SUBSCRIBE;
+    optional string topic;
+    optional uint32 id;
+}
+
+message Request {
+    const id=REQUEST;
+    string dst;
+    string src;
+    uint32 id;
+    any value;
+}
+
+message Response {
+    const id=RESPONSE;
+    string dst;
+    string src;
+    uint32 id;
+    any value;
+}
+
+message Unsubscribe {
+    const id=UNSUBSCRIBE;
+    string topic;
+    uint32 id;
+}
+
+message RespDict {
+    const id=DICTIONARY;
+    uint32 field_id;
+    string topic;
+}
+
+message ReqField {
+    const id=REQDICT;
+    uint32 field_id;
+}
+
+message FieldDescription {
+    const id=FIELD_DESCRIPTION;
+    uint32 field_id;
+    string name;
+    enum type {
+        STRING = 0;
+        INT = 1;
+        FLOAT = 2;
+        BOOL = 3;
+        BYTES = 4;
+    }
+    optional string description;
+    optional string unit;
+    optional uint32 parent_id;
+    optional children[uint32];
+}
+
