@@ -1,0 +1,14 @@
+[build]
+default-target = "arm-unknown-linux-gnueabi"    # use this target if none is explicitly provided
+
+[target.armv7-unknown-linux-gnueabihf]
+# pre-build = [
+#     "dpkg --add-architecture armv7-unknown-linux-gnueabihf", 
+#    "apt-get update && apt-get --assume-yes install libudev-dev:$CROSS_DEB_ARCH libssl-dev:$CROSS_DEB_ARCH"
+# ]
+# image = "jenoch/rust-cross:arm-unknown-linux-gnueabihf"
+# image = "zenria/cross:arm-rpi-4.9.3-linux-gnueabihf"  # https://github.com/zenria/rbp1-cross-docker
+
+[target.arm-unknown-linux-gnueabi]
+image = "limero/raspi1"
+pre-build="./pre-build.sh"
