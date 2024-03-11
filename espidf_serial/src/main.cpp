@@ -110,7 +110,7 @@ extern "C" void app_main() {
       }
       printf("publisher declared\n");
 
-      printf("Declaring Subscriber on '%s'...\n", SUB_KEY);
+  /*    printf("Declaring Subscriber on '%s'...\n", SUB_KEY);
       z_owned_closure_sample_t callback = z_closure(data_handler);
       z_owned_subscriber_t sub = z_declare_subscriber(
           z_loan(s), z_keyexpr(SUB_KEY), z_move(callback), NULL);
@@ -119,7 +119,7 @@ extern "C" void app_main() {
         zp_stop_read_task(z_loan(s));
         zp_stop_lease_task(z_loan(s));
         break;
-      }
+      }*/
 
       char buf[256];
       for (int idx = 0; idx < 100; ++idx) {
@@ -135,7 +135,7 @@ extern "C" void app_main() {
           printf("Unable to publish data!\n");
           break;
         };
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
 
         publish_ok += 1;
       }
@@ -144,7 +144,7 @@ extern "C" void app_main() {
              "publish_ok=%u  \n",
              sessions_ok, sessions_fail, publish_ok);
       z_undeclare_publisher(z_move(pub));
-      z_undeclare_subscriber(z_move(sub));
+  //    z_undeclare_subscriber(z_move(sub));
 
       vTaskDelay(100 / portTICK_PERIOD_MS); // wait flush ?
       erc = zp_stop_lease_task(z_loan(s));
