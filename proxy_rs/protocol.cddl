@@ -3,11 +3,12 @@ person = { age: int, name: tstr, employer: tstr, }
 type = Publish / Subscribe / Request / Reply / Log 
 
 Log = {
-     timestamp : long,
+     timestamp : uint,
      message : text,
       device : text,
       level = INFO / WARN / ERROR / DEBUG / TRACE / FATAL,
       file : text,
       line : int,
       function: text,
+      
 }

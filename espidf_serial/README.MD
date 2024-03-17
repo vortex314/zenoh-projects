@@ -164,3 +164,45 @@ Decoding stack results
 ```
 
 
+```log
+[298320]Opening Zenoh Session ... session_ok= 5 sessions_fail=0 publish_ok=5000  
+session open 
+publisher declared
+Declaring Subscriber on 'dst/esp32/sys/**'...
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32032] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32033] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32034] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32035] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32036] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32037] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32038] Pub from Rust!)
+Closing sessions_ok= 5 sessions_fail=0 publish_ok=6000  
+Closing serial 2
+Heap before: 298320, Heap after: 298288 delta 32 
+[298288]Opening Zenoh Session ... session_ok= 6 sessions_fail=0 publish_ok=6000  
+session open 
+publisher declared
+Declaring Subscriber on 'dst/esp32/sys/**'...
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32040] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32041] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32042] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32043] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32044] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32045] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32046] Pub from Rust!)
+Closing sessions_ok= 6 sessions_fail=0 publish_ok=7000  
+Closing serial 2
+Heap before: 298288, Heap after: 298256 delta 32 
+[298256]Opening Zenoh Session ... session_ok= 7 sessions_fail=0 publish_ok=7000  
+session open 
+publisher declared
+Declaring Subscriber on 'dst/esp32/sys/**'...
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32048] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32049] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32050] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32051] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32052] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32053] Pub from Rust!)
+ >>>>>>>>>> [Subscription listener] Received (dst/esp32/sys/message, [32054] Pub from Rust!)
+Closing sessions_ok= 7 sessions_fail=0 publish_ok=8000  
+```
