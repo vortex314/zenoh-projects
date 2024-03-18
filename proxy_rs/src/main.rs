@@ -4,17 +4,20 @@ use tokio::sync::Mutex;
 #[allow(unused_imports)]
 use tokio_serial::*;
 
+mod logger;
+use log::{debug, info};
+
 // this function will scan for available ports and add them to the shared list
 
 async fn scan_available_ports(
     active_ports: Arc<Mutex<Vec<SerialPortInfo>>>,
     accepted_ports: Vec<PortPattern>,
 ) {
-    println!("Scanning for new ports, task started ");
+    info!("Port scanner started ");
     loop {
         {
             let mut active_ports = active_ports.lock().await;
-            println!("Scanning for new ports {} ", active_ports.len());
+            info!("Scanning for new ports {} ", active_ports.len());
 
             let scanned_ports = available_ports().unwrap();
             let mut ignored_ports = Vec::new();
@@ -22,13 +25,17 @@ async fn scan_available_ports(
                 if !active_ports.contains(&port_info) {
                     match &port_info.port_type {
                         SerialPortType::UsbPort(usb_info) => {
-                            println!("USB port {} : {:?} ", port_info.port_name, usb_info);
-                            active_ports.push(port_info.clone());
+                            accepted_ports.iter().for_each(|pattern| {
+                                if pattern.matches(&port_info) {
+                                    info!("USB port {} : {:?} ", port_info.port_name, usb_info);
+                                    active_ports.push(port_info.clone());
+                                }
+                            });
                         }
                         _ => {
                             ignored_ports.push(port_info.clone());
-                            println!(
-                                "Ignore port available: {:?}:{:?} ",
+                            debug!(
+                                "Ignore port : {:?} - {:?} ",
                                 port_info.port_name, port_info.port_type
                             );
                         }
@@ -50,14 +57,13 @@ struct PortPattern {
 
 impl PortPattern {
     fn matches(&self, port_info: &SerialPortInfo) -> bool {
-        let mut ret = true;
         if !self.name_regexp.is_empty() {
             let re = regex::Regex::new(&self.name_regexp).unwrap();
             if !re.is_match(&port_info.port_name) {
                 return false;
             }
         }
-        match port_info.port_type {
+        match &port_info.port_type {
             SerialPortType::UsbPort(usb_info) => {
                 if let Some(vid) = self.vid {
                     if usb_info.vid != vid {
@@ -70,7 +76,7 @@ impl PortPattern {
                     }
                 }
                 if let Some(serial) = &self.serial_number {
-                    if Some(usb_info.serial_number) != Some(*serial) {
+                    if usb_info.serial_number != Some(serial.clone()) {
                         return false;
                     }
                 }
@@ -83,6 +89,7 @@ impl PortPattern {
 }
 #[tokio::main(worker_threads = 1)]
 async fn main() -> Result<()> {
+    logger::init();
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
         vid: Some(4292),
@@ -100,7 +107,7 @@ async fn main() -> Result<()> {
     let _port_remover_task = tokio::spawn(async move {
         loop {
             let mut active_ports = active_ports.lock().await;
-            println!("Remove port 0");
+            info!("Remove port 0");
             if active_ports.len() > 0 {
                 active_ports.remove(0);
             };

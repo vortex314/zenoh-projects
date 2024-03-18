@@ -1,14 +1,64 @@
 person = { age: int, name: tstr, employer: tstr, }
 
-type = Publish / Subscribe / Request / Reply / Log 
+message = Connect / ConnAck / Publish / Subscribe / Request / Reply / Log / Disconnect / Metrics
 
 Log = {
      timestamp : uint,
      message : text,
-      device : text,
-      level = INFO / WARN / ERROR / DEBUG / TRACE / FATAL,
-      file : text,
-      line : int,
-      function: text,
-      
+      ? device : text,
+      ? level = INFO / WARN / ERROR / DEBUG / TRACE / FATAL .size  1,
+      ? file : text,
+      ? line : int,
+      ? function: text,
 }
+
+Connect = {
+      mtu: uint,
+      alive: uint,
+      ? fragmentation : bool,
+}
+
+ConnAck = {
+      mtu: uint,
+      alive: uint,
+      ? fragmentation : bool,
+}
+
+Publish = {
+      topic: text,
+      payload: bytes,
+      ? qos: 0 / 1 / 2 .size 1,
+      ? retain: bool,
+}
+
+Subscribe = {
+      topic: text,
+      ? qos: 0 / 1 / 2 .size 1,
+}
+
+Request = {
+      id: uint,
+      ? method: text,
+      ? params: text,
+}
+
+Reply = {
+      id: uint,
+      ? result: text,
+      ? error: text,
+}
+
+Disconnect = {
+      ? reason: text,
+}
+
+Metrics = {
+      ? cpu: float,
+      ? memory: float,
+      ? disk: float,
+      ? network: float,
+      ? latency: float,
+      ? uptime: uint,
+}
+ 
+
