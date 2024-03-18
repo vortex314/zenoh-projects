@@ -1,4 +1,5 @@
-$ cat ./scripts/my-script.sh
 #!/usr/bin/env bash
-
-apt-get install libudev-dev libssl-dev -y
+rm -rf rust
+cd ../../cddl-codegen/
+target/debug/cddl-codegen --input=../zenoh-projects/proxy_rs/protocol.cddl --output=../zenoh-projects/proxy_rs 
+# apt-get install libudev-dev libssl-dev -y

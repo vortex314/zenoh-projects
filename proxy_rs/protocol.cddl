@@ -1,64 +1,52 @@
-person = { age: int, name: tstr, employer: tstr, }
 
-message = Connect / ConnAck / Publish / Subscribe / Request / Reply / Log / Disconnect / Metrics
+message = Connect
+	/ ConnAck
+	/ Publish
+	/ Subscribe
+	/ Request
+	/ Reply
+	/ Log
+	/ Disconnect
+	/ Metrics
+
+Level = INFO
+	/ WARN
+	/ ERROR
+	/ DEBUG
+	/ TRACE
+	/ FATAL .size 1
+
+Qos = 0
+	/ 1
+	/ 2 .size 1
 
 Log = {
-     timestamp : uint,
-     message : text,
-      ? device : text,
-      ? level = INFO / WARN / ERROR / DEBUG / TRACE / FATAL .size  1,
-      ? file : text,
-      ? line : int,
-      ? function: text,
+	timestamp: uint,
+	message: text,
+	? device: text,
+	? level: Level,
+	? file: text,
+	? line: uint,
+	? function: text,
 }
 
-Connect = {
-      mtu: uint,
-      alive: uint,
-      ? fragmentation : bool,
-}
+Connect = { mtu: uint, alive: uint, ? fragmentation: bool, }
 
-ConnAck = {
-      mtu: uint,
-      alive: uint,
-      ? fragmentation : bool,
-}
+ConnAck = { mtu: uint, alive: uint, ? fragmentation: bool, }
 
 Publish = {
-      topic: text,
-      payload: bytes,
-      ? qos: 0 / 1 / 2 .size 1,
-      ? retain: bool,
+	topic: text,
+	payload: bytes,
+	? qos: Qos,
+	? retain: bool,
 }
 
-Subscribe = {
-      topic: text,
-      ? qos: 0 / 1 / 2 .size 1,
-}
+Subscribe = { topic: text, ? qos: Qos }
 
-Request = {
-      id: uint,
-      ? method: text,
-      ? params: text,
-}
+Request = { id: uint, ? method: text, ? params: text, }
 
-Reply = {
-      id: uint,
-      ? result: text,
-      ? error: text,
-}
+Reply = { id: uint, ? result: text, ? error: text, }
 
-Disconnect = {
-      ? reason: text,
-}
+Disconnect = { }
 
-Metrics = {
-      ? cpu: float,
-      ? memory: float,
-      ? disk: float,
-      ? network: float,
-      ? latency: float,
-      ? uptime: uint,
-}
- 
-
+Metrics = { }

@@ -7,6 +7,11 @@ use tokio_serial::*;
 mod logger;
 use log::{debug, info};
 
+mod protocol;
+use protocol::*;
+
+use ciborium::de::from_reader;
+
 // this function will scan for available ports and add them to the shared list
 
 async fn scan_available_ports(
@@ -90,6 +95,13 @@ impl PortPattern {
 #[tokio::main(worker_threads = 1)]
 async fn main() -> Result<()> {
     logger::init();
+    let msg = Message::new_log("Hi");
+    let mut buf = Vec::new();
+    ciborium::ser::into_writer(&msg, &mut buf).unwrap();
+    info!("buffer {:02X?}", buf);
+    let msg2: Message = from_reader(&buf[..]).unwrap();
+    info!("Hello, World! {:?}", msg2);
+
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
         vid: Some(4292),
