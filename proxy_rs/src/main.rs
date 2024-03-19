@@ -10,7 +10,7 @@ use log::{debug, info};
 mod protocol;
 use protocol::*;
 
-use ciborium::de::from_reader;
+use minicbor::{encode::write::EndOfSlice, Encoder};
 
 // this function will scan for available ports and add them to the shared list
 
@@ -92,15 +92,29 @@ impl PortPattern {
     }
 
 }
+
+use core::result::Result;
+
+fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlice>>{
+    let mut buffer = [0u8; 128];
+    let mut encoder = Encoder::new(&mut buffer[..]);
+    encoder.begin_array()?;
+    encoder.u8(1)?;
+    encoder.bool(true)?;
+    encoder.str("test")?;
+    encoder.null()?;
+    encoder.f32(3.14)?;
+    encoder.end()?;
+    info!("Encoded length : {}", buffer.len());
+    Ok(buffer.to_vec())
+}
+
 #[tokio::main(worker_threads = 1)]
-async fn main() -> Result<()> {
+async fn main() -> Result<(),Error> {
     logger::init();
-    let msg = Message::new_log("Hi");
-    let mut buf = Vec::new();
-    ciborium::ser::into_writer(&msg, &mut buf).unwrap();
-    info!("buffer {:02X?}", buf);
-    let msg2: Message = from_reader(&buf[..]).unwrap();
-    info!("Hello, World! {:?}", msg2);
+
+    info!("Encoded : {:02X?}", encode_connect_request());
+
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),

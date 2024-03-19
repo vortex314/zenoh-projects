@@ -22,3 +22,5 @@ chrono = "0.4.19"                                        # for time
 regex="*"
 serde = { version = "1.0", features = ["derive"] }
 ciborium = "0.2.2"
+minicbor = "0.21.0"
+
