@@ -10,7 +10,7 @@ use log::{debug, info};
 mod protocol;
 use protocol::*;
 
-use minicbor::{encode::write::EndOfSlice, Encoder};
+use minicbor::{encode::{write::EndOfSlice, Write}, Encoder};
 
 // this function will scan for available ports and add them to the shared list
 
@@ -93,11 +93,43 @@ impl PortPattern {
 
 }
 
-use core::result::Result;
+use core::{result::Result};
+
+struct VecWriter<const N: usize> {
+    buffer: [u8; N],
+    max: usize,
+}
+
+impl VecWriter {
+    fn new(max:usize) -> Self {
+        VecWriter::<max> { buffer:[u8;max],max : N}
+    }
+
+    fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    fn to_bytes(&self) -> &[u8] {
+        self.buffer.as_slice()
+    }
+
+    fn to_vec(&self) -> Vec<u8> {
+        self.buffer.clone()
+    }
+}
+impl minicbor::encode::Write for VecWriter {
+    type Error = EndOfSlice;
+    // Required method
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+        self.buffer.extend_from_slice(buf);
+        Ok(())
+    }
+
+}
 
 fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlice>>{
-    let mut buffer = [0u8; 128];
-    let mut encoder = Encoder::new(&mut buffer[..]);
+    let mut buffer = VecWriter::<256>{ buffer:vec![], max: 256 };
+    let mut encoder = Encoder::new(&mut buffer);
     encoder.begin_array()?;
     encoder.u8(1)?;
     encoder.bool(true)?;
@@ -106,6 +138,9 @@ fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlic
     encoder.f32(3.14)?;
     encoder.end()?;
     info!("Encoded length : {}", buffer.len());
+    let cobs_output:[u8; 1344] = cobs_rs::stuff::<256,1344>(buffer.to_vec().as_slice(), 0x00);
+let (decoded_data:[u8,1342], decoded_data_length) = cobs_rs::unstuff(cobs_output, 0x00);
+    info!("Encoded length : {}", cobs_output.len());
     Ok(buffer.to_vec())
 }
 
