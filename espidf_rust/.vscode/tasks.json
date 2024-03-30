@@ -1,0 +1,28 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo run",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "1"
+                }
+            },
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "run",
+                // "--debug",
+                // "--",
+                // "arg1"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

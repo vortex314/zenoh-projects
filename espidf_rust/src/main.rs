@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
+use ciborium::cbor;
 use log::info;
 use cobs::CobsEncoder;
 use crc::{poly::{CRC_16, CRC_16_ANSI}, Crc, CRC_16_IBM_SDLC};
@@ -53,6 +54,7 @@ impl ciborium_io::Write for VecWriter {
 
 fn encode_connect_request() -> Result<Vec<u8>, String>{
     let log_msg = protocol::Message::Log(protocol::Log::new("test"));
+    let value = cbor!([1,"gg",3.14]);
     let mut buffer = VecWriter::new();
     let value=1;
     let serializer = ciborium::ser::into_writer(&log_msg, buffer);
