@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crc::{poly::{CRC_16, CRC_16_ANSI}, Crc, CRC_16_IBM_SDLC};
 use tokio::sync::Mutex;
 #[allow(unused_imports)]
 use tokio_serial::*;
@@ -8,9 +9,9 @@ mod logger;
 use log::{debug, info};
 
 mod protocol;
-use protocol::*;
 
 use minicbor::{encode::{write::EndOfSlice, Write}, Encoder};
+use cobs::CobsEncoder;
 
 // this function will scan for available ports and add them to the shared list
 
@@ -95,14 +96,13 @@ impl PortPattern {
 
 use core::{result::Result};
 
-struct VecWriter<const N: usize> {
-    buffer: [u8; N],
-    max: usize,
+struct VecWriter{
+    buffer:Vec<u8>,
 }
 
-impl VecWriter {
-    fn new(max:usize) -> Self {
-        VecWriter::<max> { buffer:[u8;max],max : N}
+impl VecWriter  {
+    fn new() -> Self {
+        VecWriter { buffer: Vec::new()}
     }
 
     fn len(&self) -> usize {
@@ -113,9 +113,18 @@ impl VecWriter {
         self.buffer.as_slice()
     }
 
-    fn to_vec(&self) -> Vec<u8> {
-        self.buffer.clone()
+    fn push(&mut self, data: u8) {
+        self.buffer.push(data);
     }
+
+    fn to_vec(&self) -> Vec<u8> {
+        self.buffer.to_vec()
+    }
+
+    fn clear(&mut self) {
+        self.buffer.clear();
+    }
+
 }
 impl minicbor::encode::Write for VecWriter {
     type Error = EndOfSlice;
@@ -128,8 +137,10 @@ impl minicbor::encode::Write for VecWriter {
 }
 
 fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlice>>{
-    let mut buffer = VecWriter::<256>{ buffer:vec![], max: 256 };
+    let mut buffer = VecWriter::new();
     let mut encoder = Encoder::new(&mut buffer);
+    let mut cobs_buffer = [0;256];
+    let crc16 =  Crc::<u16>::new(&CRC_16_IBM_SDLC);
     encoder.begin_array()?;
     encoder.u8(1)?;
     encoder.bool(true)?;
@@ -138,10 +149,14 @@ fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlic
     encoder.f32(3.14)?;
     encoder.end()?;
     info!("Encoded length : {}", buffer.len());
-    let cobs_output:[u8; 1344] = cobs_rs::stuff::<256,1344>(buffer.to_vec().as_slice(), 0x00);
-let (decoded_data:[u8,1342], decoded_data_length) = cobs_rs::unstuff(cobs_output, 0x00);
-    info!("Encoded length : {}", cobs_output.len());
-    Ok(buffer.to_vec())
+    let crc = crc16.checksum(&buffer.to_bytes());
+    buffer.push((crc & 0xFF) as u8);
+    buffer.push(((crc >> 8) & 0xFF) as u8);
+    let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
+    let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
+    let size  = cobs_encoder.finalize().unwrap();
+    cobs_buffer[size] = 0;
+    Ok(cobs_buffer[0..(size+1)].to_vec())
 }
 
 #[tokio::main(worker_threads = 1)]
