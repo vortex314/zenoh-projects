@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
+use std::{cell::RefCell, rc::Rc};
+
 use ciborium::cbor;
 use log::info;
 use cobs::CobsEncoder;
@@ -9,33 +11,33 @@ use crc::{poly::{CRC_16, CRC_16_ANSI}, Crc, CRC_16_IBM_SDLC};
 use serde::Serialize;
 mod protocol;
 
+#[derive(Clone)]
 struct VecWriter{
-    buffer:Vec<u8>,
+
+    buffer:Rc<RefCell<Vec<u8>>>,
 }
 
 impl VecWriter  {
     fn new() -> Self {
-        VecWriter { buffer: Vec::new()}
+        VecWriter { buffer: Rc::new(RefCell::new(Vec::new()))}
     }
 
     fn len(&self) -> usize {
-        self.buffer.len()
+        self.buffer.borrow().len()
     }
 
     fn to_bytes(&self) -> &[u8] {
-        self.buffer.as_slice()
+        let r = self.buffer.borrow().as_slice();
+        let x  = r.clone();
+        x
     }
 
     fn push(&mut self, data: u8) {
-        self.buffer.push(data);
-    }
-
-    fn to_vec(&self) -> Vec<u8> {
-        self.buffer.to_vec()
+        self.buffer.borrow_mut().push(data);
     }
 
     fn clear(&mut self) {
-        self.buffer.clear();
+        self.buffer.borrow_mut().clear();
     }
 
 }
@@ -43,7 +45,7 @@ impl VecWriter  {
 impl ciborium_io::Write for VecWriter {
     type Error = String;
     fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
-        self.buffer.extend_from_slice(buf);
+        self.buffer.borrow_mut().extend_from_slice(buf);
         Ok(())
     }
     fn flush(&mut self) -> Result<(), Self::Error> {

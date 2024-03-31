@@ -1,6 +1,10 @@
 use std::any::Any;
+use std::ptr::null;
 
+use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Clone,Copy)]
 pub enum LogLevel {
     Trace = 0,
     Debug,
@@ -9,12 +13,16 @@ pub enum LogLevel {
     Error,
 }
 
+fn value(foo: &LogLevel) -> u8 {
+    *foo as u8
+}
+
 impl Serialize for LogLevel {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,
     {
-        serializer.serialize_i8(*self as i8)
+        serializer.serialize_u8(value(self))
     }
 }
 
@@ -47,26 +55,14 @@ impl Serialize for Log {
     where
         S: serde::ser::Serializer,
     {
-        serializer.serialize_u64(self.timestamp)?;
-        serializer.serialize_str(self.message.as_str())?;
-        self.level.serialize(serializer)?;
-
-        if self.component.is_none() {
-            serializer.serialize_none()?;
-        } else {
-            serializer.serialize_str(self.component.as_ref().unwrap().as_str())?;
-        }
-        if self.file.is_none() {
-            serializer.serialize_none()?;
-        } else {
-            serializer.serialize_str(self.file.as_ref().unwrap().as_str())?;
-        }
-        if self.line.is_none() {
-            serializer.serialize_none()?;
-        } else {
-            serializer.serialize_u32(self.line.unwrap())?;
-        }
-        Ok(S::Ok)
+        let mut seq = serializer.serialize_seq(None)?;
+        seq.serialize_element(&self.timestamp)?;
+        seq.serialize_element(&self.message.as_str())?;
+        seq.serialize_element(&self.level)?;
+        seq.serialize_element(&self.component)?;
+        seq.serialize_element(&self.file)?;
+        seq.serialize_element(&self.line.unwrap())?;
+        seq.end()
     }
 }
 
@@ -104,13 +100,6 @@ pub struct Publish {
 pub struct Subscribe {
     pub topic: Id,
 }
-#[derive(Serialize, Deserialize, Debug)]
-
-struct Query {
-    pub dst_topic: Id,
-    pub src_topic: Id,
-    pub payload: Vec<u8>,
-}
 
 #[repr(u8)]
 pub enum Message {
@@ -120,7 +109,6 @@ pub enum Message {
     SessionRegister(SessionRegister),
     Publish(Publish),
     Subscribe(Subscribe),
-    Query(Query),
 }
 
 impl Serialize for Message {
@@ -130,12 +118,9 @@ impl Serialize for Message {
     {
         match self {
             Message::Log(log) => {
-                let seq = serializer.serialize_seq(None)?;
-                log.serialize(seq);
-                seq.end();
-                Ok(())
+                log.serialize(serializer)
             }
-            _ => Ok(()),
+            _ => serializer.serialize_i32(1),
         }
     }
 }
@@ -179,15 +164,7 @@ impl Subscribe {
     }
 }
 
-impl Query {
-    pub fn new(dst_topic: Id, src_topic: Id, payload: Vec<u8>) -> Query {
-        Query {
-            dst_topic: dst_topic,
-            src_topic: src_topic,
-            payload: payload,
-        }
-    }
-}
+
 
 impl Message {
     pub fn new_log(message: &str) -> Message {
@@ -214,7 +191,4 @@ impl Message {
         Message::Subscribe(Subscribe::new(topic))
     }
 
-    pub fn new_query(dst_topic: Id, src_topic: Id, payload: Vec<u8>) -> Message {
-        Message::Query(Query::new(dst_topic, src_topic, payload))
-    }
 }
