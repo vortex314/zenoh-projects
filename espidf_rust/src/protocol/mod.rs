@@ -61,7 +61,7 @@ impl Serialize for Log {
         seq.serialize_element(&self.level)?;
         seq.serialize_element(&self.component)?;
         seq.serialize_element(&self.file)?;
-        seq.serialize_element(&self.line.unwrap())?;
+        seq.serialize_element(&self.line)?;
         seq.end()
     }
 }
