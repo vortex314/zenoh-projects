@@ -3,8 +3,25 @@ use std::ptr::null;
 
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
+use serde_tuple::*;
+use minicbor::{Decode, Encode};
 
-#[derive(Deserialize, Clone,Copy)]
+
+#[derive(Serialize, Deserialize, Copy,Clone)]
+pub enum MessageType {
+    Log = 1,
+    SessionOpen = 2,
+    SessionClose = 3,
+    SessionRegister = 4,
+    Publish = 5,
+    Subscribe = 6,
+}
+
+fn message_type(foo: &MessageType) -> u8 {
+    *foo as u8
+}
+
+#[derive(Deserialize, Clone, Copy)]
 pub enum LogLevel {
     Trace = 0,
     Debug,
@@ -13,7 +30,7 @@ pub enum LogLevel {
     Error,
 }
 
-fn value(foo: &LogLevel) -> u8 {
+fn log_level(foo: &LogLevel) -> u8 {
     *foo as u8
 }
 
@@ -22,11 +39,13 @@ impl Serialize for LogLevel {
     where
         S: serde::ser::Serializer,
     {
-        serializer.serialize_u8(value(self))
+        serializer.serialize_u8(log_level(self))
     }
 }
 
 type Id = u16;
+#[derive(serde_tuple::Serialize_tuple, serde_tuple::Deserialize_tuple)]
+#[derive(untagged)]
 
 pub struct Log {
     pub timestamp: u64,
@@ -48,14 +67,18 @@ impl Log {
             line: None,
         }
     }
-}
+    pub fn to_cbor(&self) -> Vec[u8] {
 
+    }
+}
+/* 
 impl Serialize for Log {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,
     {
         let mut seq = serializer.serialize_seq(None)?;
+        seq.serialize_element(&messageType(&MessageType::Log))?;
         seq.serialize_element(&self.timestamp)?;
         seq.serialize_element(&self.message.as_str())?;
         seq.serialize_element(&self.level)?;
@@ -64,7 +87,7 @@ impl Serialize for Log {
         seq.serialize_element(&self.line)?;
         seq.end()
     }
-}
+}*/
 
 pub enum Kind {
     Publisher,
@@ -117,9 +140,7 @@ impl Serialize for Message {
         S: serde::ser::Serializer,
     {
         match self {
-            Message::Log(log) => {
-                log.serialize(serializer)
-            }
+            Message::Log(log) => log.serialize(serializer),
             _ => serializer.serialize_i32(1),
         }
     }
@@ -164,8 +185,6 @@ impl Subscribe {
     }
 }
 
-
-
 impl Message {
     pub fn new_log(message: &str) -> Message {
         Message::Log(Log::new(message))
@@ -190,5 +209,4 @@ impl Message {
     pub fn new_subscribe(topic: Id) -> Message {
         Message::Subscribe(Subscribe::new(topic))
     }
-
 }

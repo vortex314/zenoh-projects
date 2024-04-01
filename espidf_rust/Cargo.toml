@@ -31,6 +31,8 @@ ciborium = { version = "0.2.2", default-features = false }
 ciborium-io = { version = "0.2.2", default-features = false }
 crc = { version = "3.0.1", features = [] }
 serde = { version = "1.0.197", features = ["derive"] }
+serde_tuple = { version = "0.5.0" }
+minicbor = { version = "0.21.1", default-features = false }
 
 [build-dependencies]
 embuild = "0.31.3"
