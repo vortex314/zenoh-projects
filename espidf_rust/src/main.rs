@@ -26,10 +26,8 @@ impl VecWriter  {
         self.buffer.borrow().len()
     }
 
-    fn to_bytes(&self) -> &[u8] {
-        let r = self.buffer.borrow().as_slice();
-        let x  = r.clone();
-        x
+    fn to_bytes(&self) -> Vec<u8> {
+        self.buffer.borrow().clone()
     }
 
     fn push(&mut self, data: u8) {
@@ -59,16 +57,17 @@ fn encode_connect_request() -> Result<Vec<u8>, String>{
     let value = cbor!([1,"gg",3.14]);
     let mut buffer = VecWriter::new();
     let value=1;
+    let mut buffer_clone = buffer.clone();
     let serializer = ciborium::ser::into_writer(&log_msg, buffer);
     let mut cobs_buffer = [0;256];
     let crc16 =  Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
-    info!("Encoded length : {}", buffer.len());
-    let crc = crc16.checksum(&buffer.to_bytes());
-    buffer.push((crc & 0xFF) as u8);
-    buffer.push(((crc >> 8) & 0xFF) as u8);
+    info!("Encoded length : {}", buffer_clone.len());
+    let crc = crc16.checksum(&buffer_clone.to_bytes());
+    buffer_clone.push((crc & 0xFF) as u8);
+    buffer_clone.push(((crc >> 8) & 0xFF) as u8);
     let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
-    let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
+    let mut _res = cobs_encoder.push(&buffer_clone.to_bytes()).unwrap();
     let size  = cobs_encoder.finalize().unwrap();
     cobs_buffer[size] = 0;
     Ok(cobs_buffer[0..(size+1)].to_vec())
