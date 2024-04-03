@@ -1,13 +1,50 @@
+use core::time;
 use std::any::Any;
 use std::ptr::null;
+use std::rc::Rc;
+use std::cell::RefCell;
 
-use serde::ser::SerializeSeq;
-use serde::{Deserialize, Serialize};
-use serde_tuple::*;
 use minicbor::{Decode, Encode};
 
+#[derive(Clone)]
+pub struct VecWriter{
 
-#[derive(Serialize, Deserialize, Copy,Clone)]
+    buffer:Rc<RefCell<Vec<u8>>>,
+}
+
+impl VecWriter  {
+    fn new() -> Self {
+        VecWriter { buffer: Rc::new(RefCell::new(Vec::new()))}
+    }
+
+    fn len(&self) -> usize {
+        self.buffer.borrow().len()
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.buffer.borrow().clone()
+    }
+
+    fn push(&mut self, data: u8) {
+        self.buffer.borrow_mut().push(data);
+    }
+
+    fn clear(&mut self) {
+        self.buffer.borrow_mut().clear();
+    }
+
+}
+
+impl minicbor::encode::write::Write for VecWriter {
+    type Error = String;
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+        self.buffer.borrow_mut().extend_from_slice(buf);
+        Ok(())
+    }
+
+}
+
+
 pub enum MessageType {
     Log = 1,
     SessionOpen = 2,
@@ -17,11 +54,33 @@ pub enum MessageType {
     Subscribe = 6,
 }
 
+impl Encode<()> for MessageType {
+    fn encode(&self, e: &mut minicbor::Encoder<VecWriter>) -> Result<(), minicbor::encode::Error<String>> {
+        e.u8(*self as u8)
+    }
+    fn is_nil(&self) -> bool {
+        false
+    }
+}
+
+impl Decode<'_,()> for MessageType {
+    fn decode(d: &mut minicbor::Decoder) -> Result<Self, minicbor::decode::Error> {
+        Ok(match d.u8()? {
+            1 => MessageType::Log,
+            2 => MessageType::SessionOpen,
+            3 => MessageType::SessionClose,
+            4 => MessageType::SessionRegister,
+            5 => MessageType::Publish,
+            6 => MessageType::Subscribe,
+            _ => return Err(minicbor::decode::Error::Message("Invalid message type".to_string())),
+        })
+    }
+}
+
 fn message_type(foo: &MessageType) -> u8 {
     *foo as u8
 }
 
-#[derive(Deserialize, Clone, Copy)]
 pub enum LogLevel {
     Trace = 0,
     Debug,
@@ -34,18 +93,30 @@ fn log_level(foo: &LogLevel) -> u8 {
     *foo as u8
 }
 
-impl Serialize for LogLevel {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        serializer.serialize_u8(log_level(self))
+impl Encode<()> for LogLevel {
+    fn encode(&self, e: &mut minicbor::Encoder<VecWriter>) -> Result<(), minicbor::encode::Error<String>> {
+        e.u8(*self as u8)
+    }
+}
+
+impl Decode<'_,()> for LogLevel {
+    fn decode(d: &mut minicbor::Decoder,ctx:&mut ()) -> Result<Self, minicbor::decode::Error> {
+        Ok(match d.u8()? {
+            0 => LogLevel::Trace,
+            1 => LogLevel::Debug,
+            2 => LogLevel::Info,
+            3 => LogLevel::Warning,
+            4 => LogLevel::Error,
+            _ => return Err(Error::new("Invalid log level".to_string())),
+        })
+    }
+
+    fn nil() -> Option<Self> {
+        Some(LogLevel::Trace)
     }
 }
 
 type Id = u16;
-#[derive(serde_tuple::Serialize_tuple, serde_tuple::Deserialize_tuple)]
-#[derive(untagged)]
 
 pub struct Log {
     pub timestamp: u64,
@@ -59,7 +130,7 @@ pub struct Log {
 impl Log {
     pub fn new(message: &str) -> Log {
         Log {
-            timestamp: 0,
+            timestamp: 5,
             message: message.to_string(),
             level: None,
             component: None,
@@ -67,8 +138,28 @@ impl Log {
             line: None,
         }
     }
-    pub fn to_cbor(&self) -> Vec[u8] {
+}
 
+fn encode<T>(&x:Option<T> ,e: &mut minicbor::Encoder<VecWriter>) -> Result<(), minicbor::encode::Error<String>> 
+where T: Encode<()>
+  {
+    if x.is_nil() {
+        e.null()?
+    } else {
+        x.encode(e)?
+    }
+}
+
+impl Encode<()> for Log {
+    fn encode(&self, e: &mut minicbor::Encoder<VecWriter>) -> Result<(), minicbor::encode::Error<String>> {
+        e.array(6)?;
+        e.u8(message_type(&MessageType::Log))?;
+        e.u64(self.timestamp)?;
+        e.str(&self.message)?;
+        encode(self.level,e)?;
+        encode(self.component,e)?;
+        encode(self.file,e)?;
+        encode(self.line,e) 
     }
 }
 /* 
@@ -95,13 +186,10 @@ pub enum Kind {
     Queryable,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-
 pub struct SessionOpen {
     pub mtu: u16,
     pub mss: u16,
 }
-#[derive(Serialize, Deserialize, Debug)]
 
 pub struct SessionClose {
     pub reason: String,
@@ -112,13 +200,11 @@ pub struct SessionRegister {
     pub id: Id,
     pub kind: Kind,
 }
-#[derive(Serialize, Deserialize, Debug)]
 
 pub struct Publish {
     pub topic: Id,
     pub payload: Vec<u8>,
 }
-#[derive(Serialize, Deserialize, Debug)]
 
 pub struct Subscribe {
     pub topic: Id,
@@ -134,17 +220,7 @@ pub enum Message {
     Subscribe(Subscribe),
 }
 
-impl Serialize for Message {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        match self {
-            Message::Log(log) => log.serialize(serializer),
-            _ => serializer.serialize_i32(1),
-        }
-    }
-}
+
 
 impl SessionOpen {
     pub fn new(mtu: u16, mss: u16) -> SessionOpen {
