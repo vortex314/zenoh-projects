@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crc::{poly::{CRC_16, CRC_16_ANSI}, Crc, CRC_16_IBM_SDLC};
+use chrono::offset;
+use crc::{
+    poly::{CRC_16, CRC_16_ANSI},
+    Crc, CRC_16_IBM_SDLC,
+};
 use tokio::sync::Mutex;
 #[allow(unused_imports)]
 use tokio_serial::*;
@@ -9,9 +13,14 @@ mod logger;
 use log::{debug, info};
 
 mod protocol;
+use protocol::Log;
 
-use minicbor::{encode::{write::EndOfSlice, Write}, Encoder};
 use cobs::CobsEncoder;
+use minicbor::{
+    decode::info,
+    encode::{write::EndOfSlice, Write},
+    Decode, Decoder, Encode, Encoder,
+};
 
 // this function will scan for available ports and add them to the shared list
 
@@ -88,21 +97,22 @@ impl PortPattern {
                 }
                 return true;
             }
-        _ =>  { return false; }
+            _ => {
+                return false;
+            }
         }
     }
-
 }
 
-use core::{result::Result};
+use core::result::Result;
 
-struct VecWriter{
-    buffer:Vec<u8>,
+struct VecWriter {
+    buffer: Vec<u8>,
 }
 
-impl VecWriter  {
+impl VecWriter {
     fn new() -> Self {
-        VecWriter { buffer: Vec::new()}
+        VecWriter { buffer: Vec::new() }
     }
 
     fn len(&self) -> usize {
@@ -124,7 +134,6 @@ impl VecWriter  {
     fn clear(&mut self) {
         self.buffer.clear();
     }
-
 }
 impl minicbor::encode::Write for VecWriter {
     type Error = EndOfSlice;
@@ -133,39 +142,84 @@ impl minicbor::encode::Write for VecWriter {
         self.buffer.extend_from_slice(buf);
         Ok(())
     }
-
 }
 
-fn encode_connect_request() -> Result<Vec<u8>, minicbor::encode::Error<EndOfSlice>>{
+fn make_frame(msg: protocol::Message) -> Result<Vec<u8>, String> {
     let mut buffer = VecWriter::new();
     let mut encoder = Encoder::new(&mut buffer);
-    let mut cobs_buffer = [0;256];
-    let crc16 =  Crc::<u16>::new(&CRC_16_IBM_SDLC);
-    encoder.begin_array()?;
-    encoder.u8(1)?;
-    encoder.bool(true)?;
-    encoder.str("test")?;
-    encoder.null()?;
-    encoder.f32(3.14)?;
-    encoder.end()?;
-    info!("Encoded length : {}", buffer.len());
+    let mut ctx = 1;
+    let _ = msg.encode(&mut encoder, &mut ctx);
+    info!("Encoded cbor : {:02X?}", buffer.to_bytes());
+    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
     let crc = crc16.checksum(&buffer.to_bytes());
+    info!("CRC : {:04X}", crc);
     buffer.push((crc & 0xFF) as u8);
     buffer.push(((crc >> 8) & 0xFF) as u8);
+    let mut cobs_buffer = [0; 256];
     let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
     let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
-    let size  = cobs_encoder.finalize().unwrap();
-    cobs_buffer[size] = 0;
-    Ok(cobs_buffer[0..(size+1)].to_vec())
+    let size = cobs_encoder.finalize().unwrap();
+    buffer.push(0);
+    info!("COBS : {:02X?}", &cobs_buffer[0..(size+1)]);
+    Ok(cobs_buffer[0..size+1].to_vec())
+}
+
+fn decode_frame(frame_bytes: Vec<u8>) -> Result<protocol::Message, String> {
+    if frame_bytes.len() < 2 {
+        return Err("Frame too short".to_string());
+    }
+    let mut cobs_output = [0; 256];
+    let mut cobs_decoder = cobs::CobsDecoder::new(&mut cobs_output);
+    let res = cobs_decoder.push(&frame_bytes);
+    match res {
+        Ok(offset) => {
+            match offset {
+                None => {
+                    return Err("COBS more data needed.".to_string());
+                },
+                Some((n, m)) => {
+                    if m != frame_bytes.len() {
+                        return Err("COBS decoding error".to_string());
+                    }
+                    let bytes = cobs_output[0..n].to_vec();
+                    info!("Decoded : {:02X?}", bytes);
+
+                    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+                    let crc = crc16.checksum(&bytes[0..(bytes.len() - 2)]);
+                    let crc_received =
+                        (bytes[bytes.len() - 1] as u16) << 8 | bytes[bytes.len() - 2] as u16;
+                    if crc != crc_received {
+                        info!("CRC error : {:04X} != {:04X}", crc, crc_received);
+                        return Err("CRC error".to_string());
+                    }
+
+                    let mut decoder = minicbor::decode::Decoder::new(&bytes);
+                    let mut ctx = 1;
+                    let msg = protocol::Message::decode(&mut decoder, &mut ctx).unwrap();
+                    Ok(msg)
+                }
+            }
+        },
+        Err(j) => {
+            info!("COBS decoding error : {:?}", j);
+            Err("COBS decoding error".to_string())
+        },
+    }
+}
+
+fn encode_log() -> () {
+    let log_msg = protocol::Message::new_log("Hello, World!");
+    let bytes = make_frame(log_msg).unwrap();
+    info!("Encoded : {:02X?}", bytes);
+    let _msg = decode_frame(bytes).unwrap();
+    info!("Decoded : {:?}", _msg);
 }
 
 #[tokio::main(worker_threads = 1)]
-async fn main() -> Result<(),Error> {
+async fn main() -> Result<(), Error> {
     logger::init();
 
-    info!("Encoded : {:02X?}", encode_connect_request());
-
-
+    encode_log();
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
         vid: Some(4292),

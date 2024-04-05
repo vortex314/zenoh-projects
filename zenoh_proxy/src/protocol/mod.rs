@@ -2,7 +2,7 @@ use minicbor::{Decode, Encode};
 
 type Id = u16;
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(index_only)]
 pub enum LogLevel {
     #[n(0)]
@@ -17,7 +17,7 @@ pub enum LogLevel {
     Error,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 
 pub struct Log {
@@ -34,7 +34,7 @@ pub struct Log {
     #[n(5)]
     pub line: Option<u32>,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(index_only)]
 
 pub enum Kind {
@@ -45,7 +45,7 @@ pub enum Kind {
     #[n(2)]
     Queryable,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub struct SessionOpen {
     #[n(0)]
@@ -57,13 +57,13 @@ pub struct SessionOpen {
     #[n(3)]
     pub client_id: Option<String>,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub struct SessionClose {
     #[n(0)]
     pub reason: Option<String>,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub struct SessionRegister {
     #[n(0)]
@@ -73,7 +73,7 @@ pub struct SessionRegister {
     #[n(2)]
     pub kind: Option<Kind>,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub struct Publish {
     #[n(0)]
@@ -81,7 +81,7 @@ pub struct Publish {
     #[n(1)]
     pub payload: Vec<u8>,
 }
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub struct Subscribe {
     #[n(0)]
@@ -94,7 +94,7 @@ struct Query {
     pub payload: Vec<u8>,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode,Debug)]
 #[cbor(array)]
 pub enum Message {
     #[n(0)]
