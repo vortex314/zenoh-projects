@@ -1,62 +1,92 @@
-use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, Debug)]
+use minicbor::{Decode, Encode};
+
+type Id = u16;
+
+#[derive(Encode, Decode)]
+#[cbor(index_only)]
 pub enum LogLevel {
-    Trace,
+    #[n(0)]
+    Trace = 0,
+    #[n(1)]
     Debug,
+    #[n(2)]
     Info,
+    #[n(3)]
     Warning,
+    #[n(4)]
     Error,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-
-pub enum Kind {
-    Publisher,
-    Subscriber,
-    Queryable,
-}
-
-type Id = u16;
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Encode, Decode)]
+#[cbor(array)]
 
 pub struct Log {
+    #[n(0)]
     pub timestamp: u64,
+    #[n(1)]
     pub message: String,
+    #[n(2)]
     pub level: Option<LogLevel>,
+    #[n(3)]
     pub component: Option<String>,
+    #[n(4)]
     pub file: Option<String>,
+    #[n(5)]
     pub line: Option<u32>,
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Encode, Decode)]
+#[cbor(index_only)]
 
+pub enum Kind {
+    #[n(0)]
+    Publisher = 0,
+    #[n(1)]
+    Subscriber,
+    #[n(2)]
+    Queryable,
+}
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub struct SessionOpen {
-    pub mtu: u16,
-    pub mss: u16,
+    #[n(0)]
+    pub mtu: u32,
+    #[n(1)]
+    pub mss: u32,
+    #[n(2)]
+    pub qos: u8,
+    #[n(3)]
+    pub client_id: Option<String>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub struct SessionClose {
-    pub reason: String,
+    #[n(0)]
+    pub reason: Option<String>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub struct SessionRegister {
+    #[n(0)]
     pub name: String,
+    #[n(1)]
     pub id: Id,
-    pub kind: Kind,
+    #[n(2)]
+    pub kind: Option<Kind>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub struct Publish {
+    #[n(0)]
     pub topic: Id,
+    #[n(1)]
     pub payload: Vec<u8>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub struct Subscribe {
-    pub topic: Id,
+    #[n(0)]
+    pub topic: String,
 }
-#[derive(Serialize, Deserialize, Debug)]
 
 struct Query {
     pub dst_topic: Id,
@@ -64,16 +94,21 @@ struct Query {
     pub payload: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-
+#[derive(Encode, Decode)]
+#[cbor(array)]
 pub enum Message {
-    Log(Log),
-    SessionOpen(SessionOpen),
-    SessionClose(SessionClose),
-    SessionRegister(SessionRegister),
-    Publish(Publish),
-    Subscribe(Subscribe),
-    Query(Query),
+    #[n(0)]
+    Log(#[n(0)] Log),
+    #[n(1)]
+    SessionOpen(#[n(1)] SessionOpen),
+    #[n(2)]
+    SessionClose(#[n(2)] SessionClose),
+    #[n(3)]
+    SessionRegister(#[n(3)] SessionRegister),
+    #[n(4)]
+    Publish(#[n(4)] Publish),
+    #[n(5)]
+    Subscribe(#[n(5)] Subscribe),
 }
 
 impl Log {
@@ -90,15 +125,20 @@ impl Log {
 }
 
 impl SessionOpen {
-    pub fn new(mtu: u16, mss: u16) -> SessionOpen {
-        SessionOpen { mtu: mtu, mss: mss }
+    pub fn new(mtu: u32, mss: u32) -> SessionOpen {
+        SessionOpen {
+            mtu,
+            mss,
+            qos: 0,
+            client_id: None,
+        }
     }
 }
 
 impl SessionClose {
     pub fn new(reason: &str) -> SessionClose {
         SessionClose {
-            reason: reason.to_string(),
+            reason: Some(reason.to_string()),
         }
     }
 }
@@ -108,7 +148,7 @@ impl SessionRegister {
         SessionRegister {
             name: name.to_string(),
             id: id,
-            kind: kind,
+            kind: Some(kind),
         }
     }
 }
@@ -123,17 +163,17 @@ impl Publish {
 }
 
 impl Subscribe {
-    pub fn new(topic: Id) -> Subscribe {
-        Subscribe { topic: topic }
+    pub fn new(topic: String) -> Subscribe {
+        Subscribe { topic }
     }
 }
 
 impl Query {
     pub fn new(dst_topic: Id, src_topic: Id, payload: Vec<u8>) -> Query {
         Query {
-            dst_topic: dst_topic,
-            src_topic: src_topic,
-            payload: payload,
+            dst_topic,
+            src_topic,
+            payload,
         }
     }
 }
@@ -143,7 +183,7 @@ impl Message {
         Message::Log(Log::new(message))
     }
 
-    pub fn new_session_open(mtu: u16, mss: u16) -> Message {
+    pub fn new_session_open(mtu: u32, mss: u32) -> Message {
         Message::SessionOpen(SessionOpen::new(mtu, mss))
     }
 
@@ -159,29 +199,25 @@ impl Message {
         Message::Publish(Publish::new(topic, payload))
     }
 
-    pub fn new_subscribe(topic: Id) -> Message {
+    pub fn new_subscribe(topic: String) -> Message {
         Message::Subscribe(Subscribe::new(topic))
-    }
-
-    pub fn new_query(dst_topic: Id, src_topic: Id, payload: Vec<u8>) -> Message {
-        Message::Query(Query::new(dst_topic, src_topic, payload))
     }
 }
 
-fn main() {
+fn test() {
     let log = Message::new_log("Hello, World!");
     let session_open = Message::new_session_open(1500, 1460);
     let session_close = Message::new_session_close("Goodbye, World!");
     let session_register = Message::new_session_register("Hello, World!", 0, Kind::Publisher);
     let publish = Message::new_publish(0, vec![0, 1, 2, 3, 4]);
-    let subscribe = Message::new_subscribe(0);
-    let query = Message::new_query(0, 1, vec![0, 1, 2, 3, 4]);
+    let subscribe = Message::new_subscribe("src/*".to_string());
 
-    println!("{:?}", log);
-    println!("{:?}", session_open);
-    println!("{:?}", session_close);
-    println!("{:?}", session_register);
-    println!("{:?}", publish);
-    println!("{:?}", subscribe);
-    println!("{:?}", query);
+    let _messages = vec![
+        log,
+        session_open,
+        session_close,
+        session_register,
+        publish,
+        subscribe,
+    ];
 }
