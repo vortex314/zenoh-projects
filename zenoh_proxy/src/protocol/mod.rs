@@ -1,4 +1,47 @@
-use minicbor::{Decode, Encode};
+use minicbor::{encode::write::EndOfSlice, Decode, Encode,Encoder,Decoder };
+use log::info;
+use crc::CRC_16_IBM_SDLC;
+use crc::Crc;
+use std::{cell::RefCell, rc::Rc};
+
+
+struct VecWriter {
+    buffer: Vec<u8>,
+}
+
+impl VecWriter {
+    fn new() -> Self {
+        VecWriter { buffer: Vec::new() }
+    }
+
+    fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    fn to_bytes(&self) -> &[u8] {
+        self.buffer.as_slice()
+    }
+
+    fn push(&mut self, data: u8) {
+        self.buffer.push(data);
+    }
+
+    fn to_vec(&self) -> Vec<u8> {
+        self.buffer.to_vec()
+    }
+
+    fn clear(&mut self) {
+        self.buffer.clear();
+    }
+}
+impl minicbor::encode::Write for VecWriter {
+    type Error = EndOfSlice;
+    // Required method
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
+        self.buffer.extend_from_slice(buf);
+        Ok(())
+    }
+}
 
 type Id = u16;
 
@@ -220,4 +263,76 @@ fn test() {
         publish,
         subscribe,
     ];
+}
+
+
+pub fn make_frame(msg: Message) -> Result<Vec<u8>, String> {
+    let mut buffer = VecWriter::new();
+    let mut encoder = Encoder::new(&mut buffer);
+    let mut ctx = 1;
+    let _ = msg.encode(&mut encoder, &mut ctx);
+    info!("Encoded cbor : {:02X?}", buffer.to_bytes());
+    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+    let crc = crc16.checksum(&buffer.to_bytes());
+    info!("CRC : {:04X}", crc);
+    buffer.push((crc & 0xFF) as u8);
+    buffer.push(((crc >> 8) & 0xFF) as u8);
+    let mut cobs_buffer = [0; 256];
+    let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
+    let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
+    let size = cobs_encoder.finalize().unwrap();
+    buffer.push(0);
+    info!("COBS : {:02X?}", &cobs_buffer[0..(size+1)]);
+    Ok(cobs_buffer[0..size+1].to_vec())
+}
+
+pub fn decode_frame(frame_bytes: Vec<u8>) -> Result<Message, String> {
+    if frame_bytes.len() < 2 {
+        return Err("Frame too short".to_string());
+    }
+    let mut cobs_output = [0; 256];
+    let mut cobs_decoder = cobs::CobsDecoder::new(&mut cobs_output);
+    let res = cobs_decoder.push(&frame_bytes);
+    match res {
+        Ok(offset) => {
+            match offset {
+                None => {
+                    return Err("COBS more data needed.".to_string());
+                },
+                Some((n, m)) => {
+                    if m != frame_bytes.len() {
+                        return Err("COBS decoding error".to_string());
+                    }
+                    let bytes = cobs_output[0..n].to_vec();
+                    info!("Decoded : {:02X?}", bytes);
+
+                    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+                    let crc = crc16.checksum(&bytes[0..(bytes.len() - 2)]);
+                    let crc_received =
+                        (bytes[bytes.len() - 1] as u16) << 8 | bytes[bytes.len() - 2] as u16;
+                    if crc != crc_received {
+                        info!("CRC error : {:04X} != {:04X}", crc, crc_received);
+                        return Err("CRC error".to_string());
+                    }
+
+                    let mut decoder = minicbor::decode::Decoder::new(&bytes);
+                    let mut ctx = 1;
+                    let msg = Message::decode(&mut decoder, &mut ctx).unwrap();
+                    Ok(msg)
+                }
+            }
+        },
+        Err(j) => {
+            info!("COBS decoding error : {:?}", j);
+            Err("COBS decoding error".to_string())
+        },
+    }
+}
+
+fn encode_log() -> () {
+    let log_msg = Message::new_log("Hello, World!");
+    let bytes = make_frame(log_msg).unwrap();
+    info!("Encoded : {:02X?}", bytes);
+    let _msg = decode_frame(bytes).unwrap();
+    info!("Decoded : {:?}", _msg);
 }
