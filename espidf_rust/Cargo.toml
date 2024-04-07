@@ -25,12 +25,11 @@ embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.48", default-features = false }
+esp-idf-svc = { version = "0.48", default-features = false ,features = ["critical-section"]}
 esp-backtrace = { version = "0.11.1", default-features = false,features =["esp32","println"] }
 esp-println = { version = "0.9.1", default-features = false,features =["uart"] }
-esp32-hal = { version = "0.18.1", default-features = false,features =["debug"] }
-esp-hal-common = { version = "0.15.0", default-features = false,features =["xtal-40mhz"] }
-critical-section = { version = "1.1.2", default-features = false,features =["std"] }
+esp-hal-common = { version = "0.15.0", default-features = false,features =["xtal-40mhz","esp32","xtensa"] }
+critical-section = { version = "1.1.2" ,features = ["std"] }
 minicbor = { version = "0.21.1", features=["derive","std"] }
 cobs={ version = "0.2.3", default_features=false,features = [] }
 crc = { version = "3.0.1", features = [] }
