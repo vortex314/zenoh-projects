@@ -1,38 +1,18 @@
-[build]
-target = "xtensa-esp32-espidf"
-
-[target.xtensa-esp32-espidf]
-linker = "ldproxy"
-# runner = "espflash --monitor" # Select this runner for espflash v1.x.x
+[target.xtensa-esp32-none-elf]
 runner = "espflash  --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
-rustflags = [ "--cfg",  "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
-
-[unstable]
-build-std = ["std", "panic_abort"]
 
 [env]
-MCU="esp32"
-# Note: this variable is not used by the pio builder (`cargo build --features pio`)
-ESP_IDF_VERSION = "v5.1.3"
-
-[target.'cfg(target_arch = "xtensa")']
-runner    = "espflash flash --monitor"
+ESP_LOGLEVEL="INFO"
+[build]
 rustflags = [
-  # GNU LD
-  "-C", "link-arg=-Wl,-Tlinkall.x",
-  "-C", "link-arg=-nostartfiles",
+  "-C", "link-arg=-Tlinkall.x",
 
-  # LLD
-  # "-C", "link-arg=-Tlinkall.x",
-  # "-C", "linker=rust-lld",
+  "-C", "link-arg=-Trom_functions.x",
+
+  "-C", "link-arg=-nostartfiles",
 ]
 
-[alias]
-esp32   = "run --release --features=esp32   --target=xtensa-esp32-none-elf"
-esp32c2 = "run --release --features=esp32c2 --target=riscv32imc-unknown-none-elf"
-esp32c3 = "run --release --features=esp32c3 --target=riscv32imc-unknown-none-elf"
-esp32c6 = "run --release --features=esp32c6 --target=riscv32imac-unknown-none-elf"
-esp32h2 = "run --release --features=esp32h2 --target=riscv32imac-unknown-none-elf"
-esp32p4 = "run --release --features=esp32p4 --target=riscv32imafc-unknown-none-elf"
-esp32s2 = "run --release --features=esp32s2 --target=xtensa-esp32s2-none-elf"
-esp32s3 = "run --release --features=esp32s3 --target=xtensa-esp32s3-none-elf"
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["alloc", "core"]
