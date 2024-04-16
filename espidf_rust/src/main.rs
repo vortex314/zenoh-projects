@@ -1,12 +1,17 @@
 #![no_std]
 #![no_main]
+#![feature(alloc)]
 #![feature(type_alias_impl_trait)]
+use core::mem::MaybeUninit;
+
+extern crate alloc;
+
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
-
 use embassy_executor::Spawner;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, pipe::Pipe};
+use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
     embassy,
@@ -15,7 +20,11 @@ use esp_hal::{
     uart::{config::AtCmdConfig, UartRx, UartTx},
     Uart,
 };
-use esp_backtrace as _;
+use log::info;
+
+mod protocol;
+
+use protocol::Message;
 
 // Read Buffer Size
 const READ_BUF_SIZE: usize = 64;
@@ -43,6 +52,10 @@ async fn uart_writer(mut tx: UartTx<'static, UART0>) {
             .unwrap();
         // Flush transmit buffer
         embedded_io_async::Write::flush(&mut tx).await.unwrap();
+        let log_msg = Message::new_log("Hello world!");
+        let bytes = protocol::make_frame(log_msg).unwrap();
+        embedded_io_async::Write::write(&mut tx,bytes.as_slice()).await.unwrap();
+       // let decoded = protocol::decode_frame(bytes).unwrap();
     }
 }
 
@@ -63,8 +76,18 @@ async fn uart_reader(mut rx: UartRx<'static, UART0>) {
     }
 }
 
+fn init_heap() {
+    const HEAP_SIZE: usize = 32 * 1024;
+    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+
+    unsafe {
+        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+    }
+}
+
 #[main]
 async fn main(spawner: Spawner) {
+    init_heap();
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
@@ -85,4 +108,5 @@ async fn main(spawner: Spawner) {
     // Spawn Tx and Rx tasks
     spawner.spawn(uart_reader(rx)).ok();
     spawner.spawn(uart_writer(tx)).ok();
+
 }

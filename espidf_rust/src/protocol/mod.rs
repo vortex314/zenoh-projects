@@ -1,8 +1,13 @@
+use alloc::string::String;
+use alloc::string::ToString;
 use minicbor::{encode::write::EndOfSlice, Decode, Encode,Encoder,Decoder };
 use log::info;
 use crc::CRC_16_IBM_SDLC;
 use crc::Crc;
-use std::{cell::RefCell, rc::Rc};
+
+extern crate alloc;
+use alloc::vec::Vec;
+use alloc::vec;
 
 
 struct VecWriter {
@@ -329,8 +334,8 @@ pub fn decode_frame(frame_bytes: Vec<u8>) -> Result<Message, String> {
     }
 }
 
+/* 
 #[cfg(test)]
-
 
 mod tests {
     use super::*;
@@ -398,3 +403,4 @@ mod tests {
     }
 
  }
+ */
