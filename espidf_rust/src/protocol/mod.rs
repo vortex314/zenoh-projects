@@ -291,6 +291,67 @@ pub fn make_frame(msg: Message) -> Result<Vec<u8>, String> {
     Ok(cobs_buffer[0..size+1].to_vec())
 }
 
+
+pub struct MessageDecoder<'a> {
+    buffer: Vec<u8>,
+    cobs_buffer: [u8; 256],
+    cobs_decoder: cobs::CobsDecoder<'a>,
+    crc16: Crc<u16>,
+}
+
+ impl<'a> MessageDecoder<'a> {
+    pub fn new() -> Self {
+        MessageDecoder {
+            buffer: Vec::new(),
+            cobs_buffer: [0; 256],
+            cobs_decoder: cobs::CobsDecoder::new(&mut [0; 256]),
+            crc16: Crc::<u16>::new(&CRC_16_IBM_SDLC),
+        }
+    }
+
+    pub fn decode(&mut self, data: &[u8]) -> Vec<Message> {
+        let v = Vec::new();
+        let mut res = self.cobs_decoder.push(data);
+        loop {
+            match res {
+                Ok(offset) => {
+                    match offset {
+                        None => {
+                            return v;
+                        },
+                        Some((n, m)) => {
+                            if m != self.buffer.len() {
+                                info!("COBS decoding error");
+                                return v;
+                            }
+                            let bytes = self.cobs_buffer[0..n].to_vec();
+                            info!("Decoded : {:02X?}", bytes);
+
+                            let crc = self.crc16.checksum(&bytes[0..(bytes.len() - 2)]);
+                            let crc_received =
+                                (bytes[bytes.len() - 1] as u16) << 8 | bytes[bytes.len() - 2] as u16;
+                            if crc != crc_received {
+                                info!("CRC error : {:04X} != {:04X}", crc, crc_received);
+                                return v;
+                            }
+
+                            let mut decoder = minicbor::decode::Decoder::new(&bytes);
+                            let mut ctx = 1;
+                            let msg = Message::decode(&mut decoder, &mut ctx).unwrap();
+                            v.push(msg)
+                        }
+                    }
+                },
+                Err(j) => {
+                    info!("COBS decoding error : {:?}", j);
+                    return v;
+                },
+            }
+        }
+    }
+
+}
+
 pub fn decode_frame(frame_bytes: Vec<u8>) -> Result<Message, String> {
     if frame_bytes.len() < 2 {
         return Err("Frame too short".to_string());

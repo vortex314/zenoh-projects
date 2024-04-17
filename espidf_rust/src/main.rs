@@ -2,15 +2,19 @@
 #![no_main]
 #![feature(alloc)]
 #![feature(type_alias_impl_trait)]
-use core::mem::MaybeUninit;
+use core::{cell::RefCell, mem::MaybeUninit};
 
 extern crate alloc;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
+use alloc::rc::Rc;
 use embassy_executor::Spawner;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, pipe::Pipe};
+use embassy_sync::{
+    blocking_mutex::raw::{ NoopRawMutex},
+    channel::{Channel},
+};
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -26,64 +30,60 @@ mod protocol;
 
 use protocol::Message;
 
-// Read Buffer Size
-const READ_BUF_SIZE: usize = 64;
-
-// End of Transmission Character (Carrige Return -> 13 or 0x0D in ASCII)
-const AT_CMD: u8 = 0x0D;
-
-// Declare Pipe sync primitive to share data among Tx and Rx tasks
-static DATAPIPE: Pipe<CriticalSectionRawMutex, READ_BUF_SIZE> = Pipe::new();
+const MTU: usize = 1024;
 
 #[embassy_executor::task]
-async fn uart_writer(mut tx: UartTx<'static, UART0>) {
-    // Declare write buffer to store Tx characters
-    let mut wbuf: [u8; READ_BUF_SIZE] = [0u8; READ_BUF_SIZE];
+async fn uart_writer(
+    mut tx: UartTx<'static, UART0>,
+    receiver: embassy_sync::channel::Receiver<'static, NoopRawMutex, Message, 10>,
+) {
     loop {
-        // Read characters from pipe into write buffer
-        DATAPIPE.read(&mut wbuf).await;
-        // Transmit/echo buffer contents over UART
-        embedded_io_async::Write::write(&mut tx, &wbuf)
-            .await
-            .unwrap();
-        // Transmit a new line
-        embedded_io_async::Write::write(&mut tx, &[0x0D, 0x0A])
-            .await
-            .unwrap();
-        // Flush transmit buffer
-        embedded_io_async::Write::flush(&mut tx).await.unwrap();
-        let log_msg = Message::new_log("Hello world!");
-        let bytes = protocol::make_frame(log_msg).unwrap();
-        embedded_io_async::Write::write(&mut tx,bytes.as_slice()).await.unwrap();
-       // let decoded = protocol::decode_frame(bytes).unwrap();
+        let msg = receiver.receive().await;
+        let bytes = protocol::make_frame(msg).unwrap();
+        embedded_io_async::Write::write(&mut tx, bytes.as_slice()).await;
+        embedded_io_async::Write::flush(&mut tx).await;
     }
 }
 
 #[embassy_executor::task]
-async fn uart_reader(mut rx: UartRx<'static, UART0>) {
+async fn uart_reader(
+    mut rx: UartRx<'static, UART0>,
+    sender: embassy_sync::channel::Sender<'static, NoopRawMutex, Message, 10>,
+) {
     // Declare read buffer to store Rx characters
-    let mut rbuf: [u8; READ_BUF_SIZE] = [0u8; READ_BUF_SIZE];
+    const READ_BUF_SIZE: usize = 1024;
+    let mut rbuf = [0u8; READ_BUF_SIZE];
+
+    let mut message_decoder = protocol::MessageDecoder::new();
     loop {
-        // Read characters from UART into read buffer until EOT
         let r = embedded_io_async::Read::read(&mut rx, &mut rbuf[0..]).await;
         match r {
-            Ok(len) => {
-                // If read succeeds then write recieved characters to pipe
-                DATAPIPE.write_all(&rbuf[..len]).await;
+            Ok(cnt) => {
+                let v = message_decoder.decode(&mut rbuf);
+                // Read characters from UART into read buffer until EOT
+                for msg in v {
+                    sender.send(msg).await;
+                }
             }
-            Err(e) => esp_println::println!("RX Error: {:?}", e),
+            Err(_) => {
+                continue;
+            }
         }
     }
 }
 
 fn init_heap() {
-    const HEAP_SIZE: usize = 32 * 1024;
+    const HEAP_SIZE: usize = 100 * 1024;
     static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
 
     unsafe {
         ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
     }
 }
+
+const READ_BUF_SIZE:usize=1024;
+
+// static uart_channel_in:Rc<RefCell<Option<Channel<NoopRawMutex,Message,10>>>>=Rc::new(RefCell::new(None));
 
 #[main]
 async fn main(spawner: Spawner) {
@@ -98,15 +98,17 @@ async fn main(spawner: Spawner) {
 
     // Initialize and configure UART0
     let mut uart0 = Uart::new(peripherals.UART0, &clocks);
-    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
+//    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
     uart0
         .set_rx_fifo_full_threshold(READ_BUF_SIZE as u16)
         .unwrap();
     // Split UART0 to create seperate Tx and Rx handles
     let (tx, rx) = uart0.split();
+    let uart_channel_out = Channel::<NoopRawMutex,Message,10>::new(); 
+    let uart_channel_in = Channel::<NoopRawMutex,Message,10>::new();
 
     // Spawn Tx and Rx tasks
-    spawner.spawn(uart_reader(rx)).ok();
-    spawner.spawn(uart_writer(tx)).ok();
-
+    spawner.spawn(uart_reader(rx,uart_channel_in.sender())).ok();
+    spawner.spawn(uart_writer(tx,uart_channel_out.receiver())).ok();
+    loop {};
 }
