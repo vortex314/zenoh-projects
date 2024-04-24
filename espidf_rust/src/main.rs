@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
-#![feature(alloc)]
 #![feature(type_alias_impl_trait)]
+#![allow(unused_imports)]
 use core::{cell::RefCell, mem::MaybeUninit};
 
 extern crate alloc;
@@ -32,13 +32,13 @@ use protocol::Message;
 
 const MTU: usize = 1024;
 
-#[embassy_executor::task]
+#[embassy_executor::task] 
 async fn uart_writer(
     mut tx: UartTx<'static, UART0>,
-    receiver: embassy_sync::channel::Receiver<'static, NoopRawMutex, Message, 10>,
+    channel: &'_ embassy_sync::channel::Channel<NoopRawMutex, Message, 10>,
 ) {
     loop {
-        let msg = receiver.receive().await;
+        let msg = channel.receiver().receive().await;
         let bytes = protocol::make_frame(msg).unwrap();
         embedded_io_async::Write::write(&mut tx, bytes.as_slice()).await;
         embedded_io_async::Write::flush(&mut tx).await;
@@ -48,7 +48,7 @@ async fn uart_writer(
 #[embassy_executor::task]
 async fn uart_reader(
     mut rx: UartRx<'static, UART0>,
-    sender: embassy_sync::channel::Sender<'static, NoopRawMutex, Message, 10>,
+    channel: & embassy_sync::channel::Channel< NoopRawMutex, Message, 10>,
 ) {
     // Declare read buffer to store Rx characters
     const READ_BUF_SIZE: usize = 1024;
@@ -58,11 +58,11 @@ async fn uart_reader(
     loop {
         let r = embedded_io_async::Read::read(&mut rx, &mut rbuf[0..]).await;
         match r {
-            Ok(cnt) => {
+            Ok(_cnt) => {
                 let v = message_decoder.decode(&mut rbuf);
                 // Read characters from UART into read buffer until EOT
                 for msg in v {
-                    sender.send(msg).await;
+                    channel.sender().send(msg).await;
                 }
             }
             Err(_) => {
@@ -108,7 +108,7 @@ async fn main(spawner: Spawner) {
     let uart_channel_in = Channel::<NoopRawMutex,Message,10>::new();
 
     // Spawn Tx and Rx tasks
-    spawner.spawn(uart_reader(rx,uart_channel_in.sender())).ok();
-    spawner.spawn(uart_writer(tx,uart_channel_out.receiver())).ok();
+    spawner.spawn(uart_reader(rx,&uart_channel_in)).ok();
+    spawner.spawn(uart_writer(tx,&uart_channel_out)).ok();
     loop {};
 }
