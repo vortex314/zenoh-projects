@@ -32,6 +32,10 @@ use protocol::Message;
 
 const MTU: usize = 1024;
 
+static TXD_PIPE: Channel<ThreadModeRawMutex, Vec[u8], 5> = Channel::new();
+static RXD_PIPE: Channel<ThreadModeRawMutex, Vec[u8], 5> = Channel::new();
+
+
 #[embassy_executor::task] 
 async fn uart_writer(
     mut tx: UartTx<'static, UART0>,
