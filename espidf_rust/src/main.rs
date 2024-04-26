@@ -32,27 +32,27 @@ use protocol::Message;
 
 const MTU: usize = 1024;
 
-static TXD_PIPE: Channel<ThreadModeRawMutex, Vec[u8], 5> = Channel::new();
-static RXD_PIPE: Channel<ThreadModeRawMutex, Vec[u8], 5> = Channel::new();
+static TXD_MSG: Channel<ThreadModeRawMutex, Message, 5> = Channel::new();
+static RXD_MSG: Channel<ThreadModeRawMutex, Message, 5> = Channel::new();
 
-
+/*
+wait for message to send, encode and send to UART
+*/
 #[embassy_executor::task] 
-async fn uart_writer(
-    mut tx: UartTx<'static, UART0>,
-    channel: &'_ embassy_sync::channel::Channel<NoopRawMutex, Message, 10>,
-) {
+async fn uart_writer(mut tx: UartTx<'static, UART0>,) {
     loop {
-        let msg = channel.receiver().receive().await;
+        let msg = TXD_MSG.receive().await;
         let bytes = protocol::make_frame(msg).unwrap();
         embedded_io_async::Write::write(&mut tx, bytes.as_slice()).await;
         embedded_io_async::Write::flush(&mut tx).await;
     }
 }
-
+/*
+handle UART input, convert to message and send to channel
+*/
 #[embassy_executor::task]
 async fn uart_reader(
     mut rx: UartRx<'static, UART0>,
-    channel: & embassy_sync::channel::Channel< NoopRawMutex, Message, 10>,
 ) {
     // Declare read buffer to store Rx characters
     const READ_BUF_SIZE: usize = 1024;
@@ -66,7 +66,7 @@ async fn uart_reader(
                 let v = message_decoder.decode(&mut rbuf);
                 // Read characters from UART into read buffer until EOT
                 for msg in v {
-                    channel.sender().send(msg).await;
+                    RXD_MSG.send(msg).await;
                 }
             }
             Err(_) => {
@@ -112,7 +112,7 @@ async fn main(spawner: Spawner) {
     let uart_channel_in = Channel::<NoopRawMutex,Message,10>::new();
 
     // Spawn Tx and Rx tasks
-    spawner.spawn(uart_reader(rx,&uart_channel_in)).ok();
-    spawner.spawn(uart_writer(tx,&uart_channel_out)).ok();
+    spawner.spawn(uart_reader(rx)).ok();
+    spawner.spawn(uart_writer(tx)).ok();
     loop {};
 }
