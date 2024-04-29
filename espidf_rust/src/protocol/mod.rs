@@ -1,13 +1,69 @@
+use alloc::collections::VecDeque;
 use alloc::string::String;
 use alloc::string::ToString;
-use minicbor::{encode::write::EndOfSlice, Decode, Encode,Encoder,Decoder };
-use log::info;
-use crc::CRC_16_IBM_SDLC;
+use cobs::CobsDecoder;
 use crc::Crc;
+use crc::CRC_16_IBM_SDLC;
+use log::info;
+use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
+
+const MTU_SIZE: usize = 1023;
+const MAX_FRAME_SIZE: usize = MTU_SIZE + 2;
+/* 
+https://github.com/ty4tw/MQTT-SN
+*/
+#[derive(Encode, Decode, Debug)]
+#[cbor(array)]
+pub enum ProxyMessage {
+    #[n(0)]
+    Connect { #[n(0)] protocol_id: u8, #[n(1)] duration: u16, #[n(2)] client_id: String,},
+    #[n(1)]
+    ConnAck { #[n(0)] return_code: u8,},
+    #[n(2)]
+    WillTopicReq,
+    #[n(3)]
+    WillTopic { #[n(0)] topic: String,},
+    #[n(4)]
+    WillMsgReq,
+    #[n(5)]
+    WillMsg { #[n(0)] message: String,},
+    #[n(6)]
+    Register { #[n(0)] topic_id: u16, #[n(1)] topic_name: String,},
+    #[n(7)]
+    RegAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    #[n(8)]
+    Publish { #[n(0)] topic_id: u16, #[n(1)] message: String,},
+    #[n(9)]
+    PubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    #[n(10)]
+    Subscribe { #[n(0)] topic_id: u16, #[n(1)] qos: u8,},
+    #[n(11)]
+    SubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    #[n(12)]
+    Unsubscribe { #[n(0)] topic_id: u16,},
+    #[n(13)]
+    UnsubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    #[n(14)]
+    PingReq,
+    #[n(15)]
+    PingResp,
+    #[n(16)]
+    Disconnect,
+    #[n(17)]
+    WillTopicUpd,
+    #[n(18)]
+    WillMsgUpd,
+    #[n(19)]
+    Log { #[n(0)] timestamp: u64, #[n(1)] message: String, #[n(2)] level: Option<LogLevel>, #[n(3)] component: Option<String>, #[n(4)] file: Option<String>, #[n(5)] line: Option<u32>,},
+
+
+    }
+   
+
 
 
 struct VecWriter {
@@ -50,7 +106,7 @@ impl minicbor::encode::Write for VecWriter {
 
 type Id = u16;
 
-#[derive(Encode, Decode,Debug)]
+#[derive(Encode, Decode, Debug)]
 #[cbor(index_only)]
 pub enum LogLevel {
     #[n(0)]
@@ -65,7 +121,7 @@ pub enum LogLevel {
     Error,
 }
 
-#[derive(Encode, Decode,Debug)]
+#[derive(Encode, Decode, Debug)]
 #[cbor(array)]
 
 pub struct Log {
@@ -82,82 +138,9 @@ pub struct Log {
     #[n(5)]
     pub line: Option<u32>,
 }
-#[derive(Encode, Decode,Debug,PartialEq)]
-#[cbor(index_only)]
 
-pub enum Kind {
-    #[n(0)]
-    Publisher = 0,
-    #[n(1)]
-    Subscriber,
-    #[n(2)]
-    Queryable,
-}
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub struct SessionOpen {
-    #[n(0)]
-    pub mtu: u32,
-    #[n(1)]
-    pub mss: u32,
-    #[n(2)]
-    pub qos: u8,
-    #[n(3)]
-    pub client_id: Option<String>,
-}
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub struct SessionClose {
-    #[n(0)]
-    pub reason: Option<String>,
-}
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub struct SessionRegister {
-    #[n(0)]
-    pub name: String,
-    #[n(1)]
-    pub id: Id,
-    #[n(2)]
-    pub kind: Option<Kind>,
-}
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub struct Publish {
-    #[n(0)]
-    pub topic: Id,
-    #[n(1)]
-    pub payload: Vec<u8>,
-}
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub struct Subscribe {
-    #[n(0)]
-    pub topic: String,
-}
 
-struct Query {
-    pub dst_topic: Id,
-    pub src_topic: Id,
-    pub payload: Vec<u8>,
-}
 
-#[derive(Encode, Decode,Debug)]
-#[cbor(array)]
-pub enum Message {
-    #[n(0)]
-    Log(#[n(0)] Log),
-    #[n(1)]
-    SessionOpen(#[n(1)] SessionOpen),
-    #[n(2)]
-    SessionClose(#[n(2)] SessionClose),
-    #[n(3)]
-    SessionRegister(#[n(3)] SessionRegister),
-    #[n(4)]
-    Publish(#[n(4)] Publish),
-    #[n(5)]
-    Subscribe(#[n(5)] Subscribe),
-}
 
 impl Log {
     pub fn new(message: &str) -> Log {
@@ -172,106 +155,17 @@ impl Log {
     }
 }
 
-impl SessionOpen {
-    pub fn new(mtu: u32, mss: u32) -> SessionOpen {
-        SessionOpen {
-            mtu,
-            mss,
-            qos: 0,
-            client_id: None,
-        }
-    }
-}
-
-impl SessionClose {
-    pub fn new(reason: &str) -> SessionClose {
-        SessionClose {
-            reason: Some(reason.to_string()),
-        }
-    }
-}
-
-impl SessionRegister {
-    pub fn new(name: &str, id: Id, kind: Kind) -> SessionRegister {
-        SessionRegister {
-            name: name.to_string(),
-            id: id,
-            kind: Some(kind),
-        }
-    }
-}
-
-impl Publish {
-    pub fn new(topic: Id, payload: Vec<u8>) -> Publish {
-        Publish {
-            topic: topic,
-            payload: payload,
-        }
-    }
-}
-
-impl Subscribe {
-    pub fn new(topic: String) -> Subscribe {
-        Subscribe { topic }
-    }
-}
-
-impl Query {
-    pub fn new(dst_topic: Id, src_topic: Id, payload: Vec<u8>) -> Query {
-        Query {
-            dst_topic,
-            src_topic,
-            payload,
-        }
-    }
-}
-
-impl Message {
-    pub fn new_log(message: &str) -> Message {
-        Message::Log(Log::new(message))
-    }
-
-    pub fn new_session_open(mtu: u32, mss: u32) -> Message {
-        Message::SessionOpen(SessionOpen::new(mtu, mss))
-    }
-
-    pub fn new_session_close(reason: &str) -> Message {
-        Message::SessionClose(SessionClose::new(reason))
-    }
-
-    pub fn new_session_register(name: &str, id: Id, kind: Kind) -> Message {
-        Message::SessionRegister(SessionRegister::new(name, id, kind))
-    }
-
-    pub fn new_publish(topic: Id, payload: Vec<u8>) -> Message {
-        Message::Publish(Publish::new(topic, payload))
-    }
-
-    pub fn new_subscribe(topic: String) -> Message {
-        Message::Subscribe(Subscribe::new(topic))
-    }
-}
-
-fn test() {
-    let log = Message::new_log("Hello, World!");
-    let session_open = Message::new_session_open(1500, 1460);
-    let session_close = Message::new_session_close("Goodbye, World!");
-    let session_register = Message::new_session_register("Hello, World!", 0, Kind::Publisher);
-    let publish = Message::new_publish(0, vec![0, 1, 2, 3, 4]);
-    let subscribe = Message::new_subscribe("src/*".to_string());
-
-    let _messages = vec![
-        log,
-        session_open,
-        session_close,
-        session_register,
-        publish,
-        subscribe,
-    ];
-}
 
 
-pub fn make_frame(msg: Message) -> Result<Vec<u8>, String> {
+
+
+
+
+
+
+
+
+pub fn make_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     let mut buffer = VecWriter::new();
     let mut encoder = Encoder::new(&mut buffer);
     let mut ctx = 1;
@@ -287,181 +181,67 @@ pub fn make_frame(msg: Message) -> Result<Vec<u8>, String> {
     let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
     let size = cobs_encoder.finalize().unwrap();
     buffer.push(0);
-    info!("COBS : {:02X?}", &cobs_buffer[0..(size+1)]);
-    Ok(cobs_buffer[0..size+1].to_vec())
+    info!("COBS : {:02X?}", &cobs_buffer[0..(size + 1)]);
+    Ok(cobs_buffer[0..size + 1].to_vec())
 }
 
+fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
+    let mut output = [0; MTU_SIZE + 2];
+    let mut decoder = CobsDecoder::new(&mut output);
+    let res = decoder.push(&queue);
 
-pub struct MessageDecoder<'a> {
-    buffer: Vec<u8>,
-    cobs_buffer: [u8; 256],
-    cobs_decoder: cobs::CobsDecoder<'a>,
-    crc16: Crc<u16>,
-}
+    drop(decoder);
 
- impl<'a> MessageDecoder<'a> {
-    pub fn new() -> Self {
-        MessageDecoder {
-            buffer: Vec::new(),
-            cobs_buffer: [0; 256],
-            cobs_decoder: cobs::CobsDecoder::new(&mut [0; 256]),
-            crc16: Crc::<u16>::new(&CRC_16_IBM_SDLC),
-        }
-    }
-
-    pub fn decode(&mut self, data: &[u8]) -> Vec<Message> {
-        let v = Vec::new();
-        let mut res = self.cobs_decoder.push(data);
-        loop {
-            match res {
-                Ok(offset) => {
-                    match offset {
-                        None => {
-                            return v;
-                        },
-                        Some((n, m)) => {
-                            if m != self.buffer.len() {
-                                info!("COBS decoding error");
-                                return v;
-                            }
-                            let bytes = self.cobs_buffer[0..n].to_vec();
-                            info!("Decoded : {:02X?}", bytes);
-
-                            let crc = self.crc16.checksum(&bytes[0..(bytes.len() - 2)]);
-                            let crc_received =
-                                (bytes[bytes.len() - 1] as u16) << 8 | bytes[bytes.len() - 2] as u16;
-                            if crc != crc_received {
-                                info!("CRC error : {:04X} != {:04X}", crc, crc_received);
-                                return v;
-                            }
-
-                            let mut decoder = minicbor::decode::Decoder::new(&bytes);
-                            let mut ctx = 1;
-                            let msg = Message::decode(&mut decoder, &mut ctx).unwrap();
-                            v.push(msg)
-                        }
-                    }
-                },
-                Err(j) => {
-                    info!("COBS decoding error : {:?}", j);
-                    return v;
-                },
-            }
-        }
-    }
-
-}
-
-pub fn decode_frame(frame_bytes: Vec<u8>) -> Result<Message, String> {
-    if frame_bytes.len() < 2 {
-        return Err("Frame too short".to_string());
-    }
-    let mut cobs_output = [0; 256];
-    let mut cobs_decoder = cobs::CobsDecoder::new(&mut cobs_output);
-    let res = cobs_decoder.push(&frame_bytes);
     match res {
-        Ok(offset) => {
-            match offset {
-                None => {
-                    return Err("COBS more data needed.".to_string());
-                },
-                Some((n, m)) => {
-                    if m != frame_bytes.len() {
-                        return Err("COBS decoding error".to_string());
-                    }
-                    let bytes = cobs_output[0..n].to_vec();
-                    info!("Decoded : {:02X?}", bytes);
-
-                    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
-                    let crc = crc16.checksum(&bytes[0..(bytes.len() - 2)]);
-                    let crc_received =
-                        (bytes[bytes.len() - 1] as u16) << 8 | bytes[bytes.len() - 2] as u16;
-                    if crc != crc_received {
-                        info!("CRC error : {:04X} != {:04X}", crc, crc_received);
-                        return Err("CRC error".to_string());
-                    }
-
-                    let mut decoder = minicbor::decode::Decoder::new(&bytes);
-                    let mut ctx = 1;
-                    let msg = Message::decode(&mut decoder, &mut ctx).unwrap();
-                    Ok(msg)
-                }
+        Ok(None) => {
+            return None;
+        }
+        Ok(Some((output_size, _input_size))) => {
+            let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+            let crc = crc16.checksum(&output[0..(output_size - 2)]);
+            let crc_received =
+                (output[output_size - 1] as u16) << 8 | output[output_size - 2] as u16;
+            if crc != crc_received {
+                info!("CRC error : {:04X} != {:04X}", crc, crc_received);
+                return None;
             }
-        },
+
+            let mut cbor_decoder = minicbor::decode::Decoder::new(&output[0..(output_size - 2)]);
+            let mut ctx = 1;
+            let msg = ProxyMessage::decode(&mut cbor_decoder, &mut ctx).unwrap();
+            return Some(msg);
+        }
         Err(j) => {
             info!("COBS decoding error : {:?}", j);
-            Err("COBS decoding error".to_string())
-        },
+            return None;
+        }
     }
 }
 
-/* 
-#[cfg(test)]
+pub struct MessageDecoder {
+    queue: Vec<u8>,
+}
 
-mod tests {
-    use super::*;
-    #[test]
-    fn test_log() {
-        let log = Message::new_log("Hello, World!");
-        let bytes = make_frame(log).unwrap();
-        let decoded = decode_frame(bytes).unwrap();
-        match decoded {
-            Message::Log(log) => {
-                assert_eq!(log.message, "Hello, World!");
-            },
-            _ => {
-                assert!(false);
-            },
-        }
+impl MessageDecoder {
+    pub fn new() -> Self {
+        Self { queue: Vec::new() }
     }
 
-    #[test]
-    fn test_session_open() {
-        let session_open = Message::new_session_open(1500, 1460);
-        let bytes = make_frame(session_open).unwrap();
-        let decoded = decode_frame(bytes).unwrap();
-        match decoded {
-            Message::SessionOpen(session_open) => {
-                assert_eq!(session_open.mtu, 1500);
-                assert_eq!(session_open.mss, 1460);
-            },
-            _ => {
-                assert!(false);
-            },
+    pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
+        let mut messages_found = Vec::new();
+        for byte in data {
+            self.queue.push(*byte);
+            if *byte == 0 {
+                // decode cobs from frame
+                let msg = decode_frame(&self.queue);
+                msg.into_iter().for_each(|m| {
+                    messages_found.push(m);
+                });
+                self.queue.clear();
+            }
         }
+        messages_found
     }
+}
 
-    #[test]
-    fn test_session_close() {
-        let session_close = Message::new_session_close("Goodbye, World!");
-        let bytes = make_frame(session_close).unwrap();
-        let decoded = decode_frame(bytes).unwrap();
-        match decoded {
-            Message::SessionClose(session_close) => {
-                assert_eq!(session_close.reason.unwrap(), "Goodbye, World!");
-            },
-            _ => {
-                assert!(false);
-            },
-        }
-    }
 
-    #[test]
-    fn test_session_register() {
-        let session_register = Message::new_session_register("Hello, World!", 0, Kind::Publisher);
-        let bytes = make_frame(session_register).unwrap();
-        let decoded = decode_frame(bytes).unwrap();
-        match decoded {
-            Message::SessionRegister(session_register) => {
-                assert_eq!(session_register.name, "Hello, World!");
-                assert_eq!(session_register.id, 0);
-                assert_eq!(session_register.kind.unwrap(), Kind::Publisher);
-            },
-            _ => {
-                assert!(false);
-            },
-        }
-    }
-
- }
- */

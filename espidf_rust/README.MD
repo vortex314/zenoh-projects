@@ -11,3 +11,7 @@ cd esp-idf
 ./install.sh
 ```
 
+## MQTT-SN protocol
+https://groups.oasis-open.org/higherlogic/ws/public/download/66091/MQTT-SN_spec_v1.2.pdf
+https://github.com/ty4tw/MQTT-SN
+
