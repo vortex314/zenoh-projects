@@ -4,7 +4,7 @@ use alloc::string::ToString;
 use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
-use log::info;
+use log::{debug,info};
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 extern crate alloc;
@@ -157,23 +157,15 @@ impl Log {
 
 
 
-
-
-
-
-
-
-
-
-pub fn make_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
+pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     let mut buffer = VecWriter::new();
     let mut encoder = Encoder::new(&mut buffer);
     let mut ctx = 1;
     let _ = msg.encode(&mut encoder, &mut ctx);
-    info!("Encoded cbor : {:02X?}", buffer.to_bytes());
+    debug!("Encoded cbor : {:02X?}", buffer.to_bytes());
     let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
     let crc = crc16.checksum(&buffer.to_bytes());
-    info!("CRC : {:04X}", crc);
+    debug!("CRC : {:04X}", crc);
     buffer.push((crc & 0xFF) as u8);
     buffer.push(((crc >> 8) & 0xFF) as u8);
     let mut cobs_buffer = [0; 256];
@@ -181,11 +173,11 @@ pub fn make_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
     let size = cobs_encoder.finalize().unwrap();
     buffer.push(0);
-    info!("COBS : {:02X?}", &cobs_buffer[0..(size + 1)]);
+    debug!("COBS : {:02X?}", &cobs_buffer[0..(size + 1)]);
     Ok(cobs_buffer[0..size + 1].to_vec())
 }
 
-fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
+pub fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
     let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue);

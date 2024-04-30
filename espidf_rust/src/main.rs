@@ -48,7 +48,7 @@ async fn uart_writer(mut tx: UartTx<'static, UART0>) {
     loop {
         let msg = TXD_MSG.receive().await;
         info!("Sending message {:?}", msg);
-        let bytes = protocol::make_frame(msg).unwrap();
+        let bytes = protocol::encode_frame(msg).unwrap();
         let _ = embedded_io_async::Write::write(&mut tx, bytes.as_slice()).await;
         let _ = embedded_io_async::Write::flush(&mut tx).await;
     }
@@ -99,7 +99,7 @@ async fn fsm_connection() {
                     client_id: "myClient".to_string(),
                 })
                 .await;
-            RXD_MSG.send(ProxyMessage::ConnAck { return_code:0 }).await;
+//            RXD_MSG.send(ProxyMessage::ConnAck { return_code:0 }).await;
             let result = with_timeout(Duration::from_secs(5), RXD_MSG.receive()).await;
             match result {
                 Ok(msg) => match msg {
@@ -120,6 +120,7 @@ async fn fsm_connection() {
             }
         }
         loop {
+            let mut timeouts = 0;
             // wait for message
             info!("Waiting for message");
             let result = with_timeout(Duration::from_secs(5), RXD_MSG.receive()).await;
@@ -133,6 +134,7 @@ async fn fsm_connection() {
                     }
                 },
                 Err(_) => {
+                    timeouts+=1;
                     TXD_MSG
                         .send(ProxyMessage::PingReq {
                         })

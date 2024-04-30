@@ -1,10 +1,9 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
 use std::sync::Arc;
 
 use chrono::offset;
-use crc::{
-    poly::{CRC_16, CRC_16_ANSI},
-    Crc, CRC_16_IBM_SDLC,
-};
+
 use tokio::sync::Mutex;
 #[allow(unused_imports)]
 use tokio_serial::*;
@@ -15,7 +14,8 @@ use log::{debug, info};
 mod protocol;
 use protocol::*;
 
-
+mod proxy;
+use proxy::*;
 
 // this function will scan for available ports and add them to the shared list
 
@@ -39,6 +39,7 @@ async fn scan_available_ports(
                                 if pattern.matches(&port_info) {
                                     info!("USB port {} : {:?} ", port_info.port_name, usb_info);
                                     active_ports.push(port_info.clone());
+                                    tokio::spawn(port_handler(port_info.clone()));
                                 }
                             });
                         }
@@ -55,7 +56,7 @@ async fn scan_available_ports(
             });
             //drop(active_ports);
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
     }
 }
 struct PortPattern {
@@ -104,11 +105,12 @@ use core::result::Result;
 
 
 
+
 #[tokio::main(worker_threads = 1)]
 async fn main() -> Result<(), Error> {
     logger::init();
-    let log_msg = Message::new_log("Hello world!");
-    let bytes = protocol::make_frame(log_msg).unwrap();
+    let m =  ProxyMessage::ConnAck { return_code: 3 };
+    let _bytes = protocol::encode_frame(m).unwrap();
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
@@ -124,17 +126,6 @@ async fn main() -> Result<(), Error> {
         tokio::spawn(async move { scan_available_ports(a_ports, port_patterns).await });
     // spawn task to read from serial port
 
-    let _port_remover_task = tokio::spawn(async move {
-        loop {
-            let mut active_ports = active_ports.lock().await;
-            info!("Remove port 0");
-            if active_ports.len() > 0 {
-                active_ports.remove(0);
-            };
-            drop(active_ports);
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-        }
-    });
 
     tokio::time::sleep(tokio::time::Duration::from_secs(50)).await;
 
