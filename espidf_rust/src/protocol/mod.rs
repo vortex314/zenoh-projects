@@ -1,52 +1,108 @@
 use alloc::collections::VecDeque;
+use alloc::fmt::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
-use log::{debug,info};
+use log::{debug, info};
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
+use alloc::format;
 
-const MTU_SIZE: usize = 1023;
+pub const MTU_SIZE: usize = 1023;
 const MAX_FRAME_SIZE: usize = MTU_SIZE + 2;
-/* 
+/*
 https://github.com/ty4tw/MQTT-SN
 */
 #[derive(Encode, Decode, Debug)]
 #[cbor(array)]
 pub enum ProxyMessage {
     #[n(0)]
-    Connect { #[n(0)] protocol_id: u8, #[n(1)] duration: u16, #[n(2)] client_id: String,},
+    Connect {
+        #[n(0)]
+        protocol_id: u8,
+        #[n(1)]
+        duration: u16,
+        #[n(2)]
+        client_id: String,
+    },
     #[n(1)]
-    ConnAck { #[n(0)] return_code: u8,},
+    ConnAck {
+        #[n(0)]
+        return_code: u8,
+    },
     #[n(2)]
     WillTopicReq,
     #[n(3)]
-    WillTopic { #[n(0)] topic: String,},
+    WillTopic {
+        #[n(0)]
+        topic: String,
+    },
     #[n(4)]
     WillMsgReq,
     #[n(5)]
-    WillMsg { #[n(0)] message: String,},
+    WillMsg {
+        #[n(0)]
+        message: String,
+    },
     #[n(6)]
-    Register { #[n(0)] topic_id: u16, #[n(1)] topic_name: String,},
+    Register {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        topic_name: String,
+    },
     #[n(7)]
-    RegAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    RegAck {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        return_code: u8,
+    },
     #[n(8)]
-    Publish { #[n(0)] topic_id: u16, #[n(1)] message: String,},
+    Publish {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        message: String,
+    },
     #[n(9)]
-    PubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    PubAck {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        return_code: u8,
+    },
     #[n(10)]
-    Subscribe { #[n(0)] topic_id: u16, #[n(1)] qos: u8,},
+    Subscribe {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        qos: u8,
+    },
     #[n(11)]
-    SubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    SubAck {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        return_code: u8,
+    },
     #[n(12)]
-    Unsubscribe { #[n(0)] topic_id: u16,},
+    Unsubscribe {
+        #[n(0)]
+        topic_id: u16,
+    },
     #[n(13)]
-    UnsubAck { #[n(0)] topic_id: u16, #[n(1)] return_code: u8,},
+    UnsubAck {
+        #[n(0)]
+        topic_id: u16,
+        #[n(1)]
+        return_code: u8,
+    },
     #[n(14)]
     PingReq,
     #[n(15)]
@@ -58,13 +114,21 @@ pub enum ProxyMessage {
     #[n(18)]
     WillMsgUpd,
     #[n(19)]
-    Log { #[n(0)] timestamp: u64, #[n(1)] message: String, #[n(2)] level: Option<LogLevel>, #[n(3)] component: Option<String>, #[n(4)] file: Option<String>, #[n(5)] line: Option<u32>,},
-
-
-    }
-   
-
-
+    Log {
+        #[n(0)]
+        timestamp: u64,
+        #[n(1)]
+        message: String,
+        #[n(2)]
+        level: Option<LogLevel>,
+        #[n(3)]
+        component: Option<String>,
+        #[n(4)]
+        file: Option<String>,
+        #[n(5)]
+        line: Option<u32>,
+    },
+}
 
 struct VecWriter {
     buffer: Vec<u8>,
@@ -139,9 +203,6 @@ pub struct Log {
     pub line: Option<u32>,
 }
 
-
-
-
 impl Log {
     pub fn new(message: &str) -> Log {
         Log {
@@ -155,8 +216,6 @@ impl Log {
     }
 }
 
-
-
 pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     let mut buffer = VecWriter::new();
     let mut encoder = Encoder::new(&mut buffer);
@@ -168,16 +227,22 @@ pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     debug!("CRC : {:04X}", crc);
     buffer.push((crc & 0xFF) as u8);
     buffer.push(((crc >> 8) & 0xFF) as u8);
-    let mut cobs_buffer = [0; 256];
+    let mut cobs_buffer = [0; MTU_SIZE];
     let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
-    let mut _res = cobs_encoder.push(&buffer.to_bytes()).unwrap();
+    let mut _res = cobs_encoder.push(&buffer.to_bytes());
+    if let Err(e) = _res {
+        return Err(format!("COBS encoding error : {:?}", e));
+    }
     let size = cobs_encoder.finalize().unwrap();
-    buffer.push(0);
-    debug!("COBS : {:02X?}", &cobs_buffer[0..(size + 1)]);
-    Ok(cobs_buffer[0..size + 1].to_vec())
+    // prefix with delimiter
+    let mut res_vec = Vec::new();
+    res_vec.push(0x00 as u8);
+    res_vec.extend_from_slice(&cobs_buffer[0..size + 1]);
+    res_vec.push(0x00 as u8);
+    Ok(res_vec)
 }
 
-pub fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
+pub fn decode_frame(queue: &Vec<u8>) -> Result<ProxyMessage, String> {
     let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue);
@@ -186,7 +251,7 @@ pub fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
 
     match res {
         Ok(None) => {
-            return None;
+            return Err("no correct COBS found".to_string());
         }
         Ok(Some((output_size, _input_size))) => {
             let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
@@ -194,46 +259,50 @@ pub fn decode_frame(queue: &Vec<u8>) -> Option<ProxyMessage> {
             let crc_received =
                 (output[output_size - 1] as u16) << 8 | output[output_size - 2] as u16;
             if crc != crc_received {
-                info!("CRC error : {:04X} != {:04X}", crc, crc_received);
-                return None;
+                return Err(format!("CRC error : {:04X} != {:04X}", crc, crc_received));
             }
 
             let mut cbor_decoder = minicbor::decode::Decoder::new(&output[0..(output_size - 2)]);
             let mut ctx = 1;
-            let msg = ProxyMessage::decode(&mut cbor_decoder, &mut ctx).unwrap();
-            return Some(msg);
+            let msg_res = ProxyMessage::decode(&mut cbor_decoder, &mut ctx);
+            if msg_res.is_err() {
+                return Err(format!("CBOR decoding error : {:?}", msg_res));
+            }
+            return Ok(msg_res.unwrap());
         }
-        Err(j) => {
-            info!("COBS decoding error : {:?}", j);
-            return None;
-        }
+        Err(j) => Err(format!("COBS decoding error : {:?}", j)),
     }
 }
 
 pub struct MessageDecoder {
-    queue: Vec<u8>,
+    buffer: Vec<u8>,
 }
 
 impl MessageDecoder {
     pub fn new() -> Self {
-        Self { queue: Vec::new() }
+        Self { buffer: Vec::new() }
     }
 
     pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
         let mut messages_found = Vec::new();
         for byte in data {
-            self.queue.push(*byte);
+            self.buffer.push(*byte);
             if *byte == 0 {
                 // decode cobs from frame
-                let msg = decode_frame(&self.queue);
+                let msg = decode_frame(&self.buffer);
                 msg.into_iter().for_each(|m| {
                     messages_found.push(m);
                 });
-                self.queue.clear();
+                self.buffer.clear();
             }
         }
         messages_found
     }
+
+    pub fn to_str(&self) -> String {
+        match String::from_utf8(self.buffer.clone()) {
+            Ok(s) => s,
+            Err(_) => String::from(""),
+        }
+    }
 }
-
-

@@ -36,114 +36,14 @@ use protocol::ProxyMessage;
 mod logger;
 use logger::semi_logger_init;
 
-static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
-static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
-const UART_BUFSIZE: usize = 127;
+mod client;
+use client::fsm_connection;
+use client::uart_reader;
+use client::uart_writer;
+use client::UART_BUFSIZE;
 
-/*
-wait for message to send, encode and send to UART
-*/
-#[embassy_executor::task]
-async fn uart_writer(mut tx: UartTx<'static, UART0>) {
-    loop {
-        let msg = TXD_MSG.receive().await;
-        info!("Sending message {:?}", msg);
-        let bytes = protocol::encode_frame(msg).unwrap();
-        let _ = embedded_io_async::Write::write(&mut tx, bytes.as_slice()).await;
-        let _ = embedded_io_async::Write::flush(&mut tx).await;
-    }
-}
-/*
-handle UART input, convert to message and send to channel
-*/
-#[embassy_executor::task]
-async fn uart_reader(mut rx: UartRx<'static, UART0>) {
-    // Declare read buffer to store Rx characters
-    let mut rbuf = [0u8; UART_BUFSIZE];
 
-    let mut message_decoder = protocol::MessageDecoder::new();
-    loop {
-        info!("Waiting for message");
-        let r = embedded_io_async::Read::read(&mut rx, &mut rbuf[0..]).await;
-        match r {
-            Ok(_cnt) => {
-                let v = message_decoder.decode(&mut rbuf);
-                // Read characters from UART into read buffer until EOT
-                for msg in v {
-                    RXD_MSG.send(msg).await;
-                }
-            }
-            Err(_) => {
-                continue;
-            }
-        }
-    }
-}
 
-#[embassy_executor::task]
-async fn fsm_connection() {
-    #[derive(PartialEq)]
-    enum State {
-        Idle,
-        Connected,
-    }
-    let mut state = State::Idle;
-    loop {
-        loop {
-            // wait for connection
-            info!("Waiting for connection");
-            TXD_MSG
-                .send(ProxyMessage::Connect {
-                    protocol_id: 1,
-                    duration: 100,
-                    client_id: "myClient".to_string(),
-                })
-                .await;
-//            RXD_MSG.send(ProxyMessage::ConnAck { return_code:0 }).await;
-            let result = with_timeout(Duration::from_secs(5), RXD_MSG.receive()).await;
-            match result {
-                Ok(msg) => match msg {
-                    ProxyMessage::ConnAck { return_code } => {
-                        info!("Connected code  {}", return_code);
-                        state = State::Connected;
-                    }
-                    _ => {
-                        info!("Unexpected message {:?}", msg);
-                    }
-                },
-                Err(_) => {
-                    info!("Connection timeout");
-                }
-            }
-            if state == State::Connected {
-                break;
-            }
-        }
-        loop {
-            let mut timeouts = 0;
-            // wait for message
-            info!("Waiting for message");
-            let result = with_timeout(Duration::from_secs(5), RXD_MSG.receive()).await;
-            match result {
-                Ok(msg) => match msg {
-                    ProxyMessage::Publish { topic_id, message } => {
-                        info!("Received message on topic {} : {}", topic_id, message);
-                    }
-                    _ => {
-                        info!("Unexpected message {:?}", msg);
-                    }
-                },
-                Err(_) => {
-                    timeouts+=1;
-                    TXD_MSG
-                        .send(ProxyMessage::PingReq {
-                        })
-                        .await;
-                }
-            }
-        }
-    }
-}
 
 fn init_heap() {
     const HEAP_SIZE: usize = 50 * 1024;

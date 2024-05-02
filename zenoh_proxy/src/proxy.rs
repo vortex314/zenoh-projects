@@ -1,70 +1,79 @@
-use crate::protocol::ProxyMessage;
-use crate::protocol::encode_frame;
 use crate::protocol::decode_frame;
-use minicbor::encode;
-use tokio::io::split;
-use tokio_serial::*;
-use log::*;
-use tokio::io::AsyncReadExt;
-use tokio_util::codec::{Decoder, Encoder};
+use crate::protocol::encode_frame;
+use crate::protocol::ProxyMessage;
+use crate::protocol::MTU_SIZE;
+use crate::MessageDecoder;
 use bytes::BytesMut;
+use log::*;
+use minicbor::encode;
 use std::io;
+use std::result::Result;
+use tokio::io::split;
+use tokio::io::AsyncReadExt;
+use tokio_serial::*;
+use tokio_util::codec::{Decoder, Encoder};
 
-pub async fn port_handler(port_info : SerialPortInfo ) {
-    info!("Port Handler started for port {}", port_info.port_name);
+const GREEN : &str = "\x1b[32m";
+const RESET : &str = "\x1b[34m";
 
-    let serial_stream = tokio_serial::new(port_info.port_name, 115200)
+pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
+    let mut message_decoder = MessageDecoder::new();
+    info!(
+        "Port Handler started for port {}",
+        port_info.port_name.clone()
+    );
+
+    let mut serial_stream = tokio_serial::new(port_info.port_name.clone(), 115200)
         .open_native_async()
         .unwrap();
-    let x = CobsCodec.framed(serial_stream);
-    let (mut writer, mut reader) = split(x);
     loop {
-        let mut buf = [0; 256];
-        let n = reader.read(&mut buf).await.unwrap();
-        if n == 0 {
-            info!("Port {} closed", port_info.port_name);
-            break;
-        }
-        let mut queue = Vec::new();
-        queue.extend_from_slice(&buf[0..n]);
-        let msg = decode_frame(&queue);
-        match msg {
-            Some(msg) => {
-                info!("Received message : {:?}", msg);
-            }
-            None => {
-                info!("Invalid message");
+        let has_data = serial_stream.readable().await;
+        if has_data.is_ok() {
+            let mut buf = [0; MTU_SIZE];
+            let n = serial_stream.read(&mut buf).await.unwrap();
+            if n == 0 {
+                info!("Port {} closed", port_info.port_name);
+                break;
+            } else {
+                let messages = message_decoder.decode(&buf[0..n]);
+
+                if messages.is_empty() {
+                    let line = String::from_utf8(buf[0..n].to_vec()).ok();
+                    if line.is_some() { print!("{}{}{}",GREEN,line.unwrap(),RESET);};
+                    print!("{}",RESET);
+                }
+                for message in messages {
+                    match message {
+                        ProxyMessage::Connect {
+                            protocol_id: _,
+                            duration: _,
+                            client_id: _,
+                        } => {
+                            info!("Connect message received");
+                            let conn_ack = ProxyMessage::ConnAck { return_code: 0 };
+                            let bytes = encode_frame(conn_ack)?;
+                            let _res = serial_stream.try_write(&bytes.as_slice());
+                            if _res.is_err() {
+                                info!("Error writing to serial port");
+                            }
+                        }
+                        ProxyMessage::PingReq => {
+                            info!("PingReq message received");
+                            let ping_resp = ProxyMessage::PingResp;
+                            let bytes = encode_frame(ping_resp)?;
+                            let _res = serial_stream.try_write(&bytes.as_slice());
+                            if _res.is_err() {
+                                info!("Error writing to serial port");
+                            }
+                        }
+                        _ => {
+                            info!("Message : {:?}", message);
+                        }
+                    }
+                    info!("Message : {:?}", message);
+                }
             }
         }
     }
-    
-}
-
-struct CobsCodec;
-
-impl Decoder for CobsCodec {
-    type Item = ProxyMessage;
-    type Error = io::Error;
-
-    fn decode(&mut self, _src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        Ok(None)
-    }
-}
-
-impl Encoder<ProxyMessage> for CobsCodec {
-    type Error = io::Error;
-
-    fn encode(&mut self, _item: ProxyMessage, _dst: &mut BytesMut) -> Result<(), Self::Error> {
-        let bytes = encode_frame(_item);
-         match bytes {
-            Ok(bytes) => {
-                let mut buf = BytesMut::with_capacity(bytes.len());
-                buf.put(bytes);
-            }
-            Err(e) => {
-                return Err(io::Error::new(io::ErrorKind::Other, e));
-            }
-        }
-        Ok(())
-    }
+    Ok(())
 }
