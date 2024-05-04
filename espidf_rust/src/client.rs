@@ -3,8 +3,11 @@ use alloc::rc::Rc;
 use alloc::string::ToString;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::pubsub::publisher::Pub;
+use embassy_sync::pubsub::PubSubChannel;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
+use embassy_futures::select::select;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -26,11 +29,45 @@ use protocol::ProxyMessage;
 
 static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static CMD_MSG : Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static PUB_MSG : PubSubChannel< CriticalSectionRawMutex, ProxyMessage, 10,10,10 >= PubSubChannel::new();
 pub const UART_BUFSIZE: usize = 127;
 const RC_ACCEPTED: u8 = 0;
 const RC_REJECTED_CONGESTION: u8 = 1;
 const RC_REJECTED_INVALID_TOPIC_ID: u8 = 2;
 const RC_REJECTED_NOT_SUPPORTED: u8 = 3;
+
+/* 
+    Client     ->  Server
+    Subscribe -> NR
+    Publish 0 ( dst/client/sys/time ) -> NR
+    NR <- Publish  0 ( dst/client/sys/time )
+    PubAck ( unknown id ) <- NR
+    Register 0 ( dst/client/sys/time ) -> NR
+    Register 1 ( dst/client/sys/time ) -> NR
+
+    Table of topics
+    0 -> dst/client/sys/time + registered flag
+    1 -> src/client/sys/log + registered flag
+
+    FSM Client
+    -> Subscriber<f64> ( topic ) -> converts ProxyMessage::Publish to f64
+        -> onMessage ( topic, value )
+    -> PatternSubscriber ( pattern )
+    -> Publisher ( topic ) --- serializes message to ProxyMessage::Publish
+        -> onMessage ( topic, message )
+
+    FSM Server
+    - List Subscribers
+    - List Publishers
+    - List PatternSubscribers
+    - List topics clients + registered flag
+    - List topics servers + registered flag
+
+
+    onConnReset => clear registered flags for client topics, remove all server topics
+    at first use of topic , register it 
+*/
 
 
 /*
@@ -75,7 +112,7 @@ pub async fn uart_reader(mut rx: UartRx<'static, UART0>) {
 
 #[embassy_executor::task]
 pub async fn fsm_connection() {
-    let mut message_handler = MessageHandler::new();
+    let mut message_handler = ProxyClient::new();
     message_handler.fsm_connection().await;
 }
 
@@ -87,22 +124,90 @@ enum State {
     Connected,
 }
 
-pub struct MessageHandler {
+struct TopicReg {
+    topic : String,
+    registered : bool,
+}
+
+pub struct ProxyClient {
     client_topics: BTreeMap<u16,String>,
     server_topics: BTreeMap<u16,String>,
+    client_topics_registered: BTreeMap<u16,bool>,
     client_id: String,
     state: State,
     ping_timeouts: u32,
 }
 
-impl MessageHandler {
-    fn new() -> MessageHandler {
-        MessageHandler {
+impl ProxyClient {
+    fn new() -> ProxyClient {
+        ProxyClient {
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
+            client_topics_registered: BTreeMap::new(),
             client_id: "ESP32_1".to_string(),
             state: State::Idle,
             ping_timeouts: 0,
+        }
+    }
+
+    async fn handler(&mut self) {
+        loop {
+            let _res = select (CMD_MSG.receive(), RXD_MSG.receive());
+            match _res {
+                Ok((cmd, msg)) => {
+                    self.on_cmd_message(cmd).await;
+                    self.on_rxd_message(msg).await;
+                }
+                Err(_) => {
+                    info!("Timeout");
+                }
+            }
+        }
+    }
+
+    async fn on_cmd_message(&mut self, msg : ProxyMessage){
+        match msg {
+            ProxyMessage::Publish { topic_id, message } => {
+                info!("Received message on topic {} : {}", topic_id, message);
+                if self.server_topics.contains_key(&topic_id){
+                    TXD_MSG.send(ProxyMessage::PubAck{ topic_id, return_code : RC_ACCEPTED } ).await;
+                } else {
+                    TXD_MSG.send(ProxyMessage::PubAck{ topic_id, return_code : RC_REJECTED_INVALID_TOPIC_ID } ).await;
+                }
+            }
+            _ => {
+                info!("Unexpected message {:?}", msg);
+            }
+        }
+    }
+
+    async fn on_rxd_message(&mut self , msg : ProxyMessage){
+        match msg {
+            ProxyMessage::Register { topic_id, topic_name } =>{
+                info!("Registering topic {} with id {}", topic_name, topic_id);
+                self.server_topics.insert(topic_id,topic_name);
+            }
+            ProxyMessage::Publish { topic_id, message } => {
+                info!("Received message on topic {} : {}", topic_id, message);
+                if self.server_topics.contains_key(&topic_id){
+                    TXD_MSG.send(ProxyMessage::PubAck{ topic_id, return_code : RC_ACCEPTED } ).await;
+
+                } else {
+                    TXD_MSG.send(ProxyMessage::PubAck{ topic_id, return_code : RC_REJECTED_INVALID_TOPIC_ID } ).await;
+                }
+            }
+            ProxyMessage::PubAck { topic_id, return_code } => {
+                if return_code == RC_ACCEPTED {
+                    info!("Received PubAck for topic {} with code {}", topic_id, return_code);
+                } else {
+                    TXD_MSG.send(ProxyMessage::Register { topic_id , topic_name:self.client_topics.get(&topic_id).unwrap().clone()}).await;
+                    self.client_topics_registered.insert(topic_id,true);
+                }
+                info!("Received PubAck for topic {} with code {}", topic_id, return_code);
+            }
+            _ => {
+                info!("Unexpected message {:?}", msg);
+            }
         }
     }
 
@@ -161,7 +266,7 @@ impl MessageHandler {
                         self.state = State::WaitConnack;
                     }
                     State::Connected => {
-                        if (self.ping_timeouts > 5) {
+                        if self.ping_timeouts > 5 {
                             TXD_MSG.send(ProxyMessage::Disconnect {}).await;
                             self.state = State::Idle;
                         } else {

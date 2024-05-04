@@ -18,7 +18,7 @@ const MAX_FRAME_SIZE: usize = MTU_SIZE + 2;
 /*
 https://github.com/ty4tw/MQTT-SN
 */
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug,Clone)]
 #[cbor(array)]
 pub enum ProxyMessage {
     #[n(0)]
@@ -170,7 +170,7 @@ impl minicbor::encode::Write for VecWriter {
 
 type Id = u16;
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug,Clone)]
 #[cbor(index_only)]
 pub enum LogLevel {
     #[n(0)]
