@@ -1,6 +1,7 @@
 
 use alloc::rc::Rc;
 use alloc::string::ToString;
+use cobs::CobsEncoder;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::pubsub::publisher::Pub;
@@ -8,6 +9,7 @@ use embassy_sync::pubsub::PubSubChannel;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
 use embassy_futures::select::select;
+use embassy_futures::select::Either::{First, Second};
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -21,10 +23,13 @@ use esp_println::println;
 use log::info;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use minicbor::Encode;
 
 use crate::protocol;
 
 use minicbor::decode::info;
+use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
+
 use protocol::ProxyMessage;
 
 static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
@@ -150,16 +155,24 @@ impl ProxyClient {
         }
     }
 
+    async fn publish<T>(&mut self, topic_id: u16, message: T) where T: Encode {
+        let encoder = CborEncoder::new();
+        let msg = ProxyMessage::Publish {
+            topic_id,
+            message: message.to_string(),
+        };
+        TXD_MSG.send(msg).await;
+    }
+
     async fn handler(&mut self) {
         loop {
-            let _res = select (CMD_MSG.receive(), RXD_MSG.receive());
+            let _res = select (CMD_MSG.receive() ,RXD_MSG.receive() ).await;
             match _res {
-                Ok((cmd, msg)) => {
-                    self.on_cmd_message(cmd).await;
-                    self.on_rxd_message(msg).await;
+                First(msg) => {
+                    self.on_cmd_message(msg).await;
                 }
-                Err(_) => {
-                    info!("Timeout");
+                Second(msg) => {
+                    self.on_rxd_message(msg).await;
                 }
             }
         }
