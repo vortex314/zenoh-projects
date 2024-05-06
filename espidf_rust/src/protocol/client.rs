@@ -129,10 +129,49 @@ enum State {
     Connected,
 }
 
-struct TopicReg {
-    topic : String,
-    registered : bool,
+
+/*
+dst/device/object/property => dst/esp32_cam/sys/loopback , time()
+
+State::Idle - Timeout -> Send ( Subscribe ,  Register "loopback" , loopback ) - State::Idle
+State::Idle - Recv Publish loopback - State::Connected 
+State::Idle - Other -> State::Idle
+State::Connected - Timeout - Send ( loopback ) , inc TO -> State::Connected
+
+
+State::Connected - Timeout -> Send PingReq
+*/
+trait Publisher<T> {
+    fn publish(&self,  message: T);
 }
+
+trait Subscriber<T> {
+    fn on_message(&self, message: T);
+}
+
+struct ClientPublisher {
+    topic_id: u16,
+    client: Rc<ProxyClient>,
+}
+
+impl<T> Publisher<T> for ClientPublisher {
+    fn publish(&self, message: T) {
+        self.client.publish(self.topic_id, message);
+    }
+}
+
+struct ClientSubscriber {
+    topic_id: u16,
+    sender: Sender<T>,
+}
+
+impl<T> Subscriber<T> for ClientSubscriber {
+    fn on_message(&self, message: T) {
+        self.sender.send(message);
+    }
+}
+
+
 
 pub struct ProxyClient {
     client_topics: BTreeMap<u16,String>,
@@ -295,5 +334,15 @@ impl ProxyClient {
 
             
         }
+    }
+
+    pub fn<T> publisher(&self, topic:String , message: T) -> Publisher<T> where T: Encode {
+        let topic_id = self.client_topics.iter().find(|(_k,v)| v == &topic).unwrap().0;
+        let encoder = CborEncoder::new();
+        let msg = ProxyMessage::Publish {
+            topic_id,
+            message: message.to_string(),
+        };
+        TXD_MSG.send(msg).await;
     }
 }
