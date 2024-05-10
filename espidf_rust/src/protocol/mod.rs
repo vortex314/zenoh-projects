@@ -1,3 +1,5 @@
+mod server;
+
 use alloc::collections::VecDeque;
 use alloc::fmt::format;
 use alloc::string::String;
@@ -6,6 +8,7 @@ use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
 use log::{debug, info};
+use minicbor::bytes::ByteArray;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 extern crate alloc;
@@ -17,7 +20,53 @@ pub const MTU_SIZE: usize = 1023;
 const MAX_FRAME_SIZE: usize = MTU_SIZE + 2;
 /*
 https://github.com/ty4tw/MQTT-SN
+
+Request - seq nr - destination_topic_id - source_topic_id - payload - crc16
+Response - seq nr - source_topic_id - payload - crc16
+Publish - source_id - payload
+PubAck - source_id - return_code
+Subscribe - source_pattern 
+SubAck - source_id - return_code
+Register source_id - source_topic_name
+RegAck - source_id - return_code
+
+destination_topic_id -
+0 -Publish
+1 - PubAck
+2 - Subscribe
+3 - SubAck
+4 - Register
+5 - RegAck
+6 - Unsubscribe
+7 - UnsubAck
+8 - PingReq
+9 - PingResp
+10 - Disconnect
+11 - WillTopicUpd
+12 - WillMsgUpd
+13 - Log
+14 - Connect
+15 - ConnAck
+16 - WillTopicReq
+17 - WillTopic
+18 - WillMsgReq
+19 - WillMsg
+
+Server 
+- waitConnect - Connect - ConnAck - Connected 
+- 
+
+- waitSubscribe - Subscribe - SubAck - Subscribed
+- waitPublish - Publish - PubAck - Published
+
+
 */
+use minicbor::encode::Write;
+use minicbor::bytes::ByteVec;
+
+pub mod msg;
+
+
 #[derive(Encode, Decode, Debug,Clone)]
 #[cbor(array)]
 pub enum ProxyMessage {
@@ -47,7 +96,7 @@ pub enum ProxyMessage {
     #[n(5)]
     WillMsg {
         #[n(0)]
-        message: String,
+        message: ByteVec,
     },
     #[n(6)]
     Register {
@@ -68,7 +117,7 @@ pub enum ProxyMessage {
         #[n(0)]
         topic_id: u16,
         #[n(1)]
-        message: String,
+        message: ByteVec,
     },
     #[n(9)]
     PubAck {
