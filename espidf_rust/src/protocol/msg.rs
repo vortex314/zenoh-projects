@@ -75,7 +75,7 @@ pub enum ProxyMessage {
     #[n(10)]
     Subscribe {
         #[n(0)]
-        topic_id: u16,
+        topic: String,
         #[n(1)]
         qos: u8,
     },
