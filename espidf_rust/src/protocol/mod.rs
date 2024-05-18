@@ -1,4 +1,3 @@
-mod server;
 
 use alloc::collections::VecDeque;
 use alloc::fmt::format;
@@ -61,9 +60,14 @@ Server
 
 */
 use minicbor::encode::Write;
+use minicbor::encode::Encoder;
 use minicbor::bytes::ByteVec;
 
 pub mod msg;
+pub mod client;
+pub mod uart;
+
+use msg::ProxyMessage;
 
 
 
@@ -97,17 +101,13 @@ impl VecWriter {
     }
 }
 impl minicbor::encode::Write for VecWriter {
-    type Error = EndOfSlice;
+    type Error = String;
     // Required method
     fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
         self.buffer.extend_from_slice(buf);
         Ok(())
     }
 }
-
-type Id = u16;
-
-
 
 
 pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
@@ -168,35 +168,4 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<ProxyMessage, String> {
     }
 }
 
-pub struct MessageDecoder {
-    buffer: Vec<u8>,
-}
 
-impl MessageDecoder {
-    pub fn new() -> Self {
-        Self { buffer: Vec::new() }
-    }
-
-    pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
-        let mut messages_found = Vec::new();
-        for byte in data {
-            self.buffer.push(*byte);
-            if *byte == 0 {
-                // decode cobs from frame
-                let msg = decode_frame(&self.buffer);
-                msg.into_iter().for_each(|m| {
-                    messages_found.push(m);
-                });
-                self.buffer.clear();
-            }
-        }
-        messages_found
-    }
-
-    pub fn to_str(&self) -> String {
-        match String::from_utf8(self.buffer.clone()) {
-            Ok(s) => s,
-            Err(_) => String::from(""),
-        }
-    }
-}

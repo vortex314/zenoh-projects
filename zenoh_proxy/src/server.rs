@@ -1,6 +1,5 @@
 use super::{msg::ProxyMessage, ProxyMessage::*};
 use alloc::string::String;
-use crate::protocol::msg::ProxyMessage;
 
 enum ServerState {
     Disconnected,
@@ -31,22 +30,20 @@ impl ServerSession {
     async fn on_message(&mut self, message: ProxyMessage) {
         match message {
             ProxyMessage::Connect { protocol_id, duration, client_id } => {
-                self.on_connect(ProxyMessage::Connect { protocol_id, duration, client_id }).await;
+                self.on_connect(protocol_id,duration,client_id).await;
             },
             ProxyMessage::WillTopic { topic } => {
-                self.on_will_topic(ProxyMessage::WillTopic { topic }).await;
             },
             ProxyMessage::WillMsg { message } => {
-                self.on_will_message(ProxyMessage::WillMsg { message }).await;
             },
             ProxyMessage::Publish { topic_id, message } => {
-                self.on_publish(ProxyMessage::Publish { topic_id, message }).await;
             },
             ProxyMessage::Register { topic_id, topic_name } => {
-                self.on_register(ProxyMessage::Register { topic_id, topic_name }).await;
             },
             ProxyMessage::Subscribe { topic ,  qos } => {
-                self.on_subscribe(ProxyMessage::Subscribe { topic,qos  }).await;
+            },
+            ProxyMessage::Disconnect => {
+                self.on_disconnect().await;
             },
             _ => {
                 // Ignore
@@ -54,10 +51,10 @@ impl ServerSession {
         }
     }
 
-    async fn on_connect(&mut self, connect : ProxyMessage::Connect) {
-        self.protocol_id = connect.protocol_id;
-        self.duration = connect.duration;
-        self.client_id = connect.client_id;
+    async fn on_connect(&mut self, protocol_id: u8, duration: u16, client_id: String) {
+        self.protocol_id = protocol_id;
+        self.duration = duration;
+        self.client_id = client_id;
         self.send_client(ProxyMessage::WillTopicReq).await;
 
         self.send_client(ProxyMessage::ConnAck { return_code: 0 }).await;
@@ -66,7 +63,7 @@ impl ServerSession {
     }
 
 
-    async fn on_will_topic(&mut self, will_topic : ProxyMessage::WillTopic) {
+    async fn on_will_topic(&mut self, will_topic : String) {
         self.will_topic = Some(will_topic.topic);
         self.send_client(ProxyMessage::WillMsgReq).await;
         self.state = ServerState::WaitWillMessage;
@@ -141,13 +138,7 @@ impl ServerSession {
         // Ping Response
     }
 
-    async fn on_disconnect(&mut self) {
-        // Disconnect
-    }
 
-    async fn on_connect(&mut self) {
-        // Connect
-    }
 
 
 

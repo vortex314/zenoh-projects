@@ -5,11 +5,6 @@
 #![allow(dead_code)]
 use core::{cell::RefCell, mem::MaybeUninit};
 
-extern crate alloc;
-
-#[global_allocator]
-static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
-
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use embassy_executor::Spawner;
@@ -28,22 +23,20 @@ use esp_hal::{
 use esp_println::println;
 use log::info;
 
-mod protocol;
-
 use minicbor::decode::info;
-use protocol::ProxyMessage;
 
 mod logger;
 use logger::semi_logger_init;
 
-mod client;
-use client::fsm_connection;
-use client::uart_reader;
-use client::uart_writer;
-use client::UART_BUFSIZE;
+mod protocol;
+use protocol::msg::ProxyMessage;
+use protocol::client::ClientSession;
+use protocol::uart::UartActor;
 
+extern crate alloc;
 
-
+#[global_allocator]
+static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
 fn init_heap() {
     const HEAP_SIZE: usize = 50 * 1024;
@@ -55,6 +48,8 @@ fn init_heap() {
 }
 
 // static uart_channel_in:Rc<RefCell<Option<Channel<NoopRawMutex,Message,10>>>>=Rc::new(RefCell::new(None));
+static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
 #[main]
 async fn main(spawner: Spawner) {
@@ -73,16 +68,14 @@ async fn main(spawner: Spawner) {
     // Initialize and configure UART0
     let mut uart0 = Uart::new(peripherals.UART0, &clocks);
     //    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
-    uart0
-        .set_rx_fifo_full_threshold(UART_BUFSIZE as u16)
-        .unwrap();
-    // Split UART0 to create seperate Tx and Rx handles
-    let (tx, rx) = uart0.split();
-    info!("UART0 initialized");
+
+
+
+    let clientSession = ClientSession::new(TXD_MSG.dyn_sender(), RXD_MSG.dyn_receiver());
+    let uartActor = UartActor::new(uart0,TXD_MSG.dyn_receiver(),RXD_MSG.dyn_sender());
     // Spawn Tx and Rx tasks
-    spawner.spawn(uart_reader(rx)).ok();
-    spawner.spawn(uart_writer(tx)).ok();
-    spawner.spawn(fsm_connection()).ok();
+    spawner.spawn(uartActor.run()).ok();
+    spawner.spawn(clientSession.run()).ok();
     loop {
         Timer::after(Duration::from_millis(5_000)).await;
     }
