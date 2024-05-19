@@ -2,6 +2,7 @@ use alloc::collections::VecDeque;
 use alloc::fmt::format;
 use alloc::string::String;
 use alloc::string::ToString;
+use alloc::vec::Vec;
 use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
@@ -42,7 +43,7 @@ pub enum ProxyMessage {
     #[n(5)]
     WillMsg {
         #[n(0)]
-        message: ByteVec,
+        message: Vec<u8>,
     },
     #[n(6)]
     Register {
@@ -63,7 +64,7 @@ pub enum ProxyMessage {
         #[n(0)]
         topic_id: u16,
         #[n(1)]
-        message: ByteVec,
+        message: Vec<u8>,
     },
     #[n(9)]
     PubAck {
@@ -125,7 +126,7 @@ pub enum ProxyMessage {
     },
 }
 
-#[derive(Encode, Decode, Debug,Clone)]
+#[derive(Encode, Decode, Debug, Clone)]
 #[cbor(index_only)]
 pub enum LogLevel {
     #[n(0)]
@@ -139,4 +140,3 @@ pub enum LogLevel {
     #[n(4)]
     Error,
 }
-

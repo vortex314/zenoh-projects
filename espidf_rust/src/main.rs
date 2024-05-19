@@ -51,6 +51,16 @@ fn init_heap() {
 static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
+#[embassy_executor::task]
+async fn uart_task( mut uart:UartActor) {
+    uart.run().await;
+}
+
+#[embassy_executor::task]
+async fn client_task( mut client:ClientSession) {
+    client.run().await;
+}
+
 #[main]
 async fn main(spawner: Spawner) {
     init_heap();
@@ -69,13 +79,11 @@ async fn main(spawner: Spawner) {
     let mut uart0 = Uart::new(peripherals.UART0, &clocks);
     //    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
-
-
-    let clientSession = ClientSession::new(TXD_MSG.dyn_sender(), RXD_MSG.dyn_receiver());
-    let uartActor = UartActor::new(uart0,TXD_MSG.dyn_receiver(),RXD_MSG.dyn_sender());
+    let mut clientSession = ClientSession::new(TXD_MSG.dyn_sender(), RXD_MSG.dyn_receiver());
+    let mut uartActor = UartActor::new(uart0,TXD_MSG.dyn_receiver(),RXD_MSG.dyn_sender());
     // Spawn Tx and Rx tasks
-    spawner.spawn(uartActor.run()).ok();
-    spawner.spawn(clientSession.run()).ok();
+    spawner.spawn(uart_task(uartActor)).ok();
+    spawner.spawn(client_task(clientSession)).ok();
     loop {
         Timer::after(Duration::from_millis(5_000)).await;
     }

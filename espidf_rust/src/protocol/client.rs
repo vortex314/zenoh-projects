@@ -1,5 +1,6 @@
 use alloc::rc::Rc;
 use alloc::string::ToString;
+use alloc::vec::Vec;
 use cobs::CobsEncoder;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -24,6 +25,7 @@ use esp_hal::{
 };
 use esp_println::println;
 use log::info;
+use minicbor::bytes::ByteVec;
 
 use crate::protocol;
 use super::VecWriter;
@@ -76,22 +78,24 @@ impl ClientSession {
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
             client_id: "ESP32_1".to_string(),
-            state: State::Idle,
+            state: State::Disconnected,
             ping_timeouts: 0,
             txd_msg,
             rxd_msg,
         }
     }
 
-    async fn publish<T>(&mut self, topic_id: u16, message: T)
+    async fn publish<T>(&mut self, topic_id: u16, _message: T)
     where
         T: Encode<String>,
     {
-        let mut buffer = VecWriter::new();
+        let mut buffer = Vec::<u8>::new();
         let mut encoder = Encoder::new(&mut buffer);
+        let mut s = String::new();
+        _message.encode(&mut encoder, &mut s).unwrap();
         let msg = ProxyMessage::Publish {
             topic_id,
-            message: buffer.to_bytes().to_vec(),
+            message: buffer,
         };
         self.txd_msg.send(msg).await;
     }
@@ -113,7 +117,7 @@ impl ClientSession {
     async fn on_cmd_message(&mut self, msg: ProxyMessage) {
         match msg {
             ProxyMessage::Publish { topic_id, message } => {
-                info!("Received message on topic {} : {}", topic_id, message);
+                info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
                     self.txd_msg
                         .send(ProxyMessage::PubAck {
@@ -146,7 +150,7 @@ impl ClientSession {
                 self.server_topics.insert(topic_id, topic_name);
             }
             ProxyMessage::Publish { topic_id, message } => {
-                info!("Received message on topic {} : {}", topic_id, message);
+                info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
                     self.txd_msg
                         .send(ProxyMessage::PubAck {
@@ -199,7 +203,7 @@ impl ClientSession {
                 Ok(msg) => match msg {
                     ProxyMessage::ConnAck { return_code } => {
                         info!("Connected code  {}", return_code);
-                        if self.state == State::WaitConnack {
+                        if self.state == State::Disconnected {
                             self.state = State::Connected;
                         }
                     }
@@ -208,7 +212,7 @@ impl ClientSession {
                     }
                     ProxyMessage::Disconnect {} => {
                         info!("Disconnected");
-                        self.state = State::Idle;
+                        self.state = State::Disconnected;
                     }
                     ProxyMessage::Register {
                         topic_id,
@@ -218,7 +222,7 @@ impl ClientSession {
                         self.client_topics.insert(topic_id, topic_name);
                     }
                     ProxyMessage::Publish { topic_id, message } => {
-                        info!("Received message on topic {} : {}", topic_id, message);
+                        info!("Received message on topic {} ", topic_id);
                         if self.server_topics.contains_key(&topic_id) {
                             self.txd_msg
                                 .send(ProxyMessage::PubAck {
@@ -264,7 +268,7 @@ impl ClientSession {
                 },
                 Err(_) => match self.state {
                     // on timeout
-                    State::Idle => {
+                    State::Disconnected => {
                         self.txd_msg
                             .send(ProxyMessage::Connect {
                                 protocol_id: 1,
@@ -272,20 +276,18 @@ impl ClientSession {
                                 client_id: self.client_id.clone(),
                             })
                             .await;
-                        self.state = State::WaitConnack;
+                        self.state = State::Connected;
                     }
                     State::Connected => {
                         if self.ping_timeouts > 5 {
                             self.txd_msg.send(ProxyMessage::Disconnect {}).await;
-                            self.state = State::Idle;
+                            self.state = State::Disconnected;
                         } else {
                             self.ping_timeouts += 1;
                             self.txd_msg.send(ProxyMessage::PingReq {}).await;
                         }
                     }
-                    State::WaitConnack => {
-                        self.state = State::Idle;
-                    }
+
                 },
             }
         }

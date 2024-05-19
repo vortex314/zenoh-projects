@@ -8,6 +8,9 @@ use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
 use log::{debug, info};
 
+use embassy_sync::channel::Channel;
+use embassy_sync::channel::DynamicReceiver;
+use embassy_sync::channel::DynamicSender;
 
 extern crate alloc;
 use alloc::vec;
@@ -60,6 +63,8 @@ Server
 
 */
 use minicbor::encode::Write;
+use minicbor::decode::Decode;
+use minicbor::encode::Encode;
 use minicbor::encode::Encoder;
 use minicbor::bytes::ByteVec;
 
