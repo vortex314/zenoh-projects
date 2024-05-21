@@ -3,12 +3,14 @@
 #![feature(type_alias_impl_trait)]
 #![allow(unused_imports)]
 #![allow(dead_code)]
+use core::ops::Shr;
 use core::{cell::RefCell, mem::MaybeUninit};
 
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::DynamicSender;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
 use esp_backtrace as _;
@@ -48,8 +50,6 @@ fn init_heap() {
 }
 
 // static uart_channel_in:Rc<RefCell<Option<Channel<NoopRawMutex,Message,10>>>>=Rc::new(RefCell::new(None));
-static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
-static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
 #[embassy_executor::task]
 async fn uart_task( mut uart:UartActor) {
@@ -59,34 +59,6 @@ async fn uart_task( mut uart:UartActor) {
 #[embassy_executor::task]
 async fn client_task( mut client:ClientSession) {
     client.run().await;
-}
-
-// implement shift right as connecting a sender to a receiver
-struct Handler<T> {
-    senders : Vec<DynamicSender<T>>
-}
-
-impl <T> Handler<T> {
-    fn new() -> Self {
-        Self {
-            senders: Vec::new()
-        }
-    }
-    fn add_sender(&mut self, sender: DynamicSender<T>) {
-        self.senders.push(sender);
-    }
-    fn handle(&self, msg: T) {
-        for sender in self.senders.iter() {
-            sender.send(msg);
-        }
-    }
-}
-
-impl<T> Shr<&dyn DynamicSender<T>> for Handler<T> {
-    type Output = ();
-    fn shr(self, rhs: &dyn DynamicSender<T>) -> Self::Output {
-        self.add_sender(rhs.clone());
-    }
 }
 
 
@@ -109,10 +81,10 @@ async fn main(spawner: Spawner) {
 
     //    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
-    let mut clientSession = ClientSession::new(TXD_MSG.dyn_sender(), RXD_MSG.dyn_receiver());
-    let mut uartActor = UartActor::new(uart0,TXD_MSG.dyn_receiver(),RXD_MSG.dyn_sender());
-    uartActor.rxd() >> clientSession.rxd_msg();
-    clientSession.txd_msg() >> uartActor.txd();
+    let mut clientSession = ClientSession::new();
+    let mut uartActor = UartActor::new(uart0);
+    uartActor.rxd_source().add_sender(clientSession.rxd_sink());
+    clientSession.txd_source().add_sender(uartActor.txd_sink());
     // Spawn Tx and Rx tasks
     spawner.spawn(uart_task(uartActor)).ok();
     spawner.spawn(client_task(clientSession)).ok();

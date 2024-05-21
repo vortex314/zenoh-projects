@@ -27,8 +27,9 @@ use esp_println::println;
 use log::info;
 use minicbor::bytes::ByteVec;
 
-use crate::protocol;
+use super::Handler;
 use super::VecWriter;
+use crate::protocol;
 
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
@@ -42,6 +43,8 @@ const RC_ACCEPTED: u8 = 0;
 const RC_REJECTED_CONGESTION: u8 = 1;
 const RC_REJECTED_INVALID_TOPIC_ID: u8 = 2;
 const RC_REJECTED_NOT_SUPPORTED: u8 = 3;
+
+static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
 #[derive(PartialEq)]
 
@@ -65,14 +68,12 @@ pub struct ClientSession {
     client_id: String,
     state: State,
     ping_timeouts: u32,
-    txd_msg: DynamicSender<'static, ProxyMessage>,
+    txd_msg: Handler<'static, ProxyMessage>,
     rxd_msg: DynamicReceiver<'static, ProxyMessage>,
+    msg_handler: Handler<'static, ProxyMessage>,
 }
 impl ClientSession {
-    pub fn new(
-        txd_msg: DynamicSender<'static, ProxyMessage>,
-        rxd_msg: DynamicReceiver<'static, ProxyMessage>,
-    ) -> ClientSession {
+    pub fn new() -> ClientSession {
         ClientSession {
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
@@ -80,8 +81,9 @@ impl ClientSession {
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
-            txd_msg,
-            rxd_msg,
+            txd_msg: Handler::new(),
+            rxd_msg: RXD_MSG.dyn_receiver(),
+            msg_handler: Handler::new(),
         }
     }
 
@@ -97,15 +99,15 @@ impl ClientSession {
             topic_id,
             message: buffer,
         };
-        self.txd_msg.send(msg).await;
+        self.txd_msg.emit(msg);
     }
 
-    pub fn rxd_mxg(&self) -> DynamicReceiver<'static, ProxyMessage> {
-        self.rxd_msg.clone()
+    pub fn txd_source(&self) -> &mut Handler<ProxyMessage> {
+        &mut self.msg_handler
     }
 
-    pub fn txd_msg(&self) -> DynamicSender<'static, ProxyMessage> {
-        self.txd_msg.clone()
+    pub fn rxd_sink(&self) -> DynamicSender<'static, ProxyMessage> {
+        RXD_MSG.dyn_sender()
     }
 
     async fn handler(&mut self) {
@@ -124,22 +126,21 @@ impl ClientSession {
 
     async fn on_cmd_message(&mut self, msg: ProxyMessage) {
         match msg {
-            ProxyMessage::Publish { topic_id, message } => {
+            ProxyMessage::Publish {
+                topic_id,
+                message: _,
+            } => {
                 info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg
-                        .send(ProxyMessage::PubAck {
-                            topic_id,
-                            return_code: RC_ACCEPTED,
-                        })
-                        .await;
+                    self.txd_msg.emit(ProxyMessage::PubAck {
+                        topic_id,
+                        return_code: RC_ACCEPTED,
+                    });
                 } else {
-                    self.txd_msg
-                        .send(ProxyMessage::PubAck {
-                            topic_id,
-                            return_code: RC_REJECTED_INVALID_TOPIC_ID,
-                        })
-                        .await;
+                    self.txd_msg.emit(ProxyMessage::PubAck {
+                        topic_id,
+                        return_code: RC_REJECTED_INVALID_TOPIC_ID,
+                    });
                 }
             }
             _ => {
@@ -157,22 +158,21 @@ impl ClientSession {
                 info!("Registering topic {} with id {}", topic_name, topic_id);
                 self.server_topics.insert(topic_id, topic_name);
             }
-            ProxyMessage::Publish { topic_id, message } => {
+            ProxyMessage::Publish {
+                topic_id,
+                message: _,
+            } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg
-                        .send(ProxyMessage::PubAck {
-                            topic_id,
-                            return_code: RC_ACCEPTED,
-                        })
-                        .await;
+                    self.txd_msg.emit(ProxyMessage::PubAck {
+                        topic_id,
+                        return_code: RC_ACCEPTED,
+                    });
                 } else {
-                    self.txd_msg
-                        .send(ProxyMessage::PubAck {
-                            topic_id,
-                            return_code: RC_REJECTED_INVALID_TOPIC_ID,
-                        })
-                        .await;
+                    self.txd_msg.emit(ProxyMessage::PubAck {
+                        topic_id,
+                        return_code: RC_REJECTED_INVALID_TOPIC_ID,
+                    });
                 }
             }
             ProxyMessage::PubAck {
@@ -185,12 +185,10 @@ impl ClientSession {
                         topic_id, return_code
                     );
                 } else {
-                    self.txd_msg
-                        .send(ProxyMessage::Register {
-                            topic_id,
-                            topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
-                        })
-                        .await;
+                    self.txd_msg.emit(ProxyMessage::Register {
+                        topic_id,
+                        topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                    });
                     self.client_topics_registered.insert(topic_id, true);
                 }
                 info!(
@@ -229,22 +227,21 @@ impl ClientSession {
                         info!("Registering topic {} with id {}", topic_name, topic_id);
                         self.client_topics.insert(topic_id, topic_name);
                     }
-                    ProxyMessage::Publish { topic_id, message } => {
+                    ProxyMessage::Publish {
+                        topic_id,
+                        message: _,
+                    } => {
                         info!("Received message on topic {} ", topic_id);
                         if self.server_topics.contains_key(&topic_id) {
-                            self.txd_msg
-                                .send(ProxyMessage::PubAck {
-                                    topic_id,
-                                    return_code: RC_ACCEPTED,
-                                })
-                                .await;
+                            self.txd_msg.emit(ProxyMessage::PubAck {
+                                topic_id,
+                                return_code: RC_ACCEPTED,
+                            });
                         } else {
-                            self.txd_msg
-                                .send(ProxyMessage::PubAck {
-                                    topic_id,
-                                    return_code: RC_REJECTED_INVALID_TOPIC_ID,
-                                })
-                                .await;
+                            self.txd_msg.emit(ProxyMessage::PubAck {
+                                topic_id,
+                                return_code: RC_REJECTED_INVALID_TOPIC_ID,
+                            });
                         }
                     }
                     ProxyMessage::PubAck {
@@ -257,12 +254,10 @@ impl ClientSession {
                                 topic_id, return_code
                             );
                         } else {
-                            self.txd_msg
-                                .send(ProxyMessage::Register {
-                                    topic_id,
-                                    topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
-                                })
-                                .await;
+                            self.txd_msg.emit(ProxyMessage::Register {
+                                topic_id,
+                                topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                            });
                         }
                         info!(
                             "Received PubAck for topic {} with code {}",
@@ -278,28 +273,24 @@ impl ClientSession {
                     // on timeout
                     State::Disconnected => {
                         self.txd_msg
-                            .send(ProxyMessage::Connect {
+                            .emit(ProxyMessage::Connect {
                                 protocol_id: 1,
                                 duration: 100,
                                 client_id: self.client_id.clone(),
-                            })
-                            .await;
+                            });
                         self.state = State::Connected;
                     }
                     State::Connected => {
                         if self.ping_timeouts > 5 {
-                            self.txd_msg.send(ProxyMessage::Disconnect {}).await;
+                            self.txd_msg.emit(ProxyMessage::Disconnect {});
                             self.state = State::Disconnected;
                         } else {
                             self.ping_timeouts += 1;
-                            self.txd_msg.send(ProxyMessage::PingReq {}).await;
+                            self.txd_msg.emit(ProxyMessage::PingReq {});
                         }
                     }
-
                 },
             }
         }
     }
-
-
 }
