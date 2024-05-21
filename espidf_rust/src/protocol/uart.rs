@@ -70,6 +70,14 @@ impl UartActor {
             }
         }
     }
+
+    pub fn txd(&self) -> DynamicSender<'static, ProxyMessage> {
+        self.txd_msg.clone()
+    }
+
+    pub fn rxd(&self) -> DynamicReceiver<'static, ProxyMessage> {
+        self.rxd_msg.clone()
+    }
 }
 
 async fn uart_reader(

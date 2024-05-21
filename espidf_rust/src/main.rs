@@ -61,6 +61,35 @@ async fn client_task( mut client:ClientSession) {
     client.run().await;
 }
 
+// implement shift right as connecting a sender to a receiver
+struct Handler<T> {
+    senders : Vec<DynamicSender<T>>
+}
+
+impl <T> Handler<T> {
+    fn new() -> Self {
+        Self {
+            senders: Vec::new()
+        }
+    }
+    fn add_sender(&mut self, sender: DynamicSender<T>) {
+        self.senders.push(sender);
+    }
+    fn handle(&self, msg: T) {
+        for sender in self.senders.iter() {
+            sender.send(msg);
+        }
+    }
+}
+
+impl<T> Shr<&dyn DynamicSender<T>> for Handler<T> {
+    type Output = ();
+    fn shr(self, rhs: &dyn DynamicSender<T>) -> Self::Output {
+        self.add_sender(rhs.clone());
+    }
+}
+
+
 #[main]
 async fn main(spawner: Spawner) {
     init_heap();
@@ -77,10 +106,13 @@ async fn main(spawner: Spawner) {
 
     // Initialize and configure UART0
     let mut uart0 = Uart::new(peripherals.UART0, &clocks);
+
     //    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
     let mut clientSession = ClientSession::new(TXD_MSG.dyn_sender(), RXD_MSG.dyn_receiver());
     let mut uartActor = UartActor::new(uart0,TXD_MSG.dyn_receiver(),RXD_MSG.dyn_sender());
+    uartActor.rxd() >> clientSession.rxd_msg();
+    clientSession.txd_msg() >> uartActor.txd();
     // Spawn Tx and Rx tasks
     spawner.spawn(uart_task(uartActor)).ok();
     spawner.spawn(client_task(clientSession)).ok();

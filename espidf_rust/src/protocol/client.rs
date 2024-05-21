@@ -100,6 +100,14 @@ impl ClientSession {
         self.txd_msg.send(msg).await;
     }
 
+    pub fn rxd_mxg(&self) -> DynamicReceiver<'static, ProxyMessage> {
+        self.rxd_msg.clone()
+    }
+
+    pub fn txd_msg(&self) -> DynamicSender<'static, ProxyMessage> {
+        self.txd_msg.clone()
+    }
+
     async fn handler(&mut self) {
         loop {
             let _res = select(CMD_MSG.receive(), self.rxd_msg.receive()).await;
