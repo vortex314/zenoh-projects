@@ -83,8 +83,9 @@ async fn main(spawner: Spawner) {
 
     let mut clientSession = ClientSession::new();
     let mut uartActor = UartActor::new(uart0);
-    uartActor.rxd_source().add_sender(clientSession.rxd_sink());
-    clientSession.txd_source().add_sender(uartActor.txd_sink());
+    uartActor.add_rxd_sink(clientSession.rxd_sink().clone());
+    let x = uartActor.txd_sink().clone();
+    clientSession.add_msg_sink(x);
     // Spawn Tx and Rx tasks
     spawner.spawn(uart_task(uartActor)).ok();
     spawner.spawn(client_task(clientSession)).ok();

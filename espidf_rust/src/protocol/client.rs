@@ -28,6 +28,7 @@ use log::info;
 use minicbor::bytes::ByteVec;
 
 use super::Handler;
+use super::HandlerTrait;
 use super::VecWriter;
 use crate::protocol;
 
@@ -102,8 +103,8 @@ impl ClientSession {
         self.txd_msg.emit(msg);
     }
 
-    pub fn txd_source(&self) -> &mut Handler<ProxyMessage> {
-        &mut self.msg_handler
+    pub fn add_msg_sink(&self, sender: DynamicSender<'static, ProxyMessage>) {
+        self.msg_handler.add_sender(sender);
     }
 
     pub fn rxd_sink(&self) -> DynamicSender<'static, ProxyMessage> {

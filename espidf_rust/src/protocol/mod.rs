@@ -1,8 +1,10 @@
 
+use core::cell::RefCell;
 use core::ops::Shr;
 
 use alloc::collections::VecDeque;
 use alloc::fmt::format;
+use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::string::ToString;
 use cobs::CobsDecoder;
@@ -178,28 +180,36 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<ProxyMessage, String> {
 
 // implement shift right as connecting a sender to a receiver
 pub struct Handler<'a,T> {
-    senders : Vec<DynamicSender<'a,T>>
+    senders : Rc<RefCell<Vec<DynamicSender<'a,T>>>>
+}
+
+pub trait HandlerTrait<'a,T> {
+    fn add_sender(&self, sender: DynamicSender<'a,T>);
+    fn emit(&self, msg: T);
 }
 
 impl <'a,T> Handler<'a,T> {
     pub fn new() -> Self {
         Self {
-            senders: Vec::new()
+            senders: Rc::new(RefCell::new(Vec::new()))
         }
     }
-    pub fn add_sender(&mut self, sender: DynamicSender<'a,T>) {
-        self.senders.push(sender);
+}
+
+impl <'a,T> HandlerTrait<'a,T> for Handler<'a,T> {
+     fn add_sender(&self, sender: DynamicSender<'a,T>) {
+        self.senders.borrow_mut().push(sender);
     }
-    pub fn emit(&self, msg: T) {
-        for sender in self.senders.iter() {
+     fn emit(&self, msg: T) {
+        for sender in self.senders.borrow().iter() {
             let _ = sender.try_send(msg);
         }
     }
 }
 
-impl<'a,T> Shr<& DynamicSender<'a,T>> for &mut Handler<'a,T> {
+impl<'a,T> Shr<&'a DynamicSender<'a,T>> for &mut Handler<'a,T> {
     type Output = ();
-    fn shr(self, rhs: & DynamicSender<T>) -> Self::Output {
+    fn shr(self, rhs: &'a DynamicSender<T>) -> Self::Output {
         self.add_sender(rhs.clone());
     }
 }

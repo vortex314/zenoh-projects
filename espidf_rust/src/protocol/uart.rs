@@ -13,7 +13,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use log::info;
 
-use super::decode_frame;
+use super::{decode_frame, HandlerTrait};
 use super::encode_frame;
 use super::msg::ProxyMessage;
 use super::Handler;
@@ -87,8 +87,8 @@ impl UartActor {
         TXD_MSG.dyn_sender()
     }
 
-    pub fn rxd_source(&self) -> &mut Handler<ProxyMessage> {
-        &mut self.rxd_msg 
+    pub fn add_rxd_sink(&mut self, sender: DynamicSender<'static, ProxyMessage>) {
+        self.rxd_msg.add_sender(sender);
     }
 }
 
