@@ -27,15 +27,13 @@ use esp_println::println;
 use log::info;
 use minicbor::bytes::ByteVec;
 
-use super::Handler;
-use super::HandlerTrait;
-use super::VecWriter;
-use crate::protocol;
 
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
-use protocol::ProxyMessage;
+use crate::protocol::msg::ProxyMessage;
+use crate::stream::{Source, SourceTrait};
+
 
 static CMD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, ProxyMessage, 10, 10, 10> =
@@ -45,7 +43,7 @@ const RC_REJECTED_CONGESTION: u8 = 1;
 const RC_REJECTED_INVALID_TOPIC_ID: u8 = 2;
 const RC_REJECTED_NOT_SUPPORTED: u8 = 3;
 
-static RXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static RXD_DATA: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
 #[derive(PartialEq)]
 
@@ -69,9 +67,9 @@ pub struct ClientSession {
     client_id: String,
     state: State,
     ping_timeouts: u32,
-    txd_msg: Handler<'static, ProxyMessage>,
+    txd_msg: Source<'static, ProxyMessage>,
     rxd_msg: DynamicReceiver<'static, ProxyMessage>,
-    msg_handler: Handler<'static, ProxyMessage>,
+    msg_handler: Source<'static, ProxyMessage>,
 }
 impl ClientSession {
     pub fn new() -> ClientSession {
@@ -82,9 +80,9 @@ impl ClientSession {
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
-            txd_msg: Handler::new(),
-            rxd_msg: RXD_MSG.dyn_receiver(),
-            msg_handler: Handler::new(),
+            txd_msg: Source::new(),
+            rxd_msg: RXD_DATA.dyn_receiver(),
+            msg_handler: Source::new(),
         }
     }
 
@@ -100,15 +98,19 @@ impl ClientSession {
             topic_id,
             message: buffer,
         };
-        self.txd_msg.emit(msg);
+        self.txd_msg.emit(&msg);
     }
 
-    pub fn add_msg_sink(&self, sender: DynamicSender<'static, ProxyMessage>) {
+    pub fn add_txd_sink(&self, sender: DynamicSender<'static, ProxyMessage>) {
+        self.txd_msg.add_sender(sender);
+    }
+
+    fn add_msg_sink(&mut self, sender: DynamicSender<'static, ProxyMessage>) {
         self.msg_handler.add_sender(sender);
     }
 
     pub fn rxd_sink(&self) -> DynamicSender<'static, ProxyMessage> {
-        RXD_MSG.dyn_sender()
+        RXD_DATA.dyn_sender()
     }
 
     async fn handler(&mut self) {
@@ -133,12 +135,12 @@ impl ClientSession {
             } => {
                 info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.emit(ProxyMessage::PubAck {
+                    self.txd_msg.emit(&ProxyMessage::PubAck {
                         topic_id,
                         return_code: RC_ACCEPTED,
                     });
                 } else {
-                    self.txd_msg.emit(ProxyMessage::PubAck {
+                    self.txd_msg.emit(&ProxyMessage::PubAck {
                         topic_id,
                         return_code: RC_REJECTED_INVALID_TOPIC_ID,
                     });
@@ -165,12 +167,12 @@ impl ClientSession {
             } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.emit(ProxyMessage::PubAck {
+                    self.txd_msg.emit(&ProxyMessage::PubAck {
                         topic_id,
                         return_code: RC_ACCEPTED,
                     });
                 } else {
-                    self.txd_msg.emit(ProxyMessage::PubAck {
+                    self.txd_msg.emit(&ProxyMessage::PubAck {
                         topic_id,
                         return_code: RC_REJECTED_INVALID_TOPIC_ID,
                     });
@@ -186,7 +188,7 @@ impl ClientSession {
                         topic_id, return_code
                     );
                 } else {
-                    self.txd_msg.emit(ProxyMessage::Register {
+                    self.txd_msg.emit(&ProxyMessage::Register {
                         topic_id,
                         topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
                     });
@@ -205,6 +207,7 @@ impl ClientSession {
 
     pub async fn run(&mut self) {
         loop {
+            info!("Client running");
             let result = with_timeout(Duration::from_secs(5), self.rxd_msg.receive()).await;
             match result {
                 Ok(msg) => match msg {
@@ -234,12 +237,12 @@ impl ClientSession {
                     } => {
                         info!("Received message on topic {} ", topic_id);
                         if self.server_topics.contains_key(&topic_id) {
-                            self.txd_msg.emit(ProxyMessage::PubAck {
+                            self.txd_msg.emit(&ProxyMessage::PubAck {
                                 topic_id,
                                 return_code: RC_ACCEPTED,
                             });
                         } else {
-                            self.txd_msg.emit(ProxyMessage::PubAck {
+                            self.txd_msg.emit(&ProxyMessage::PubAck {
                                 topic_id,
                                 return_code: RC_REJECTED_INVALID_TOPIC_ID,
                             });
@@ -255,7 +258,7 @@ impl ClientSession {
                                 topic_id, return_code
                             );
                         } else {
-                            self.txd_msg.emit(ProxyMessage::Register {
+                            self.txd_msg.emit(&ProxyMessage::Register {
                                 topic_id,
                                 topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
                             });
@@ -274,20 +277,19 @@ impl ClientSession {
                     // on timeout
                     State::Disconnected => {
                         self.txd_msg
-                            .emit(ProxyMessage::Connect {
+                            .emit(&ProxyMessage::Connect {
                                 protocol_id: 1,
                                 duration: 100,
                                 client_id: self.client_id.clone(),
                             });
-                        self.state = State::Connected;
                     }
                     State::Connected => {
                         if self.ping_timeouts > 5 {
-                            self.txd_msg.emit(ProxyMessage::Disconnect {});
+                            self.txd_msg.emit(&ProxyMessage::Disconnect {});
                             self.state = State::Disconnected;
                         } else {
                             self.ping_timeouts += 1;
-                            self.txd_msg.emit(ProxyMessage::PingReq {});
+                            self.txd_msg.emit(&ProxyMessage::PingReq {});
                         }
                     }
                 },

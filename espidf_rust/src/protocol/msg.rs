@@ -1,8 +1,25 @@
-use alloc::collections::VecDeque;
-use alloc::fmt::format;
-use alloc::string::String;
-use alloc::string::ToString;
-use alloc::vec::Vec;
+
+
+#[cfg(feature = "alloc")]
+use alloc::{
+    string::String,
+    vec::Vec,
+    collections::VecDeque,
+    fmt::format,
+};
+
+#[cfg(not(feature = "alloc"))]
+use std::{
+    string::String,
+    vec::Vec,
+    collections::VecDeque,
+    fmt::format,
+};
+
+
+
+
+
 use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;

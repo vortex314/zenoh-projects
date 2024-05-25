@@ -13,6 +13,7 @@ use log::{debug, info};
 
 mod protocol;
 use protocol::*;
+use protocol::msg::ProxyMessage;
 
 mod proxy;
 use proxy::*;

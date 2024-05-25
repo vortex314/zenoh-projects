@@ -12,9 +12,9 @@ use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
 use log::{debug, info};
 
-use embassy_sync::channel::Channel;
-use embassy_sync::channel::DynamicReceiver;
-use embassy_sync::channel::DynamicSender;
+#[cfg(feature = "embassy")]
+
+use embassy_sync::channel::{ Channel,DynamicReceiver,DynamicSender};
 
 extern crate alloc;
 use alloc::vec;
@@ -73,8 +73,7 @@ use minicbor::encode::Encoder;
 use minicbor::bytes::ByteVec;
 
 pub mod msg;
-pub mod client;
-pub mod uart;
+
 
 use msg::ProxyMessage;
 
@@ -142,6 +141,8 @@ pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
     res_vec.push(0x00 as u8);
     res_vec.extend_from_slice(&cobs_buffer[0..size + 1]);
     res_vec.push(0x00 as u8);
+    res_vec.push('\r' as u8);
+    res_vec.push('\n' as u8);
     Ok(res_vec)
 }
 
@@ -178,38 +179,35 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<ProxyMessage, String> {
 }
 
 
-// implement shift right as connecting a sender to a receiver
-pub struct Handler<'a,T> {
-    senders : Rc<RefCell<Vec<DynamicSender<'a,T>>>>
+pub struct MessageDecoder {
+    buffer: Vec<u8>,
 }
 
-pub trait HandlerTrait<'a,T> {
-    fn add_sender(&self, sender: DynamicSender<'a,T>);
-    fn emit(&self, msg: T);
-}
-
-impl <'a,T> Handler<'a,T> {
+impl MessageDecoder {
     pub fn new() -> Self {
-        Self {
-            senders: Rc::new(RefCell::new(Vec::new()))
-        }
+        Self { buffer: Vec::new() }
     }
-}
 
-impl <'a,T> HandlerTrait<'a,T> for Handler<'a,T> {
-     fn add_sender(&self, sender: DynamicSender<'a,T>) {
-        self.senders.borrow_mut().push(sender);
-    }
-     fn emit(&self, msg: T) {
-        for sender in self.senders.borrow().iter() {
-            let _ = sender.try_send(msg);
+    pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
+        let mut messages_found = Vec::new();
+        for byte in data {
+            self.buffer.push(*byte);
+            if *byte == 0 {
+                // decode cobs from frame
+                let msg = decode_frame(&self.buffer);
+                msg.into_iter().for_each(|m| {
+                    messages_found.push(m);
+                });
+                self.buffer.clear();
+            }
         }
+        messages_found
     }
-}
 
-impl<'a,T> Shr<&'a DynamicSender<'a,T>> for &mut Handler<'a,T> {
-    type Output = ();
-    fn shr(self, rhs: &'a DynamicSender<T>) -> Self::Output {
-        self.add_sender(rhs.clone());
+    pub fn to_str(&self) -> String {
+        match String::from_utf8(self.buffer.clone()) {
+            Ok(s) => s,
+            Err(_) => String::from(""),
+        }
     }
 }

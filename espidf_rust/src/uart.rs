@@ -12,16 +12,19 @@ use esp_hal::{
 use alloc::string::String;
 use alloc::vec::Vec;
 use log::info;
+use minicbor::decode::info;
 
-use super::{decode_frame, HandlerTrait};
-use super::encode_frame;
-use super::msg::ProxyMessage;
-use super::Handler;
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{DynamicReceiver, DynamicSender},
 };
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
+
+
+use crate::stream::{Source, SourceTrait};
+use crate::protocol::msg::ProxyMessage;
+use crate::protocol::{decode_frame, encode_frame,};
+use crate::protocol::MessageDecoder;
 
 pub const UART_BUFSIZE: usize = 127;
 static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
@@ -29,7 +32,7 @@ static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new
 pub struct UartActor {
     tx: UartTx<'static, UART0>,
     rx: UartRx<'static, UART0>,
-    rxd_msg: Handler<'static, ProxyMessage>,
+    rxd_msg: Source<'static, ProxyMessage>,
     txd_msg: DynamicReceiver<'static, ProxyMessage>,
 }
 
@@ -43,7 +46,7 @@ impl UartActor {
         Self {
             tx,
             rx,
-            rxd_msg: Handler::new(),
+            rxd_msg: Source::new(),
             txd_msg: TXD_MSG.dyn_receiver(),
         }
     }
@@ -61,12 +64,13 @@ impl UartActor {
             .await;
             match _res {
                 First(r) => {
+                    info!("Received {} bytes", r.ok().unwrap());
                     match r {
                         Ok(_cnt) => {
                             let v = message_decoder.decode(&mut rbuf);
                             // Read characters from UART into read buffer until EOT
                             for msg in v {
-                                self.rxd_msg.emit(msg);
+                                self.rxd_msg.emit(&msg);
                             }
                         }
                         Err(_) => {
@@ -75,6 +79,7 @@ impl UartActor {
                     }
                 }
                 Second(msg) => {
+                    info!("Sending message");
                     let bytes = encode_frame(msg).unwrap();
                     let _ = embedded_io_async::Write::write(&mut self.tx, bytes.as_slice()).await;
                     let _ = embedded_io_async::Write::flush(&mut self.tx).await;
@@ -83,7 +88,7 @@ impl UartActor {
         }
     }
 
-    pub fn txd_sink(&self) -> DynamicSender<'_, ProxyMessage> {
+    pub fn txd_sink(&self) -> DynamicSender<'static, ProxyMessage> {
         TXD_MSG.dyn_sender()
     }
 
@@ -94,35 +99,4 @@ impl UartActor {
 
 
 
-pub struct MessageDecoder {
-    buffer: Vec<u8>,
-}
 
-impl MessageDecoder {
-    pub fn new() -> Self {
-        Self { buffer: Vec::new() }
-    }
-
-    pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
-        let mut messages_found = Vec::new();
-        for byte in data {
-            self.buffer.push(*byte);
-            if *byte == 0 {
-                // decode cobs from frame
-                let msg = decode_frame(&self.buffer);
-                msg.into_iter().for_each(|m| {
-                    messages_found.push(m);
-                });
-                self.buffer.clear();
-            }
-        }
-        messages_found
-    }
-
-    pub fn to_str(&self) -> String {
-        match String::from_utf8(self.buffer.clone()) {
-            Ok(s) => s,
-            Err(_) => String::from(""),
-        }
-    }
-}

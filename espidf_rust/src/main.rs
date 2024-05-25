@@ -32,8 +32,14 @@ use logger::semi_logger_init;
 
 mod protocol;
 use protocol::msg::ProxyMessage;
-use protocol::client::ClientSession;
-use protocol::uart::UartActor;
+
+mod client;
+use client::ClientSession;
+
+mod uart;
+use uart::UartActor;
+
+mod stream;
 
 extern crate alloc;
 
@@ -77,19 +83,20 @@ async fn main(spawner: Spawner) {
     log::info!("Hello, log!");
 
     // Initialize and configure UART0
-    let mut uart0 = Uart::new(peripherals.UART0, &clocks);
+    let  uart0 = Uart::new(peripherals.UART0, &clocks);
 
-    //    uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
+    // uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
-    let mut clientSession = ClientSession::new();
-    let mut uartActor = UartActor::new(uart0);
-    uartActor.add_rxd_sink(clientSession.rxd_sink().clone());
-    let x = uartActor.txd_sink().clone();
-    clientSession.add_msg_sink(x);
-    // Spawn Tx and Rx tasks
-    spawner.spawn(uart_task(uartActor)).ok();
-    spawner.spawn(client_task(clientSession)).ok();
+    let  client_session = ClientSession::new();
+    let mut uart_actor = UartActor::new(uart0);
+
+    uart_actor.add_rxd_sink(client_session.rxd_sink().clone());
+    client_session.add_txd_sink(uart_actor.txd_sink().clone());
+    // Spawn uart and client tasks
+    spawner.spawn(uart_task(uart_actor)).ok();
+    spawner.spawn(client_task(client_session)).ok();
     loop {
         Timer::after(Duration::from_millis(5_000)).await;
+        info!("main thread running");
     }
 }

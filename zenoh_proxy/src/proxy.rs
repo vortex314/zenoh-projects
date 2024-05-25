@@ -1,8 +1,9 @@
-use crate::protocol::decode_frame;
-use crate::protocol::encode_frame;
-use crate::protocol::ProxyMessage;
-use crate::protocol::MTU_SIZE;
-use crate::MessageDecoder;
+use crate::protocol;
+use protocol::decode_frame;
+use protocol::encode_frame;
+use protocol::msg::ProxyMessage;
+use protocol::MTU_SIZE;
+use protocol::MessageDecoder;
 use bytes::BytesMut;
 use log::*;
 use minicbor::encode;
@@ -13,8 +14,8 @@ use tokio::io::AsyncReadExt;
 use tokio_serial::*;
 use tokio_util::codec::{Decoder, Encoder};
 
-const GREEN : &str = "\x1b[32m";
-const RESET : &str = "\x1b[34m";
+const GREEN : &str = "\x1b[0;32m";
+const RESET : &str = "\x1b[m";
 
 pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
     let mut message_decoder = MessageDecoder::new();
@@ -43,13 +44,13 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                     print!("{}",RESET);
                 }
                 for message in messages {
+                    info!("Message : {:?}", message);
                     match message {
                         ProxyMessage::Connect {
                             protocol_id: _,
                             duration: _,
                             client_id: _,
                         } => {
-                            info!("Connect message received");
                             let conn_ack = ProxyMessage::ConnAck { return_code: 0 };
                             let bytes = encode_frame(conn_ack)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
@@ -58,7 +59,6 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                             }
                         }
                         ProxyMessage::PingReq => {
-                            info!("PingReq message received");
                             let ping_resp = ProxyMessage::PingResp;
                             let bytes = encode_frame(ping_resp)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
@@ -67,10 +67,8 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                             }
                         }
                         _ => {
-                            info!("Message : {:?}", message);
                         }
                     }
-                    info!("Message : {:?}", message);
                 }
             }
         }
