@@ -7,7 +7,9 @@ use protocol::MessageDecoder;
 use bytes::BytesMut;
 use log::*;
 use minicbor::encode;
+use std::arch::x86_64::_MM_FLUSH_ZERO_MASK;
 use std::io;
+use std::io::Write;
 use std::result::Result;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
@@ -27,6 +29,7 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
     let mut serial_stream = tokio_serial::new(port_info.port_name.clone(), 115200)
         .open_native_async()
         .unwrap();
+    info!("Port {} opened", port_info.port_name.clone() );
     loop {
         let has_data = serial_stream.readable().await;
         if has_data.is_ok() {
@@ -36,15 +39,18 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                 info!("Port {} closed", port_info.port_name);
                 break;
             } else {
+
                 let messages = message_decoder.decode(&buf[0..n]);
 
                 if messages.is_empty() {
                     let line = String::from_utf8(buf[0..n].to_vec()).ok();
-                    if line.is_some() { print!("{}{}{}",GREEN,line.unwrap(),RESET);};
-                    print!("{}",RESET);
+                 if line.is_some() { 
+                        print!("{}{}{}",GREEN,line.unwrap(),RESET);
+                        std::io::stdout().flush().unwrap();
+                    };
                 }
                 for message in messages {
-                    info!("Message : {:?}", message);
+                    info!("Received Message : {:?}", message);
                     match message {
                         ProxyMessage::Connect {
                             protocol_id: _,
@@ -52,6 +58,7 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                             client_id: _,
                         } => {
                             let conn_ack = ProxyMessage::ConnAck { return_code: 0 };
+                            info!("Send Msg : {:?}", conn_ack);
                             let bytes = encode_frame(conn_ack)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
                             if _res.is_err() {
@@ -60,6 +67,7 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                         }
                         ProxyMessage::PingReq => {
                             let ping_resp = ProxyMessage::PingResp;
+                            info!("Send Msg : {:?}", ping_resp);
                             let bytes = encode_frame(ping_resp)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
                             if _res.is_err() {
@@ -71,6 +79,9 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                     }
                 }
             }
+        } else if has_data.is_err() {
+            info!("Port {} closed", port_info.port_name);
+            break;
         }
     }
     Ok(())

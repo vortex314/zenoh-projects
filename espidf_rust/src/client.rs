@@ -218,18 +218,20 @@ impl ClientSession {
                         }
                     }
                     ProxyMessage::PingResp {} => {
+
                         info!("Ping response");
                     }
                     ProxyMessage::Disconnect {} => {
                         info!("Disconnected");
                         self.state = State::Disconnected;
+                        self.server_topics.clear();
                     }
                     ProxyMessage::Register {
                         topic_id,
                         topic_name,
                     } => {
                         info!("Registering topic {} with id {}", topic_name, topic_id);
-                        self.client_topics.insert(topic_id, topic_name);
+                        self.server_topics.insert(topic_id, topic_name);
                     }
                     ProxyMessage::Publish {
                         topic_id,
@@ -287,6 +289,7 @@ impl ClientSession {
                         if self.ping_timeouts > 5 {
                             self.txd_msg.emit(&ProxyMessage::Disconnect {});
                             self.state = State::Disconnected;
+                            self.server_topics.clear();
                         } else {
                             self.ping_timeouts += 1;
                             self.txd_msg.emit(&ProxyMessage::PingReq {});

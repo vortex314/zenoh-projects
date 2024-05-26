@@ -70,6 +70,7 @@ impl UartActor {
                             let v = message_decoder.decode(&mut rbuf);
                             // Read characters from UART into read buffer until EOT
                             for msg in v {
+                                info!("Received message: {:?}", msg);
                                 self.rxd_msg.emit(&msg);
                             }
                         }
@@ -79,7 +80,7 @@ impl UartActor {
                     }
                 }
                 Second(msg) => {
-                    info!("Sending message");
+                    info!("Send message: {:?}", msg);
                     let bytes = encode_frame(msg).unwrap();
                     let _ = embedded_io_async::Write::write(&mut self.tx, bytes.as_slice()).await;
                     let _ = embedded_io_async::Write::flush(&mut self.tx).await;

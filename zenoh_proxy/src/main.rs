@@ -127,8 +127,8 @@ async fn main() -> Result<(), Error> {
         tokio::spawn(async move { scan_available_ports(a_ports, port_patterns).await });
     // spawn task to read from serial port
 
-
-    tokio::time::sleep(tokio::time::Duration::from_secs(50)).await;
-
-    Ok(())
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(50)).await;
+        info!("Main loop");
+    }
 }
