@@ -34,6 +34,16 @@ use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 use crate::protocol::msg::ProxyMessage;
 use crate::stream::{Source, SourceTrait};
 
+trait PubSub {
+    fn publish<T>(&self, topic:String,message:T)  where T:Encode;
+    fn subscribe<T>(&self, subscriber: DynamicSender<'static, T>) ->u16 where T:Decode;
+}
+
+struct Subscription {
+    id:u16,
+    topic:String,
+    sender:DynamicSender<'static,T> where T:Encode
+}
 
 static CMD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, ProxyMessage, 10, 10, 10> =
