@@ -74,6 +74,7 @@ pub struct ClientSession {
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
+    client_topics_sender: BTreeMap<u16, DynamicSender<'static,T>> where T:Encode,
     client_id: String,
     state: State,
     ping_timeouts: u32,
