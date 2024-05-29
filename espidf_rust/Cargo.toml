@@ -30,7 +30,7 @@ esp-alloc = { version = "0.3.0" }
 embedded-svc = { version = "0.26.1", default-features = false, features = [] }
 embedded-io = "0.6.1"
 embedded-io-async={ version ="*"}
-esp-wifi = { version = "0.4.0", features = [
+esp-wifi = { version = "*", features = [
     "esp32",
     "phy-enable-usb",
     "utils",

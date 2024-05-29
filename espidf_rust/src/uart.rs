@@ -34,6 +34,7 @@ pub struct UartActor {
     rx: UartRx<'static, UART0>,
     rxd_msg: Source<'static, ProxyMessage>,
     txd_msg: DynamicReceiver<'static, ProxyMessage>,
+    rxd_buffer : Vec<u8>,
 }
 
 impl UartActor {
@@ -48,17 +49,20 @@ impl UartActor {
             rx,
             rxd_msg: Source::new(),
             txd_msg: TXD_MSG.dyn_receiver(),
+            rxd_buffer: Vec::new(),
         }
     }
 
     pub async fn run(&mut self) {
         let mut rbuf = [0u8; UART_BUFSIZE];
+        let mut small_buf = [0u8; 1];
         let mut message_decoder = MessageDecoder::new();
         info!("UART0 running");
         // Spawn Tx and Rx tasks
         loop {
             let _res = select(
-                embedded_io_async::Read::read(&mut self.rx, &mut rbuf[0..]),
+  //              self.rx.read(&mut rbuf[0..]),
+               embedded_io_async::Read::read(&mut self.rx, &mut small_buf),
                 self.txd_msg.receive(),
             )
             .await;
@@ -67,7 +71,7 @@ impl UartActor {
                     info!("Received {} bytes", r.ok().unwrap());
                     match r {
                         Ok(_cnt) => {
-                            let v = message_decoder.decode(&mut rbuf);
+                            let v = message_decoder.decode(&mut small_buf);
                             // Read characters from UART into read buffer until EOT
                             for msg in v {
                                 info!("Received message: {:?}", msg);

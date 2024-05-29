@@ -61,6 +61,7 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                             info!("Send Msg : {:?}", conn_ack);
                             let bytes = encode_frame(conn_ack)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
+                            serial_stream.flush();
                             if _res.is_err() {
                                 info!("Error writing to serial port");
                             }
@@ -70,6 +71,7 @@ pub async fn port_handler(port_info: SerialPortInfo) -> Result<(), String> {
                             info!("Send Msg : {:?}", ping_resp);
                             let bytes = encode_frame(ping_resp)?;
                             let _res = serial_stream.try_write(&bytes.as_slice());
+                            serial_stream.flush();
                             if _res.is_err() {
                                 info!("Error writing to serial port");
                             }

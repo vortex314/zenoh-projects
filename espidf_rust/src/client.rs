@@ -1,3 +1,6 @@
+use core::result;
+
+use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use alloc::vec::Vec;
@@ -27,23 +30,11 @@ use esp_println::println;
 use log::info;
 use minicbor::bytes::ByteVec;
 
-
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 use crate::protocol::msg::ProxyMessage;
 use crate::stream::{Source, SourceTrait};
-
-trait PubSub {
-    fn publish<T>(&self, topic:String,message:T)  where T:Encode;
-    fn subscribe<T>(&self, subscriber: DynamicSender<'static, T>) ->u16 where T:Decode;
-}
-
-struct Subscription {
-    id:u16,
-    topic:String,
-    sender:DynamicSender<'static,T> where T:Encode
-}
 
 static CMD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, ProxyMessage, 10, 10, 10> =
@@ -62,19 +53,46 @@ enum State {
     Connected,
 }
 
-trait Publisher<T> {
-    fn publish(&self, message: T);
+trait Subscriber {
+    fn on_message(&self, message: & ProxyMessage);
 }
 
-trait Subscriber<T> {
-    fn on_message(&self, message: T);
+struct Sub<'a, T> {
+    topic_id: u16,
+    sender: DynamicSender<'a, T>,
+}
+
+impl<'a, T> Sub<'a, T> {
+    pub fn new(topic_id: u16, sender: DynamicSender<'a, T>) -> Self {
+        Sub { topic_id, sender }
+    }
+}
+
+impl<'a, T> Subscriber for Sub<'a, T>
+where
+    T: for<'b> Decode<'b, i32> , 
+{
+    fn on_message(&self, message: & ProxyMessage) {
+        if let ProxyMessage::Publish { topic_id, message } = message {
+            if *topic_id == self.topic_id {
+                let mut cbor_decoder = Decoder::new(message); // Lifetime here is limited to this scope
+
+                let res = T::decode(&mut cbor_decoder, &mut 1);
+
+                if res.is_ok() {
+                    let _ = self.sender.try_send(res.unwrap());
+                }
+            }
+        }
+        
+    }
 }
 
 pub struct ClientSession {
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
-    client_topics_sender: BTreeMap<u16, DynamicSender<'static,T>> where T:Encode,
+    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
     client_id: String,
     state: State,
     ping_timeouts: u32,
@@ -88,6 +106,7 @@ impl ClientSession {
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
+            client_topics_sender: BTreeMap::new(),
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
@@ -229,7 +248,6 @@ impl ClientSession {
                         }
                     }
                     ProxyMessage::PingResp {} => {
-
                         info!("Ping response");
                     }
                     ProxyMessage::Disconnect {} => {
@@ -289,12 +307,11 @@ impl ClientSession {
                 Err(_) => match self.state {
                     // on timeout
                     State::Disconnected => {
-                        self.txd_msg
-                            .emit(&ProxyMessage::Connect {
-                                protocol_id: 1,
-                                duration: 100,
-                                client_id: self.client_id.clone(),
-                            });
+                        self.txd_msg.emit(&ProxyMessage::Connect {
+                            protocol_id: 1,
+                            duration: 100,
+                            client_id: self.client_id.clone(),
+                        });
                     }
                     State::Connected => {
                         if self.ping_timeouts > 5 {
