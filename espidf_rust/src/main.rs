@@ -39,7 +39,8 @@ use client::ClientSession;
 mod uart;
 use uart::UartActor;
 
-mod stream;
+mod limero;
+
 
 extern crate alloc;
 
@@ -90,8 +91,11 @@ async fn main(spawner: Spawner) {
     let  client_session = ClientSession::new();
     let mut uart_actor = UartActor::new(uart0);
 
-    uart_actor.add_rxd_sink(client_session.rxd_sink().clone());
-    client_session.add_txd_sink(uart_actor.txd_sink().clone());
+    uart_actor.actor.add_sink(Box::new(|msg:ProxyMessage| {
+        info!("UartActor received message: {:?}", msg);
+    }));
+
+    
     // Spawn uart and client tasks
     spawner.spawn(uart_task(uart_actor)).ok();
     spawner.spawn(client_task(client_session)).ok();

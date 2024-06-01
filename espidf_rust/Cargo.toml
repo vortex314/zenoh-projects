@@ -62,8 +62,8 @@ opt-level = 's'
 overflow-checks = false
 
 [features]
-default=["alloc"]
-alloc=[]
+default=["esp32"]
+esp32=[]
 
 
 

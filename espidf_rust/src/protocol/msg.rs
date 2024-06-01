@@ -1,6 +1,6 @@
 
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "esp32")]
 use alloc::{
     string::String,
     vec::Vec,
@@ -8,7 +8,7 @@ use alloc::{
     fmt::format,
 };
 
-#[cfg(not(feature = "alloc"))]
+#[cfg(feature = "linux")]
 use std::{
     string::String,
     vec::Vec,

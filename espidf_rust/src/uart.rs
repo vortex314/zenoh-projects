@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use esp_hal::{
@@ -21,7 +22,7 @@ use embassy_sync::{
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 
-use crate::stream::{Source, SourceTrait};
+use crate::limero::{SourceTrait,Source,Actor,Handler,Flow,};
 use crate::protocol::msg::ProxyMessage;
 use crate::protocol::{decode_frame, encode_frame,};
 use crate::protocol::MessageDecoder;
@@ -30,9 +31,10 @@ pub const UART_BUFSIZE: usize = 127;
 static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 
 pub struct UartActor {
+    pub actor : Actor<ProxyMessage,ProxyMessage>,
     tx: UartTx<'static, UART0>,
     rx: UartRx<'static, UART0>,
-    rxd_msg: Source<'static, ProxyMessage>,
+    rxd_msg: Source<ProxyMessage>,
     txd_msg: DynamicReceiver<'static, ProxyMessage>,
     rxd_buffer : Vec<u8>,
 }
@@ -45,16 +47,20 @@ impl UartActor {
         // Split UART0 to create seperate Tx and Rx handles
         let (tx, rx) = uart0.split();
         Self {
+            actor: Actor::<ProxyMessage,ProxyMessage>::new(Box::new(|_actor,msg| {
+                info!("UartActor received message: {:?}", msg);
+            })),
             tx,
             rx,
             rxd_msg: Source::new(),
             txd_msg: TXD_MSG.dyn_receiver(),
             rxd_buffer: Vec::new(),
+
         }
     }
 
     pub async fn run(&mut self) {
-        let mut rbuf = [0u8; UART_BUFSIZE];
+        let mut _rbuf = [0u8; UART_BUFSIZE];
         let mut small_buf = [0u8; 1];
         let mut message_decoder = MessageDecoder::new();
         info!("UART0 running");
@@ -93,13 +99,7 @@ impl UartActor {
         }
     }
 
-    pub fn txd_sink(&self) -> DynamicSender<'static, ProxyMessage> {
-        TXD_MSG.dyn_sender()
-    }
 
-    pub fn add_rxd_sink(&mut self, sender: DynamicSender<'static, ProxyMessage>) {
-        self.rxd_msg.add_sender(sender);
-    }
 }
 
 

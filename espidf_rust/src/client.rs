@@ -34,7 +34,7 @@ use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 use crate::protocol::msg::ProxyMessage;
-use crate::stream::{Source, SourceTrait};
+use crate::limero::{Actor, Source, SourceTrait};
 
 static CMD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
 static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, ProxyMessage, 10, 10, 10> =
@@ -89,6 +89,7 @@ where
 }
 
 pub struct ClientSession {
+    pub actor : Actor<ProxyMessage,ProxyMessage>,
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
@@ -96,13 +97,16 @@ pub struct ClientSession {
     client_id: String,
     state: State,
     ping_timeouts: u32,
-    txd_msg: Source<'static, ProxyMessage>,
+    txd_msg: Source<ProxyMessage>,
     rxd_msg: DynamicReceiver<'static, ProxyMessage>,
-    msg_handler: Source<'static, ProxyMessage>,
+    msg_handler: Source< ProxyMessage>,
 }
 impl ClientSession {
     pub fn new() -> ClientSession {
         ClientSession {
+            actor: Actor::<ProxyMessage,ProxyMessage>::new(Box::new(|_actor,msg| {
+                info!("ClientSession received message: {:?}", msg);
+            })),
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
@@ -129,18 +133,6 @@ impl ClientSession {
             message: buffer,
         };
         self.txd_msg.emit(&msg);
-    }
-
-    pub fn add_txd_sink(&self, sender: DynamicSender<'static, ProxyMessage>) {
-        self.txd_msg.add_sender(sender);
-    }
-
-    fn add_msg_sink(&mut self, sender: DynamicSender<'static, ProxyMessage>) {
-        self.msg_handler.add_sender(sender);
-    }
-
-    pub fn rxd_sink(&self) -> DynamicSender<'static, ProxyMessage> {
-        RXD_DATA.dyn_sender()
     }
 
     async fn handler(&mut self) {
