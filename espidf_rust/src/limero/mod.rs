@@ -60,6 +60,27 @@ impl<T, U> Actor<T, U> {
     }
 }
 
+impl<T,U> SinkTrait<T> for Actor<T,U> {
+    fn handler(&self) -> Box<dyn Handler<T>> {
+        let actor = self.clone();
+        struct ActorHandler<T,U> {
+            actor: Actor<T,U>,
+        }
+        impl<T,U> Handler<T> for ActorHandler<T,U> {
+            fn handle(&self, cmd: T) {
+                (self.actor.fn_handler)(&mut self.actor,cmd);
+            }
+        }
+        Box::new(ActorHandler { actor })
+    }
+}
+
+impl<T,U> SourceTrait<U> for Actor<T,U> {
+    fn add_handler(&self, handler: Box<dyn Handler<U>>) {
+        self.emitter.add_handler(handler);
+    }
+}
+
 pub struct Mapper<T, U> {
     emitter: Rc<RefCell<Source<U>>>,
     func: Rc<dyn Fn(T) -> U>,
