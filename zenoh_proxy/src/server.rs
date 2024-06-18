@@ -9,6 +9,14 @@ enum ServerState {
     Will,
 }
 
+enum ClientState {
+    Disconnected,
+    WaitWillTopic,
+    WaitWillMessage,
+    Connected,
+    Will,
+}
+
 struct ServerSession {
     state: ServerState,
     client_id: String,
