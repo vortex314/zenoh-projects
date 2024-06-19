@@ -216,13 +216,9 @@ impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
         (*self).add_listener(sink);
     }
 }
-/* 
-impl<T> Shr<&dyn SinkTrait<T>> for &mut dyn SourceTrait<T> where T: Clone + Send + Sync,dyn SinkTrait<T>: Clone + Send + Sync {
-    type Output = ();
-    fn shr(self, sink: &dyn SinkTrait<T>) -> () {
-       // let _s = sink.clone();
-        
-        let _x = Box::new(sink.clone());
-        (*self).add_listener(_x);
-    }
-}*/
+
+pub fn connect<T,U>(src: &mut dyn SourceTrait<T>, func : fn(T)->Option<U>, sink: SinkRef<U>) where T:Clone+Send+Sync+'static, U:Clone+Send+Sync+'static {
+    let mut flow = FlowFunction::new(func);
+    flow.add_listener(Box::new(sink));
+    src.add_listener(Box::new(flow));
+}
