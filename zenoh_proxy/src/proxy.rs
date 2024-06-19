@@ -7,7 +7,6 @@ use protocol::MessageDecoder;
 use bytes::BytesMut;
 use log::*;
 use minicbor::encode;
-use std::arch::x86_64::_MM_FLUSH_ZERO_MASK;
 use std::io;
 use std::io::Write;
 use std::result::Result;

@@ -1,38 +1,55 @@
-use tokio_serial::SerialPortInfo;
+use tokio::io::split;
+use tokio::io::AsyncReadExt;
+use tokio_serial::*;
+use tokio_util::codec::{Decoder, Encoder};
+use tokio::select;
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::Mutex;
+use log::info;
+use cobs::CobsDecoder;
 
 use crate::limero::Sink;
 use crate::limero::SinkTrait;
 use crate::limero::SourceTrait;
 use crate::limero::Src;
 
+use crate::protocol::msg::*;
+use crate::protocol::MessageDecoder;
+use crate::encode_frame;
+
+const MTU_SIZE: usize = 1023;
+
 #[derive(Clone)]
-pub enum DataLinkCmd {
-    SendFrame { frame: Vec<u8> },
+pub enum TransportCmd {
+    SendFrame { frame: ProxyMessage },
 }
 
 #[derive(Clone)]
-pub enum DataLinkEvent {
-    RecvFrame { frame: Vec<u8> },
+pub enum TransportEvent {
+    RecvFrame { frame: ProxyMessage },
 }
 
-struct DataLink {
-    events: Src<DataLinkEvent>,
-    commands: Sink<DataLinkCmd>,
+struct Transport {
+    events: Src<TransportEvent>,
+    commands: Sink<TransportCmd>,
     port_info: SerialPortInfo,
     input_buffer: Vec<u8>,
     output_buffer: Vec<u8>,
+    message_decoder: MessageDecoder,
 }
 
-impl DataLink {
+impl Transport {
     fn new(port_info: SerialPortInfo) -> Self {
         let commands = Sink::new(100);
         let events = Src::new();
-        DataLink {
+        Transport {
             events,
             commands,
             port_info,
             input_buffer: Vec::new(),
             output_buffer: Vec::new(),
+            message_decoder: MessageDecoder::new(),
         }
     }
     fn cobs_decoder(&self, data: Vec<u8>) -> Option<Vec<u8>> {
@@ -55,22 +72,22 @@ impl DataLink {
             self.input_buffer.push(byte);
         }
     }
-    async fn run() {
+    async fn run(&mut self) {
         loop {
             let message_decoder = MessageDecoder::new();
-            let mut serial_stream = tokio_serial::new(port_info.port_name.clone(), 115200)
+            let mut serial_stream = tokio_serial::new(self.port_info.port_name.clone(), 115200)
                 .open_native_async()
                 .unwrap();
-            info!("Port {} opened", port_info.port_name.clone());
-            input_buffer.clear();
+            info!("Port {} opened", self.port_info.port_name.clone());
+            self.input_buffer.clear();
 
             loop {
                 select!{
-                    _ = commands.read() => {
-                        let cmd = commands.pop();
-                        match cmd {
-                            DataLinkCmd::SendFrame { frame } => {
-                                let _res = serial_stream.try_write(&frame.as_slice());
+                    cmd = self.commands.read() => {
+                        match cmd.unwrap() {
+                            TransportCmd::SendFrame { frame } => {
+                                let x = encode_frame(frame);
+                                let _res = serial_stream.try_write(&x);
                                 serial_stream.flush();
                                 if _res.is_err() {
                                     info!("Error writing to serial port");
@@ -82,10 +99,10 @@ impl DataLink {
                         let mut buf = [0; MTU_SIZE];
                         let n = serial_stream.read(&mut buf).await.unwrap();
                         if n == 0 {
-                            info!("Port {} closed", port_info.port_name);
+                            info!("Port {} closed", self.port_info.port_name);
                             break;
                         } else {
-                            self.push_input(buf[0..n].to_vec());
+                            let _res = self.message_decoder.push_input(&buf[0..n]);
                             }
                         }
                 }
@@ -96,14 +113,14 @@ impl DataLink {
     }
 }
 
-impl SinkTrait<DataLinkCmd> for DataLink {
-    fn push(&self, message: DataLinkCmd) {
+impl SinkTrait<TransportCmd> for Transport {
+    fn push(&self, message: TransportCmd) {
         self.commands.push(message);
     }
 }
 
-impl SourceTrait<DataLinkEvent> for DataLink {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<DataLinkEvent>>) {
+impl SourceTrait<TransportEvent> for Transport {
+    fn add_listener(&mut self, sink: Box<dyn SinkTrait<TransportEvent>>) {
         self.events.add_listener(sink);
     }
 }
