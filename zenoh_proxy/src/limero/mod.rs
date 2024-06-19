@@ -91,11 +91,11 @@ where
         self.sender.try_send(message).unwrap();
     }
 }
-pub struct Src<T> {
+pub struct Source<T> {
     sinks: Vec<Box<dyn SinkTrait<T>>>,
 }
 
-impl<T> Src<T> {
+impl<T> Source<T> {
     pub fn new() -> Self {
         Self { sinks: Vec::new() }
     }
@@ -109,7 +109,7 @@ impl<T> Src<T> {
     }
 }
 
-impl<T> SourceTrait<T> for Src<T>
+impl<T> SourceTrait<T> for Source<T>
 where
     T: Clone + Send + Sync,
 {
@@ -124,7 +124,7 @@ where
     U: Clone + Send + Sync,
 {
     func: fn(T) -> Option<U>,
-    src: Src<U>,
+    src: Source<U>,
     l: PhantomData<T>,
 }
 
@@ -140,7 +140,7 @@ where
     {
         FlowFunction {
             func,
-            src: Src::new(),
+            src: Source::new(),
             l: PhantomData,
         }
     }
@@ -172,7 +172,7 @@ where
     U: Clone + Send + Sync,
 {
     func: fn(T) -> Option<U>,
-    src: Src<U>,
+    src: Source<U>,
     l: PhantomData<T>,
 }
 
@@ -184,7 +184,7 @@ where
     pub fn new(func: fn(T) -> Option<U>) -> Self {
         FlowMap {
             func,
-            src: Src::new(),
+            src: Source::new(),
             l: PhantomData,
         }
     }

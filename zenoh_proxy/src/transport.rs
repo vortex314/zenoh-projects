@@ -14,7 +14,7 @@ use std::io::Write;
 use crate::limero::Sink;
 use crate::limero::SinkTrait;
 use crate::limero::SourceTrait;
-use crate::limero::Src;
+use crate::limero::Source;
 
 use crate::encode_frame;
 use crate::protocol::msg::*;
@@ -24,33 +24,29 @@ const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendFrame { frame: ProxyMessage },
+    SendMessage { frame: ProxyMessage },
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvFrame { frame: ProxyMessage },
+    RecvMessage { frame: ProxyMessage },
 }
 
 pub struct Transport {
-    events: Src<TransportEvent>,
+    events: Source<TransportEvent>,
     commands: Sink<TransportCmd>,
     port_info: SerialPortInfo,
-    input_buffer: Vec<u8>,
-    output_buffer: Vec<u8>,
     message_decoder: MessageDecoder,
 }
 
 impl Transport {
     pub fn new(port_info: SerialPortInfo) -> Self {
         let commands = Sink::new(100);
-        let events = Src::new();
+        let events = Source::new();
         Transport {
             events,
             commands,
             port_info,
-            input_buffer: Vec::new(),
-            output_buffer: Vec::new(),
             message_decoder: MessageDecoder::new(),
         }
     }
@@ -62,16 +58,19 @@ impl Transport {
             let _message_decoder = MessageDecoder::new();
             let mut buf = [0; MTU_SIZE];
             let mut serial_stream = tokio_serial::new(self.port_info.port_name.clone(), 115200)
-                .open_native_async()
-                .unwrap();
+                .open_native_async();
+            if serial_stream.is_err() {
+                info!("Error opening port {}", self.port_info.port_name.clone());
+                break;
+            }
+            let mut serial_stream = serial_stream.unwrap();
             info!("Port {} opened", self.port_info.port_name.clone());
-            self.input_buffer.clear();
 
             loop {
                 select! {
                     cmd = self.commands.read() => {
                         match cmd.unwrap() {
-                            TransportCmd::SendFrame { frame } => {
+                            TransportCmd::SendMessage { frame } => {
                                 let x = encode_frame(frame);
                                 let _res = serial_stream.try_write(&x.unwrap().as_slice());
                                 let _r = serial_stream.flush();
@@ -101,7 +100,7 @@ impl Transport {
                             } else {
                                 for message in _res {
                                     info!("Received Message : {:?}", message);
-                                    self.events.emit(TransportEvent::RecvFrame { frame: message });
+                                    self.events.emit(TransportEvent::RecvMessage { frame: message });
                                 }
                             }
                         }
