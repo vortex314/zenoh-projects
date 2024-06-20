@@ -15,6 +15,7 @@ use crate::limero::Sink;
 use crate::limero::SinkTrait;
 use crate::limero::SourceTrait;
 use crate::limero::Source;
+use crate::limero::SinkRef;
 
 use crate::encode_frame;
 use crate::protocol::msg::*;
@@ -24,12 +25,12 @@ const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { frame: ProxyMessage },
+    SendMessage { msg: ProxyMessage },
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage { frame: ProxyMessage },
+    RecvMessage { msg: ProxyMessage },
 }
 
 pub struct Transport {
@@ -51,13 +52,17 @@ impl Transport {
         }
     }
 
+    pub fn sink_ref(&self) -> SinkRef<TransportCmd> {
+        self.commands.sink_ref()
+    }
+
     pub async fn run(&mut self) {
         const GREEN: &str = "\x1b[0;32m";
         const RESET: &str = "\x1b[m";
         loop {
             let _message_decoder = MessageDecoder::new();
             let mut buf = [0; MTU_SIZE];
-            let mut serial_stream = tokio_serial::new(self.port_info.port_name.clone(), 115200)
+            let  serial_stream = tokio_serial::new(self.port_info.port_name.clone(), 115200)
                 .open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
@@ -70,8 +75,8 @@ impl Transport {
                 select! {
                     cmd = self.commands.read() => {
                         match cmd.unwrap() {
-                            TransportCmd::SendMessage { frame } => {
-                                let x = encode_frame(frame);
+                            TransportCmd::SendMessage { msg } => {
+                                let x = encode_frame(msg);
                                 let _res = serial_stream.try_write(&x.unwrap().as_slice());
                                 let _r = serial_stream.flush();
                                 if _res.is_err() {
@@ -100,7 +105,7 @@ impl Transport {
                             } else {
                                 for message in _res {
                                     info!("Received Message : {:?}", message);
-                                    self.events.emit(TransportEvent::RecvMessage { frame: message });
+                                    self.events.emit(TransportEvent::RecvMessage { msg: message });
                                 }
                             }
                         }
@@ -114,11 +119,6 @@ impl Transport {
     }
 }
 
-impl SinkTrait<TransportCmd> for Transport {
-    fn push(&self, message: TransportCmd) {
-        self.commands.push(message);
-    }
-}
 
 impl SourceTrait<TransportEvent> for Transport {
     fn add_listener(&mut self, sink: Box<dyn SinkTrait<TransportEvent>>) {

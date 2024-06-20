@@ -1,20 +1,31 @@
-use crate::protocol;
-use crate::SourceTrait;
-use protocol::decode_frame;
-use protocol::encode_frame;
-use protocol::msg::ProxyMessage;
-use protocol::MTU_SIZE;
-use protocol::MessageDecoder;
+
 use bytes::BytesMut;
 use log::*;
-use minicbor::encode;
 use std::io;
 use std::io::Write;
 use std::result::Result;
+
+use tokio::select;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio_serial::*;
 use tokio_util::codec::{Decoder, Encoder};
+use minicbor::encode;
+
+use crate::protocol;
+use crate::SourceTrait;
+use crate::protocol::decode_frame;
+use crate::protocol::encode_frame;
+use protocol::msg::ProxyMessage;
+use protocol::MTU_SIZE;
+use protocol::MessageDecoder;
+use crate::limero::Sink;
+use crate::limero::SinkTrait;
+use crate::limero::Source;
+use crate::limero::SinkRef;
+
+use crate::transport::*;
+
 
 const GREEN : &str = "\x1b[0;32m";
 const RESET : &str = "\x1b[m";
@@ -36,11 +47,12 @@ pub enum ProxyServerCmd {
     Disconnect,
 }
 
-struct ProxyServer {
+pub struct ProxyServer {
     port_info: SerialPortInfo,
     events: Source<ProxyServerEvent>,
     commands: Sink<ProxyServerCmd>,
-    transport: SinkRef<TransportCmd>,
+    transport_cmd: SinkRef<TransportCmd>,
+    transport_event:Sink<TransportEvent>,
 }
 
 impl ProxyServer {
@@ -51,50 +63,55 @@ impl ProxyServer {
             port_info,
             events,
             commands,
-            transport,
+            transport_cmd: transport,
+            transport_event: Sink::new(100),
         }
     }
 
     pub async fn run(&mut self) {
         loop {
             select! {
-                cmd = self.commands.recv() => {
+                cmd = self.commands.read() => {
                     match cmd {
                         Some(ProxyServerCmd::Connect { protocol_id, duration, client_id }) => {
                             let connect = ProxyMessage::Connect { protocol_id, duration, client_id };
-                            self.transport.send(TransportCmd::SendMessage { frame: connect }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: connect });
                         },
                         Some(ProxyServerCmd::WillTopic { topic }) => {
                             let will_topic = ProxyMessage::WillTopic { topic };
-                            self.transport.send(TransportCmd::SendMessage { frame: will_topic }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: will_topic });
                         },
                         Some(ProxyServerCmd::WillMsg { message }) => {
                             let will_msg = ProxyMessage::WillMsg { message };
-                            self.transport.send(TransportCmd::SendMessage { frame: will_msg }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: will_msg });
                         },
                         Some(ProxyServerCmd::Register { topic_id, topic_name }) => {
                             let register = ProxyMessage::Register { topic_id, topic_name };
-                            self.transport.send(TransportCmd::SendMessage { frame: register }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: register });
                         },
                         Some(ProxyServerCmd::Subscribe { topic, qos }) => {
                             let subscribe = ProxyMessage::Subscribe { topic, qos };
-                            self.transport.send(TransportCmd::SendMessage { frame: subscribe }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: subscribe });
                         },
                         Some(ProxyServerCmd::Disconnect) => {
                             let disconnect = ProxyMessage::Disconnect;
-                            self.transport.send(TransportCmd::SendMessage { frame: disconnect }).await;
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: disconnect });
                         },
                         None => {
                             break;
                         },
                     }
                 },
-                event = self.transport.recv() => {
+                event = self.transport_event.read() => {
                     match event {
-                        Some(TransportEvent::RecvMessage { frame }) => {
-                            match frame {
+                        Some(TransportEvent::RecvMessage { msg }) => {
+                            match msg {
                                 ProxyMessage::ConnAck { return_code } => {
-                                    self.events.emit(ProxyServerEvent::Connected);
+                                    if return_code == 0 {
+                                        self.events.emit(ProxyServerEvent::Connected);
+                                    } else {
+                                        self.events.emit(ProxyServerEvent::Disconnected);
+                                    }
                                 },
                                 ProxyMessage::Publish { topic_id, message } => {
                                     self.events.emit(ProxyServerEvent::Publish { topic_id, message });

@@ -64,6 +64,17 @@ impl PortScanner {
                     }
                 }
             });
+            self.active_ports.retain(|port_info| {
+                if scanned_ports.contains(port_info) {
+                    return true;
+                } else {
+                    info!("Port : {:?} removed ", port_info.port_name);
+                    self.events.emit(PortScannerEvent::PortRemoved {
+                        port: port_info.clone(),
+                    });
+                    return false;
+                }
+            });
             tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
         }
     }
