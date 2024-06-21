@@ -4,6 +4,7 @@ use log::*;
 use std::io;
 use std::io::Write;
 use std::result::Result;
+use std::collections::BTreeMap;
 
 use tokio::select;
 use tokio::io::split;
@@ -26,6 +27,8 @@ use crate::limero::SinkRef;
 
 use crate::transport::*;
 
+use zenoh::prelude::r#async::*;
+
 
 const GREEN : &str = "\x1b[0;32m";
 const RESET : &str = "\x1b[m";
@@ -42,9 +45,14 @@ pub enum ProxyServerCmd {
     Connect { protocol_id: u8, duration: u16, client_id: String },
     WillTopic { topic: String },
     WillMsg { message: Vec<u8> },
-    Register { topic_id: u16, topic_name: String },
-    Subscribe { topic: String, qos: u8 },
+    
     Disconnect,
+}
+
+struct TopicId {
+    id: u16,
+    name: String,
+    acked: bool,
 }
 
 pub struct ProxyServer {
@@ -53,6 +61,9 @@ pub struct ProxyServer {
     commands: Sink<ProxyServerCmd>,
     transport_cmd: SinkRef<TransportCmd>,
     transport_event:Sink<TransportEvent>,
+    zenoh_session: Option<zenoh::Session>,
+    client_topics : BTreeMap <u16,TopicId>,
+    server_topics : BTreeMap <u16,TopicId>,
 }
 
 impl ProxyServer {
@@ -65,12 +76,31 @@ impl ProxyServer {
             commands,
             transport_cmd: transport,
             transport_event: Sink::new(100),
+            zenoh_session: None,
+            client_topics: Vec::new(),
+            server_topics: Vec::new(),
         }
     }
 
     pub async fn run(&mut self) {
+        self.zenoh_session = Some(zenoh::open(config::default()).res().await.unwrap());
+        let mut zenoh_subscriber = Some(self.zenoh_session.as_ref().unwrap().declare_subscriber("/esp32/*").res().await.unwrap());
+        let mut buf = vec![0u8; MTU_SIZE];
         loop {
             select! {
+                msg = self.zenoh_subscriber.as_ref().unwrap().recv_async() => {
+                    match msg {
+                        Some((topic, payload)) => {
+                            let topic_id = 0;
+                            let message = payload.to_vec();
+                            let publish = ProxyMessage::Publish { topic_id, message };
+                            self.transport_cmd.push(TransportCmd::SendMessage { msg: publish });
+                        },
+                        None => {
+                            break;
+                        },
+                    }
+                },
                 cmd = self.commands.read() => {
                     match cmd {
                         Some(ProxyServerCmd::Connect { protocol_id, duration, client_id }) => {
@@ -106,6 +136,9 @@ impl ProxyServer {
                     match event {
                         Some(TransportEvent::RecvMessage { msg }) => {
                             match msg {
+                                ProxyMessage::Connect { .. } => {
+                                    self.zenoh_session = Some(zenoh::open(config::default()).res().await.unwrap());
+                                },
                                 ProxyMessage::ConnAck { return_code } => {
                                     if return_code == 0 {
                                         self.events.emit(ProxyServerEvent::Connected);
@@ -115,6 +148,17 @@ impl ProxyServer {
                                 },
                                 ProxyMessage::Publish { topic_id, message } => {
                                     self.events.emit(ProxyServerEvent::Publish { topic_id, message });
+                                    self.zenoh_session.as_ref().unwrap().write(&topic_id.to_string(), &message).await.unwrap();
+                                },
+                                ProxyMessage::Disconnect => {
+                                    self.zenoh_session.as_ref().unwrap().close();
+                                    self.zenoh_session = None;
+                                    self.events.emit(ProxyServerEvent::Disconnected);
+                                },
+                                ProxyMessage::Subscribe { topic , qos } => {
+                                    let _ = self.zenoh_session.as_ref().unwrap().declare(&topic, whatami::PUBLISHER).await;
+                                    let subscriber = self.zenoh_session.declare_subscriber(topic).res().await.unwrap();
+
                                 },
                                 _ => {
                                     // Ignore
@@ -138,8 +182,8 @@ impl SinkTrait<ProxyServerCmd> for ProxyServer {
 }
 
 impl SourceTrait<ProxyServerEvent> for ProxyServer {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<ProxyServerEvent>>) {
-        self.events.add_listener(sink);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyServerEvent>>) {
+        self.events.subscribe(sink);
     }
 }
 

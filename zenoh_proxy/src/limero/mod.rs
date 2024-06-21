@@ -28,12 +28,12 @@ use std::marker::PhantomData;
 use std::sync::Mutex as StdMutex;
 use std::sync::RwLock;
 
-pub trait SinkTrait<M>: Send + Sync  {
+pub trait SinkTrait<M>: Send + Sync {
     fn push(&self, m: M);
 }
 
 pub trait SourceTrait<M>: Send + Sync {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<M>>);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<M>>);
 }
 pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
 where
@@ -113,7 +113,7 @@ impl<T> SourceTrait<T> for Source<T>
 where
     T: Clone + Send + Sync,
 {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<T>>) {
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<T>>) {
         self.sinks.push(sink);
     }
 }
@@ -151,8 +151,8 @@ where
     T: Clone + Send + Sync,
     U: Clone + Send + Sync,
 {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<U>>) {
-        self.src.add_listener(sink);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>) {
+        self.src.subscribe(sink);
     }
 }
 
@@ -205,36 +205,44 @@ where
     T: Clone + Send + Sync,
     U: Clone + Send + Sync,
 {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<U>>) {
-        self.src.add_listener(sink);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>) {
+        self.src.subscribe(sink);
     }
 }
 
 impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
     type Output = ();
     fn shr(self, sink: Box<dyn SinkTrait<T>>) -> () {
-        (*self).add_listener(sink);
+        (*self).subscribe(sink);
     }
 }
 
-pub fn connect<T,U>(src: &mut dyn SourceTrait<T>, func : fn(T)->Option<U>, sink: SinkRef<U>) where T:Clone+Send+Sync+'static, U:Clone+Send+Sync+'static {
+pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
     let mut flow = FlowFunction::new(func);
-    flow.add_listener(Box::new(sink));
-    src.add_listener(Box::new(flow));
+    flow.subscribe(Box::new(sink));
+    src.subscribe(Box::new(flow));
 }
 
-pub fn connect_map<T,U>(src: &mut dyn SourceTrait<T>, func : fn(T)->Option<U>, sink: SinkRef<U>) where T:Clone+Send+Sync+'static, U:Clone+Send+Sync+'static {
+pub fn connect_map<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
     let mut flow = FlowMap::new(func);
-    flow.add_listener(Box::new(sink));
-    src.add_listener(Box::new(flow));
+    flow.subscribe(Box::new(sink));
+    src.subscribe(Box::new(flow));
 }
 
 pub struct Timer {
     expires_at: Instant,
     re_trigger: bool,
-    interval : Duration,
+    interval: Duration,
     active: bool,
-    id : u32,
+    id: u32,
 }
 
 impl Timer {
@@ -244,7 +252,7 @@ impl Timer {
             re_trigger: false,
             interval,
             active: false,
-            id : 0,
+            id: 0,
         }
     }
     pub fn set_interval(&mut self, interval: Duration) {
@@ -299,4 +307,29 @@ impl Timers {
         }
         expired
     }
+}
+
+pub trait ActorTrait<T, U>
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
+    fn run(&mut self);
+    fn command_sink(&self) -> SinkRef<T>;
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>);
+}
+
+pub fn connect_actors<T, U, V, W>(
+    src: &mut dyn ActorTrait<T, U>,
+    func: fn(U) -> Option<V>,
+    dst: &dyn ActorTrait<V, W>,
+) where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+    V: Clone + Send + Sync + 'static,
+    W: Clone + Send + Sync + 'static,
+{
+    let mut flow = FlowFunction::new(func);
+    flow.subscribe(Box::new(dst.command_sink()));
+    src.subscribe(Box::new(flow));
 }

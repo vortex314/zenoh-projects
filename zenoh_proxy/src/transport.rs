@@ -121,7 +121,7 @@ impl Transport {
 
 
 impl SourceTrait<TransportEvent> for Transport {
-    fn add_listener(&mut self, sink: Box<dyn SinkTrait<TransportEvent>>) {
-        self.events.add_listener(sink);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<TransportEvent>>) {
+        self.events.subscribe(sink);
     }
 }
