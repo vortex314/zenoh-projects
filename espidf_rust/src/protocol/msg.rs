@@ -100,8 +100,6 @@ pub enum ProxyMessage {
     #[n(11)]
     SubAck {
         #[n(0)]
-        topic_id: u16,
-        #[n(1)]
         return_code: u8,
     },
     #[n(12)]

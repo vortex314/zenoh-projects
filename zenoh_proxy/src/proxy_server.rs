@@ -1,51 +1,57 @@
-
 use bytes::BytesMut;
 use log::*;
+use std::collections::BTreeMap;
 use std::io;
 use std::io::Write;
 use std::result::Result;
-use std::collections::BTreeMap;
 
-use tokio::select;
+use minicbor::encode;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
+use tokio::select;
 use tokio_serial::*;
 use tokio_util::codec::{Decoder, Encoder};
-use minicbor::encode;
 
-use crate::protocol;
-use crate::SourceTrait;
-use crate::protocol::decode_frame;
-use crate::protocol::encode_frame;
-use protocol::msg::ProxyMessage;
-use protocol::MTU_SIZE;
-use protocol::MessageDecoder;
 use crate::limero::Sink;
+use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::Source;
-use crate::limero::SinkRef;
+use crate::protocol;
+use crate::protocol::decode_frame;
+use crate::protocol::encode_frame;
+use crate::SourceTrait;
+use protocol::msg::ProxyMessage;
+use protocol::MessageDecoder;
+use protocol::MTU_SIZE;
 
 use crate::transport::*;
 
 use zenoh::prelude::r#async::*;
 
-
-const GREEN : &str = "\x1b[0;32m";
-const RESET : &str = "\x1b[m";
+const GREEN: &str = "\x1b[0;32m";
+const RESET: &str = "\x1b[m";
 
 #[derive(Clone)]
 pub enum ProxyServerEvent {
-    Connected ,
+    Connected,
     Disconnected,
-    Publish { topic_id: u16, message: Vec<u8> },
+    Publish { topic: String, message: Vec<u8> },
 }
 
-#[derive(Clone) ]
+#[derive(Clone)]
 pub enum ProxyServerCmd {
-    Connect { protocol_id: u8, duration: u16, client_id: String },
-    WillTopic { topic: String },
-    WillMsg { message: Vec<u8> },
-    
+    Connect {
+        protocol_id: u8,
+        duration: u16,
+        client_id: String,
+    },
+    WillTopic {
+        topic: String,
+    },
+    WillMsg {
+        message: Vec<u8>,
+    },
+
     Disconnect,
 }
 
@@ -60,10 +66,12 @@ pub struct ProxyServer {
     events: Source<ProxyServerEvent>,
     commands: Sink<ProxyServerCmd>,
     transport_cmd: SinkRef<TransportCmd>,
-    transport_event:Sink<TransportEvent>,
+    transport_event: Sink<TransportEvent>,
     zenoh_session: Option<zenoh::Session>,
-    client_topics : BTreeMap <u16,TopicId>,
-    server_topics : BTreeMap <u16,TopicId>,
+    client_topics: BTreeMap<u16, TopicId>,
+    server_topics: BTreeMap<u16, TopicId>,
+    will_topic: Option<String>,
+    will_message: Option<Vec<u8>>,
 }
 
 impl ProxyServer {
@@ -77,88 +85,101 @@ impl ProxyServer {
             transport_cmd: transport,
             transport_event: Sink::new(100),
             zenoh_session: None,
-            client_topics: Vec::new(),
-            server_topics: Vec::new(),
+            client_topics: BTreeMap::new(),
+            server_topics: BTreeMap::new(),
+            will_topic: None,
+            will_message: None,
         }
     }
 
+    pub fn transport_sink_ref(&self) -> SinkRef<TransportEvent> {
+        self.transport_event.sink_ref()
+    }
+
+    pub fn transport_send(&self, message: ProxyMessage) {
+        self.transport_cmd.push(TransportCmd::SendMessage { message });
+    }
+
     pub async fn run(&mut self) {
-        self.zenoh_session = Some(zenoh::open(config::default()).res().await.unwrap());
-        let mut zenoh_subscriber = Some(self.zenoh_session.as_ref().unwrap().declare_subscriber("/esp32/*").res().await.unwrap());
+        let zenoh_session = zenoh::open(config::default()).res().await.unwrap();
+        let mut zenoh_subscriber = zenoh_session
+            .declare_subscriber("esp32/*")
+            .res()
+            .await
+            .unwrap();
         let mut buf = vec![0u8; MTU_SIZE];
         loop {
             select! {
-                msg = self.zenoh_subscriber.as_ref().unwrap().recv_async() => {
+                msg = zenoh_subscriber.recv_async() => {
                     match msg {
-                        Some((topic, payload)) => {
-                            let topic_id = 0;
-                            let message = payload.to_vec();
-                            let publish = ProxyMessage::Publish { topic_id, message };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: publish });
+                        _ => {
+                            info!("Received message from subscriber ");
                         },
-                        None => {
-                            break;
-                        },
+
                     }
                 },
                 cmd = self.commands.read() => {
                     match cmd {
-                        Some(ProxyServerCmd::Connect { protocol_id, duration, client_id }) => {
-                            let connect = ProxyMessage::Connect { protocol_id, duration, client_id };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: connect });
-                        },
-                        Some(ProxyServerCmd::WillTopic { topic }) => {
-                            let will_topic = ProxyMessage::WillTopic { topic };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: will_topic });
-                        },
-                        Some(ProxyServerCmd::WillMsg { message }) => {
-                            let will_msg = ProxyMessage::WillMsg { message };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: will_msg });
-                        },
-                        Some(ProxyServerCmd::Register { topic_id, topic_name }) => {
-                            let register = ProxyMessage::Register { topic_id, topic_name };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: register });
-                        },
-                        Some(ProxyServerCmd::Subscribe { topic, qos }) => {
-                            let subscribe = ProxyMessage::Subscribe { topic, qos };
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: subscribe });
-                        },
-                        Some(ProxyServerCmd::Disconnect) => {
-                            let disconnect = ProxyMessage::Disconnect;
-                            self.transport_cmd.push(TransportCmd::SendMessage { msg: disconnect });
-                        },
-                        None => {
-                            break;
-                        },
+                       _ => {
+                           info!("Received command from client ");
+                          },
+
                     }
                 },
                 event = self.transport_event.read() => {
                     match event {
-                        Some(TransportEvent::RecvMessage { msg }) => {
-                            match msg {
+                        Some(TransportEvent::RecvMessage { message }) => {
+                            info!("Received transport event from client ");
+                            match message {
                                 ProxyMessage::Connect { .. } => {
-                                    self.zenoh_session = Some(zenoh::open(config::default()).res().await.unwrap());
+                                    info!("Received Connect message");
+                                    self.transport_send(ProxyMessage::ConnAck { return_code: 0 });
+                                    self.transport_send(ProxyMessage::WillTopicReq {  });
+
+                                    self.client_topics.clear();
                                 },
-                                ProxyMessage::ConnAck { return_code } => {
-                                    if return_code == 0 {
-                                        self.events.emit(ProxyServerEvent::Connected);
-                                    } else {
-                                        self.events.emit(ProxyServerEvent::Disconnected);
-                                    }
+                                ProxyMessage::WillTopic { topic } => {
+                                    info!("Received WillTopic message");
+                                    self.will_topic = Some(topic);
+                                    self.transport_send(ProxyMessage::WillMsgReq { });
+                                },
+                                ProxyMessage::WillMsg { message } => {
+                                    self.will_message = Some(message);  
+                                    info!("Received WillMsg message");
                                 },
                                 ProxyMessage::Publish { topic_id, message } => {
-                                    self.events.emit(ProxyServerEvent::Publish { topic_id, message });
-                                    self.zenoh_session.as_ref().unwrap().write(&topic_id.to_string(), &message).await.unwrap();
+                                    match self.client_topics.get(&topic_id) {
+                                        Some(topic) => {
+                                            info!("Received Publish message");
+                                            zenoh_session.put(&topic.name, message).res().await.unwrap();
+                                            self.transport_send( ProxyMessage::PubAck { topic_id: topic_id, return_code: 0 } );
+                                        },
+                                        None => {
+                                            info!("Received Publish message for unknown topic");
+                                            self.transport_send(ProxyMessage::PubAck { topic_id: topic_id, return_code: 1 });
+                                        },
+                                    }
+                                },
+                                ProxyMessage::Subscribe { topic, qos } => {
+                                    info!("Received Subscribe message");
+                                    /*zenoh_subscriber
+                                        .with_subscriber(topic.clone())
+                                        .res()
+                                        .await
+                                        .unwrap();*/
+                                    self.transport_send(ProxyMessage::SubAck { return_code: 0 });
+
+                                },
+                                ProxyMessage::Register { topic_name,topic_id } => {
+                                    info!("Received Unsubscribe message");
+                                    self.client_topics.insert(topic_id, TopicId { id: topic_id, name: topic_name, acked: false });
+                                    self.transport_send(ProxyMessage::RegAck { topic_id: topic_id, return_code: 1 });
                                 },
                                 ProxyMessage::Disconnect => {
-                                    self.zenoh_session.as_ref().unwrap().close();
-                                    self.zenoh_session = None;
                                     self.events.emit(ProxyServerEvent::Disconnected);
                                 },
-                                ProxyMessage::Subscribe { topic , qos } => {
-                                    let _ = self.zenoh_session.as_ref().unwrap().declare(&topic, whatami::PUBLISHER).await;
-                                    let subscriber = self.zenoh_session.declare_subscriber(topic).res().await.unwrap();
-
+                                ProxyMessage::PingReq => {
+                                    self.transport_send(ProxyMessage::PingResp);
                                 },
                                 _ => {
                                     // Ignore
@@ -186,4 +207,3 @@ impl SourceTrait<ProxyServerEvent> for ProxyServer {
         self.events.subscribe(sink);
     }
 }
-

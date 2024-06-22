@@ -25,12 +25,12 @@ const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { msg: ProxyMessage },
+    SendMessage { message: ProxyMessage },
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage { msg: ProxyMessage },
+    RecvMessage { message: ProxyMessage },
 }
 
 pub struct Transport {
@@ -75,11 +75,12 @@ impl Transport {
                 select! {
                     cmd = self.commands.read() => {
                         match cmd.unwrap() {
-                            TransportCmd::SendMessage { msg } => {
-                                let x = encode_frame(msg);
+                            TransportCmd::SendMessage { message } => {
+                                info!("Sending Message : {:?}", message);
+                                let x = encode_frame(message);
                                 let _res = serial_stream.try_write(&x.unwrap().as_slice());
                                 let _r = serial_stream.flush();
-                                if _res.is_err() {
+                                if _res.is_err()  || _r.is_err() {
                                     info!("Error writing to serial port");
                                 }
                             }
@@ -105,7 +106,7 @@ impl Transport {
                             } else {
                                 for message in _res {
                                     info!("Received Message : {:?}", message);
-                                    self.events.emit(TransportEvent::RecvMessage { msg: message });
+                                    self.events.emit(TransportEvent::RecvMessage { message: message });
                                 }
                             }
                         }
