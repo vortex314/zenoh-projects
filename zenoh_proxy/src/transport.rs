@@ -21,16 +21,17 @@ use crate::encode_frame;
 use crate::protocol::msg::*;
 use crate::protocol::MessageDecoder;
 
+
 const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { message: ProxyMessage },
+    SendMessage { message: MqttSnMessage },
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage { message: ProxyMessage },
+    RecvMessage { message: MqttSnMessage },
 }
 
 pub struct Transport {

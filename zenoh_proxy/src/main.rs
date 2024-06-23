@@ -14,11 +14,14 @@ mod logger;
 use log::{debug, info};
 
 mod protocol;
-use protocol::msg::ProxyMessage;
+use protocol::msg::MqttSnMessage;
 use protocol::*;
 
 mod proxy_server;
 use proxy_server::*;
+
+mod proxy_tester;
+use proxy_tester::*;
 
 mod limero;
 use limero::*;
@@ -63,7 +66,7 @@ async fn main() -> Result<(), Error> {
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
-        vid: Some(4292),
+        vid: None, // Some(4292),
         pid: None,
         serial_number: None,
     }];

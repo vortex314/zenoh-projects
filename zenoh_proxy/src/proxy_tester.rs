@@ -16,12 +16,12 @@ use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::Source;
+use crate::msg::MqttSnMessage;
+use crate::msg::ReturnCode;
 use crate::protocol;
 use crate::protocol::decode_frame;
 use crate::protocol::encode_frame;
 use crate::SourceTrait;
-use protocol::msg::MqttSnMessage;
-use protocol::msg::ReturnCode;
 use protocol::MessageDecoder;
 use protocol::MTU_SIZE;
 
@@ -33,14 +33,14 @@ const GREEN: &str = "\x1b[0;32m";
 const RESET: &str = "\x1b[m";
 
 #[derive(Clone)]
-pub enum ProxyServerEvent {
+pub enum ProxyTesterEvent {
     Connected,
     Disconnected,
     Publish { topic: String, message: Vec<u8> },
 }
 
 #[derive(Clone)]
-pub enum ProxyServerCmd {
+pub enum ProxyTesterCmd {
     Connect {
         protocol_id: u8,
         duration: u16,
@@ -62,10 +62,10 @@ struct TopicId {
     acked: bool,
 }
 
-pub struct ProxyServer {
+pub struct ProxyTester {
     port_info: SerialPortInfo,
-    events: Source<ProxyServerEvent>,
-    commands: Sink<ProxyServerCmd>,
+    events: Source<ProxyTesterEvent>,
+    commands: Sink<ProxyTesterCmd>,
     transport_cmd: SinkRef<TransportCmd>,
     transport_event: Sink<TransportEvent>,
     zenoh_session: Option<zenoh::Session>,
@@ -75,11 +75,11 @@ pub struct ProxyServer {
     will_message: Option<Vec<u8>>,
 }
 
-impl ProxyServer {
+impl ProxyTester {
     pub fn new(port_info: SerialPortInfo, transport: SinkRef<TransportCmd>) -> Self {
         let commands = Sink::new(100);
         let events = Source::new();
-        ProxyServer {
+        ProxyTester {
             port_info,
             events,
             commands,
@@ -128,51 +128,42 @@ impl ProxyServer {
                         Some(TransportEvent::RecvMessage { message }) => {
                             info!("Received transport event from client ");
                             match message {
-                                MqttSnMessage::Connect { flags:_,duration:_,client_id:_ }=> {
+                                MqttSnMessage::Connect{ flags:_,duration:_,client_id:_ } => {
                                     info!("Received Connect message");
                                     self.transport_send(MqttSnMessage::ConnAck { return_code: ReturnCode::Accepted });
+
                                     self.client_topics.clear();
                                 },
-                                MqttSnMessage::WillTopic { flags:_,topic } => {
-                                    info!("Received WillTopic message");
-                                    self.will_topic = Some(topic);
-                                    self.transport_send(MqttSnMessage::WillMsgReq { });
-                                },
-                                MqttSnMessage::WillMsg { message } => {
-                                    self.will_message = Some(message);
-                                    info!("Received WillMsg message");
-                                },
-                                MqttSnMessage::Publish { flags:_,topic_id, msg_id,data:_ } => {
+
+                                MqttSnMessage::Publish { flags:_,topic_id,msg_id,data } => {
                                     match self.client_topics.get(&topic_id) {
-                                        Some(_topic) => {
+                                        Some(topic) => {
                                             info!("Received Publish message");
-                                           // zenoh_session.put(&topic.name, message).res().await.unwrap();
-                                            self.transport_send(MqttSnMessage::PubAck { topic_id,msg_id, return_code: ReturnCode::Accepted } );
+                                            zenoh_session.put(&topic.name, data).res().await.unwrap();
+                                            self.transport_send( MqttSnMessage::PubAck { topic_id,msg_id, return_code: ReturnCode::Accepted } );
                                         },
                                         None => {
                                             info!("Received Publish message for unknown topic");
-                                            self.transport_send(MqttSnMessage::PubAck { topic_id,msg_id, return_code : ReturnCode::InvalidTopicId });
+                                            self.transport_send(MqttSnMessage::PubAck { topic_id,msg_id, return_code: ReturnCode::Accepted } );
                                         },
                                     }
                                 },
-                                MqttSnMessage::Subscribe { flags,msg_id,topic_id, topic:_,qos:_} => {
+                                MqttSnMessage::Subscribe { flags,msg_id,topic:_,topic_id,qos:_ } => {
+                                    info!("Received Subscribe message");
                                     /*zenoh_subscriber
                                         .with_subscriber(topic.clone())
                                         .res()
                                         .await
                                         .unwrap();*/
-                                    self.transport_send(MqttSnMessage::SubAck { flags,msg_id,topic_id:topic_id.unwrap(),return_code : ReturnCode::Accepted });
-
+                                        self.transport_send(MqttSnMessage::SubAck { flags,topic_id:topic_id.unwrap(), msg_id, return_code: ReturnCode::Accepted });
                                 },
-                                MqttSnMessage::Register { topic_id,msg_id,topic_name, } => {
+                                MqttSnMessage::Register{ topic_id,msg_id,topic_name } => {
                                     info!("Received Unsubscribe message");
-                                    self.client_topics.insert(topic_id, TopicId { id: topic_id, name: topic_name, acked: false });
-                                    self.transport_send(MqttSnMessage::RegAck { topic_id,msg_id, return_code: ReturnCode::Accepted });
+                                    self.client_topics.insert(topic_id, TopicId { id: topic_id, name: topic_name.to_string(), acked: false });
+                                    self.transport_send(MqttSnMessage::RegAck { topic_id, msg_id, return_code: ReturnCode::Accepted });
                                 },
-
-                                MqttSnMessage::PingReq { client_id }=> {
-                                    info!("Received PingReq message from {} ",client_id.unwrap());
-                                    self.transport_send(MqttSnMessage::PingResp{});
+                                MqttSnMessage::PingReq { client_id:_ }  => {
+                                    self.transport_send(MqttSnMessage::PingResp {} );
                                 },
                                 _ => {
                                     // Ignore
@@ -189,14 +180,14 @@ impl ProxyServer {
     }
 }
 
-impl SinkTrait<ProxyServerCmd> for ProxyServer {
-    fn push(&self, message: ProxyServerCmd) {
+impl SinkTrait<ProxyTesterCmd> for ProxyTester {
+    fn push(&self, message: ProxyTesterCmd) {
         self.commands.push(message);
     }
 }
 
-impl SourceTrait<ProxyServerEvent> for ProxyServer {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyServerEvent>>) {
+impl SourceTrait<ProxyTesterEvent> for ProxyTester {
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyTesterEvent>>) {
         self.events.subscribe(sink);
     }
 }
