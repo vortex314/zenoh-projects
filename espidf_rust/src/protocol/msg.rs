@@ -1,5 +1,6 @@
 #[cfg(feature = "esp32")]
 use alloc::{collections::VecDeque, fmt::format, string::String, vec::Vec};
+use byte::Error;
 
 #[cfg(feature = "linux")]
 use std::{collections::VecDeque, fmt::format, string::String, vec::Vec};
@@ -15,7 +16,6 @@ use minicbor::encode::Write;
 use byte::TryRead;
 use byte::TryWrite;
 use minicbor::bytes::ByteArray;
-
 
 use bitfield::{bitfield_bitrange, bitfield_fields};
 
@@ -146,7 +146,7 @@ struct MqttSnEncoder {
 
 impl MqttSnEncoder {
     fn new() -> Self {
-        MqttSnEncoder { bytes:Vec::new() }
+        MqttSnEncoder { bytes: Vec::new() }
     }
     fn encode_u8(&mut self, v: u8) {
         self.bytes.push(v);
@@ -398,10 +398,28 @@ impl Decoder {
         self.pos += len;
         Ok(v)
     }
+    fn return_code(&mut self) -> byte::Result<ReturnCode> {
+        let v = match self.u8()? {
+            0x00 => ReturnCode::Accepted,
+            0x01 => ReturnCode::Rejected,
+            0x02 => ReturnCode::Congestion,
+            0x03 => ReturnCode::InvalidTopicId,
+            0x04 => ReturnCode::NotSupported,
+            _ => ReturnCode::Accepted,
+        };
+        Ok(v)
+    }
+    fn flags(&mut self) -> byte::Result<Flags> {
+        let v = Flags(self.u8()?);
+        Ok(v)
+    }
+    fn offset(&self) -> usize {
+        self.pos
+    }
 }
 
-impl TryRead<'a> for MqttSnMessage {
-    fn try_read(bytes: &'a [u8], _ctx: ()) -> byte::Result<(Self,usize)> {
+impl<'a> TryRead<'a> for MqttSnMessage {
+    fn try_read(bytes: &'a [u8], _ctx: ()) -> byte::Result<(Self, usize)> {
         let mut decoder = Decoder::new(bytes);
         let msg_type = decoder.u8()?;
         match msg_type {
@@ -409,80 +427,83 @@ impl TryRead<'a> for MqttSnMessage {
                 let flags = Flags(decoder.u8()?);
                 let duration = decoder.u16()?;
                 let client_id = decoder.string()?;
-                Ok(MqttSnMessage::Connect {
-                    flags,
-                    duration,
-                    client_id,
-                })
+                Ok((
+                    MqttSnMessage::Connect {
+                        flags,
+                        duration,
+                        client_id,
+                    },
+                    decoder.offset(),
+                ))
             }
             0x05 => {
-                let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::ConnAck { return_code })
+                let return_code = decoder.return_code()?;
+                Ok((MqttSnMessage::ConnAck { return_code },decoder.offset()))
             }
-            0x06 => Ok(MqttSnMessage::WillTopicReq),
+            0x06 => Ok((MqttSnMessage::WillTopicReq,decoder.offset()))  ,
             0x07 => {
                 let flags = Flags(decoder.u8()?);
                 let topic = decoder.string()?;
-                Ok(MqttSnMessage::WillTopic { flags, topic })
+                Ok((MqttSnMessage::WillTopic { flags, topic },decoder.offset()))
             }
-            0x08 => Ok(MqttSnMessage::WillMsgReq),
+            0x08 => Ok((MqttSnMessage::WillMsgReq,decoder.offset())) ,
             0x09 => {
                 let message = decoder.bytes()?;
-                Ok(MqttSnMessage::WillMsg { message })
+                Ok((MqttSnMessage::WillMsg { message },decoder.offset()))
             }
             0x0a => {
                 let topic_id = decoder.u16()?;
                 let msg_id = decoder.u16()?;
                 let topic_name = decoder.string()?;
-                Ok(MqttSnMessage::Register {
+                Ok((MqttSnMessage::Register {
                     topic_id,
                     msg_id,
                     topic_name,
-                })
+                },decoder.offset()))
             }
             0x0b => {
                 let topic_id = decoder.u16()?;
                 let msg_id = decoder.u16()?;
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::RegAck {
+                Ok((MqttSnMessage::RegAck {
                     topic_id,
                     msg_id,
                     return_code,
-                })
+                },decoder.offset()))
             }
             0x0c => {
                 let flags = Flags(decoder.u8()?);
                 let topic_id = decoder.u16()?;
                 let msg_id = decoder.u16()?;
                 let data = decoder.bytes()?;
-                Ok(MqttSnMessage::Publish {
+                Ok((MqttSnMessage::Publish {
                     flags,
                     topic_id,
                     msg_id,
                     data,
-                })
+                },decoder.offset()))
             }
             0x0d => {
                 let topic_id = decoder.u16()?;
                 let msg_id = decoder.u16()?;
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::PubAck {
+                Ok((MqttSnMessage::PubAck {
                     topic_id,
                     msg_id,
                     return_code,
-                })
+                },decoder.offset()))
             }
             0x0e => {
                 let msg_id = decoder.u16()?;
-                Ok(MqttSnMessage::PubRec { msg_id })
+                Ok((MqttSnMessage::PubRec { msg_id },decoder.offset())) 
             }
             0x0f => {
                 let msg_id = decoder.u16()?;
-                Ok(MqttSnMessage::PubRel { msg_id })
+                Ok((MqttSnMessage::PubRel { msg_id },decoder.offset()))  
             }
             0x10 => {
                 let msg_id = decoder.u16()?;
-                Ok(MqttSnMessage::PubComp { msg_id })
+                Ok((MqttSnMessage::PubComp { msg_id },decoder.offset()))
             }
             0x12 => {
                 let flags = Flags(decoder.u8()?);
@@ -490,25 +511,25 @@ impl TryRead<'a> for MqttSnMessage {
                 let topic = decoder.string()?;
                 let topic_id = decoder.u16()?;
                 let qos = decoder.u8()?;
-                Ok(MqttSnMessage::Subscribe {
+                Ok((MqttSnMessage::Subscribe {
                     flags,
                     msg_id,
                     topic: Some(topic),
                     topic_id: Some(topic_id),
                     qos,
-                })
+                },decoder.offset()))
             }
             0x13 => {
                 let flags = Flags(decoder.u8()?);
                 let topic_id = decoder.u16()?;
                 let msg_id = decoder.u16()?;
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::SubAck {
+                Ok((MqttSnMessage::SubAck {
                     flags,
                     topic_id,
                     msg_id,
                     return_code,
-                })
+                },decoder.offset()))
             }
             0x14 => {
                 let flags = Flags(decoder.u8()?);
@@ -516,49 +537,51 @@ impl TryRead<'a> for MqttSnMessage {
                 let topic = decoder.string()?;
                 let topic_id = decoder.u16()?;
                 let qos = decoder.u8()?;
-                Ok(MqttSnMessage::Unsubscribe {
+                Ok((MqttSnMessage::Unsubscribe {
                     flags,
                     msg_id,
                     topic: Some(topic),
                     topic_id: Some(topic_id),
                     qos,
-                })
+                },decoder.offset()))
             }
             0x15 => {
                 let msg_id = decoder.u16()?;
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::UnsubAck {
+                Ok((MqttSnMessage::UnsubAck {
                     msg_id,
                     return_code,
-                })
+                },decoder.offset()))
             }
             0x16 => {
                 let client_id = decoder.string()?;
-                Ok(MqttSnMessage::PingReq { client_id: Some(client_id) })
+                Ok((MqttSnMessage::PingReq {
+                    client_id: Some(client_id),
+                },decoder.offset()))
             }
-            0x17 => Ok(MqttSnMessage::PingResp),
+            0x17 => Ok((MqttSnMessage::PingResp,decoder.offset())),
             0x18 => {
                 let duration = decoder.u16()?;
-                Ok(MqttSnMessage::Disconnect { duration })
+                Ok((MqttSnMessage::Disconnect { duration },decoder.offset()))
             }
             0x1a => {
                 let flags = Flags(decoder.u8()?);
                 let topic = decoder.string()?;
-                Ok(MqttSnMessage::WillTopicUpd { flags, topic })
+                Ok((MqttSnMessage::WillTopicUpd { flags, topic },decoder.offset()))
             }
             0x1b => {
                 let message = decoder.bytes()?;
-                Ok(MqttSnMessage::WillMsgUpd { message })
+                Ok((MqttSnMessage::WillMsgUpd { message },decoder.offset()))
             }
             0x1c => {
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::WillTopicResp { return_code })
+                Ok((MqttSnMessage::WillTopicResp { return_code },decoder.offset()))
             }
             0x1d => {
                 let return_code = ReturnCode::Accepted;
-                Ok(MqttSnMessage::WillMsgResp { return_code })
+                Ok((MqttSnMessage::WillMsgResp { return_code },decoder.offset()))
             }
-            _ => Err("Invalid message type".into()),
+            _ => Err(Error::BadInput { err: "parsing failed " }),
         }
     }
 }

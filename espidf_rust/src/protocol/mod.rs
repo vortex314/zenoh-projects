@@ -283,8 +283,8 @@ pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
     
 }
 
-pub fn decode_frame(_queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
-  /*   let mut output = [0; MTU_SIZE + 2];
+pub fn decode_frame(queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
+   let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue);
 
@@ -302,7 +302,7 @@ pub fn decode_frame(_queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
             if crc != crc_received {
                 return Err(format!("CRC error : {:04X} != {:04X}", crc, crc_received));
             }
-            let msg_res = Message::try_read(&output[0..(output_size - 2)], ());
+            let msg_res = MqttSnMessage::try_read(&output[0..(output_size - 2)], ());
             match msg_res {
                 Ok((m, _size)) => {
                     return Ok(m);
@@ -313,6 +313,5 @@ pub fn decode_frame(_queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
             }
         }
         Err(j) => Err(format!("COBS decoding error : {:?}", j)),
-    }*/
-    Err("Not implemented".to_string())
+    }
 }

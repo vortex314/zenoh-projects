@@ -1,387 +1,347 @@
 #![allow(unused_imports)]
-#[cfg(all(feature = "std", feature = "no_std"))]
-compile_error!("feature \"std\" and feature \"no_std\" cannot be enabled at the same time");
-
+#![allow(dead_code)]
 #[cfg(feature = "linux")]
 use {
+    minicbor::decode::info,
+    std::borrow::BorrowMut,
+    std::cell::RefCell,
+    std::collections::BTreeMap,
+    std::error::Error,
     std::io::Write,
+    std::marker::PhantomData,
     std::pin::pin,
     std::rc::Rc,
     std::sync::Arc,
+    std::sync::Mutex as StdMutex,
+    std::sync::RwLock,
     std::thread::sleep,
     std::time::{Duration, Instant},
+    std::vec::Vec,
     std::{ops::Shr, pin::Pin},
-    tokio::task::block_in_place,
+    tokio::sync::mpsc::Receiver,
+    tokio::sync::mpsc::Sender,
+    tokio::sync::Mutex,
 };
-
 #[cfg(feature = "esp32")]
-extern crate alloc;
-use {alloc::boxed::Box, alloc::rc::Rc, alloc::vec::Vec};
+use {
+    alloc::boxed::Box,
+    alloc::string::String,
+    embassy_sync::channel::Channel,
+    embassy_sync::channel::DynamicReceiver,
+    embassy_sync::channel::DynamicSender,
+    embassy_sync::channel::Receiver,
+    embassy_sync::channel::Sender,
 
-use core::{cell::RefCell, default, mem, marker::PhantomData};
-use core::{
-    ops::Shr,
-    pin::Pin,
-    task::{Context, Poll},
 };
 
-use alloc::collections::BTreeMap;
-use embassy_time::{with_timeout, Duration, Instant, TimeoutError};
-use log::{info, warn};
-pub mod logger;
+use core::result::Result;
+use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use log::error;
+use log::{debug, info};
 
-pub trait Handler<T> {
-    fn handle(&self, cmd: T);
+
+pub trait SinkTrait<M>: Send + Sync {
+    fn push(&self, m: M);
 }
 
-pub trait SinkTrait<T> {
-    fn handler(&self) -> Box<dyn Handler<T>>; // cloneable handler
+pub trait SourceTrait<M>: Send + Sync {
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<M>>);
 }
-
-pub trait SourceTrait<T> {
-    fn add_handler(&self, handler: Box<dyn Handler<T>>);
-}
-
-pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U> {}
-
-
-
-pub struct Actor<T,U> {
-    fn_handler : Box<dyn FnMut(&mut Self,T)>,
-    emitter : Source<U>,
-}
-
-impl<T, U> Actor<T, U> {
-    pub fn new(callback_handler: Box<dyn FnMut(&mut Self,T)> ) -> Self {
-        Self {
-            fn_handler:callback_handler,
-            emitter: Source::<U>::new(),
-        }
-    }
-}
-
-impl<T,U> SinkTrait<T> for Actor<T,U> {
-    fn handler(&self) -> Box<dyn Handler<T>> {
-        let actor = self.clone();
-        struct ActorHandler<T,U> {
-            actor: Actor<T,U>,
-        }
-        impl<T,U> Handler<T> for ActorHandler<T,U> {
-            fn handle(&self, cmd: T) {
-                (self.actor.fn_handler)(&mut self.actor,cmd);
-            }
-        }
-        Box::new(ActorHandler { actor })
-    }
-}
-
-impl<T,U> SourceTrait<U> for Actor<T,U> {
-    fn add_handler(&self, handler: Box<dyn Handler<U>>) {
-        self.emitter.add_handler(handler);
-    }
-}
-
-pub struct Mapper<T, U> {
-    emitter: Rc<RefCell<Source<U>>>,
-    func: Rc<dyn Fn(T) -> U>,
-   // phantom: PhantomData<&'a ()>,
-}
-
-impl<T,U> Clone for Mapper<T, U> {
-    fn clone(&self) -> Self {
-        Self {
-            emitter: self.emitter.clone(),
-            func: self.func.clone(),
-          //  phantom: PhantomData,
-        }
-    }
-}
-
-impl<T, U> Mapper<T, U> {
-    pub fn new(func: impl Fn(T) -> U +'static) -> Self {
-        Self {
-            emitter: Rc::new(RefCell::new(Source::new())),
-            func: Rc::new(func),
-          //  phantom: PhantomData,
-        }
-    }
-    pub fn add_sink(&self, sink: impl SinkTrait<U> + 'static) {
-        self.emitter.borrow_mut().add_handler(sink.handler());
-    }
-}
-
-impl<T:'static,U:'static> SinkTrait<T> for Mapper<T, U> where U: Clone +'static{
-    fn handler(&self) -> Box<dyn Handler<T>> {
-        let emitter = self.emitter.clone();
-        let func = self.func.clone();
-        struct MapperHandler<T, U> {
-            emitter: Rc<RefCell<Source<U>>>,
-            func: Rc<dyn Fn(T) -> U>,
-        }
-        impl<T, U> Handler<T> for MapperHandler<T, U>
-        where
-            U: Clone,
-        {
-            fn handle(&self, cmd: T) {
-                let cmd = (self.func)(cmd);
-                self.emitter.borrow().emit(&cmd);
-            }
-        }
-        Box::new(MapperHandler {
-            emitter,
-            func,
-        })
-    }
-}
-
-impl<T, U> SourceTrait<U> for Mapper<T, U> {
-    fn add_handler(&self, handler: Box<dyn Handler<U>>) {
-        self.emitter.borrow_mut().add_handler(handler);
-    }
-}
-
-impl<T,U> Handler<T> for Mapper<T, U>
+pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
 where
-    U: Clone,
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
 {
-    fn handle(&self, cmd: T) {
-        let cmd = (self.func)(cmd);
-        self.emitter.borrow().emit(&cmd);
+}
+
+pub struct Sink<M> {
+    channel: Channel<NoopRawMutex, M, 10>,
+}
+
+impl<M> Sink<M>
+where
+    M: Clone + Send + Sync + 'static,
+{
+    pub fn new(_size: usize) -> Self {
+        Sink {
+            channel: Channel::new(),
+        }
+    }
+    pub async fn read(&mut self) -> Option<M> {
+        self.channel.recv().await.ok()
+    }
+    pub fn sink_ref(&self) -> SinkRef<M> {
+        SinkRef::new(self.tx.clone())
     }
 }
 
+impl<M> SinkTrait<M> for Sink<M>
+where
+    M: Clone + Send + Sync,
+{
+    fn push(&self, m: M) {
+        let _r = self.tx.try_send(m);
+    }
+}
 
+#[derive(Clone)]
+pub struct SinkRef<M> {
+    sender: DynamicSender<'_,M>,
+}
 
+impl<M> SinkRef<M> {
+    fn new(sender: Sender<M>) -> Self {
+        SinkRef { sender }
+    }
+}
+
+impl<M> SinkTrait<M> for SinkRef<M>
+where
+    M: Clone + Send + Sync,
+{
+    fn push(&self, message: M) {
+        self.sender.try_send(message).unwrap();
+    }
+}
 pub struct Source<T> {
-    handlers: Vec< Box<dyn Handler<T>>>,
+    sinks: Vec<Box<dyn SinkTrait<T>>>,
 }
 
 impl<T> Source<T> {
     pub fn new() -> Self {
-        Self {
-            handlers: Vec::new(),
-        }
+        Self { sinks: Vec::new() }
     }
-    pub fn emit(&self, t: &T)
+    pub fn emit(&self, m: T)
     where
-        T: Clone,
+        T: Clone + Send + Sync,
     {
-        for handler in self.handlers.iter() {
-            handler.handle(t.clone());
+        for sink in self.sinks.iter() {
+            sink.push(m.clone());
         }
     }
-    pub fn add_handler(&mut self, handler: Box<dyn Handler<T>>) {
-        self.handlers.push(handler);
+}
+
+impl<T> SourceTrait<T> for Source<T>
+where
+    T: Clone + Send + Sync,
+{
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<T>>) {
+        self.sinks.push(sink);
     }
 }
 
-/*impl<T> Clone for Emitter<T> {
-    fn clone(&self) -> Self {
-        Self {
-            handlers: self.handlers.clone(),
+pub struct FlowFunction<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    func: fn(T) -> Option<U>,
+    src: Source<U>,
+    l: PhantomData<T>,
+}
+
+impl<T, U> FlowFunction<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    pub fn new(func: fn(T) -> Option<U>) -> Self
+    where
+        T: Clone + Send + Sync,
+        U: Clone + Send + Sync,
+    {
+        FlowFunction {
+            func,
+            src: Source::new(),
+            l: PhantomData,
         }
     }
-}*/
-
-
-
-
-type TimerId = u32;
-
-#[derive(Debug)]
-pub enum TimerCmd {
-    Gated(TimerId, Duration),
-    Interval(TimerId, Duration),
-    Once(TimerId, Instant),
-    TimerExpired(TimerId),
 }
 
-/// a infinite duration u64::MAX/2
-const fn forever() -> Duration {
-    Duration::from_millis(1_000_000_000)
-}
-/// a infinite instant now() + DUration::from_millis(u64::MAX/2
-fn infinity() -> Instant {
-    Instant::now() + forever()
+impl<T, U> SourceTrait<U> for FlowFunction<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>) {
+        self.src.subscribe(sink);
+    }
 }
 
-pub enum TimerType {
-    Gated,
-    Interval,
-    Once,
+impl<T, U> SinkTrait<T> for FlowFunction<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    fn push(&self, t: T) {
+        (self.func)(t).map(|u| self.src.emit(u));
+    }
 }
+
+pub struct FlowMap<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    func: fn(T) -> Option<U>,
+    src: Source<U>,
+    l: PhantomData<T>,
+}
+
+impl<T, U> FlowMap<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    pub fn new(func: fn(T) -> Option<U>) -> Self {
+        FlowMap {
+            func,
+            src: Source::new(),
+            l: PhantomData,
+        }
+    }
+}
+
+impl<T, U> SinkTrait<T> for FlowMap<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    fn push(&self, t: T) {
+        (self.func)(t).map(|u| self.src.emit(u));
+    }
+}
+
+impl<T, U> SourceTrait<U> for FlowMap<T, U>
+where
+    T: Clone + Send + Sync,
+    U: Clone + Send + Sync,
+{
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>) {
+        self.src.subscribe(sink);
+    }
+}
+
+impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
+    type Output = ();
+    fn shr(self, sink: Box<dyn SinkTrait<T>>) -> () {
+        (*self).subscribe(sink);
+    }
+}
+
+pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
+    let mut flow = FlowFunction::new(func);
+    flow.subscribe(Box::new(sink));
+    src.subscribe(Box::new(flow));
+}
+
+pub fn connect_map<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
+    let mut flow = FlowMap::new(func);
+    flow.subscribe(Box::new(sink));
+    src.subscribe(Box::new(flow));
+}
+
 pub struct Timer {
     expires_at: Instant,
-    timer_type: TimerType,
-    interval: Option<Duration>,
-    id: u8,
+    re_trigger: bool,
+    interval: Duration,
+    active: bool,
+    id: u32,
 }
+
 impl Timer {
-    pub fn once(id: u8, instant: Instant) -> Self {
+    pub fn new(interval: Duration) -> Self {
         Timer {
-            expires_at: instant,
-            timer_type: TimerType::Once,
-            interval: None,
-            id,
+            expires_at: Instant::now() + interval,
+            re_trigger: false,
+            interval,
+            active: false,
+            id: 0,
         }
     }
-    /// Creates a new timer that expires at `instant` and then repeats at
-    /// the given interval.
-
-    pub fn interval(id: u8, instant: Instant, interval: Duration) -> Self {
-        Timer {
-            expires_at: instant,
-            timer_type: TimerType::Interval,
-            interval: Some(interval),
-            id,
-        }
+    pub fn set_interval(&mut self, interval: Duration) {
+        self.interval = interval;
     }
-    /// Creates a new timer that expires at `instant` and then repeats at
-    /// the given interval.
-    pub fn gated(id: u8, instant: Instant, interval: Duration) -> Self {
-        Timer {
-            expires_at: instant,
-            timer_type: TimerType::Gated,
-            interval: Some(interval),
-            id,
-        }
+    pub fn start(&mut self) {
+        self.active = true;
+        self.expires_at = Instant::now() + self.interval;
     }
-    /// Returns `true` if the timer has expired.
-    fn is_expired(&self) -> bool {
-        self.expires_at < Instant::now()
+    pub fn stop(&mut self) {
+        self.active = false;
     }
-    /// Updates the timer's expiration time based on its current type.
-    /// If the timer is repeating, the interval is added to the current
-    /// expiration time or the current time
-    ///
-    fn update_timeout(&mut self) {
-        match self.timer_type {
-            TimerType::Once => {
-                self.expires_at = infinity();
-            }
-            TimerType::Interval => {
-                self.expires_at = Instant::now() + self.interval.unwrap();
-            }
-            TimerType::Gated => {
-                self.expires_at += self.interval.unwrap();
-            }
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+    pub fn check(&mut self) -> bool {
+        if self.active && Instant::now() > self.expires_at {
+            self.expires_at = Instant::now() + self.interval;
+            return true;
         }
+        false
     }
 }
 
-pub struct TimerScheduler {
-    timers: BTreeMap<u8, Timer>,
+pub struct Timers {
+    timers: BTreeMap<u32, Timer>,
+    next_id: u32,
 }
 
-impl TimerScheduler {
+impl Timers {
     pub fn new() -> Self {
-        TimerScheduler {
+        Timers {
             timers: BTreeMap::new(),
+            next_id: 0,
         }
     }
-    pub fn add_timer(&mut self, timer: Timer) {
-        self.timers.insert(timer.id, timer);
+    pub fn add_timer(&mut self, timer: Timer) -> u32 {
+        let id = self.next_id;
+        self.timers.insert(id, timer);
+        self.next_id += 1;
+        id
     }
-    pub fn del_timer(&mut self, id: u8) {
+    pub fn remove_timer(&mut self, id: u32) {
         self.timers.remove(&id);
     }
-    pub fn get_timer(&self, id: u8) -> Option<&Timer> {
-        self.timers.get(&id)
-    }
-    pub fn set_interval(&mut self, id: u8, interval: Duration) {
-        if let Some(timer) = self.timers.get_mut(&id) {
-            timer.interval = Some(interval);
-        }
-    }
-
-    pub fn expired_list(&mut self) -> Vec<u8> {
+    pub fn check(&mut self) -> Vec<u32> {
         let mut expired = Vec::new();
-        for timer in self.timers.iter_mut() {
-            if timer.1.is_expired() {
-                expired.push(*timer.0);
+        for (id, timer) in self.timers.iter_mut() {
+            if timer.check() {
+                expired.push(*id);
             }
         }
         expired
     }
-    pub fn reload(&mut self) {
-        for timer in self.timers.iter_mut() {
-            if timer.1.is_expired() {
-                timer.1.update_timeout();
-            }
-        }
-    }
-
-    pub fn soonest(&self) -> Option<Duration> {
-        let infinity = infinity();
-        let mut soonest = infinity;
-        for timer in self.timers.iter() {
-            if timer.1.expires_at < soonest {
-                soonest = timer.1.expires_at;
-            }
-        }
-        //       info!("soonest={:?} vs infinity() {:?}",soonest,infinity);
-
-        if soonest == infinity {
-            None
-        } else if soonest < Instant::now() {
-            None
-        } else {
-            Some(soonest-Instant::now())
-        }
-    }
 }
 
-pub fn leak_static<T>( x:T ) -> &'static mut T  {
-    let _x: &'static mut T = Box::leak(Box::new(x));
-    _x
+pub trait ActorTrait<T, U>
+where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+{
+    fn run(&mut self);
+    fn command_sink(&self) -> SinkRef<T>;
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>);
 }
 
-/*impl<T,U> Shr<&Mapper<'static,T,U>> for &dyn Source<T> where U: Clone + 'static,   T: 'static{
-    type Output =  ();
-    fn shr(self, rhs: &Mapper<'static,T,U>) -> Self::Output {
-        self.add_handler(rhs.handler());
-    }
-}*/
-
-impl<T> Shr<&dyn SinkTrait<T>> for &dyn SourceTrait<T> {
-    type Output = ();
-    fn shr(self, rhs: &dyn SinkTrait<T>) -> Self::Output {
-        self.add_handler(rhs.handler());
-    }
-}
-
-impl<'a,T,U> Shr<&'a Mapper<T,U>> for &'a dyn SourceTrait<T> 
-where U: Clone + 'static,   T: 'static {
-    type Output = &'a Mapper<T,U>;
-    fn shr(self, rhs: &'a Mapper<T,U>) -> Self::Output {
-        self.add_handler(rhs.handler());
-        rhs
-    }
-}
-
-impl<'a,T,U> Shr<&'a dyn SinkTrait<U>> for &'a Mapper<T,U> 
-where U: Clone + 'static,   T: 'static {
-    type Output = ();
-    fn shr(self, rhs: &'a dyn SinkTrait<U>) -> Self::Output {
-        self.add_handler(rhs.handler());
-    }
-}
-
-impl<F,T,U> Shr< F > for &dyn SourceTrait<T> where F: Fn(T) -> U + 'static,   T: 'static,U : 'static + Clone{
-    type Output = Mapper<T,U>;
-    fn shr(self, rhs: F) -> Self::Output {
-        let mapper = Mapper::new(rhs);
-        self.add_handler(mapper.handler());
-        mapper
-    }
-}
-
-
-
-pub fn link<T>(source: &mut dyn SourceTrait<T>, sink: &dyn SinkTrait<T>) {
-    source.add_handler(sink.handler());
-}
-
-pub fn source<T>(x:&dyn SourceTrait<T>) -> &dyn SourceTrait<T> {
-    x as &dyn SourceTrait<T>
+pub fn connect_actors<T, U, V, W>(
+    src: &mut dyn ActorTrait<T, U>,
+    func: fn(U) -> Option<V>,
+    dst: &dyn ActorTrait<V, W>,
+) where
+    T: Clone + Send + Sync + 'static,
+    U: Clone + Send + Sync + 'static,
+    V: Clone + Send + Sync + 'static,
+    W: Clone + Send + Sync + 'static,
+{
+    let mut flow = FlowFunction::new(func);
+    flow.subscribe(Box::new(dst.command_sink()));
+    src.subscribe(Box::new(flow));
 }

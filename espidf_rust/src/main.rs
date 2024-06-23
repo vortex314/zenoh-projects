@@ -31,7 +31,7 @@ mod logger;
 use logger::semi_logger_init;
 
 mod protocol;
-use protocol::msg::ProxyMessage;
+use protocol::msg::MqttSnMessage;
 
 mod client;
 use client::ClientSession;
@@ -91,7 +91,7 @@ async fn main(spawner: Spawner) {
     let  client_session = ClientSession::new();
     let mut uart_actor = UartActor::new(uart0);
 
-    uart_actor.actor.add_sink(Box::new(|msg:ProxyMessage| {
+    uart_actor.actor.add_sink(Box::new(|msg:MqttSnMessage| {
         info!("UartActor received message: {:?}", msg);
     }));
 
