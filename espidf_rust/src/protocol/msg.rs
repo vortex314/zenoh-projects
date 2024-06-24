@@ -20,10 +20,10 @@ use minicbor::bytes::ByteArray;
 use bitfield::{bitfield_bitrange, bitfield_fields};
 
 #[derive(Debug, Clone)]
-pub struct Flags(u8);
+pub struct Flags(pub u8);
 bitfield_bitrange! {struct Flags(u8)}
 
-impl Flags {
+ impl Flags {
     bitfield_fields! {
       u8;
       pub dup, set_dup: 7;
@@ -35,7 +35,7 @@ impl Flags {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,PartialEq)]
 pub enum ReturnCode {
     Accepted,
     Rejected,

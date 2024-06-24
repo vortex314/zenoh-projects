@@ -88,13 +88,10 @@ async fn main(spawner: Spawner) {
 
     // uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
-    let  client_session = ClientSession::new();
     let mut uart_actor = UartActor::new(uart0);
+    let  client_session = ClientSession::new(uart_actor.sink_ref());
 
-    uart_actor.actor.add_sink(Box::new(|msg:MqttSnMessage| {
-        info!("UartActor received message: {:?}", msg);
-    }));
-
+    
     
     // Spawn uart and client tasks
     spawner.spawn(uart_task(uart_actor)).ok();

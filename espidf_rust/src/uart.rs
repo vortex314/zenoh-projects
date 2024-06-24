@@ -21,22 +21,22 @@ use embassy_sync::{
 };
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
-
-use crate::limero::{SourceTrait,Source,Actor,Handler,Flow,};
-use crate::protocol::msg::ProxyMessage;
-use crate::protocol::{decode_frame, encode_frame,};
+use crate::limero::{Flow, Sink, SinkRef, SinkTrait, Source, SourceTrait};
+use crate::protocol::msg::MqttSnMessage;
 use crate::protocol::MessageDecoder;
+use crate::protocol::{decode_frame, encode_frame};
 
 pub const UART_BUFSIZE: usize = 127;
-static TXD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static TXD_MSG: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
 
 pub struct UartActor {
-    pub actor : Actor<ProxyMessage,ProxyMessage>,
+    command: Sink<MqttSnMessage>,
+    events: Source<MqttSnMessage>,
     tx: UartTx<'static, UART0>,
     rx: UartRx<'static, UART0>,
-    rxd_msg: Source<ProxyMessage>,
-    txd_msg: DynamicReceiver<'static, ProxyMessage>,
-    rxd_buffer : Vec<u8>,
+    rxd_msg: Source<MqttSnMessage>,
+    txd_msg: DynamicReceiver<'static, MqttSnMessage>,
+    rxd_buffer: Vec<u8>,
 }
 
 impl UartActor {
@@ -47,16 +47,18 @@ impl UartActor {
         // Split UART0 to create seperate Tx and Rx handles
         let (tx, rx) = uart0.split();
         Self {
-            actor: Actor::<ProxyMessage,ProxyMessage>::new(Box::new(|_actor,msg| {
-                info!("UartActor received message: {:?}", msg);
-            })),
+            command: Sink::new(&TXD_MSG),
+            events: Source::new(),
             tx,
             rx,
             rxd_msg: Source::new(),
             txd_msg: TXD_MSG.dyn_receiver(),
             rxd_buffer: Vec::new(),
-
         }
+    }
+
+    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage> {
+        SinkRef::new(TXD_MSG)
     }
 
     pub async fn run(&mut self) {
@@ -67,8 +69,8 @@ impl UartActor {
         // Spawn Tx and Rx tasks
         loop {
             let _res = select(
-  //              self.rx.read(&mut rbuf[0..]),
-               embedded_io_async::Read::read(&mut self.rx, &mut small_buf),
+                //              self.rx.read(&mut rbuf[0..]),
+                embedded_io_async::Read::read(&mut self.rx, &mut small_buf),
                 self.txd_msg.receive(),
             )
             .await;
@@ -81,7 +83,7 @@ impl UartActor {
                             // Read characters from UART into read buffer until EOT
                             for msg in v {
                                 info!("Received message: {:?}", msg);
-                                self.rxd_msg.emit(&msg);
+                                self.rxd_msg.emit(msg);
                             }
                         }
                         Err(_) => {
@@ -98,10 +100,5 @@ impl UartActor {
             }
         }
     }
-
-
 }
-
-
-
 

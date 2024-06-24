@@ -34,8 +34,14 @@ use {
 
 };
 
+use core::marker::PhantomData;
+use core::ops::Shr;
 use core::result::Result;
+use core::time::Duration;
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_time::Instant;
 use log::error;
 use log::{debug, info};
 
@@ -54,6 +60,8 @@ where
 {
 }
 
+
+
 pub struct Sink<M> {
     channel: Channel<NoopRawMutex, M, 10>,
 }
@@ -62,22 +70,21 @@ impl<M> Sink<M>
 where
     M: Clone + Send + Sync + 'static,
 {
-    pub fn new(_size: usize) -> Self {
+    pub fn new(channel:&'static Channel<NoopRawMutex,M,10>) -> Self {
         Sink {
-            channel: Channel::new(),
+            channel,
         }
     }
     pub async fn read(&mut self) -> Option<M> {
-        self.channel.recv().await.ok()
+        Some(self.channel.receive().await)
     }
     pub fn sink_ref(&self) -> SinkRef<M> {
-        SinkRef::new(self.tx.clone())
+        SinkRef::new(self.channel.dyn_sender())
     }
 }
 
-impl<M> SinkTrait<M> for Sink<M>
-where
-    M: Clone + Send + Sync,
+impl<M> SinkTrait<M> for Sink<M> where
+    M: Clone + Send + Sync,dyn SinkTrait<M>:Send + Sync
 {
     fn push(&self, m: M) {
         let _r = self.tx.try_send(m);
@@ -85,24 +92,24 @@ where
 }
 
 #[derive(Clone)]
-pub struct SinkRef<M> {
-    sender: DynamicSender<'_,M>,
+pub struct SinkRef<M> where M: Clone + Send + Sync +'static{
+    sender: DynamicSender<'static,M>,
 }
 
-impl<M> SinkRef<M> {
-    fn new(sender: Sender<M>) -> Self {
+impl<M> SinkRef<M> where M: Clone + Send + Sync + 'static{
+    pub fn new(sender: DynamicSender<'static,M>) -> Self where M: Clone + Send + Sync{
         SinkRef { sender }
     }
 }
 
-impl<M> SinkTrait<M> for SinkRef<M>
-where
-    M: Clone + Send + Sync,
-{
+
+
+impl<M> SinkTrait<M> for SinkRef<M> where M: Clone + Send + Sync{
     fn push(&self, message: M) {
         self.sender.try_send(message).unwrap();
     }
 }
+
 pub struct Source<T> {
     sinks: Vec<Box<dyn SinkTrait<T>>>,
 }

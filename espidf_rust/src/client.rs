@@ -17,6 +17,7 @@ use alloc::string::String;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use embassy_time::{with_timeout, Duration, Timer};
+use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -33,18 +34,19 @@ use minicbor::bytes::ByteVec;
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
-use crate::protocol::msg::ProxyMessage;
-use crate::limero::{Actor, Source, SourceTrait};
+use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait};
+use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode};
 
-static CMD_MSG: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
-static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, ProxyMessage, 10, 10, 10> =
+static CMD_MSG: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
+static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, MqttSnMessage, 10, 10, 10> =
     PubSubChannel::new();
 const RC_ACCEPTED: u8 = 0;
 const RC_REJECTED_CONGESTION: u8 = 1;
 const RC_REJECTED_INVALID_TOPIC_ID: u8 = 2;
 const RC_REJECTED_NOT_SUPPORTED: u8 = 3;
 
-static RXD_DATA: Channel<CriticalSectionRawMutex, ProxyMessage, 5> = Channel::new();
+static SESSION_CMD_CHANNEL: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
+static SESSION_MSG_CHANNEL: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
 
 #[derive(PartialEq)]
 
@@ -54,7 +56,7 @@ enum State {
 }
 
 trait Subscriber {
-    fn on_message(&self, message: & ProxyMessage);
+    fn on_message(&self, message: &MqttSnMessage);
 }
 
 struct Sub<'a, T> {
@@ -70,12 +72,18 @@ impl<'a, T> Sub<'a, T> {
 
 impl<'a, T> Subscriber for Sub<'a, T>
 where
-    T: for<'b> Decode<'b, i32> , 
+    T: for<'b> Decode<'b, i32>,
 {
-    fn on_message(&self, message: & ProxyMessage) {
-        if let ProxyMessage::Publish { topic_id, message } = message {
+    fn on_message(&self, message: &MqttSnMessage) {
+        if let MqttSnMessage::Publish {
+            flags,
+            topic_id,
+            msg_id,
+            data,
+        } = message
+        {
             if *topic_id == self.topic_id {
-                let mut cbor_decoder = Decoder::new(message); // Lifetime here is limited to this scope
+                let mut cbor_decoder = Decoder::new(data); // Lifetime here is limited to this scope
 
                 let res = T::decode(&mut cbor_decoder, &mut 1);
 
@@ -84,12 +92,29 @@ where
                 }
             }
         }
-        
     }
+}
+#[derive(Clone)]
+pub enum SessionCmd {
+    Publish { topic_id: u16, message: String },
+    Subscribe { topic_id: u16 },
+    Unsubscribe { topic_id: u16 },
+    Connect { client_id: String },
+    Disconnect,
+}
+#[derive(Clone)]
+pub enum SessionEvent {
+    Publish { topic_id: u16, message: String },
+
+    Connected,
+    Disconnected,
 }
 
 pub struct ClientSession {
-    pub actor : Actor<ProxyMessage,ProxyMessage>,
+    command: Sink<SessionCmd>,
+    events: Source<SessionEvent>,
+    txd_msg: SinkRef<MqttSnMessage>,
+    rxd_msg: Sink<MqttSnMessage>,
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
@@ -97,16 +122,15 @@ pub struct ClientSession {
     client_id: String,
     state: State,
     ping_timeouts: u32,
-    txd_msg: Source<ProxyMessage>,
-    rxd_msg: DynamicReceiver<'static, ProxyMessage>,
-    msg_handler: Source< ProxyMessage>,
+    msg_id: u16,
 }
 impl ClientSession {
-    pub fn new() -> ClientSession {
+    pub fn new(txd_msg: SinkRef<MqttSnMessage>) -> ClientSession {
         ClientSession {
-            actor: Actor::<ProxyMessage,ProxyMessage>::new(Box::new(|_actor,msg| {
-                info!("ClientSession received message: {:?}", msg);
-            })),
+            command: Sink::new(SESSION_CMD_CHANNEL),
+            events: Source::new(),
+            txd_msg,
+            rxd_msg: Sink::new(SESSION_MSG_CHANNEL),
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
@@ -114,58 +138,42 @@ impl ClientSession {
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
-            txd_msg: Source::new(),
-            rxd_msg: RXD_DATA.dyn_receiver(),
-            msg_handler: Source::new(),
+            msg_id: 0,
         }
     }
 
-    async fn publish<T>(&mut self, topic_id: u16, _message: T)
-    where
-        T: Encode<String>,
-    {
-        let mut buffer = Vec::<u8>::new();
-        let mut encoder = Encoder::new(&mut buffer);
-        let mut s = String::new();
-        _message.encode(&mut encoder, &mut s).unwrap();
-        let msg = ProxyMessage::Publish {
-            topic_id,
-            message: buffer,
-        };
-        self.txd_msg.emit(&msg);
-    }
-
-    async fn handler(&mut self) {
+    pub async fn run(&mut self) {
         loop {
-            let _res = select(CMD_MSG.receive(), self.rxd_msg.receive()).await;
+            let _res = select(self.command.read(), self.rxd_msg.read()).await;
             match _res {
                 First(msg) => {
-                    self.on_cmd_message(msg).await;
+                    self.on_cmd_message(msg.unwrap()).await;
                 }
                 Second(msg) => {
-                    self.on_rxd_message(msg).await;
+                    self.on_rxd_message(msg.unwrap()).await;
                 }
             }
         }
     }
 
-    async fn on_cmd_message(&mut self, msg: ProxyMessage) {
+    async fn on_cmd_message(&mut self, msg: SessionCmd) {
         match msg {
-            ProxyMessage::Publish {
-                topic_id,
-                message: _,
-            } => {
+            SessionCmd::Publish { topic_id, message } => {
                 info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.emit(&ProxyMessage::PubAck {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
                         topic_id,
-                        return_code: RC_ACCEPTED,
+                        msg_id: self.msg_id,
+                        return_code: ReturnCode::Accepted,
                     });
+                    self.msg_id += 1;
                 } else {
-                    self.txd_msg.emit(&ProxyMessage::PubAck {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
                         topic_id,
-                        return_code: RC_REJECTED_INVALID_TOPIC_ID,
+                        msg_id: self.msg_id,
+                        return_code: ReturnCode::InvalidTopicId,
                     });
+                    self.msg_id += 1;
                 }
             }
             _ => {
@@ -174,50 +182,115 @@ impl ClientSession {
         }
     }
 
-    async fn on_rxd_message(&mut self, msg: ProxyMessage) {
+    async fn on_rxd_message(&mut self, msg: MqttSnMessage) {
         match msg {
-            ProxyMessage::Register {
+            MqttSnMessage::ConnAck { return_code } => {
+                info!("Connected code  {:?}", return_code);
+                if self.state == State::Disconnected {
+                    self.state = State::Connected;
+                }
+            }
+            MqttSnMessage::PingResp {} => {
+                info!("Ping response");
+            }
+            MqttSnMessage::Disconnect { duration: _ } => {
+                info!("Disconnected");
+                self.state = State::Disconnected;
+                self.server_topics.clear();
+            }
+            MqttSnMessage::Register {
                 topic_id,
+                msg_id,
                 topic_name,
             } => {
                 info!("Registering topic {} with id {}", topic_name, topic_id);
                 self.server_topics.insert(topic_id, topic_name);
             }
-            ProxyMessage::Publish {
+            MqttSnMessage::Publish {
+                flags,
                 topic_id,
-                message: _,
+                msg_id,
+                data: _,
             } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.emit(&ProxyMessage::PubAck {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
                         topic_id,
-                        return_code: RC_ACCEPTED,
+                        msg_id,
+                        return_code: ReturnCode::Accepted,
                     });
                 } else {
-                    self.txd_msg.emit(&ProxyMessage::PubAck {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
                         topic_id,
-                        return_code: RC_REJECTED_INVALID_TOPIC_ID,
+                        msg_id,
+                        return_code: ReturnCode::InvalidTopicId,
                     });
                 }
             }
-            ProxyMessage::PubAck {
+            MqttSnMessage::PubAck {
                 topic_id,
+                msg_id,
                 return_code,
             } => {
-                if return_code == RC_ACCEPTED {
+                if return_code == ReturnCode::Accepted {
                     info!(
-                        "Received PubAck for topic {} with code {}",
+                        "Received PubAck for topic {} with code {:?}",
                         topic_id, return_code
                     );
                 } else {
-                    self.txd_msg.emit(&ProxyMessage::Register {
+                    self.txd_msg.push(MqttSnMessage::Register {
                         topic_id,
+                        msg_id,
+                        topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                    });
+                }
+                info!(
+                    "Received PubAck for topic {} with code {:?}",
+                    topic_id, return_code
+                );
+            }
+
+            MqttSnMessage::Publish {
+                flags,
+                topic_id,
+                msg_id,
+                data,
+            } => {
+                info!("Received message on topic {} ", topic_id);
+                if self.server_topics.contains_key(&topic_id) {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
+                        topic_id,
+                        msg_id,
+                        return_code: ReturnCode::Accepted,
+                    });
+                } else {
+                    self.txd_msg.push(MqttSnMessage::PubAck {
+                        topic_id,
+                        msg_id,
+                        return_code: ReturnCode::InvalidTopicId,
+                    });
+                }
+            }
+            MqttSnMessage::PubAck {
+                topic_id,
+                msg_id,
+                return_code,
+            } => {
+                if return_code == ReturnCode::Accepted {
+                    info!(
+                        "Received PubAck for topic {} with code {:?}",
+                        topic_id, return_code
+                    );
+                } else {
+                    self.txd_msg.push(MqttSnMessage::Register {
+                        topic_id,
+                        msg_id,
                         topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
                     });
                     self.client_topics_registered.insert(topic_id, true);
                 }
                 info!(
-                    "Received PubAck for topic {} with code {}",
+                    "Received PubAck for topic {} with code {:?}",
                     topic_id, return_code
                 );
             }
@@ -227,95 +300,39 @@ impl ClientSession {
         }
     }
 
-    pub async fn run(&mut self) {
-        loop {
-            info!("Client running");
-            let result = with_timeout(Duration::from_secs(5), self.rxd_msg.receive()).await;
-            match result {
-                Ok(msg) => match msg {
-                    ProxyMessage::ConnAck { return_code } => {
-                        info!("Connected code  {}", return_code);
-                        if self.state == State::Disconnected {
-                            self.state = State::Connected;
-                        }
-                    }
-                    ProxyMessage::PingResp {} => {
-                        info!("Ping response");
-                    }
-                    ProxyMessage::Disconnect {} => {
-                        info!("Disconnected");
-                        self.state = State::Disconnected;
-                        self.server_topics.clear();
-                    }
-                    ProxyMessage::Register {
-                        topic_id,
-                        topic_name,
-                    } => {
-                        info!("Registering topic {} with id {}", topic_name, topic_id);
-                        self.server_topics.insert(topic_id, topic_name);
-                    }
-                    ProxyMessage::Publish {
-                        topic_id,
-                        message: _,
-                    } => {
-                        info!("Received message on topic {} ", topic_id);
-                        if self.server_topics.contains_key(&topic_id) {
-                            self.txd_msg.emit(&ProxyMessage::PubAck {
-                                topic_id,
-                                return_code: RC_ACCEPTED,
-                            });
-                        } else {
-                            self.txd_msg.emit(&ProxyMessage::PubAck {
-                                topic_id,
-                                return_code: RC_REJECTED_INVALID_TOPIC_ID,
-                            });
-                        }
-                    }
-                    ProxyMessage::PubAck {
-                        topic_id,
-                        return_code,
-                    } => {
-                        if return_code == RC_ACCEPTED {
-                            info!(
-                                "Received PubAck for topic {} with code {}",
-                                topic_id, return_code
-                            );
-                        } else {
-                            self.txd_msg.emit(&ProxyMessage::Register {
-                                topic_id,
-                                topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
-                            });
-                        }
-                        info!(
-                            "Received PubAck for topic {} with code {}",
-                            topic_id, return_code
-                        );
-                    }
-
-                    _ => {
-                        info!("Unexpected message {:?}", msg);
-                    }
-                },
-                Err(_) => match self.state {
-                    // on timeout
-                    State::Disconnected => {
-                        self.txd_msg.emit(&ProxyMessage::Connect {
-                            protocol_id: 1,
-                            duration: 100,
-                            client_id: self.client_id.clone(),
-                        });
-                    }
-                    State::Connected => {
-                        if self.ping_timeouts > 5 {
-                            self.txd_msg.emit(&ProxyMessage::Disconnect {});
-                            self.state = State::Disconnected;
-                            self.server_topics.clear();
-                        } else {
-                            self.ping_timeouts += 1;
-                            self.txd_msg.emit(&ProxyMessage::PingReq {});
-                        }
-                    }
-                },
+    pub async fn on_cmd_msg(&mut self, cmd: SessionCmd) {
+        match cmd {
+            SessionCmd::Publish { topic_id, message } => {
+                self.txd_msg.push(MqttSnMessage::Publish {
+                    flags: Flags(0),
+                    topic_id,
+                    msg_id: self.msg_id,
+                    data: message.as_bytes().to_vec(),
+                });
+            }
+            SessionCmd::Subscribe { topic_id } => {
+                self.txd_msg.push(MqttSnMessage::Register {
+                    topic_id,
+                    msg_id: 0,
+                    topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                });
+            }
+            SessionCmd::Unsubscribe { topic_id } => {
+                self.txd_msg.push(MqttSnMessage::PubAck {
+                    topic_id,
+                    msg_id: 0,
+                    return_code: ReturnCode::Accepted,
+                });
+            }
+            SessionCmd::Connect { client_id } => {
+                self.txd_msg.push(MqttSnMessage::Connect {
+                    flags: Flags(0),
+                    duration: 100,
+                    client_id: client_id.clone(),
+                });
+            }
+            SessionCmd::Disconnect => {
+                self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
             }
         }
     }
