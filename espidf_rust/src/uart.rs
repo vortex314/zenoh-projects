@@ -27,7 +27,6 @@ use crate::protocol::MessageDecoder;
 use crate::protocol::{decode_frame, encode_frame};
 
 pub const UART_BUFSIZE: usize = 127;
-static TXD_MSG: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
 
 pub struct UartActor {
     command: Sink<MqttSnMessage, 4>,

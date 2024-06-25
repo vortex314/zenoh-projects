@@ -365,11 +365,13 @@ impl Timers {
                 return timer.id();
             }
             if let Some(lowest) = lowest_timer {
-                if timer.expires_at < lowest.expires_at {
+                if timer.active && timer.expires_at < lowest.expires_at {
                     lowest_timer = Some(timer);
                 }
             } else {
-                lowest_timer = Some(timer);
+                if timer.active {
+                    lowest_timer = Some(timer);
+                }
             }
         }
         if let Some(lowest_timer) = lowest_timer {

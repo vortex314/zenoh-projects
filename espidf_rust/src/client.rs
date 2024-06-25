@@ -183,6 +183,8 @@ impl ClientSession {
                     self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
                 }
             }
+        } else {
+            info!("Unexpected timer id {}", id);
         }
     }
 
