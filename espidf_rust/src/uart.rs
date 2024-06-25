@@ -30,12 +30,11 @@ pub const UART_BUFSIZE: usize = 127;
 static TXD_MSG: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
 
 pub struct UartActor {
-    command: Sink<MqttSnMessage>,
+    command: Sink<MqttSnMessage, 4>,
     events: Source<MqttSnMessage>,
     tx: UartTx<'static, UART0>,
     rx: UartRx<'static, UART0>,
     rxd_msg: Source<MqttSnMessage>,
-    txd_msg: DynamicReceiver<'static, MqttSnMessage>,
     rxd_buffer: Vec<u8>,
 }
 
@@ -47,18 +46,17 @@ impl UartActor {
         // Split UART0 to create seperate Tx and Rx handles
         let (tx, rx) = uart0.split();
         Self {
-            command: Sink::new(&TXD_MSG),
+            command: Sink::new(),
             events: Source::new(),
             tx,
             rx,
             rxd_msg: Source::new(),
-            txd_msg: TXD_MSG.dyn_receiver(),
             rxd_buffer: Vec::new(),
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage> {
-        SinkRef::new(TXD_MSG)
+    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage,4> {
+        self.command.sink_ref()
     }
 
     pub async fn run(&mut self) {
@@ -71,7 +69,7 @@ impl UartActor {
             let _res = select(
                 //              self.rx.read(&mut rbuf[0..]),
                 embedded_io_async::Read::read(&mut self.rx, &mut small_buf),
-                self.txd_msg.receive(),
+                self.command.read(),
             )
             .await;
             match _res {
@@ -93,7 +91,7 @@ impl UartActor {
                 }
                 Second(msg) => {
                     info!("Send message: {:?}", msg);
-                    let bytes = encode_frame(msg).unwrap();
+                    let bytes = encode_frame(msg.unwrap()).unwrap();
                     let _ = embedded_io_async::Write::write(&mut self.tx, bytes.as_slice()).await;
                     let _ = embedded_io_async::Write::flush(&mut self.tx).await;
                 }
@@ -101,4 +99,3 @@ impl UartActor {
         }
     }
 }
-

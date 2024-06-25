@@ -14,9 +14,9 @@ use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use embassy_futures::select::select;
-use embassy_futures::select::Either::{First, Second};
-use embassy_time::{with_timeout, Duration, Timer};
+use embassy_futures::select::Either3::{First, Second, Third};
+use embassy_futures::select::{self, select3, Either3};
+use embassy_time::{with_timeout, Duration};
 use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
 use esp_hal::{
@@ -34,19 +34,8 @@ use minicbor::bytes::ByteVec;
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
-use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait};
+use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait, Timer, Timers};
 use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode};
-
-static CMD_MSG: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
-static PUB_MSG: PubSubChannel<CriticalSectionRawMutex, MqttSnMessage, 10, 10, 10> =
-    PubSubChannel::new();
-const RC_ACCEPTED: u8 = 0;
-const RC_REJECTED_CONGESTION: u8 = 1;
-const RC_REJECTED_INVALID_TOPIC_ID: u8 = 2;
-const RC_REJECTED_NOT_SUPPORTED: u8 = 3;
-
-static SESSION_CMD_CHANNEL: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
-static SESSION_MSG_CHANNEL: Channel<CriticalSectionRawMutex, MqttSnMessage, 5> = Channel::new();
 
 #[derive(PartialEq)]
 
@@ -94,7 +83,7 @@ where
         }
     }
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SessionCmd {
     Publish { topic_id: u16, message: String },
     Subscribe { topic_id: u16 },
@@ -102,7 +91,7 @@ pub enum SessionCmd {
     Connect { client_id: String },
     Disconnect,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SessionEvent {
     Publish { topic_id: u16, message: String },
 
@@ -110,11 +99,16 @@ pub enum SessionEvent {
     Disconnected,
 }
 
+enum TimerId {
+    PingTimer = 1,
+    ConnectTimer = 2,
+}
+
 pub struct ClientSession {
-    command: Sink<SessionCmd>,
+    command: Sink<SessionCmd, 3>,
     events: Source<SessionEvent>,
-    txd_msg: SinkRef<MqttSnMessage>,
-    rxd_msg: Sink<MqttSnMessage>,
+    txd_msg: SinkRef<MqttSnMessage, 4>,
+    rxd_msg: Sink<MqttSnMessage, 3>,
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
@@ -123,14 +117,15 @@ pub struct ClientSession {
     state: State,
     ping_timeouts: u32,
     msg_id: u16,
+    timers: Timers,
 }
 impl ClientSession {
-    pub fn new(txd_msg: SinkRef<MqttSnMessage>) -> ClientSession {
+    pub fn new(txd_msg: SinkRef<MqttSnMessage, 4>) -> ClientSession {
         ClientSession {
-            command: Sink::new(SESSION_CMD_CHANNEL),
+            command: Sink::new(),
             events: Source::new(),
             txd_msg,
-            rxd_msg: Sink::new(SESSION_MSG_CHANNEL),
+            rxd_msg: Sink::new(),
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
@@ -139,12 +134,22 @@ impl ClientSession {
             state: State::Disconnected,
             ping_timeouts: 0,
             msg_id: 0,
+            timers: Timers::new(),
         }
     }
 
     pub async fn run(&mut self) {
+        self.timers.add_timer(Timer::new_repeater(
+            TimerId::ConnectTimer as u32,
+            Duration::from_millis(1000),
+        ));
         loop {
-            let _res = select(self.command.read(), self.rxd_msg.read()).await;
+            let _res = select3(
+                self.command.read(),
+                self.rxd_msg.read(),
+                self.timers.alarm(),
+            )
+            .await;
             match _res {
                 First(msg) => {
                     self.on_cmd_message(msg.unwrap()).await;
@@ -152,13 +157,41 @@ impl ClientSession {
                 Second(msg) => {
                     self.on_rxd_message(msg.unwrap()).await;
                 }
+                Third(idx) => {
+                    info!("Timer expired {}", idx);
+                    self.on_timeout(idx).await;
+                }
+            }
+        }
+    }
+
+    async fn on_timeout(&mut self, id: u32) {
+        if id == TimerId::ConnectTimer as u32 {
+            if self.state == State::Disconnected {
+                self.txd_msg.push(MqttSnMessage::Connect {
+                    flags: Flags(0),
+                    duration: 100,
+                    client_id: self.client_id.clone(),
+                });
+            }
+        } else if id == TimerId::PingTimer as u32 {
+            if self.state == State::Connected {
+                self.txd_msg
+                    .push(MqttSnMessage::PingReq { client_id: None });
+                self.ping_timeouts += 1;
+                if self.ping_timeouts > 3 {
+                    self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
+                }
             }
         }
     }
 
     async fn on_cmd_message(&mut self, msg: SessionCmd) {
         match msg {
-            SessionCmd::Publish { topic_id, message } => {
+            SessionCmd::Publish {
+                topic_id,
+                message: _,
+            } => {
                 info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
                     self.txd_msg.push(MqttSnMessage::PubAck {

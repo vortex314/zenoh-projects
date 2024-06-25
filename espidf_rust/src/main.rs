@@ -9,6 +9,8 @@ use core::{cell::RefCell, mem::MaybeUninit};
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use embassy_executor::Spawner;
+use embassy_futures::select::{self, select3,Either3};
+use embassy_futures::select::Either3::{First, Second, Third};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::DynamicSender;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
@@ -41,7 +43,6 @@ use uart::UartActor;
 
 mod limero;
 
-
 extern crate alloc;
 
 #[global_allocator]
@@ -57,7 +58,7 @@ fn init_heap() {
 }
 
 // static uart_channel_in:Rc<RefCell<Option<Channel<NoopRawMutex,Message,10>>>>=Rc::new(RefCell::new(None));
-
+/*
 #[embassy_executor::task]
 async fn uart_task( mut uart:UartActor) {
     uart.run().await;
@@ -66,11 +67,10 @@ async fn uart_task( mut uart:UartActor) {
 #[embassy_executor::task]
 async fn client_task( mut client:ClientSession) {
     client.run().await;
-}
-
+}*/
 
 #[main]
-async fn main(spawner: Spawner) {
+async fn main(_spawner: Spawner) {
     init_heap();
     semi_logger_init().unwrap();
     let peripherals = Peripherals::take();
@@ -84,20 +84,24 @@ async fn main(spawner: Spawner) {
     log::info!("Hello, log!");
 
     // Initialize and configure UART0
-    let  uart0 = Uart::new(peripherals.UART0, &clocks);
+    let uart0 = Uart::new(peripherals.UART0, &clocks);
 
     // uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
     let mut uart_actor = UartActor::new(uart0);
-    let  client_session = ClientSession::new(uart_actor.sink_ref());
-
-    
-    
-    // Spawn uart and client tasks
-    spawner.spawn(uart_task(uart_actor)).ok();
-    spawner.spawn(client_task(client_session)).ok();
+    let mut client_session = ClientSession::new(uart_actor.sink_ref());
     loop {
-        Timer::after(Duration::from_millis(5_000)).await;
-        info!("main thread running");
+        let x = select3(
+            uart_actor.run(),
+            client_session.run(),
+            Timer::after(Duration::from_millis(50_000)),
+        ).await;
+        info!("select3" );
+        match x {
+            First(_) => { info!("First");}
+            Second(_) => { info!("Second");}
+            Third(_) => { info!("Third");}
+
+        }
     }
 }

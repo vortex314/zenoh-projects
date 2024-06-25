@@ -1,5 +1,11 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
+#[cfg(feature = "esp32")]
+use {
+    alloc::boxed::Box, alloc::string::String, embassy_sync::channel::Channel,
+    embassy_sync::channel::DynamicReceiver, embassy_sync::channel::DynamicSender,
+    embassy_sync::channel::Receiver, embassy_sync::channel::Sender,
+};
 #[cfg(feature = "linux")]
 use {
     minicbor::decode::info,
@@ -22,29 +28,18 @@ use {
     tokio::sync::mpsc::Sender,
     tokio::sync::Mutex,
 };
-#[cfg(feature = "esp32")]
-use {
-    alloc::boxed::Box,
-    alloc::string::String,
-    embassy_sync::channel::Channel,
-    embassy_sync::channel::DynamicReceiver,
-    embassy_sync::channel::DynamicSender,
-    embassy_sync::channel::Receiver,
-    embassy_sync::channel::Sender,
 
-};
-
+use alloc::collections::BTreeMap;
+use alloc::sync::Arc;
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::ops::Shr;
 use core::result::Result;
-use core::time::Duration;
-use alloc::collections::BTreeMap;
-use alloc::vec::Vec;
-use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
+use embassy_time::Duration;
 use embassy_time::Instant;
 use log::error;
 use log::{debug, info};
-
 
 pub trait SinkTrait<M>: Send + Sync {
     fn push(&self, m: M);
@@ -60,53 +55,52 @@ where
 {
 }
 
-
-
-pub struct Sink<M> {
-    channel: Channel<NoopRawMutex, M, 10>,
+pub struct Sink<M, const N: usize> {
+    channel: Arc<Channel<CriticalSectionRawMutex, M, N>>,
 }
 
-impl<M> Sink<M>
+#[derive(Clone)]
+pub struct SinkRef<M, const N: usize>
 where
     M: Clone + Send + Sync + 'static,
 {
-    pub fn new(channel:&'static Channel<NoopRawMutex,M,10>) -> Self {
-        Sink {
-            channel,
-        }
+    channel: Arc<Channel<CriticalSectionRawMutex, M, N>>,
+}
+
+impl<M, const N: usize> Sink<M, N>
+where
+    M: Clone + Send + Sync + 'static,
+{
+    pub fn new() -> Self {
+        let channel = Arc::new(Channel::new());
+        Sink { channel }
     }
     pub async fn read(&mut self) -> Option<M> {
         Some(self.channel.receive().await)
     }
-    pub fn sink_ref(&self) -> SinkRef<M> {
-        SinkRef::new(self.channel.dyn_sender())
+    pub fn sink_ref(&self) -> SinkRef<M, N> {
+        SinkRef {
+            channel: self.channel.clone(),
+        }
     }
 }
-
-impl<M> SinkTrait<M> for Sink<M> where
-    M: Clone + Send + Sync,dyn SinkTrait<M>:Send + Sync
+/*
+impl<M, const N: usize> SinkTrait<M> for Sink<M, N>
+where
+    M: Clone + Send + Sync,
+    dyn SinkTrait<M>: Send + Sync,
 {
     fn push(&self, m: M) {
-        let _r = self.tx.try_send(m);
+        let _r = self.channel.try_send(m);
     }
-}
+}*/
 
-#[derive(Clone)]
-pub struct SinkRef<M> where M: Clone + Send + Sync +'static{
-    sender: DynamicSender<'static,M>,
-}
-
-impl<M> SinkRef<M> where M: Clone + Send + Sync + 'static{
-    pub fn new(sender: DynamicSender<'static,M>) -> Self where M: Clone + Send + Sync{
-        SinkRef { sender }
-    }
-}
-
-
-
-impl<M> SinkTrait<M> for SinkRef<M> where M: Clone + Send + Sync{
+impl<M, const N: usize> SinkTrait<M> for SinkRef<M, N>
+where
+    M: Clone + Send + Sync,
+{
     fn push(&self, message: M) {
-        self.sender.try_send(message).unwrap();
+        let _ = self.channel.try_send(message);
     }
 }
 
@@ -236,8 +230,11 @@ impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
     }
 }
 
-pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
-where
+pub fn connect<T, U, const N: usize>(
+    src: &mut dyn SourceTrait<T>,
+    func: fn(T) -> Option<U>,
+    sink: SinkRef<U, N>,
+) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
@@ -246,8 +243,11 @@ where
     src.subscribe(Box::new(flow));
 }
 
-pub fn connect_map<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
-where
+pub fn connect_map<T, U, const N: usize>(
+    src: &mut dyn SourceTrait<T>,
+    func: fn(T) -> Option<U>,
+    sink: SinkRef<U, N>,
+) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
@@ -265,14 +265,26 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn new(interval: Duration) -> Self {
+    pub fn new(id: u32, interval: Duration) -> Self {
         Timer {
             expires_at: Instant::now() + interval,
             re_trigger: false,
             interval,
             active: false,
+            id,
+        }
+    }
+    pub fn new_repeater(id: u32, interval: Duration) -> Self {
+        Timer {
+            expires_at: Instant::now() + interval,
+            re_trigger: true,
+            interval,
+            active: true,
             id: 0,
         }
+    }
+    pub fn id(&self) -> u32 {
+        self.id
     }
     pub fn set_interval(&mut self, interval: Duration) {
         self.interval = interval;
@@ -293,6 +305,25 @@ impl Timer {
             return true;
         }
         false
+    }
+    pub fn reload(&mut self) {
+        if self.active {
+            if self.re_trigger {
+                self.expires_at = Instant::now() + self.interval;
+            } else {
+                self.active = false;
+            }
+        }
+    }
+    pub fn expired(&self) -> bool {
+        Instant::now() > self.expires_at && self.active
+    }
+    pub fn wait_time(&self) -> Duration {
+        if self.active {
+            self.expires_at - Instant::now()
+        } else {
+            Duration::from_millis(0)
+        }
     }
 }
 
@@ -317,7 +348,7 @@ impl Timers {
     pub fn remove_timer(&mut self, id: u32) {
         self.timers.remove(&id);
     }
-    pub fn check(&mut self) -> Vec<u32> {
+    pub fn expired_list(&mut self) -> Vec<u32> {
         let mut expired = Vec::new();
         for (id, timer) in self.timers.iter_mut() {
             if timer.check() {
@@ -326,15 +357,37 @@ impl Timers {
         }
         expired
     }
+    pub async fn alarm(&mut self) -> u32 {
+        let mut lowest_timer: Option<&Timer> = None;
+        for (_id, timer) in self.timers.iter_mut() {
+            if timer.expired() {
+                timer.reload();
+                return timer.id();
+            }
+            if let Some(lowest) = lowest_timer {
+                if timer.expires_at < lowest.expires_at {
+                    lowest_timer = Some(timer);
+                }
+            } else {
+                lowest_timer = Some(timer);
+            }
+        }
+        if let Some(lowest_timer) = lowest_timer {
+            embassy_time::Timer::after(lowest_timer.wait_time()).await;
+        } else {
+            embassy_time::Timer::after(Duration::from_millis(10_000)).await;
+        }
+        lowest_timer.unwrap().id()
+    }
 }
-
-pub trait ActorTrait<T, U>
+/*
+pub trait ActorTrait<T, U,const N:usize>
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
     fn run(&mut self);
-    fn command_sink(&self) -> SinkRef<T>;
+    fn command_sink(&self) -> SinkRef<T,N>;
     fn subscribe(&mut self, sink: Box<dyn SinkTrait<U>>);
 }
 
@@ -352,3 +405,4 @@ pub fn connect_actors<T, U, V, W>(
     flow.subscribe(Box::new(dst.command_sink()));
     src.subscribe(Box::new(flow));
 }
+*/
