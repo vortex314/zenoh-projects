@@ -375,6 +375,10 @@ impl Timers {
         }
         if let Some(lowest_timer) = lowest_timer {
             embassy_time::Timer::after(lowest_timer.wait_time()).await;
+            if lowest_timer.expired() {
+                lowest_timer.reload();
+                return lowest_timer.id();
+            }
         } else {
             embassy_time::Timer::after(Duration::from_millis(10_000)).await;
         }

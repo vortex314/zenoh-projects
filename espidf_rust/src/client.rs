@@ -144,13 +144,12 @@ impl ClientSession {
             Duration::from_millis(5_000),
         ));
         loop {
-            let _res = select3(
+            match select3(
                 self.command.read(),
                 self.rxd_msg.read(),
                 self.timers.alarm(),
             )
-            .await;
-            match _res {
+            .await {
                 First(msg) => {
                     self.on_cmd_message(msg.unwrap()).await;
                 }
