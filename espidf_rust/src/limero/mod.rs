@@ -256,7 +256,7 @@ pub fn connect_map<T, U, const N: usize>(
     src.subscribe(Box::new(flow));
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Timer {
     expires_at: Instant,
     re_trigger: bool,
@@ -340,8 +340,8 @@ impl Timers {
             next_id: 0,
         }
     }
-    pub fn add_timer(&mut self, timer: Timer)  {
-        info!("adding timer {:?}",timer);
+    pub fn add_timer(&mut self, timer: Timer) {
+        info!("adding timer {:?}", timer);
         self.timers.insert(timer.id, timer);
     }
     pub fn remove_timer(&mut self, id: u32) {
@@ -357,32 +357,33 @@ impl Timers {
         expired
     }
     pub async fn alarm(&mut self) -> u32 {
-        let mut lowest_timer: Option<&Timer> = None;
+        let mut lowest_timer: Option<&mut Timer> = None;
         for (_id, timer) in self.timers.iter_mut() {
             if timer.expired() {
                 timer.reload();
                 return timer.id();
             }
-            if let Some(lowest) = lowest_timer {
-                if timer.active && timer.expires_at < lowest.expires_at {
-                    lowest_timer = Some(timer);
-                }
+            if lowest_timer.is_none() {
+                lowest_timer = Some(timer);
             } else {
-                if timer.active {
+                if timer.active && timer.expires_at < lowest_timer.unwrap().expires_at {
                     lowest_timer = Some(timer);
                 }
             }
         }
-        if let Some(lowest_timer) = lowest_timer {
-            embassy_time::Timer::after(lowest_timer.wait_time()).await;
-            if lowest_timer.expired() {
-                lowest_timer.reload();
-                return lowest_timer.id();
+        if lowest_timer.is_some() {
+            let timer = lowest_timer.unwrap();
+            embassy_time::Timer::after(timer.wait_time()).await;
+            if timer.expired() {
+                timer.reload();
+                return timer.id();
+            } else {
+                0
             }
         } else {
-            embassy_time::Timer::after(Duration::from_millis(10_000)).await;
+            embassy_time::Timer::after(Duration::from_millis(1_000_000)).await; // sleep 10 seconds
+            0
         }
-        lowest_timer.unwrap().id()
     }
 }
 /*
