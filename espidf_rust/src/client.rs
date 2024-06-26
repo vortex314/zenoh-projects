@@ -141,7 +141,7 @@ impl ClientSession {
     pub async fn run(&mut self) {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::ConnectTimer as u32,
-            Duration::from_millis(1000),
+            Duration::from_millis(5_000),
         ));
         loop {
             let _res = select3(

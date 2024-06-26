@@ -256,6 +256,7 @@ pub fn connect_map<T, U, const N: usize>(
     src.subscribe(Box::new(flow));
 }
 
+#[derive(Debug)]
 pub struct Timer {
     expires_at: Instant,
     re_trigger: bool,
@@ -280,7 +281,7 @@ impl Timer {
             re_trigger: true,
             interval,
             active: true,
-            id: 0,
+            id,
         }
     }
     pub fn id(&self) -> u32 {
@@ -339,11 +340,9 @@ impl Timers {
             next_id: 0,
         }
     }
-    pub fn add_timer(&mut self, timer: Timer) -> u32 {
-        let id = self.next_id;
-        self.timers.insert(id, timer);
-        self.next_id += 1;
-        id
+    pub fn add_timer(&mut self, timer: Timer)  {
+        info!("adding timer {:?}",timer);
+        self.timers.insert(timer.id, timer);
     }
     pub fn remove_timer(&mut self, id: u32) {
         self.timers.remove(&id);

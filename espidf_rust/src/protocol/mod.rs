@@ -258,7 +258,7 @@ pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
         return Err(format!("CBOR encoding error : {:?}", e));
     }
     let size = _res.unwrap();
-    debug!("Encoded MQTT-SN : {:02X?}", &buffer[0..size]);
+    info!("Encoded MQTT-SN : {:02X?}", &buffer[0..size]);
 
     let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
     let crc = crc16.checksum(&buffer[0..size]);
