@@ -317,7 +317,7 @@ impl Timer {
         }
     }
     pub fn expired(&self) -> bool {
-        Instant::now() > self.expires_at && self.active
+        Instant::now() >= self.expires_at && self.active
     }
     pub fn wait_time(&self) -> Duration {
         if self.active {
@@ -330,14 +330,12 @@ impl Timer {
 
 pub struct Timers {
     timers: BTreeMap<u32, Timer>,
-    next_id: u32,
 }
 
 impl Timers {
     pub fn new() -> Self {
         Timers {
             timers: BTreeMap::new(),
-            next_id: 0,
         }
     }
     pub fn add_timer(&mut self, timer: Timer) {
@@ -356,6 +354,16 @@ impl Timers {
         }
         expired
     }
+    pub set_interval(&mut self, id: u32, interval: Duration) {
+        if let Some(timer) = self.timers.get_mut(&id) {
+            timer.set_interval(interval);
+        }
+    }
+    pub stop(&mut self, id: u32) {
+        if let Some(timer) = self.timers.get_mut(&id) {
+            timer.stop();
+        }
+    }
     pub async fn alarm(&mut self) -> u32 {
         let mut lowest_timer: Option<&mut Timer> = None;
         for (_id, timer) in self.timers.iter_mut() {
@@ -363,13 +371,19 @@ impl Timers {
                 timer.reload();
                 return timer.id();
             }
-            if lowest_timer.is_none() {
-                lowest_timer = Some(timer);
-            } else {
-                if timer.active && timer.expires_at < lowest_timer.unwrap().expires_at {
-                    lowest_timer = Some(timer);
+            if timer.active {
+                match lowest_timer {
+                    Some(ref tim) => {
+                        if timer.active && timer.expires_at < tim.expires_at {
+                            lowest_timer.replace(timer);
+                            }
+                        }
+                    None => { 
+                        lowest_timer.replace(timer);
+                    }
                 }
             }
+
         }
         if lowest_timer.is_some() {
             let timer = lowest_timer.unwrap();
@@ -386,6 +400,7 @@ impl Timers {
         }
     }
 }
+
 /*
 pub trait ActorTrait<T, U,const N:usize>
 where
