@@ -6,26 +6,36 @@
 use core::ops::Shr;
 use core::{cell::RefCell, mem::MaybeUninit};
 
+use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::string::ToString;
+
+use embassy_executor::raw::Executor;
 use embassy_executor::Spawner;
 use embassy_futures::join::{join3, join4};
-use embassy_futures::select::{self, select3,Either3};
 use embassy_futures::select::Either3::{First, Second, Third};
+use embassy_futures::select::{self, select3, Either3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::DynamicSender;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
+
+use embedded_hal::digital::v2::OutputPin;
 use esp_backtrace as _;
+use esp_hal::gpio::any_pin::AnyPin;
+use esp_hal::gpio::{AnyOutput, GpioPin, Io, Level, Output};
+use esp_hal::peripheral::Peripheral;
+use esp_hal::system::SystemControl;
+use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
     clock::ClockControl,
-    embassy,
     peripherals::{Peripherals, UART0},
     prelude::*,
-    uart::{config::AtCmdConfig, UartRx, UartTx},
-    Uart,
+    uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
 };
+use esp_hal_embassy::*;
 use esp_println::println;
+use limero::connect;
 use log::info;
 
 use minicbor::decode::info;
@@ -37,7 +47,7 @@ mod protocol;
 use protocol::msg::MqttSnMessage;
 
 mod client;
-use client::ClientSession;
+use client::{ClientSession, SessionEvent};
 
 mod uart;
 use uart::UartActor;
@@ -61,12 +71,11 @@ fn init_heap() {
     }
 }
 
-
-fn map_connected_to_blink_fast(event : SessionEvent) -> Option<LedCmd> {
+fn map_connected_to_blink_fast(event: SessionEvent) -> Option<LedCmd> {
     match event {
         SessionEvent::Connected => Some(LedCmd::Blink { duration: 100 }),
         SessionEvent::Disconnected => Some(LedCmd::Blink { duration: 1000 }),
-        _ => None
+        _ => None,
     }
 }
 
@@ -77,28 +86,35 @@ async fn main(_spawner: Spawner) {
     log::info!("Logger initialized.");
 
     let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let system = SystemControl::new(peripherals.SYSTEM);
+    let clocks = ClockControl::max(system.clock_control).freeze();
 
     // Initialize Embassy with needed timers
-    let timer_group0 = esp_hal::timer::TimerGroup::new(peripherals.TIMG0, &clocks);
-    embassy::init(&clocks, timer_group0);
+    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
+    esp_hal_embassy::init(&clocks, timg0);
 
     // Initialize and configure UART0
-    let uart0 = Uart::new(peripherals.UART0, &clocks);
-    let led = Led::new(peripherals.GPIO.split().into_output_pin(2));
 
-    // uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
+    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
+    let led_pin = io.pins.gpio2;
+    let led_pin: AnyOutput = AnyOutput::new(led_pin, Level::Low);
+    //  let  led_ouput_pin : Box<dyn esp_hal::gpio::OutputPin> = Box::new(led_pin) ;
+
+    let mut led_actor = Led::new(led_pin); // pass as OutputPin
+
+    let mut uart0 = Uart::new_async(peripherals.UART0, &clocks);
+    let _res = uart0.set_rx_fifo_full_threshold(127);
     let mut uart_actor = UartActor::new(uart0);
-    let mut client_session = ClientSession::new(uart_actor.sink_ref() );
-    connect(&client_session, map_connected_to_blink_fast, led.sink_ref());
+
+    let mut client_session = ClientSession::new(uart_actor.sink_ref());
+    connect(
+        &mut client_session,
+        map_connected_to_blink_fast,
+        led_actor.sink_ref(),
+    );
 
     loop {
-        join3(
-            uart_actor.run(),
-            client_session.run(),
-            led.run(),
-        ).await;
+        select3(uart_actor.run(), client_session.run(), led_actor.run()).await;
     }
 }

@@ -1,6 +1,12 @@
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
 //==============================================================================
 // Timer
 //==============================================================================
+use embassy_time::Duration;
+use embassy_time::Instant;
+
+use log::info;
 const FOREVER : Duration = Duration::from_millis(0xFFFFFFFF);
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
@@ -100,12 +106,12 @@ impl Timers {
         }
         expired
     }
-    pub set_interval(&mut self, id: u32, interval: Duration) {
+    pub fn set_interval(&mut self, id: u32, interval: Duration) {
         if let Some(timer) = self.timers.get_mut(&id) {
             timer.set_interval(interval);
         }
     }
-    pub stop(&mut self, id: u32) {
+    pub fn stop(&mut self, id: u32) {
         if let Some(timer) = self.timers.get_mut(&id) {
             timer.stop();
         }

@@ -21,11 +21,9 @@ use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
-    embassy,
     peripherals::{Peripherals, UART0},
     prelude::*,
     uart::{config::AtCmdConfig, UartRx, UartTx},
-    Uart,
 };
 use esp_println::println;
 use log::info;
@@ -43,7 +41,7 @@ enum State {
     Disconnected,
     Connected,
 }
-
+/* 
 trait Subscriber {
     fn on_message(&self, message: &MqttSnMessage);
 }
@@ -83,6 +81,7 @@ where
         }
     }
 }
+    */
 #[derive(Clone, Debug)]
 pub enum SessionCmd {
     Publish { topic_id: u16, message: String },
@@ -112,7 +111,7 @@ pub struct ClientSession {
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
-    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
+//    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
     client_id: String,
     state: State,
     ping_timeouts: u32,
@@ -129,7 +128,7 @@ impl ClientSession {
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
-            client_topics_sender: BTreeMap::new(),
+ //           client_topics_sender: BTreeMap::new(),
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
@@ -234,14 +233,14 @@ impl ClientSession {
             }
             MqttSnMessage::Register {
                 topic_id,
-                msg_id,
+                msg_id:_,
                 topic_name,
             } => {
                 info!("Registering topic {} with id {}", topic_name, topic_id);
                 self.server_topics.insert(topic_id, topic_name);
             }
             MqttSnMessage::Publish {
-                flags,
+                flags:_,
                 topic_id,
                 msg_id,
                 data: _,
@@ -284,50 +283,8 @@ impl ClientSession {
                 );
             }
 
-            MqttSnMessage::Publish {
-                flags,
-                topic_id,
-                msg_id,
-                data,
-            } => {
-                info!("Received message on topic {} ", topic_id);
-                if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
-                        topic_id,
-                        msg_id,
-                        return_code: ReturnCode::Accepted,
-                    });
-                } else {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
-                        topic_id,
-                        msg_id,
-                        return_code: ReturnCode::InvalidTopicId,
-                    });
-                }
-            }
-            MqttSnMessage::PubAck {
-                topic_id,
-                msg_id,
-                return_code,
-            } => {
-                if return_code == ReturnCode::Accepted {
-                    info!(
-                        "Received PubAck for topic {} with code {:?}",
-                        topic_id, return_code
-                    );
-                } else {
-                    self.txd_msg.push(MqttSnMessage::Register {
-                        topic_id,
-                        msg_id,
-                        topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
-                    });
-                    self.client_topics_registered.insert(topic_id, true);
-                }
-                info!(
-                    "Received PubAck for topic {} with code {:?}",
-                    topic_id, return_code
-                );
-            }
+
+            
             _ => {
                 info!("Unexpected message {:?}", msg);
             }
@@ -373,7 +330,7 @@ impl ClientSession {
 }
 
 impl SourceTrait<SessionEvent> for ClientSession {
-    fn subscribe(&self, sender: dyn SinkTrait<SessionEvent>) {
-        self.events.subscribe(sender);
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<SessionEvent>>) {
+        self.events.subscribe(sink);
     }
 }

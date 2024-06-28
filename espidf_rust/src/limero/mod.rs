@@ -41,7 +41,7 @@ use embassy_time::Instant;
 use log::error;
 use log::{debug, info};
 
-mod timer;
+pub mod timer;
 use timer::*;
 
 pub trait SinkTrait<M>: Send + Sync {

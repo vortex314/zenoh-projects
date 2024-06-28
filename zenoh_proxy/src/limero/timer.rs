@@ -1,3 +1,7 @@
+use std::collections::BTreeMap;
+use std::time::{Duration, Instant};
+
+const FOREVER : Duration = Duration::from_millis(0xFFFFFFFF);
 
 pub struct Timer {
     expires_at: Instant,
@@ -16,6 +20,18 @@ impl Timer {
             active: false,
             id: 0,
         }
+    }
+    pub fn new_repeater(id: u32, interval: Duration) -> Self {
+        Timer {
+            expires_at: Instant::now() + interval,
+            re_trigger: true,
+            interval,
+            active: true,
+            id,
+        }
+    }
+    pub fn id(&self) -> u32 {
+        self.id
     }
     pub fn set_interval(&mut self, interval: Duration) {
         self.interval = interval;
@@ -36,6 +52,25 @@ impl Timer {
             return true;
         }
         false
+    }
+    pub fn reload(&mut self) {
+        if self.active {
+            if self.re_trigger {
+                self.expires_at = Instant::now() + self.interval;
+            } else {
+                self.active = false;
+            }
+        }
+    }
+    pub fn expired(&self) -> bool {
+        Instant::now() >= self.expires_at && self.active
+    }
+    pub fn wait_time(&self) -> Duration {
+        if self.active {
+            self.expires_at - Instant::now()
+        } else {
+            Duration::from_millis(0)
+        }
     }
 }
 
@@ -68,5 +103,40 @@ impl Timers {
             }
         }
         expired
+    }
+    pub async fn alarm(&mut self) -> u32 {
+        let mut lowest_timer: Option<&mut Timer> = None;
+        for (_id, timer) in self.timers.iter_mut() {
+            if timer.expired() {
+                timer.reload();
+                return timer.id();
+            }
+            if timer.active {
+                match lowest_timer {
+                    Some(ref tim) => {
+                        if timer.active && timer.expires_at < tim.expires_at {
+                            lowest_timer.replace(timer);
+                            }
+                        }
+                    None => { 
+                        lowest_timer.replace(timer);
+                    }
+                }
+            }
+
+        }
+        if lowest_timer.is_some() {
+            let timer = lowest_timer.unwrap();
+            tokio::time::sleep(timer.wait_time()).await;
+            if timer.expired() {
+                timer.reload();
+                return timer.id();
+            } else {
+                0
+            }
+        } else {
+            tokio::time::sleep(FOREVER).await;
+            0
+        }
     }
 }

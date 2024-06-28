@@ -4,13 +4,12 @@ use alloc::boxed::Box;
 use alloc::format;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
+use esp_hal::{Async, Blocking};
 use esp_hal::{
     clock::ClockControl,
-    embassy,
     peripherals::{Peripherals, UART0},
     prelude::*,
-    uart::{config::AtCmdConfig, UartRx, UartTx},
-    Uart,
+    uart::{config::AtCmdConfig, UartRx, UartTx,Uart},
 };
 
 use alloc::string::String;
@@ -34,13 +33,13 @@ pub const UART_BUFSIZE: usize = 127;
 pub struct UartActor {
     command: Sink<MqttSnMessage, 4>,
     events: Source<MqttSnMessage>,
-    tx: UartTx<'static, UART0>,
-    rx: UartRx<'static, UART0>,
+    tx: UartTx<'static, UART0,Async>,
+    rx: UartRx<'static, UART0,Async>,
     message_decoder: MessageDecoder,
 }
 
 impl UartActor {
-    pub fn new(mut uart0: Uart<'static, UART0>) -> Self {
+    pub fn new(mut uart0: Uart<'static, UART0,Async>) -> Self {
         uart0
             .set_rx_fifo_full_threshold(UART_BUFSIZE as u16)
             .unwrap();
