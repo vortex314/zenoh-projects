@@ -255,7 +255,10 @@ pub fn connect_map<T, U, const N: usize>(
     flow.subscribe(Box::new(sink));
     src.subscribe(Box::new(flow));
 }
-
+//==============================================================================
+// Timer
+//==============================================================================
+const FOREVER : Duration = Duration::from_millis(0xFFFFFFFF);
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
     expires_at: Instant,
@@ -395,7 +398,7 @@ impl Timers {
                 0
             }
         } else {
-            embassy_time::Timer::after(Duration::from_millis(1_000_000)).await; // sleep 10 seconds
+            embassy_time::Timer::after(FOREVER).await; // sleep forever 
             0
         }
     }

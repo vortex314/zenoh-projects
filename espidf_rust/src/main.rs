@@ -9,6 +9,7 @@ use core::{cell::RefCell, mem::MaybeUninit};
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use embassy_executor::Spawner;
+use embassy_futures::join::{join3, join4};
 use embassy_futures::select::{self, select3,Either3};
 use embassy_futures::select::Either3::{First, Second, Third};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
@@ -41,6 +42,9 @@ use client::ClientSession;
 mod uart;
 use uart::UartActor;
 
+mod led;
+use led::{Led, LedCmd};
+
 mod limero;
 
 extern crate alloc;
@@ -69,10 +73,20 @@ async fn client_task( mut client:ClientSession) {
     client.run().await;
 }*/
 
+fn map_connected_to_blink_fast(event : SessionEvent) -> Option<LedCmd> {
+    match event {
+        SessionEvent::Connected => Some(LedCmd::Blink { duration: 100 }),
+        SessionEvent::Disconnected => Some(LedCmd::Blink { duration: 1000 }),
+        _ => None
+    }
+}
+
 #[main]
 async fn main(_spawner: Spawner) {
     init_heap();
     semi_logger_init().unwrap();
+    log::info!("Logger initialized.");
+
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
@@ -81,27 +95,22 @@ async fn main(_spawner: Spawner) {
     let timer_group0 = esp_hal::timer::TimerGroup::new(peripherals.TIMG0, &clocks);
     embassy::init(&clocks, timer_group0);
 
-    log::info!("Hello, log!");
 
     // Initialize and configure UART0
     let uart0 = Uart::new(peripherals.UART0, &clocks);
+    let led = Led::new(peripherals.GPIO.split().into_output_pin(2));
 
     // uart0.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
 
     let mut uart_actor = UartActor::new(uart0);
-    let mut client_session = ClientSession::new(uart_actor.sink_ref());
+    let mut client_session = ClientSession::new(uart_actor.sink_ref() );
+    connect(&client_session, map_connected_to_blink_fast, led.sink_ref());
+
     loop {
-        let x = select3(
+        join3(
             uart_actor.run(),
             client_session.run(),
-            Timer::after(Duration::from_millis(50_000)),
+            led.run(),
         ).await;
-        info!("select3" );
-        match x {
-            First(_) => { info!("First");}
-            Second(_) => { info!("Second");}
-            Third(_) => { info!("Third");}
-
-        }
     }
 }

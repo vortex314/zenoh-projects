@@ -371,3 +371,9 @@ impl ClientSession {
         }
     }
 }
+
+impl SourceTrait<SessionEvent> for ClientSession {
+    fn subscribe(&self, sender: dyn SinkTrait<SessionEvent>) {
+        self.events.subscribe(sender);
+    }
+}

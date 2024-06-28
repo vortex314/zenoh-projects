@@ -5,22 +5,23 @@ use esp32_hal::prelude::*;
 use esp32_hal::gpio::{Output, OutputConfig, Pin};
 
 use limero::Sink;
+use limero::SinkTrait;
 
-use crate::Actor;
-
-enum LedCmd {
+pub enum LedCmd {
     On,
     Off,
     Blink { duration: u32 },
+    Pulse { duration: u32 },
 }
 
 enum LedState {
     ON,
     OFF,
     BLINK { duration: u32 },
+    PULSE { duration: u32 },
 } ;
 
-struct Led {
+pub struct Led {
     commands: Sink<LedCmd,2>,
     timers: Timers,
     state: LedState,
@@ -41,10 +42,10 @@ impl Led {
 
 }
 
-impl Actor<LedMsg,NoEvent> for Led {
+impl  Led {
 
     pub async fn run(&mut self) {
-        self.timers.add_timer(Timer::new_repeater(0,Duration::from_millis(100));
+        self.timers.add_timer(Timer::new_repeater(0,Duration::from_millis(1_000));
         loop {
         select! {
             _ = self.commands.read() => {
@@ -55,13 +56,21 @@ impl Actor<LedMsg,NoEvent> for Led {
                 self.set_led_high(true);
                 self.timers.set_interval(0, Duration::from_millis(duration as u64));
             },
+            LedMsg::Pulse { duration } => {
+                self.state = LedState::PULSE { duration };
+                self.set_led_high(true);
+                self.timers.set_interval(0, Duration::from_millis(duration as u64));
+
                 }
-            }
+            }}
             _ = self.timers.alarm() => {
                 match self.state {
                     LedState::BLINK { duration } => {
                         self.pin_level_high = !self.pin_level_high;
                         self.set_led_high(self.pin_level_high);
+                    }
+                    LedState::PULSE { duration } => {
+                        self.set_led_high(false);
                     }
                     _ =>{}
                 }

@@ -11,7 +11,6 @@ pub fn init_logger(level: log::LevelFilter) {
     }
 }
 
-
 struct LimeroLogger;
 
 impl log::Log for LimeroLogger {
