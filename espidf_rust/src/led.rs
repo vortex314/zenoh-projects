@@ -29,7 +29,6 @@ pub struct Led {
     pin_level_high : bool,
 }
 
-
 impl Led {
     pub fn new(pin: AnyOutputPin) -> Self {
         Self {
@@ -39,7 +38,6 @@ impl Led {
             pin,
         }
     }
-
 }
 
 impl  Led {
@@ -60,7 +58,6 @@ impl  Led {
                 self.state = LedState::PULSE { duration };
                 self.set_led_high(true);
                 self.timers.set_interval(0, Duration::from_millis(duration as u64));
-
                 }
             }}
             _ = self.timers.alarm() => {
@@ -87,10 +84,4 @@ impl  Led {
         }
     }
 
-}
-
-impl SinkTrait<LedMsg> for Led {
-    fn on(&self, msg: &LedMsg) {
-        let _ = LED_QUEUE.send(msg.clone());
-    }
 }

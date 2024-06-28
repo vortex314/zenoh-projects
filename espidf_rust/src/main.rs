@@ -61,17 +61,6 @@ fn init_heap() {
     }
 }
 
-// static uart_channel_in:Rc<RefCell<Option<Channel<NoopRawMutex,Message,10>>>>=Rc::new(RefCell::new(None));
-/*
-#[embassy_executor::task]
-async fn uart_task( mut uart:UartActor) {
-    uart.run().await;
-}
-
-#[embassy_executor::task]
-async fn client_task( mut client:ClientSession) {
-    client.run().await;
-}*/
 
 fn map_connected_to_blink_fast(event : SessionEvent) -> Option<LedCmd> {
     match event {
@@ -94,7 +83,6 @@ async fn main(_spawner: Spawner) {
     // Initialize Embassy with needed timers
     let timer_group0 = esp_hal::timer::TimerGroup::new(peripherals.TIMG0, &clocks);
     embassy::init(&clocks, timer_group0);
-
 
     // Initialize and configure UART0
     let uart0 = Uart::new(peripherals.UART0, &clocks);

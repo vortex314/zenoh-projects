@@ -34,7 +34,7 @@ use minicbor::bytes::ByteVec;
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
-use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait, Timer, Timers};
+use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait, timer::Timer, timer::Timers};
 use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode};
 
 #[derive(PartialEq)]
