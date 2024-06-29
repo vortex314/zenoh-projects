@@ -276,7 +276,7 @@ pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
     let mut res_vec = Vec::new();
     res_vec.push(0x00 as u8);
     res_vec.extend_from_slice(&cobs_buffer[0..size + 1]);
-    res_vec.push(0x00 as u8);
+//    res_vec.push(0x00 as u8);
     res_vec.push('\r' as u8);
     res_vec.push('\n' as u8);
     Ok(res_vec)
@@ -295,6 +295,9 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
             return Err("no correct COBS found".to_string());
         }
         Ok(Some((output_size, _input_size))) => {
+            if output_size < 2 {
+                return Err("no correct COBS found".to_string());
+            }
             let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
             let crc = crc16.checksum(&output[0..(output_size - 2)]);
             let crc_received =

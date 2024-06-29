@@ -59,18 +59,27 @@ impl UartActor {
     }
 
     pub async fn run(&mut self) {
-        let mut small_buf = [0u8; 1];
+        let mut small_buf = [0u8; 100];
         info!("UART0 running");
         // Spawn Tx and Rx tasks
         loop {
             match select(
-                embedded_io_async::Read::read(&mut self.rx, &mut small_buf),
+                self.rx.read_async(&mut small_buf),
                 self.command.read(),
             )
             .await
             {
                 First(r) => {
-                    self.on_bytes_rxd(r.unwrap(), &mut small_buf);
+                    match r {
+                        Ok(r) => {
+                            let line:String  = small_buf[0..r].iter().map(|b| format!("{:02X} ", b)).collect();
+                            info!("Rx bytes : {:?}",line);
+                            self.on_bytes_rxd( &mut small_buf[0..r]);
+                        }
+                        Err(e) => {
+                            info!("Rx error {:?}", e);
+                        }
+                    }
                 }
                 Second(msg) => {
                     self.on_cmd_msg(msg.unwrap()).await;
@@ -87,12 +96,19 @@ impl UartActor {
         let _ = embedded_io_async::Write::write(&mut self.tx, bytes.as_slice()).await;
         let _ = embedded_io_async::Write::flush(&mut self.tx).await;
     }
-    fn on_bytes_rxd(&mut self, _size: usize, small_buf: &mut [u8]) {
+    fn on_bytes_rxd(&mut self,  small_buf: &mut [u8]) {
         let v = self.message_decoder.decode(small_buf);
         // Read characters from UART into read buffer until EOT
         for msg in v {
             info!("Received message: {:?}", msg);
             self.events.emit(msg);
         }
+    }
+    
+}
+
+impl SourceTrait<MqttSnMessage> for UartActor {
+    fn subscribe(&mut self, sink: Box<dyn SinkTrait<MqttSnMessage>>) {
+        self.events.subscribe(sink);
     }
 }

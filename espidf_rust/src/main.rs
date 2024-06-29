@@ -27,6 +27,8 @@ use esp_hal::gpio::{AnyOutput, GpioPin, Io, Level, Output};
 use esp_hal::peripheral::Peripheral;
 use esp_hal::system::SystemControl;
 use esp_hal::timer::timg::TimerGroup;
+use esp_hal::uart::config::{Config, DataBits, Parity, StopBits};
+use esp_hal::uart::{ClockSource, TxRxPins};
 use esp_hal::{
     clock::ClockControl,
     peripherals::{Peripherals, UART0},
@@ -35,7 +37,7 @@ use esp_hal::{
 };
 use esp_hal_embassy::*;
 use esp_println::println;
-use limero::connect;
+use limero::{connect, SourceTrait};
 use log::info;
 
 use minicbor::decode::info;
@@ -72,6 +74,7 @@ fn init_heap() {
 }
 
 fn map_connected_to_blink_fast(event: SessionEvent) -> Option<LedCmd> {
+    info!("Event: {:?}", event);
     match event {
         SessionEvent::Connected => Some(LedCmd::Blink { duration: 100 }),
         SessionEvent::Disconnected => Some(LedCmd::Blink { duration: 1000 }),
@@ -104,10 +107,31 @@ async fn main(_spawner: Spawner) {
     let mut led_actor = Led::new(led_pin); // pass as OutputPin
 
     let mut uart0 = Uart::new_async(peripherals.UART0, &clocks);
-    let _res = uart0.set_rx_fifo_full_threshold(127);
+    uart0.change_baud(921600,ClockSource::Apb,&clocks);
+
+    /*let config = Config {
+        baudrate: 921600,
+        data_bits: DataBits::DataBits8,
+        parity: Parity::ParityNone,
+        stop_bits: StopBits::STOP1,
+        clock_source: ClockSource::Apb,
+    };*/
+
+    if uart0.set_rx_fifo_full_threshold(127).is_err() {
+        info!("Error setting RX FIFO full threshold");
+    }
+    uart0.set_at_cmd(AtCmdConfig {
+        // catch sentinel char 0x00
+        pre_idle_count: Some(1),
+        post_idle_count: Some(1),
+        gap_timeout: Some(1),
+        cmd_char: 0u8,
+        char_num: Some(1),
+    });
     let mut uart_actor = UartActor::new(uart0);
 
     let mut client_session = ClientSession::new(uart_actor.sink_ref());
+    uart_actor.subscribe(Box::new(client_session.transport_sink_ref()));
     connect(
         &mut client_session,
         map_connected_to_blink_fast,

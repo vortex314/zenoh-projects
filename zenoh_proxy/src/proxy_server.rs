@@ -125,6 +125,10 @@ impl ProxyServer {
                 },
                 event = self.transport_event.read() => {
                     match event {
+                        Some(TransportEvent::ConnectionLost {}) => {
+                            info!("Connection lost");
+                            self.events.emit(ProxyServerEvent::Disconnected);
+                        },
                         Some(TransportEvent::RecvMessage { message }) => {
                             info!("Received transport event from client ");
                             match message {
@@ -170,9 +174,9 @@ impl ProxyServer {
                                     self.transport_send(MqttSnMessage::RegAck { topic_id,msg_id, return_code: ReturnCode::Accepted });
                                 },
 
-                                MqttSnMessage::PingReq { client_id }=> {
-                                    info!("Received PingReq message from {} ",client_id.unwrap());
-                                    self.transport_send(MqttSnMessage::PingResp{});
+                                MqttSnMessage::PingReq { timestamp }=> {
+                                    info!("Received PingReq message with {:?} ",timestamp);
+                                    self.transport_send(MqttSnMessage::PingResp{timestamp});
                                 },
                                 _ => {
                                     // Ignore

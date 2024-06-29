@@ -1,5 +1,7 @@
+use byte::TryWrite;
 use cobs::CobsDecoder;
 use log::info;
+use minicbor::decode::info;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
@@ -12,15 +14,16 @@ use tokio_util::codec::{Decoder, Encoder};
 use std::io::Write;
 
 use crate::limero::Sink;
-use crate::limero::SinkTrait;
-use crate::limero::SourceTrait;
-use crate::limero::Source;
 use crate::limero::SinkRef;
+use crate::limero::SinkTrait;
+use crate::limero::Source;
+use crate::limero::SourceTrait;
 
 use crate::encode_frame;
+use crate::decode_frame;
 use crate::protocol::msg::*;
 use crate::protocol::MessageDecoder;
-
+use byte::TryRead;
 
 const MTU_SIZE: usize = 1023;
 
@@ -32,6 +35,7 @@ pub enum TransportCmd {
 #[derive(Clone)]
 pub enum TransportEvent {
     RecvMessage { message: MqttSnMessage },
+    ConnectionLost {},
 }
 
 pub struct Transport {
@@ -60,14 +64,15 @@ impl Transport {
     pub async fn run(&mut self) {
         const GREEN: &str = "\x1b[0;32m";
         const RESET: &str = "\x1b[m";
+        self.test();
         loop {
-            let _message_decoder = MessageDecoder::new();
             let mut buf = [0; MTU_SIZE];
-            let  serial_stream = tokio_serial::new(self.port_info.port_name.clone(), 115200)
-                .open_native_async();
+            let serial_stream =
+                tokio_serial::new(self.port_info.port_name.clone(), 921600).open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
-                break;
+                self.events.emit(TransportEvent::ConnectionLost {});
+                continue;
             }
             let mut serial_stream = serial_stream.unwrap();
             info!("Port {} opened", self.port_info.port_name.clone());
@@ -79,6 +84,8 @@ impl Transport {
                             TransportCmd::SendMessage { message } => {
                                 info!("Sending Message : {:?}", message);
                                 let x = encode_frame(message);
+                                let line : String = x.clone().unwrap().as_slice().iter().map(|b| format!("{:02X} ", b)).collect();
+                                info!("TXD : {}", line);
                                 let _res = serial_stream.try_write(&x.unwrap().as_slice());
                                 let _r = serial_stream.flush();
                                 if _res.is_err()  || _r.is_err() {
@@ -116,14 +123,63 @@ impl Transport {
                 }
             }
             info!("Port {} closing", self.port_info.port_name);
-           // serial_stream.close().unwrap();
+            // serial_stream.close().unwrap();
         }
     }
-}
 
+
+
+    fn test(&mut self) {
+        let mut buf = [0u8; MTU_SIZE];
+        let msg = MqttSnMessage::Connect {
+            flags: Flags(0),
+            duration: 1000,
+            client_id: "hello".to_string(),
+        };
+        info!(" test message {:?}", msg);
+
+        let r = msg.clone().try_write(&mut buf, ());
+        info!(" test try_write  {}", bytes_to_string(&buf[0..r.unwrap()]));
+
+        let m = MqttSnMessage::try_read(&buf[0..r.unwrap()], ());
+        info!(" test try_read {:?}", m);
+
+        let x = encode_frame(msg);
+        info!(" test encode_frame {}", bytes_to_string(&x.clone().unwrap()));
+
+        let decoded_frame = decode_frame(&x.clone().unwrap());
+        info!(" test decode_frame {:?}", decoded_frame);
+
+   /*      let mut rxd_buf = [0u8; MTU_SIZE];
+        let mut cobs_decoder = CobsDecoder::new(&mut rxd_buf);
+        let encoded_bytes = x.unwrap();
+        let x2 = cobs_decoder.push(&encoded_bytes);
+        let length = x2.unwrap().unwrap().0;
+        info!(" test RXD {:?}", x2);
+        let line: String = rxd_buf[0..length]
+            .iter()
+            .map(|b| format!("{:02X} ", b))
+            .collect();
+        info!(" test RXD {}", line);
+
+        let v = self.message_decoder.decode(x.unwrap().as_slice());
+        info!(" test RXD {:?}", v);
+
+        let v = MqttSnMessage::try_read(&rxd_buf[0..length], ()).unwrap().0;
+        info!(" try_read after Cobs and CRC {:?}", v);*/
+    }
+}
 
 impl SourceTrait<TransportEvent> for Transport {
     fn subscribe(&mut self, sink: Box<dyn SinkTrait<TransportEvent>>) {
         self.events.subscribe(sink);
     }
+}
+
+fn bytes_to_string(bytes: &[u8]) -> String {
+    let mut s = String::new();
+    for b in bytes {
+        s.push_str(&format!("{:02X} ", b));
+    }
+    s
 }

@@ -16,7 +16,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use embassy_futures::select::Either3::{First, Second, Third};
 use embassy_futures::select::{self, select3, Either3};
-use embassy_time::{with_timeout, Duration};
+use embassy_time::{with_timeout, Duration, Instant};
 use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
 use esp_hal::{
@@ -32,7 +32,7 @@ use minicbor::bytes::ByteVec;
 use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
-use crate::limero::{Sink, SinkRef, SinkTrait, Source, SourceTrait, timer::Timer, timer::Timers};
+use crate::limero::{timer::Timer, timer::Timers, Sink, SinkRef, SinkTrait, Source, SourceTrait};
 use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode};
 
 #[derive(PartialEq)]
@@ -41,7 +41,7 @@ enum State {
     Disconnected,
     Connected,
 }
-/* 
+/*
 trait Subscriber {
     fn on_message(&self, message: &MqttSnMessage);
 }
@@ -111,7 +111,7 @@ pub struct ClientSession {
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
-//    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
+    //    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
     client_id: String,
     state: State,
     ping_timeouts: u32,
@@ -128,7 +128,7 @@ impl ClientSession {
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
- //           client_topics_sender: BTreeMap::new(),
+            //           client_topics_sender: BTreeMap::new(),
             client_id: "ESP32_1".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
@@ -137,9 +137,17 @@ impl ClientSession {
         }
     }
 
+    pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage, 3> {
+        self.rxd_msg.sink_ref()
+    }
+
     pub async fn run(&mut self) {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::ConnectTimer as u32,
+            Duration::from_millis(5_000),
+        ));
+        self.timers.add_timer(Timer::new_repeater(
+            TimerId::PingTimer as u32,
             Duration::from_millis(5_000),
         ));
         loop {
@@ -148,7 +156,8 @@ impl ClientSession {
                 self.rxd_msg.read(),
                 self.timers.alarm(),
             )
-            .await {
+            .await
+            {
                 First(msg) => {
                     self.on_cmd_message(msg.unwrap()).await;
                 }
@@ -156,7 +165,6 @@ impl ClientSession {
                     self.on_rxd_message(msg.unwrap()).await;
                 }
                 Third(idx) => {
-                    info!("Timer expired {}", idx);
                     self.on_timeout(idx).await;
                 }
             }
@@ -174,15 +182,16 @@ impl ClientSession {
             }
         } else if id == TimerId::PingTimer as u32 {
             if self.state == State::Connected {
-                self.txd_msg
-                    .push(MqttSnMessage::PingReq { client_id: None });
-                self.ping_timeouts += 1;
-                if self.ping_timeouts > 3 {
-                    self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
-                }
+                self.txd_msg.push(MqttSnMessage::PingReq {
+                    timestamp: Instant::now().as_millis() as u64,
+                });
             }
         } else {
             info!("Unexpected timer id {}", id);
+            self.ping_timeouts += 1;
+            if self.ping_timeouts > 3 {
+                self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
+            }
         }
     }
 
@@ -223,8 +232,12 @@ impl ClientSession {
                     self.state = State::Connected;
                 }
             }
-            MqttSnMessage::PingResp {} => {
-                info!("Ping response");
+            MqttSnMessage::PingResp { timestamp    } => {
+                info!("Ping response {:?}", timestamp);
+                self.ping_timeouts = 0;
+                let now:u64 = Instant::now().as_millis() as u64;
+                let diff:u64 = now - timestamp;
+                info!("Ping response time {}", diff);
             }
             MqttSnMessage::Disconnect { duration: _ } => {
                 info!("Disconnected");
@@ -233,14 +246,14 @@ impl ClientSession {
             }
             MqttSnMessage::Register {
                 topic_id,
-                msg_id:_,
+                msg_id: _,
                 topic_name,
             } => {
                 info!("Registering topic {} with id {}", topic_name, topic_id);
                 self.server_topics.insert(topic_id, topic_name);
             }
             MqttSnMessage::Publish {
-                flags:_,
+                flags: _,
                 topic_id,
                 msg_id,
                 data: _,
@@ -283,8 +296,6 @@ impl ClientSession {
                 );
             }
 
-
-            
             _ => {
                 info!("Unexpected message {:?}", msg);
             }

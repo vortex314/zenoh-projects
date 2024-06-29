@@ -1,25 +1,25 @@
-use alloc::boxed::Box;
-use log::info;
-use embassy_futures::select::select;
-use embassy_futures::select::Either::{First, Second};
-use embassy_time::Duration;
-use esp_hal::gpio::any_pin::AnyPin;
-use esp_hal::prelude::*;
-use esp_hal::{
-    clock::ClockControl,
-    gpio::{Output, Pin, AnyOutput},
-    peripherals::{Peripherals, UART0},
-    prelude::*,
-    uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
-};
-use embedded_hal::digital::v2::OutputPin;
-use minicbor::decode::info;
 use crate::limero::timer::{Timer, Timers};
 use crate::limero::Flow;
 use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::SourceTrait;
+use alloc::boxed::Box;
+use embassy_futures::select::select;
+use embassy_futures::select::Either::{First, Second};
+use embassy_time::Duration;
+use embedded_hal::digital::v2::OutputPin;
+use esp_hal::gpio::any_pin::AnyPin;
+use esp_hal::prelude::*;
+use esp_hal::{
+    clock::ClockControl,
+    gpio::{AnyOutput, Output, Pin},
+    peripherals::{Peripherals, UART0},
+    prelude::*,
+    uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
+};
+use log::info;
+use minicbor::decode::info;
 
 #[derive(Clone)]
 pub enum LedCmd {
@@ -45,7 +45,7 @@ pub struct Led {
 }
 
 impl Led {
-    pub fn new(pin: AnyOutput<'static> ) -> Self {
+    pub fn new(pin: AnyOutput<'static>) -> Self {
         Self {
             commands: Sink::new(),
             timers: Timers::new(),
@@ -61,16 +61,13 @@ impl Led {
         self.timers
             .add_timer(Timer::new_repeater(0, Duration::from_millis(1_000)));
         loop {
-            match select(
-                self.commands.read(),
-                self.timers.alarm(),
-            ).await {
+            match select(self.commands.read(), self.timers.alarm()).await {
                 First(msg) => {
                     self.on_cmd(msg.unwrap());
-                },
+                }
                 Second(id) => {
                     self.on_timer(id);
-                },
+                }
             }
         }
     }
@@ -98,13 +95,13 @@ impl Led {
         }
     }
 
-    fn on_timer(&mut self,_id:u32) {
+    fn on_timer(&mut self, _id: u32) {
         match self.state {
-            LedState::BLINK { duration } => {
+            LedState::BLINK { duration: _ } => {
                 self.pin_level_high = !self.pin_level_high;
                 self.set_led_high(self.pin_level_high);
             }
-            LedState::PULSE { duration } => {
+            LedState::PULSE { duration: _ } => {
                 self.set_led_high(false);
             }
             _ => {}

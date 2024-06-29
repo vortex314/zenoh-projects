@@ -119,9 +119,11 @@ pub enum MqttSnMessage {
         return_code: ReturnCode,
     },
     PingReq {
-        client_id: Option<String>,
+        timestamp:u64,
     },
-    PingResp,
+    PingResp {
+        timestamp:u64,
+    }, 
     Disconnect {
         duration: u16,
     },
@@ -155,9 +157,19 @@ impl MqttSnEncoder {
         self.encode_u8(v as u8);
         self.encode_u8((v >> 8) as u8);
     }
+    fn encode_u32(&mut self, v: u32) {
+        self.encode_u16(v as u16);
+        self.encode_u16((v >> 16) as u16);
+    }
+    fn encode_u64(&mut self, v: u64) {
+        self.encode_u32(v as u32);
+        self.encode_u32((v >> 32) as u32);
+    }
     fn encode_string(&mut self, v: &str) {
         self.encode_u8(v.len() as u8);
-        self.bytes.extend(v.as_bytes());
+        for c in v.chars() {
+            self.encode_u8(c as u8);
+        }
     }
     fn encode_bytes(&mut self, v: &[u8]) {
         self.encode_u8(v.len() as u8);
@@ -326,14 +338,13 @@ fn encode(msg: &MqttSnMessage, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize
             encoder.encode_u16(*msg_id);
             encoder.encode_return_code(return_code);
         }
-        MqttSnMessage::PingReq { client_id } => {
+        MqttSnMessage::PingReq { timestamp } => {
             encoder.encode_u8(0x16);
-            if let Some(client_id) = client_id {
-                encoder.encode_string(&client_id);
-            }
+            encoder.encode_u64(*timestamp);
         }
-        MqttSnMessage::PingResp => {
+        MqttSnMessage::PingResp { timestamp }=> {
             encoder.encode_u8(0x17);
+            encoder.encode_u64(*timestamp);
         }
         MqttSnMessage::Disconnect { duration } => {
             encoder.encode_u8(0x18);
@@ -358,9 +369,11 @@ fn encode(msg: &MqttSnMessage, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize
         }
     }
     let length = encoder.len();
-    bytes[0] = 0x01;
+    /*bytes[0] = 0x01;
     bytes[1] = length as u8;
     bytes[2..length + 2].copy_from_slice(&encoder.bytes);
+    Ok(length+2)*/
+    bytes[0..length].copy_from_slice(&encoder.bytes);
     Ok(length)
 }
 
@@ -384,6 +397,30 @@ impl Decoder {
     fn u16(&mut self) -> byte::Result<u16> {
         let v = u16::from_le_bytes([self.bytes[self.pos], self.bytes[self.pos + 1]]);
         self.pos += 2;
+        Ok(v)
+    }
+    fn u32(&mut self) -> byte::Result<u32> {
+        let v = u32::from_le_bytes([
+            self.bytes[self.pos],
+            self.bytes[self.pos + 1],
+            self.bytes[self.pos + 2],
+            self.bytes[self.pos + 3],
+        ]);
+        self.pos += 4;
+        Ok(v)
+    }
+    fn u64(&mut self) -> byte::Result<u64> {
+        let v = u64::from_le_bytes([
+            self.bytes[self.pos],
+            self.bytes[self.pos + 1],
+            self.bytes[self.pos + 2],
+            self.bytes[self.pos + 3],
+            self.bytes[self.pos + 4],
+            self.bytes[self.pos + 5],
+            self.bytes[self.pos + 6],
+            self.bytes[self.pos + 7],
+        ]);
+        self.pos += 8;
         Ok(v)
     }
     fn string(&mut self) -> byte::Result<String> {
@@ -554,12 +591,25 @@ impl<'a> TryRead<'a> for MqttSnMessage {
                 },decoder.offset()))
             }
             0x16 => {
-                let client_id = decoder.string()?;
-                Ok((MqttSnMessage::PingReq {
-                    client_id: Some(client_id),
-                },decoder.offset()))
+                if decoder.bytes.len() == decoder.pos {
+                    return Ok((MqttSnMessage::PingReq { timestamp:0 },decoder.offset()));
+                } else {
+                    let timestamp = decoder.u64()?;
+                    Ok((MqttSnMessage::PingReq {
+                        timestamp,
+                    },decoder.offset()))
+                }
             }
-            0x17 => Ok((MqttSnMessage::PingResp,decoder.offset())),
+            0x17 => {
+                if decoder.bytes.len() == decoder.pos {
+                    return Ok((MqttSnMessage::PingResp { timestamp:0 },decoder.offset()));
+                } else {
+                    let timestamp = decoder.u64()?;
+                    Ok((MqttSnMessage::PingResp {
+                        timestamp,
+                    },decoder.offset()))
+                }
+            }
             0x18 => {
                 let duration = decoder.u16()?;
                 Ok((MqttSnMessage::Disconnect { duration },decoder.offset()))

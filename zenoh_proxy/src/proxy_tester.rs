@@ -125,6 +125,10 @@ impl ProxyTester {
                 },
                 event = self.transport_event.read() => {
                     match event {
+                        Some(TransportEvent::ConnectionLost {}) => {
+                            info!("Connection lost");
+                            self.events.emit(ProxyTesterEvent::Disconnected);
+                        },
                         Some(TransportEvent::RecvMessage { message }) => {
                             info!("Received transport event from client ");
                             match message {
@@ -162,8 +166,8 @@ impl ProxyTester {
                                     self.client_topics.insert(topic_id, TopicId { id: topic_id, name: topic_name.to_string(), acked: false });
                                     self.transport_send(MqttSnMessage::RegAck { topic_id, msg_id, return_code: ReturnCode::Accepted });
                                 },
-                                MqttSnMessage::PingReq { client_id:_ }  => {
-                                    self.transport_send(MqttSnMessage::PingResp {} );
+                                MqttSnMessage::PingReq { timestamp }  => {
+                                    self.transport_send(MqttSnMessage::PingResp { timestamp } );
                                 },
                                 _ => {
                                     // Ignore
