@@ -92,7 +92,10 @@ where
     M: Clone + Send + Sync,
 {
     fn push(&self, message: M) {
-        self.sender.try_send(message).unwrap();
+        let res = self.sender.try_send(message);
+        if res.is_err() {
+            error!("SinkRef::push() failed");
+        }
     }
 }
 pub struct Source<T> {

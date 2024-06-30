@@ -68,7 +68,7 @@ impl Transport {
         loop {
             let mut buf = [0; MTU_SIZE];
             let serial_stream =
-                tokio_serial::new(self.port_info.port_name.clone(), 921600).open_native_async();
+                tokio_serial::new(self.port_info.port_name.clone(), 115200).open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
                 self.events.emit(TransportEvent::ConnectionLost {});
@@ -130,43 +130,16 @@ impl Transport {
 
 
     fn test(&mut self) {
-        let mut buf = [0u8; MTU_SIZE];
-        let msg = MqttSnMessage::Connect {
-            flags: Flags(0),
-            duration: 1000,
-            client_id: "hello".to_string(),
-        };
-        info!(" test message {:?}", msg);
-
-        let r = msg.clone().try_write(&mut buf, ());
-        info!(" test try_write  {}", bytes_to_string(&buf[0..r.unwrap()]));
-
-        let m = MqttSnMessage::try_read(&buf[0..r.unwrap()], ());
-        info!(" test try_read {:?}", m);
-
-        let x = encode_frame(msg);
-        info!(" test encode_frame {}", bytes_to_string(&x.clone().unwrap()));
-
-        let decoded_frame = decode_frame(&x.clone().unwrap());
-        info!(" test decode_frame {:?}", decoded_frame);
-
-   /*      let mut rxd_buf = [0u8; MTU_SIZE];
-        let mut cobs_decoder = CobsDecoder::new(&mut rxd_buf);
-        let encoded_bytes = x.unwrap();
-        let x2 = cobs_decoder.push(&encoded_bytes);
-        let length = x2.unwrap().unwrap().0;
-        info!(" test RXD {:?}", x2);
-        let line: String = rxd_buf[0..length]
-            .iter()
-            .map(|b| format!("{:02X} ", b))
-            .collect();
-        info!(" test RXD {}", line);
-
-        let v = self.message_decoder.decode(x.unwrap().as_slice());
-        info!(" test RXD {:?}", v);
-
-        let v = MqttSnMessage::try_read(&rxd_buf[0..length], ()).unwrap().0;
-        info!(" try_read after Cobs and CRC {:?}", v);*/
+        let mut buffer = VecWriter::new();
+        let mut encoder = minicbor::Encoder::new(&mut buffer);
+        let _ = encoder.begin_array();
+        let _x = encoder.u8(0x01);
+        let _ = encoder.u64(33);
+        let _ = encoder.str("Hello");
+        let _ = encoder.end();
+        let line = bytes_to_string(&buffer.to_inner());
+        info!("CBOR : {}", line);
+        
     }
 }
 

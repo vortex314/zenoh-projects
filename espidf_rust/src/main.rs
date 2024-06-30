@@ -107,15 +107,7 @@ async fn main(_spawner: Spawner) {
     let mut led_actor = Led::new(led_pin); // pass as OutputPin
 
     let mut uart0 = Uart::new_async(peripherals.UART0, &clocks);
-    uart0.change_baud(921600,ClockSource::Apb,&clocks);
-
-    /*let config = Config {
-        baudrate: 921600,
-        data_bits: DataBits::DataBits8,
-        parity: Parity::ParityNone,
-        stop_bits: StopBits::STOP1,
-        clock_source: ClockSource::Apb,
-    };*/
+    uart0.change_baud(115200,ClockSource::Apb,&clocks);
 
     if uart0.set_rx_fifo_full_threshold(127).is_err() {
         info!("Error setting RX FIFO full threshold");

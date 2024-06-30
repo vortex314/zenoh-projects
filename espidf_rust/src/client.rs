@@ -33,7 +33,7 @@ use minicbor::decode::info;
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 use crate::limero::{timer::Timer, timer::Timers, Sink, SinkRef, SinkTrait, Source, SourceTrait};
-use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode};
+use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode, VecWriter};
 
 #[derive(PartialEq)]
 
@@ -106,7 +106,7 @@ enum TimerId {
 pub struct ClientSession {
     command: Sink<SessionCmd, 3>,
     events: Source<SessionEvent>,
-    txd_msg: SinkRef<MqttSnMessage, 4>,
+    transport_cmd: SinkRef<MqttSnMessage, 4>,
     rxd_msg: Sink<MqttSnMessage, 3>,
     client_topics: BTreeMap<u16, String>,
     server_topics: BTreeMap<u16, String>,
@@ -123,7 +123,7 @@ impl ClientSession {
         ClientSession {
             command: Sink::new(),
             events: Source::new(),
-            txd_msg,
+            transport_cmd: txd_msg,
             rxd_msg: Sink::new(),
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
@@ -174,7 +174,7 @@ impl ClientSession {
     async fn on_timeout(&mut self, id: u32) {
         if id == TimerId::ConnectTimer as u32 {
             if self.state == State::Disconnected {
-                self.txd_msg.push(MqttSnMessage::Connect {
+                self.transport_cmd.push(MqttSnMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: self.client_id.clone(),
@@ -182,7 +182,7 @@ impl ClientSession {
             }
         } else if id == TimerId::PingTimer as u32 {
             if self.state == State::Connected {
-                self.txd_msg.push(MqttSnMessage::PingReq {
+                self.transport_cmd.push(MqttSnMessage::PingReq {
                     timestamp: Instant::now().as_millis() as u64,
                 });
             }
@@ -190,7 +190,8 @@ impl ClientSession {
             info!("Unexpected timer id {}", id);
             self.ping_timeouts += 1;
             if self.ping_timeouts > 3 {
-                self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
+                self.transport_cmd
+                    .push(MqttSnMessage::Disconnect { duration: 0 });
             }
         }
     }
@@ -203,14 +204,14 @@ impl ClientSession {
             } => {
                 info!("Received message on topic {}", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
+                    self.transport_cmd.push(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id: self.msg_id,
                         return_code: ReturnCode::Accepted,
                     });
                     self.msg_id += 1;
                 } else {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
+                    self.transport_cmd.push(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id: self.msg_id,
                         return_code: ReturnCode::InvalidTopicId,
@@ -224,6 +225,16 @@ impl ClientSession {
         }
     }
 
+    fn encode<X>(&self, v: X) -> Vec<u8>
+    where
+        X: Encode<()>,
+    {
+        let mut buffer = VecWriter::new();
+        let mut encoder = Encoder::new(&mut buffer);
+        let _x = encoder.encode(v);
+        _x.unwrap().writer().to_vec()
+    }
+
     async fn on_rxd_message(&mut self, msg: MqttSnMessage) {
         match msg {
             MqttSnMessage::ConnAck { return_code } => {
@@ -231,13 +242,29 @@ impl ClientSession {
                 if self.state == State::Disconnected {
                     self.state = State::Connected;
                 }
+                self.transport_cmd.push(MqttSnMessage::Register {
+                    topic_id: 0,
+                    msg_id: 0,
+                    topic_name: "ESP32".to_string(),
+                });
+                self.transport_cmd.push(MqttSnMessage::Register {
+                    topic_id: 1,
+                    msg_id: 0,
+                    topic_name: "latency".to_string(),
+                });
             }
-            MqttSnMessage::PingResp { timestamp    } => {
+            MqttSnMessage::PingResp { timestamp } => {
                 info!("Ping response {:?}", timestamp);
                 self.ping_timeouts = 0;
-                let now:u64 = Instant::now().as_millis() as u64;
-                let diff:u64 = now - timestamp;
+                let now: u64 = Instant::now().as_millis() as u64;
+                let diff: u64 = now - timestamp;
                 info!("Ping response time {}", diff);
+                self.transport_cmd.push(MqttSnMessage::Publish {
+                    topic_id: 1, // 1 is the topic id for the ping response
+                    msg_id: self.msg_id,
+                    flags: Flags(0),
+                    data: self.encode(diff),
+                });
             }
             MqttSnMessage::Disconnect { duration: _ } => {
                 info!("Disconnected");
@@ -260,13 +287,13 @@ impl ClientSession {
             } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
+                    self.transport_cmd.push(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::Accepted,
                     });
                 } else {
-                    self.txd_msg.push(MqttSnMessage::PubAck {
+                    self.transport_cmd.push(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::InvalidTopicId,
@@ -284,16 +311,20 @@ impl ClientSession {
                         topic_id, return_code
                     );
                 } else {
-                    self.txd_msg.push(MqttSnMessage::Register {
+                    let topic_name = self.client_topics.get(&topic_id);
+                    if topic_name.is_none() {
+                        info!(
+                            "Received PubAck for topic {} with code {:?}",
+                            topic_id, return_code
+                        );
+                        return;
+                    }
+                    self.transport_cmd.push(MqttSnMessage::Register {
                         topic_id,
                         msg_id,
-                        topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                        topic_name: topic_name.unwrap().clone(),
                     });
                 }
-                info!(
-                    "Received PubAck for topic {} with code {:?}",
-                    topic_id, return_code
-                );
             }
 
             _ => {
@@ -305,7 +336,7 @@ impl ClientSession {
     pub async fn on_cmd_msg(&mut self, cmd: SessionCmd) {
         match cmd {
             SessionCmd::Publish { topic_id, message } => {
-                self.txd_msg.push(MqttSnMessage::Publish {
+                self.transport_cmd.push(MqttSnMessage::Publish {
                     flags: Flags(0),
                     topic_id,
                     msg_id: self.msg_id,
@@ -313,28 +344,29 @@ impl ClientSession {
                 });
             }
             SessionCmd::Subscribe { topic_id } => {
-                self.txd_msg.push(MqttSnMessage::Register {
+                self.transport_cmd.push(MqttSnMessage::Register {
                     topic_id,
                     msg_id: 0,
                     topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
                 });
             }
             SessionCmd::Unsubscribe { topic_id } => {
-                self.txd_msg.push(MqttSnMessage::PubAck {
+                self.transport_cmd.push(MqttSnMessage::PubAck {
                     topic_id,
                     msg_id: 0,
                     return_code: ReturnCode::Accepted,
                 });
             }
             SessionCmd::Connect { client_id } => {
-                self.txd_msg.push(MqttSnMessage::Connect {
+                self.transport_cmd.push(MqttSnMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: client_id.clone(),
                 });
             }
             SessionCmd::Disconnect => {
-                self.txd_msg.push(MqttSnMessage::Disconnect { duration: 0 });
+                self.transport_cmd
+                    .push(MqttSnMessage::Disconnect { duration: 0 });
             }
         }
     }

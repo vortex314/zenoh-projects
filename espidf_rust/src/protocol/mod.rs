@@ -213,61 +213,28 @@ impl MessageDecoder {
     }
 }
 
-struct VecWriter {
-    buffer: Vec<u8>,
-}
 
-impl VecWriter {
-    fn new() -> Self {
-        VecWriter { buffer: Vec::new() }
-    }
-
-    fn len(&self) -> usize {
-        self.buffer.len()
-    }
-
-    fn to_bytes(&self) -> &[u8] {
-        self.buffer.as_slice()
-    }
-
-    fn push(&mut self, data: u8) {
-        self.buffer.push(data);
-    }
-
-    fn to_vec(&self) -> Vec<u8> {
-        self.buffer.to_vec()
-    }
-
-    fn clear(&mut self) {
-        self.buffer.clear();
-    }
-}
-impl minicbor::encode::Write for VecWriter {
-    type Error = String;
-    // Required method
-    fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
-        self.buffer.extend_from_slice(buf);
-        Ok(())
-    }
-}
 
 pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
-    let buffer = &mut [0u8; 1000];
-    let _res = msg.try_write(buffer, ());
-    if let Err(e) = _res {
+
+    let writer = msg::VecWriter::new();
+    let mut encoder = minicbor::encode::Encoder::new(writer);
+    let res = msg.encode(&mut encoder, &mut());
+    if let Err(e) = res {
         return Err(format!("CBOR encoding error : {:?}", e));
     }
-    let size = _res.unwrap();
-    info!("Encoded MQTT-SN : {:02X?}", &buffer[0..size]);
+    let mut bytes = encoder.into_writer().to_inner();
+
+    info!("Encoded MQTT-SN : {:02X?}", bytes);
 
     let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
-    let crc = crc16.checksum(&buffer[0..size]);
+    let crc = crc16.checksum(&bytes);
     debug!("CRC : {:04X}", crc);
-    buffer[size] = (crc & 0xFF) as u8;
-    buffer[size + 1] = ((crc >> 8) & 0xFF) as u8;
+    bytes.push((crc & 0xFF) as u8);
+    bytes.push(((crc >> 8) & 0xFF) as u8);
     let mut cobs_buffer = [0; MTU_SIZE];
     let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
-    let mut _res = cobs_encoder.push(&buffer[0..size + 2]);
+    let mut _res = cobs_encoder.push(&bytes);
     if let Err(e) = _res {
         return Err(format!("COBS encoding error : {:?}", e));
     }
@@ -305,9 +272,10 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
             if crc != crc_received {
                 return Err(format!("CRC error : {:04X} != {:04X}", crc, crc_received));
             }
-            let msg_res = MqttSnMessage::try_read(&output[0..(output_size - 2)], ());
+            let mut d = minicbor::decode::Decoder::new(&output[0..(output_size - 2)]);
+            let msg_res = MqttSnMessage::decode(&mut d, &mut());
             match msg_res {
-                Ok((m, _size)) => {
+                Ok(m) => {
                     return Ok(m);
                 }
                 Err(e) => {
