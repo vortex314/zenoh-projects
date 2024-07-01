@@ -41,7 +41,7 @@ fn start_proxy(event: PortScannerEvent) -> Option<()> {
         PortScannerEvent::PortAdded { port } => {
             info!("Port added : {:?}", port.port_name);
             let mut transport = Transport::new(port.clone());
-            let mut proxy_server = ProxyServer::new( port,transport.sink_ref());
+            let mut proxy_server = ProxySession::new( port,transport.sink_ref());
             transport.subscribe(Box::new(proxy_server.transport_sink_ref()));
             tokio::spawn(async move {
                 transport.run().await;

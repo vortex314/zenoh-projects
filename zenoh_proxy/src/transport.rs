@@ -68,7 +68,7 @@ impl Transport {
         loop {
             let mut buf = [0; MTU_SIZE];
             let serial_stream =
-                tokio_serial::new(self.port_info.port_name.clone(), 115200).open_native_async();
+                tokio_serial::new(self.port_info.port_name.clone(), 921600).open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
                 self.events.emit(TransportEvent::ConnectionLost {});

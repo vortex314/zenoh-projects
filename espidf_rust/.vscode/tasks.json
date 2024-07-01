@@ -22,6 +22,9 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "presentation": {
+                "clear": true                        // <-- this line
             }
         }
     ]

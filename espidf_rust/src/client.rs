@@ -41,59 +41,18 @@ enum State {
     Disconnected,
     Connected,
 }
-/*
-trait Subscriber {
-    fn on_message(&self, message: &MqttSnMessage);
-}
 
-struct Sub<'a, T> {
-    topic_id: u16,
-    sender: DynamicSender<'a, T>,
-}
-
-impl<'a, T> Sub<'a, T> {
-    pub fn new(topic_id: u16, sender: DynamicSender<'a, T>) -> Self {
-        Sub { topic_id, sender }
-    }
-}
-
-impl<'a, T> Subscriber for Sub<'a, T>
-where
-    T: for<'b> Decode<'b, i32>,
-{
-    fn on_message(&self, message: &MqttSnMessage) {
-        if let MqttSnMessage::Publish {
-            flags,
-            topic_id,
-            msg_id,
-            data,
-        } = message
-        {
-            if *topic_id == self.topic_id {
-                let mut cbor_decoder = Decoder::new(data); // Lifetime here is limited to this scope
-
-                let res = T::decode(&mut cbor_decoder, &mut 1);
-
-                if res.is_ok() {
-                    let _ = self.sender.try_send(res.unwrap());
-                }
-            }
-        }
-    }
-}
-    */
 #[derive(Clone, Debug)]
 pub enum SessionCmd {
-    Publish { topic_id: u16, message: String },
-    Subscribe { topic_id: u16 },
-    Unsubscribe { topic_id: u16 },
+    Publish { topic: String, message: String },
+    Subscribe { topic: String },
+    Unsubscribe { topic: String },
     Connect { client_id: String },
     Disconnect,
 }
 #[derive(Clone, Debug)]
 pub enum SessionEvent {
     Publish { topic_id: u16, message: String },
-
     Connected,
     Disconnected,
 }
@@ -101,6 +60,7 @@ pub enum SessionEvent {
 enum TimerId {
     PingTimer = 1,
     ConnectTimer = 2,
+    ConnectionTimer = 3,
 }
 
 pub struct ClientSession {
@@ -108,7 +68,7 @@ pub struct ClientSession {
     events: Source<SessionEvent>,
     transport_cmd: SinkRef<MqttSnMessage, 4>,
     rxd_msg: Sink<MqttSnMessage, 3>,
-    client_topics: BTreeMap<u16, String>,
+    client_topics: BTreeMap<String, u16>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
     //    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
@@ -117,6 +77,7 @@ pub struct ClientSession {
     ping_timeouts: u32,
     msg_id: u16,
     timers: Timers,
+    topic_id_counter: u16,
 }
 impl ClientSession {
     pub fn new(txd_msg: SinkRef<MqttSnMessage, 4>) -> ClientSession {
@@ -134,11 +95,35 @@ impl ClientSession {
             ping_timeouts: 0,
             msg_id: 0,
             timers: Timers::new(),
+            topic_id_counter: 0,
         }
     }
 
     pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage, 3> {
         self.rxd_msg.sink_ref()
+    }
+
+    fn register_topic(&mut self, topic: &str) -> u16 {
+        let topic_id = self.topic_id_counter;
+        self.topic_id_counter += 1;
+        self.transport_cmd.push(MqttSnMessage::Register {
+            topic_id: self.topic_id_counter,
+            msg_id: 0,
+            topic_name: topic.to_string(),
+        });
+
+        self.client_topics.insert(topic.to_string(), topic_id);
+        self.client_topics_registered.insert(topic_id, true);
+        self.topic_id_counter += 1;
+        topic_id
+    }
+
+    fn get_client_topic_from_string(&mut self, topic: &str) -> u16 {
+        let topic_id = match self.client_topics.get(topic) {
+            Some(topic_id) => *topic_id,
+            None => self.register_topic(topic),
+        };
+        topic_id
     }
 
     pub async fn run(&mut self) {
@@ -148,8 +133,9 @@ impl ClientSession {
         ));
         self.timers.add_timer(Timer::new_repeater(
             TimerId::PingTimer as u32,
-            Duration::from_millis(5_000),
+            Duration::from_millis(1_000),
         ));
+
         loop {
             match select3(
                 self.command.read(),
@@ -185,6 +171,14 @@ impl ClientSession {
                 self.transport_cmd.push(MqttSnMessage::PingReq {
                     timestamp: Instant::now().as_millis() as u64,
                 });
+                self.ping_timeouts += 1;
+                if self.ping_timeouts > 3 {
+                    info!("Ping timeout >3 disconnecting    ");
+                    self.transport_cmd
+                        .push(MqttSnMessage::Disconnect { duration: 0 });
+                    self.state = State::Disconnected;
+                    self.events.emit(SessionEvent::Disconnected);
+                }
             }
         } else {
             info!("Unexpected timer id {}", id);
@@ -192,35 +186,6 @@ impl ClientSession {
             if self.ping_timeouts > 3 {
                 self.transport_cmd
                     .push(MqttSnMessage::Disconnect { duration: 0 });
-            }
-        }
-    }
-
-    async fn on_cmd_message(&mut self, msg: SessionCmd) {
-        match msg {
-            SessionCmd::Publish {
-                topic_id,
-                message: _,
-            } => {
-                info!("Received message on topic {}", topic_id);
-                if self.server_topics.contains_key(&topic_id) {
-                    self.transport_cmd.push(MqttSnMessage::PubAck {
-                        topic_id,
-                        msg_id: self.msg_id,
-                        return_code: ReturnCode::Accepted,
-                    });
-                    self.msg_id += 1;
-                } else {
-                    self.transport_cmd.push(MqttSnMessage::PubAck {
-                        topic_id,
-                        msg_id: self.msg_id,
-                        return_code: ReturnCode::InvalidTopicId,
-                    });
-                    self.msg_id += 1;
-                }
-            }
-            _ => {
-                info!("Unexpected message {:?}", msg);
             }
         }
     }
@@ -241,6 +206,7 @@ impl ClientSession {
                 info!("Connected code  {:?}", return_code);
                 if self.state == State::Disconnected {
                     self.state = State::Connected;
+                    self.events.emit(SessionEvent::Connected);
                 }
                 self.transport_cmd.push(MqttSnMessage::Register {
                     topic_id: 0,
@@ -259,8 +225,9 @@ impl ClientSession {
                 let now: u64 = Instant::now().as_millis() as u64;
                 let diff: u64 = now - timestamp;
                 info!("Ping response time {}", diff);
+                let topic_id = self.get_client_topic_from_string("latency");
                 self.transport_cmd.push(MqttSnMessage::Publish {
-                    topic_id: 1, // 1 is the topic id for the ping response
+                    topic_id, // 1 is the topic id for the ping response
                     msg_id: self.msg_id,
                     flags: Flags(0),
                     data: self.encode(diff),
@@ -269,6 +236,7 @@ impl ClientSession {
             MqttSnMessage::Disconnect { duration: _ } => {
                 info!("Disconnected");
                 self.state = State::Disconnected;
+                self.events.emit(SessionEvent::Disconnected);
                 self.server_topics.clear();
             }
             MqttSnMessage::Register {
@@ -311,7 +279,7 @@ impl ClientSession {
                         topic_id, return_code
                     );
                 } else {
-                    let topic_name = self.client_topics.get(&topic_id);
+                    let topic_name = self.client_topics.iter().find(|(_, v)| **v == topic_id);
                     if topic_name.is_none() {
                         info!(
                             "Received PubAck for topic {} with code {:?}",
@@ -319,11 +287,26 @@ impl ClientSession {
                         );
                         return;
                     }
+                    let topic_name = topic_name.unwrap().0;
                     self.transport_cmd.push(MqttSnMessage::Register {
                         topic_id,
                         msg_id,
-                        topic_name: topic_name.unwrap().clone(),
+                        topic_name: topic_name.clone(),
                     });
+                }
+            }
+            MqttSnMessage::RegAck {
+                topic_id,
+                msg_id,
+                return_code,
+            } => {
+                if return_code == ReturnCode::Accepted {
+                    self.client_topics_registered.insert(topic_id, true);
+                } else {
+                    info!(
+                        "Received RegAck Failure  for topic {} msg_id {} with code {:?}",
+                        topic_id, msg_id, return_code
+                    );
                 }
             }
 
@@ -333,27 +316,35 @@ impl ClientSession {
         }
     }
 
-    pub async fn on_cmd_msg(&mut self, cmd: SessionCmd) {
+    pub async fn on_cmd_message(&mut self, cmd: SessionCmd) {
         match cmd {
-            SessionCmd::Publish { topic_id, message } => {
+            SessionCmd::Publish { topic, message } => {
+                let topic_id = self.get_client_topic_from_string(&topic);
+                let mut flags = Flags(0);
+                flags.set_qos(0);
                 self.transport_cmd.push(MqttSnMessage::Publish {
-                    flags: Flags(0),
+                    flags,
                     topic_id,
                     msg_id: self.msg_id,
                     data: message.as_bytes().to_vec(),
                 });
+                self.msg_id += 1;
             }
-            SessionCmd::Subscribe { topic_id } => {
+            SessionCmd::Subscribe { topic } => {
+                self.msg_id += 1;
+                let topic_id = self.get_client_topic_from_string(topic.as_str());
                 self.transport_cmd.push(MqttSnMessage::Register {
                     topic_id,
-                    msg_id: 0,
-                    topic_name: self.client_topics.get(&topic_id).unwrap().clone(),
+                    msg_id: self.msg_id,
+                    topic_name: topic,
                 });
             }
-            SessionCmd::Unsubscribe { topic_id } => {
+            SessionCmd::Unsubscribe { topic } => {
+                self.msg_id += 1;
+                let topic_id = self.get_client_topic_from_string(topic.as_str());
                 self.transport_cmd.push(MqttSnMessage::PubAck {
                     topic_id,
-                    msg_id: 0,
+                    msg_id: self.msg_id,
                     return_code: ReturnCode::Accepted,
                 });
             }

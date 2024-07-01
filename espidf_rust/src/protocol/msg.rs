@@ -86,8 +86,12 @@ impl Encode<()> for Flags {
         e: &mut minicbor::encode::Encoder<VecWriter>,
         _ctx: &mut (),
     ) -> Result<(), minicbor::encode::Error<<VecWriter>::Error>> {
-        e.u8(self.0);
-        Ok(())
+        match e.u8(self.0) {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(minicbor::encode::Error::<<VecWriter>::Error>::message(
+                "Error encoding flags".to_string(),
+            )),
+        }
     }
 }
 
@@ -216,26 +220,26 @@ impl Encode<()> for MqttSnMessage {
                 duration,
                 client_id,
             } => {
-                encoder
+                 encoder
                     .u8(0x04)?
                     .encode(flags)?
                     .u16(*duration)?
-                    .str(&client_id);
+                    .str(&client_id)?;
             }
             MqttSnMessage::ConnAck { return_code } => {
-                encoder.u8(0x05)?.encode(return_code);
+                encoder.u8(0x05)?.encode(return_code)?;
             }
             MqttSnMessage::WillTopicReq => {
-                encoder.u8(0x06);
+                encoder.u8(0x06)?;
             }
             MqttSnMessage::WillTopic { flags, topic } => {
-                encoder.u8(0x07)?.encode(flags)?.str(&topic);
+                encoder.u8(0x07)?.encode(flags)?.str(&topic)?;
             }
             MqttSnMessage::WillMsgReq => {
-                encoder.u8(0x08);
+                encoder.u8(0x08)?;
             }
             MqttSnMessage::WillMsg { message } => {
-                encoder.u8(0x09)?.bytes(&message);
+                encoder.u8(0x09)?.bytes(&message)?;
             }
             MqttSnMessage::Register {
                 topic_id,
@@ -246,7 +250,7 @@ impl Encode<()> for MqttSnMessage {
                     .u8(0x0a)?
                     .u16(*topic_id)?
                     .u16(*msg_id)?
-                    .str(&topic_name);
+                    .str(&topic_name)?;
             }
             MqttSnMessage::RegAck {
                 topic_id,
@@ -257,7 +261,7 @@ impl Encode<()> for MqttSnMessage {
                     .u8(0x0b)?
                     .u16(*topic_id)?
                     .u16(*msg_id)?
-                    .encode(return_code);
+                    .encode(return_code)?;
             }
             MqttSnMessage::Publish {
                 flags,
@@ -270,7 +274,7 @@ impl Encode<()> for MqttSnMessage {
                     .encode(flags)?
                     .u16(*topic_id)?
                     .u16(*msg_id)?
-                    .bytes(&data);
+                    .bytes(&data)?;
             }
             MqttSnMessage::PubAck {
                 topic_id,
@@ -281,16 +285,16 @@ impl Encode<()> for MqttSnMessage {
                     .u8(0x0d)?
                     .u16(*topic_id)?
                     .u16(*msg_id)?
-                    .encode(return_code);
+                    .encode(return_code)?;
             }
             MqttSnMessage::PubRec { msg_id } => {
-                encoder.u8(0x0e)?.u16(*msg_id);
+                encoder.u8(0x0e)?.u16(*msg_id)?;
             }
             MqttSnMessage::PubRel { msg_id } => {
-                encoder.u8(0x0f)?.u16(*msg_id);
+                encoder.u8(0x0f)?.u16(*msg_id)?;
             }
             MqttSnMessage::PubComp { msg_id } => {
-                encoder.u8(0x10)?.u16(*msg_id);
+                encoder.u8(0x10)?.u16(*msg_id)?;
             }
             MqttSnMessage::Subscribe {
                 flags,
@@ -299,13 +303,13 @@ impl Encode<()> for MqttSnMessage {
                 topic_id,
                 qos,
             } => {
-                encoder.u8(0x12)?.encode(flags)?.u16(*msg_id);
+                encoder.u8(0x12)?.encode(flags)?.u16(*msg_id)?;
                 if let Some(topic) = topic {
-                    encoder.str(&topic);
+                    encoder.str(&topic)?;
                 } else {
-                    encoder.u16(topic_id.unwrap());
+                    encoder.u16(topic_id.unwrap())?;
                 }
-                encoder.u8(*qos);
+                encoder.u8(*qos)?;
             }
             MqttSnMessage::SubAck {
                 flags,
@@ -318,7 +322,7 @@ impl Encode<()> for MqttSnMessage {
                     .encode(flags)?
                     .u16(*topic_id)?
                     .u16(*msg_id)?
-                    .encode(return_code);
+                    .encode(return_code)?;
             }
             MqttSnMessage::Unsubscribe {
                 flags,
@@ -327,40 +331,40 @@ impl Encode<()> for MqttSnMessage {
                 topic_id,
                 qos,
             } => {
-                encoder.u8(0x14)?.encode(flags)?.u16(*msg_id);
+                encoder.u8(0x14)?.encode(flags)?.u16(*msg_id)?;
                 if let Some(topic) = topic {
                     encoder.str(&topic)?;
                 } else {
                     encoder.u16(topic_id.unwrap())?;
                 }
-                encoder.u8(*qos);
+                encoder.u8(*qos)?;
             }
             MqttSnMessage::UnsubAck {
                 msg_id,
                 return_code,
             } => {
-                encoder.u8(0x15)?.u16(*msg_id)?.encode(return_code);
+                encoder.u8(0x15)?.u16(*msg_id)?.encode(return_code)?;
             }
             MqttSnMessage::PingReq { timestamp } => {
-                encoder.u8(0x16)?.u64(*timestamp);
+                encoder.u8(0x16)?.u64(*timestamp)?;
             }
             MqttSnMessage::PingResp { timestamp } => {
-                encoder.u8(0x17)?.u64(*timestamp);
+                encoder.u8(0x17)?.u64(*timestamp)?;
             }
             MqttSnMessage::Disconnect { duration } => {
-                encoder.u8(0x18)?.u16(*duration);
+                encoder.u8(0x18)?.u16(*duration)?;
             }
             MqttSnMessage::WillTopicUpd { flags, topic } => {
-                encoder.u8(0x1a)?.encode(flags)?.str(&topic);
+                encoder.u8(0x1a)?.encode(flags)?.str(&topic)?;
             }
             MqttSnMessage::WillMsgUpd { message } => {
-                encoder.u8(0x1b)?.bytes(&message);
+                encoder.u8(0x1b)?.bytes(&message)?;
             }
             MqttSnMessage::WillTopicResp { return_code } => {
-                encoder.u8(0x1c)?.encode(return_code);
+                encoder.u8(0x1c)?.encode(return_code)?;
             }
             MqttSnMessage::WillMsgResp { return_code } => {
-                encoder.u8(0x1d)?.encode(return_code);
+                encoder.u8(0x1d)?.encode(return_code)?;
             }
         }
         encoder.end()?;

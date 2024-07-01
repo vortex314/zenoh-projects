@@ -20,6 +20,7 @@ use crate::protocol;
 use crate::protocol::decode_frame;
 use crate::protocol::encode_frame;
 use crate::SourceTrait;
+use protocol::msg::Flags;
 use protocol::msg::MqttSnMessage;
 use protocol::msg::ReturnCode;
 use protocol::MessageDecoder;
@@ -39,19 +40,10 @@ pub enum ProxyServerEvent {
     Publish { topic: String, message: Vec<u8> },
 }
 
+
 #[derive(Clone)]
 pub enum ProxyServerCmd {
-    Connect {
-        protocol_id: u8,
-        duration: u16,
-        client_id: String,
-    },
-    WillTopic {
-        topic: String,
-    },
-    WillMsg {
-        message: Vec<u8>,
-    },
+    Publish { topic: String, message: Vec<u8> },
 
     Disconnect,
 }
@@ -62,7 +54,7 @@ struct TopicId {
     acked: bool,
 }
 
-pub struct ProxyServer {
+pub struct ProxySession {
     port_info: SerialPortInfo,
     events: Source<ProxyServerEvent>,
     commands: Sink<ProxyServerCmd>,
@@ -73,13 +65,19 @@ pub struct ProxyServer {
     server_topics: BTreeMap<u16, TopicId>,
     will_topic: Option<String>,
     will_message: Option<Vec<u8>>,
+    topic_id_counter: u16,
+    client_id: Option<String>   ,
 }
 
-impl ProxyServer {
-    pub fn new(port_info: SerialPortInfo, transport: SinkRef<TransportCmd>) -> Self {
+impl ProxySession {
+    pub fn new(
+        port_info: SerialPortInfo,
+        transport: SinkRef<TransportCmd>,
+    ) -> Self {
         let commands = Sink::new(100);
         let events = Source::new();
-        ProxyServer {
+
+        ProxySession {
             port_info,
             events,
             commands,
@@ -90,6 +88,8 @@ impl ProxyServer {
             server_topics: BTreeMap::new(),
             will_topic: None,
             will_message: None,
+            topic_id_counter: 0,
+            client_id: None,
         }
     }
 
@@ -102,21 +102,45 @@ impl ProxyServer {
             .push(TransportCmd::SendMessage { message });
     }
 
+    fn get_server_topic_from_string(&mut self, topic: &str) -> u16 {
+        for (id, topic_id) in self.server_topics.iter() {
+            if topic_id.name == topic {
+                return *id;
+            }
+        }
+        let  topic_id = self.topic_id_counter;
+        self.topic_id_counter += 1;
+        self.server_topics.insert(
+            topic_id,
+            TopicId {
+                id: topic_id,
+                name: topic.to_string(),
+                acked: false,
+            },
+        );
+        topic_id
+    }
+
     pub async fn run(&mut self) {
         let zenoh_session = zenoh::open(config::default()).res().await.unwrap();
-        let  zenoh_subscriber = zenoh_session
+        let zenoh_subscriber = zenoh_session
             .declare_subscriber("esp32/*")
             .res()
             .await
             .unwrap();
-        let  _buf = vec![0u8; MTU_SIZE];
+        let _buf = vec![0u8; MTU_SIZE];
         loop {
             select! {
-                _msg = zenoh_subscriber.recv_async() => {
+                msg = zenoh_subscriber.recv_async() => {
+                    info!("Received message from zenoh {} ",msg.unwrap());
+                    //let message = zenoh_subscriber.recv_async().res().await.unwrap();
+                    //let topic = message.get_topic().unwrap();
+                    //let message = message.get_payload().unwrap();
+                    //self.transport_send(MqttSnMessage::Publish { flags:0,topic_id:0, msg_id:0, data: message });
 
                 },
                 cmd = self.commands.read() => {
-                    match cmd {
+                    match cmd.unwrap() {
                        _ => {
                            info!("Received command from client ");
                           },
@@ -146,13 +170,14 @@ impl ProxyServer {
                                     self.will_message = Some(message);
                                     info!("Received WillMsg message");
                                 },
-                                MqttSnMessage::Publish { flags:_,topic_id, msg_id,data:_ } => {
+                                MqttSnMessage::Publish { flags,topic_id, msg_id,data:_ } => {
                                     match self.client_topics.get(&topic_id) {
                                         Some(_topic) => {
                                             info!("Received Publish message");
                                            // zenoh_session.put(&topic.name, message).res().await.unwrap();
+                                        if flags.qos() == 1 {
                                             self.transport_send(MqttSnMessage::PubAck { topic_id,msg_id, return_code: ReturnCode::Accepted } );
-                                        },
+                                        }},
                                         None => {
                                             info!("Received Publish message for unknown topic");
                                             self.transport_send(MqttSnMessage::PubAck { topic_id,msg_id, return_code : ReturnCode::InvalidTopicId });
@@ -193,13 +218,13 @@ impl ProxyServer {
     }
 }
 
-impl SinkTrait<ProxyServerCmd> for ProxyServer {
+impl SinkTrait<ProxyServerCmd> for ProxySession {
     fn push(&self, message: ProxyServerCmd) {
         self.commands.push(message);
     }
 }
 
-impl SourceTrait<ProxyServerEvent> for ProxyServer {
+impl SourceTrait<ProxyServerEvent> for ProxySession {
     fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyServerEvent>>) {
         self.events.subscribe(sink);
     }
