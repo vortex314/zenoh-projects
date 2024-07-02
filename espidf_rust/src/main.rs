@@ -14,7 +14,7 @@ use embassy_executor::raw::Executor;
 use embassy_executor::Spawner;
 use embassy_futures::join::{join3, join4};
 use embassy_futures::select::Either3::{First, Second, Third};
-use embassy_futures::select::{self, select3, Either3};
+use embassy_futures::select::{self, select3, select4, Either3};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::DynamicSender;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
@@ -56,6 +56,9 @@ use uart::UartActor;
 
 mod led;
 use led::{Led, LedCmd};
+
+mod sys;
+use sys::*;
 
 mod limero;
 
@@ -129,8 +132,10 @@ async fn main(_spawner: Spawner) {
         map_connected_to_blink_fast,
         led_actor.sink_ref(),
     );
+    let mut sys_actor = Sys::new(client_session.sink_ref());
+    client_session.subscribe(Box::new(sys_actor.on_session_event()));
 
     loop {
-        select3(uart_actor.run(), client_session.run(), led_actor.run()).await;
+        select4(uart_actor.run(), client_session.run(), led_actor.run(),sys_actor.run()).await;
     }
 }

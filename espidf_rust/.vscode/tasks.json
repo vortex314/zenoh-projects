@@ -15,6 +15,7 @@
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
             "args": [
                 "run",
+                "--release",
                 // "--debug",
                 // "--",
                 // "arg1"

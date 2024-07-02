@@ -99,6 +99,10 @@ impl ClientSession {
         }
     }
 
+    pub fn sink_ref(&self) -> SinkRef<SessionCmd, 3> {
+        self.command.sink_ref()
+    }
+
     pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage, 3> {
         self.rxd_msg.sink_ref()
     }

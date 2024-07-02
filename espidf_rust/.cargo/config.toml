@@ -13,6 +13,6 @@ rustflags = [
 ]
 
 target = "xtensa-esp32-none-elf"
-
+runner = "espflash flash --baud=921600 --monitor /dev/ttyUSB0"
 [unstable]
 build-std = ["alloc", "core"]

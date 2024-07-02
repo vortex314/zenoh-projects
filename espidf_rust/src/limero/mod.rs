@@ -286,3 +286,15 @@ pub fn connect_actors<T, U, V, W>(
     src.subscribe(Box::new(flow));
 }
 */
+
+trait Actor<C,E> where C:Clone+Send+Sync+'static,E:Clone+Send+Sync+'static{
+    async fn run(&mut self);
+    fn command(&self) -> Sender<C>;
+    fn subscribe(&mut self, sink_ref : Sender<E>);
+}
+
+
+
+
+
+
