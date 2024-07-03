@@ -14,7 +14,7 @@ use esp_hal::{
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use log::info;
+use log::{debug, info};
 use minicbor::decode::info;
 
 use embassy_sync::{
@@ -54,7 +54,7 @@ impl UartActor {
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage, 4> {
+    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage> {
         self.command.sink_ref()
     }
 
@@ -73,7 +73,7 @@ impl UartActor {
                     match r {
                         Ok(r) => {
                             let line:String  = small_buf[0..r].iter().map(|b| format!("{:02X} ", b)).collect();
-                            info!("Rx bytes : {:?}",line);
+                            debug!("Rx bytes : {:?}",line);
                             self.on_bytes_rxd( &mut small_buf[0..r]);
                         }
                         Err(e) => {
@@ -92,7 +92,7 @@ impl UartActor {
         info!("Send message: {:?}", msg);
         let bytes = encode_frame(msg).unwrap();
         let line:String  = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
-        info!(" TXD {}",line);
+        debug!(" TXD {}",line);
         let _ = embedded_io_async::Write::write(&mut self.tx, bytes.as_slice()).await;
         let _ = embedded_io_async::Write::flush(&mut self.tx).await;
     }

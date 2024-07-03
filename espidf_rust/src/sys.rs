@@ -15,12 +15,12 @@ use embassy_futures::select::{self, select3, Either3};
 
 pub struct Sys {
     pub_sub_events: Sink<SessionEvent, 4>,
-    pub_sub_cmds: SinkRef<SessionCmd, 3>,
+    pub_sub_cmds: SinkRef<SessionCmd>,
     timers: Timers,
 }
 
 impl Sys {
-    pub fn new(client: SinkRef<SessionCmd,3>) -> Sys {
+    pub fn new(client: SinkRef<SessionCmd>) -> Sys {
         let pub_sub_events = Sink::new();
         let pub_sub_cmds = client;
         Sys {
@@ -30,7 +30,7 @@ impl Sys {
         }
     }
 
-    pub fn on_session_event(&self) -> SinkRef<SessionEvent,4> {
+    pub fn on_session_event(&self) -> SinkRef<SessionEvent> {
         self.pub_sub_events.sink_ref()
     }
 

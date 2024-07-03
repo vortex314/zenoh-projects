@@ -32,6 +32,7 @@ use {
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use embassy_sync::blocking_mutex::raw::RawMutex;
 use core::marker::PhantomData;
 use core::ops::Shr;
 use core::result::Result;
@@ -62,14 +63,6 @@ pub struct Sink<M, const N: usize> {
     channel: Arc<Channel<CriticalSectionRawMutex, M, N>>,
 }
 
-#[derive(Clone)]
-pub struct SinkRef<M, const N: usize>
-where
-    M: Clone + Send + Sync + 'static,
-{
-    channel: Arc<Channel<CriticalSectionRawMutex, M, N>>,
-}
-
 impl<M, const N: usize> Sink<M, N>
 where
     M: Clone + Send + Sync + 'static,
@@ -81,12 +74,43 @@ where
     pub async fn read(&mut self) -> Option<M> {
         Some(self.channel.receive().await)
     }
-    pub fn sink_ref(&self) -> SinkRef<M, N> {
+    pub fn sink_ref(&self) -> SinkRef<M> {
         SinkRef {
             channel: self.channel.clone(),
         }
     }
 }
+
+trait DynSender<T> {
+    fn try_send(&self, message: T) -> Result<(), String>;
+}
+
+impl <M,T,const N:usize> DynSender<T> for Channel<M,T,N> where M : RawMutex{
+    fn try_send(&self, message: T) -> Result<(),String> {
+        match self.try_send(message) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(String::from("Channel full")),
+        }
+    }
+}
+
+pub struct SinkRef<M>
+where
+    M: Clone + Send + Sync + 'static,
+{
+    channel: Arc<dyn DynSender<M> + Send + Sync>,
+}
+
+impl<M> SinkTrait<M> for SinkRef<M>
+where
+    M: Clone + Send + Sync,
+{
+    fn push(&self, message: M) {
+        let _ = self.channel.try_send(message);
+    }
+}
+
+
 /*
 impl<M, const N: usize> SinkTrait<M> for Sink<M, N>
 where
@@ -98,14 +122,9 @@ where
     }
 }*/
 
-impl<M, const N: usize> SinkTrait<M> for SinkRef<M, N>
-where
-    M: Clone + Send + Sync,
-{
-    fn push(&self, message: M) {
-        let _ = self.channel.try_send(message);
-    }
-}
+
+
+
 
 pub struct Source<T> {
     sinks: Vec<Box<dyn SinkTrait<T>>>,
@@ -233,10 +252,10 @@ impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
     }
 }
 
-pub fn connect<T, U, const N: usize>(
+pub fn connect<T, U>(
     src: &mut dyn SourceTrait<T>,
     func: fn(T) -> Option<U>,
-    sink: SinkRef<U, N>,
+    sink: SinkRef<U>,
 ) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
@@ -246,10 +265,10 @@ pub fn connect<T, U, const N: usize>(
     src.subscribe(Box::new(flow));
 }
 
-pub fn connect_map<T, U, const N: usize>(
+pub fn connect_map<T, U>(
     src: &mut dyn SourceTrait<T>,
     func: fn(T) -> Option<U>,
-    sink: SinkRef<U, N>,
+    sink: SinkRef<U>,
 ) where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
@@ -285,7 +304,7 @@ pub fn connect_actors<T, U, V, W>(
     flow.subscribe(Box::new(dst.command_sink()));
     src.subscribe(Box::new(flow));
 }
-*/
+
 
 trait Actor<C,E> where C:Clone+Send+Sync+'static,E:Clone+Send+Sync+'static{
     async fn run(&mut self);
@@ -293,7 +312,7 @@ trait Actor<C,E> where C:Clone+Send+Sync+'static,E:Clone+Send+Sync+'static{
     fn subscribe(&mut self, sink_ref : Sender<E>);
 }
 
-
+*/
 
 
 

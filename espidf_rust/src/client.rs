@@ -26,7 +26,7 @@ use esp_hal::{
     uart::{config::AtCmdConfig, UartRx, UartTx},
 };
 use esp_println::println;
-use log::info;
+use log::{debug, info};
 use minicbor::bytes::ByteVec;
 
 use minicbor::decode::info;
@@ -66,7 +66,7 @@ enum TimerId {
 pub struct ClientSession {
     command: Sink<SessionCmd, 3>,
     events: Source<SessionEvent>,
-    transport_cmd: SinkRef<MqttSnMessage, 4>,
+    transport_cmd: SinkRef<MqttSnMessage>,
     rxd_msg: Sink<MqttSnMessage, 3>,
     client_topics: BTreeMap<String, u16>,
     server_topics: BTreeMap<u16, String>,
@@ -80,7 +80,7 @@ pub struct ClientSession {
     topic_id_counter: u16,
 }
 impl ClientSession {
-    pub fn new(txd_msg: SinkRef<MqttSnMessage, 4>) -> ClientSession {
+    pub fn new(txd_msg: SinkRef<MqttSnMessage>) -> ClientSession {
         ClientSession {
             command: Sink::new(),
             events: Source::new(),
@@ -99,11 +99,11 @@ impl ClientSession {
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<SessionCmd, 3> {
+    pub fn sink_ref(&self) -> SinkRef<SessionCmd> {
         self.command.sink_ref()
     }
 
-    pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage, 3> {
+    pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage> {
         self.rxd_msg.sink_ref()
     }
 
@@ -224,11 +224,11 @@ impl ClientSession {
                 });
             }
             MqttSnMessage::PingResp { timestamp } => {
-                info!("Ping response {:?}", timestamp);
+                debug!("Ping response {:?}", timestamp);
                 self.ping_timeouts = 0;
                 let now: u64 = Instant::now().as_millis() as u64;
                 let diff: u64 = now - timestamp;
-                info!("Ping response time {}", diff);
+                debug!("Ping response time {}", diff);
                 let topic_id = self.get_client_topic_from_string("latency");
                 self.transport_cmd.push(MqttSnMessage::Publish {
                     topic_id, // 1 is the topic id for the ping response

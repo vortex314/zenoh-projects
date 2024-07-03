@@ -115,7 +115,7 @@ impl Led {
             self.pin.set_low()
         }
     }
-    pub fn sink_ref(&self) -> SinkRef<LedCmd, 2> {
+    pub fn sink_ref(&self) -> SinkRef<LedCmd> {
         self.commands.sink_ref()
     }
 }
