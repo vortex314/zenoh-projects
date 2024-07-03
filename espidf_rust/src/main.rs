@@ -126,14 +126,14 @@ async fn main(_spawner: Spawner) {
     let mut uart_actor = UartActor::new(uart0);
 
     let mut client_session = ClientSession::new(uart_actor.sink_ref());
-    uart_actor.subscribe(Box::new(client_session.transport_sink_ref()));
+    uart_actor.subscribe(client_session.transport_sink_ref());
     connect(
         &mut client_session,
         map_connected_to_blink_fast,
         led_actor.sink_ref(),
     );
     let mut sys_actor = Sys::new(client_session.sink_ref());
-    client_session.subscribe(Box::new(sys_actor.on_session_event()));
+    client_session.subscribe(sys_actor.on_session_event());
 
     loop {
         select4(uart_actor.run(), client_session.run(), led_actor.run(),sys_actor.run()).await;

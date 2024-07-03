@@ -108,7 +108,7 @@ impl UartActor {
 }
 
 impl SourceTrait<MqttSnMessage> for UartActor {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<MqttSnMessage>>) {
+    fn subscribe(&mut self, sink: SinkRef<MqttSnMessage>) {
         self.events.subscribe(sink);
     }
 }

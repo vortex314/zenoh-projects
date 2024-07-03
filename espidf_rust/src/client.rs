@@ -368,7 +368,7 @@ impl ClientSession {
 }
 
 impl SourceTrait<SessionEvent> for ClientSession {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<SessionEvent>>) {
+    fn subscribe(&mut self, sink: SinkRef<SessionEvent>) {
         self.events.subscribe(sink);
     }
 }

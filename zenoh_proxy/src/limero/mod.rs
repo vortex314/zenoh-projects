@@ -53,7 +53,7 @@ pub struct Sink<M> {
 
 impl<M> Sink<M>
 where
-    M: Clone + Send + Sync + 'static,
+    M: Clone + Send + Sync ,
 {
     pub fn new(size: usize) -> Self {
         let (tx, rx) = tokio::sync::mpsc::channel(size);
