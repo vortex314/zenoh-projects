@@ -191,7 +191,7 @@ impl SinkTrait<ProxyTesterCmd> for ProxyTester {
 }
 
 impl SourceTrait<ProxyTesterEvent> for ProxyTester {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyTesterEvent>>) {
+    fn subscribe(&mut self, sink: SinkRef<ProxyTesterEvent>) {
         self.events.subscribe(sink);
     }
 }

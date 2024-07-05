@@ -225,7 +225,7 @@ impl SinkTrait<ProxyServerCmd> for ProxySession {
 }
 
 impl SourceTrait<ProxyServerEvent> for ProxySession {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<ProxyServerEvent>>) {
+    fn subscribe(&mut self, sink: SinkRef<ProxyServerEvent>) {
         self.events.subscribe(sink);
     }
 }

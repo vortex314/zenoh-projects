@@ -121,16 +121,14 @@ where
 
 struct FlowState<T, U> where U:Clone+Sync+Send+'static ,T:Clone+Sync+Send {
     func: fn(T) -> Option<U>,
-    src: Source<U>,
-    l: PhantomData<T>,
+    sink_ref:SinkRef<U>,
 }
 
 impl<T,U> FlowState <T,U> where T: Clone + Send + Sync, U: Clone + Send + Sync{
-    pub fn new(func: fn(T) -> Option<U>) -> Self {
+    pub fn new(func: fn(T) -> Option<U>,sink_ref : SinkRef<U>) -> Self {
         Self {
             func,
-            src: Source::new(),
-            l: PhantomData,
+            sink_ref,
         }
     }
     pub fn push(&self, t: T) {
@@ -159,7 +157,7 @@ where
     T: Clone + Send + Sync,
     U: Clone + Send + Sync,
 {
-    pub fn new(func: fn(T) -> Option<U>) -> Self
+    pub fn new(func: fn(T) -> Option<U>,sink_ref : SinkRef<U>) -> Self
     where
         T: Clone + Send + Sync,
         U: Clone + Send + Sync,
@@ -167,8 +165,7 @@ where
         FlowFunction {
             flow_state: Arc::new(FlowState {
                 func,
-                src: Source::new(),
-                l: PhantomData,
+                sink_ref,
             }),
         }
     }
@@ -255,13 +252,12 @@ where
     }
 }*/
 
-pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
+pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink_ref: SinkRef<U>)
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
-    let mut flow = FlowFunction::new(func);
-    flow.subscribe(sink);
+    let mut flow = FlowFunction::new(func,sink_ref);
     src.subscribe(flow.sink_ref());
 }
 

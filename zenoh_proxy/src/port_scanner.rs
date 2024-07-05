@@ -5,6 +5,7 @@ use crate::limero::SourceTrait;
 use crate::protocol::msg::*;
 use crate::protocol::MessageDecoder;
 use crate::protocol::MTU_SIZE;
+use crate::SinkRef;
 use log::*;
 use minicbor::decode::info;
 use tokio_serial::available_ports;
@@ -87,7 +88,7 @@ impl PortScanner {
 }
 
 impl SourceTrait<PortScannerEvent> for PortScanner {
-    fn subscribe(&mut self, sink: Box<dyn SinkTrait<PortScannerEvent>>) {
+    fn subscribe(&mut self, sink: SinkRef<PortScannerEvent>) {
         self.events.subscribe(sink);
     }
 }
