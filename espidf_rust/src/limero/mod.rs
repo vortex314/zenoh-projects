@@ -10,6 +10,7 @@ use {
 use alloc::collections::BTreeMap;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use core::any::type_name;
 use core::cell::RefCell;
 use core::marker::PhantomData;
 use core::ops::Shr;
@@ -42,6 +43,17 @@ pub struct Sink<M, const N: usize> {
     channel: Arc<Channel<CriticalSectionRawMutex, M, N>>,
 }
 
+trait DynSender<T> {
+    fn send(&self, message: T) ;
+}
+
+pub struct SinkRef<M>
+where
+    M: Clone + Send + Sync + 'static,
+{
+    sender: Arc<dyn DynSender<M> + Send + Sync>,
+}
+
 impl<M, const N: usize> Sink<M, N>
 where
     M: Clone + Send + Sync ,
@@ -55,40 +67,33 @@ where
     }
     pub fn sink_ref(&self) -> SinkRef<M> {
         SinkRef {
-            channel: self.channel.clone(),
+            sender: self.channel.clone(),
         }
     }
 }
 
-trait DynSender<T> {
-    fn try_send(&self, message: T) -> Result<(), String>;
-}
+
 
 impl<M, T, const N: usize> DynSender<T> for Channel<M, T, N>
 where
     M: RawMutex,
 {
-    fn try_send(&self, message: T) -> Result<(), String> {
+    fn send(&self, message: T)  {
         match self.try_send(message) {
-            Ok(()) => Ok(()),
-            Err(_) => Err(String::from("Channel full")),
-        }
+            Ok(()) => {},
+            Err(_) => {error!("Send fails on channel : Queue Full for {} " ,type_name::<T>());},
+        };
     }
 }
 
-pub struct SinkRef<M>
-where
-    M: Clone + Send + Sync + 'static,
-{
-    channel: Arc<dyn DynSender<M> + Send + Sync>,
-}
+
 
 impl<M> SinkTrait<M> for SinkRef<M>
 where
     M: Clone + Send + Sync,
 {
     fn push(&self, message: M) {
-        let _ = self.channel.try_send(message);
+        let _ = self.sender.send(message);
     }
 }
 
@@ -124,23 +129,10 @@ struct FlowState<T, U> where U:Clone+Sync+Send+'static ,T:Clone+Sync+Send {
     sink_ref:SinkRef<U>,
 }
 
-impl<T,U> FlowState <T,U> where T: Clone + Send + Sync, U: Clone + Send + Sync{
-    pub fn new(func: fn(T) -> Option<U>,sink_ref : SinkRef<U>) -> Self {
-        Self {
-            func,
-            sink_ref,
-        }
-    }
-    pub fn push(&self, t: T) {
-        (self.func)(t).map(|u| self.src.emit(u));
-    }
-}
 
 impl<T,U> DynSender<T> for FlowState<T,U> where T: Clone + Send + Sync, U: Clone + Send + Sync{
-    fn try_send(&self, t: T) -> Result<(), String> {
-        self.push(t);
-        Ok(())
-    }
+    fn send(&self, t: T)  {
+        (self.func)(t).map(|u| self.sink_ref.push(u));    }
 }
 
 pub struct FlowFunction<T, U>
@@ -170,24 +162,13 @@ where
         }
     }
     fn sink_ref(&self) -> SinkRef<T> where T: Clone + Send + Sync{
-        SinkRef { channel: self.flow_state.clone() }
+        SinkRef { sender: self.flow_state.clone() }
     }
 
-    pub fn push(&self, t: T) {
-        self.flow_state.push(t);
-    }
+    /*pub fn push(&self, t: T) {
+        (self.flow_state.func)(t).map(|u| self.flow_state.sink_ref.push(u));
+    }*/
 }
-
-impl<T, U> SourceTrait<U> for FlowFunction<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    fn subscribe(&mut self, sink_ref    : SinkRef<U>) {
-        self.flow_state.src.subscribe(sink_ref);
-    }
-}
-
 
 
 impl<C, E> DynSender<C> for FlowFunction<C, E>
@@ -195,111 +176,19 @@ where
     C: Clone + Send + Sync + 'static,
     E: Clone + Send + Sync + 'static,
 {
-    fn try_send(&self, message: C) -> Result<(), String> {
-        self.push(message);
-        Ok(())
+    fn send(&self, message: C)  {
+        self.flow_state.send(message);
+        
     }
 }
 
-pub struct FlowMap<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync+'static,
-{
-    func: fn(T) -> Option<U>,
-    src: Source<U>,
-    l: PhantomData<T>,
-}
-
-impl<T, U> FlowMap<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    pub fn new(func: fn(T) -> Option<U>) -> Self {
-        FlowMap {
-            func,
-            src: Source::new(),
-            l: PhantomData,
-        }
-    }
-}
-
-impl<T, U> SinkTrait<T> for FlowMap<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    fn push(&self, t: T) {
-        (self.func)(t).map(|u| self.src.emit(u));
-    }
-}
-
-impl<T, U> SourceTrait<U> for FlowMap<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    fn subscribe(&mut self, sink: SinkRef<U>) {
-        self.src.subscribe(sink);
-    }
-}
-
-/*impl<T> Shr<Box<dyn SinkTrait<T>>> for &mut dyn SourceTrait<T> {
-    type Output = ();
-    fn shr(self, sink: SinkRef<T>) -> () {
-        (*self).subscribe(sink);
-    }
-}*/
 
 pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink_ref: SinkRef<U>)
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
-    let mut flow = FlowFunction::new(func,sink_ref);
+    let flow = FlowFunction::new(func,sink_ref);
     src.subscribe(flow.sink_ref());
 }
 
-/*pub fn connect_map<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
-where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-{
-    let mut flow = FlowMap::new(func);
-    flow.subscribe(sink);
-    src.subscribe(flow.sink_ref());
-}*/
-/* 
-pub trait ActorTrait<C, E>
-where
-    C: Clone + Send + Sync + 'static,
-    E: Clone + Send + Sync + 'static,
-{
-    fn command_sink(&self) -> SinkRef<C>;
-    fn add_event_listener(&mut self, sink_ref: SinkRef<E>);
-}
-
-pub fn connect_actors<C1, E1, C2, E2>(
-    src: &mut dyn ActorTrait<C1, E1>,
-    func: fn(E1) -> Option<C2>,
-    dst: &dyn ActorTrait<C2, E2>,
-) where
-    C1: Clone + Send + Sync + 'static,
-    E1: Clone + Send + Sync + 'static,
-    C2: Clone + Send + Sync + 'static,
-    E2: Clone + Send + Sync + 'static,
-{
-    let mut flow = FlowFunction::new(func);
-    flow.subscribe(Box::new(dst.command_sink()));
-    src.add_event_listener(flow.sink_ref());
-}*/
-
-/*
-trait Actor<C,E> where C:Clone+Send+Sync+'static,E:Clone+Send+Sync+'static{
-    async fn run(&mut self);
-    fn command(&self) -> Sender<C>;
-    fn subscribe(&mut self, sink_ref : Sender<E>);
-}
-
-*/
