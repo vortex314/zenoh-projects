@@ -30,19 +30,20 @@ mod port_scanner;
 use port_scanner::*;
 
 mod transport;
-use transport::*;
 #[allow(unused_imports)]
-
-
 use core::result::Result;
+use transport::*;
 
 fn start_proxy(event: PortScannerEvent) -> Option<()> {
     match event {
         PortScannerEvent::PortAdded { port } => {
             info!("Port added : {:?}", port.port_name);
             let mut transport = Transport::new(port.clone());
-            let mut proxy_server = ProxySession::new( port,transport.sink_ref());
-            transport.subscribe(proxy_server.transport_sink_ref());
+            let mut proxy_server = ProxySession::new(port, transport.sink_ref());
+            transport.map(
+                |ev| Some(ProxyServerCmd::TransportEvent(ev)),
+                proxy_server.sink_ref(),
+            );
             tokio::spawn(async move {
                 transport.run().await;
             });
@@ -62,7 +63,7 @@ async fn main() -> Result<(), Error> {
     logger::init();
     info!("Starting Serial Proxy");
 
-    let  null_sink = Sink::<()>::new(1);
+    let null_sink = Sink::<()>::new(1);
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
@@ -72,7 +73,7 @@ async fn main() -> Result<(), Error> {
     }];
 
     let mut port_scanner = PortScanner::new(port_patterns);
-    connect(&mut port_scanner, start_proxy, null_sink.sink_ref()); // start a proxy when port detected
+    port_scanner.map( start_proxy, null_sink.sink_ref()); // start a proxy when port detected
 
     select! {
         _ = port_scanner.run()  => {

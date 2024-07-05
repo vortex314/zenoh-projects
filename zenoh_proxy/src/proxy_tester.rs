@@ -191,7 +191,7 @@ impl SinkTrait<ProxyTesterCmd> for ProxyTester {
 }
 
 impl SourceTrait<ProxyTesterEvent> for ProxyTester {
-    fn subscribe(&mut self, sink: SinkRef<ProxyTesterEvent>) {
-        self.events.subscribe(sink);
+    fn add_listener(&mut self, sink: SinkRef<ProxyTesterEvent>) {
+        self.events.add_listener(sink);
     }
 }

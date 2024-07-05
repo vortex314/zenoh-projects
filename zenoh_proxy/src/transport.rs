@@ -1,6 +1,7 @@
 use byte::TryWrite;
 use cobs::CobsDecoder;
 use log::info;
+use log::debug;
 use minicbor::decode::info;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
@@ -82,10 +83,10 @@ impl Transport {
                     cmd = self.commands.read() => {
                         match cmd.unwrap() {
                             TransportCmd::SendMessage { message } => {
-                                info!("Sending Message : {:?}", message);
+                                info!("TXD: {:?}", message);
                                 let x = encode_frame(message);
                                 let line : String = x.clone().unwrap().as_slice().iter().map(|b| format!("{:02X} ", b)).collect();
-                                info!("TXD : {}", line);
+                                debug!("TXD : {}", line);
                                 let _res = serial_stream.try_write(&x.unwrap().as_slice());
                                 let _r = serial_stream.flush();
                                 if _res.is_err()  || _r.is_err() {
@@ -113,7 +114,7 @@ impl Transport {
                                 };
                             } else {
                                 for message in _res {
-                                    info!("Received Message : {:?}", message);
+                                    info!("RXD: {:?}", message);
                                     self.events.emit(TransportEvent::RecvMessage { message: message });
                                 }
                             }
@@ -144,8 +145,8 @@ impl Transport {
 }
 
 impl SourceTrait<TransportEvent> for Transport {
-    fn subscribe(&mut self, sink: SinkRef<TransportEvent>) {
-        self.events.subscribe(sink);
+    fn add_listener(&mut self, sink: SinkRef<TransportEvent>) {
+        self.events.add_listener(sink);
     }
 }
 

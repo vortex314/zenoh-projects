@@ -1,5 +1,5 @@
 use crate::client::ClientSession;
-use crate::client::SessionCmd;
+use crate::client::SessionInput;
 use crate::client::SessionEvent;
 use crate::limero::timer::Timers;
 use crate::limero::Sink;
@@ -15,12 +15,12 @@ use embassy_futures::select::{self, select3, Either3};
 
 pub struct Sys {
     pub_sub_events: Sink<SessionEvent, 4>,
-    pub_sub_cmds: SinkRef<SessionCmd>,
+    pub_sub_cmds: SinkRef<SessionInput>,
     timers: Timers,
 }
 
 impl Sys {
-    pub fn new(client: SinkRef<SessionCmd>) -> Sys {
+    pub fn new(client: SinkRef<SessionInput>) -> Sys {
         let pub_sub_events = Sink::new();
         let pub_sub_cmds = client;
         Sys {

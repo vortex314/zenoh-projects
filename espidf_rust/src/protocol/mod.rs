@@ -124,7 +124,7 @@ pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
     }
     let mut bytes = encoder.into_writer().to_inner();
 
-    info!("Encoded MQTT-SN : {:02X?}", bytes);
+    debug!("Encoded MQTT-SN : {:02X?}", bytes);
 
     let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
     let crc = crc16.checksum(&bytes);

@@ -30,6 +30,16 @@ use crate::protocol::{decode_frame, encode_frame};
 
 pub const UART_BUFSIZE: usize = 127;
 
+#[derive(Clone)]
+pub enum TransportCmd {
+    SendMessage { message: MqttSnMessage },
+}
+
+#[derive(Clone)]
+pub enum TransportEvent {
+    RecvMessage { message: MqttSnMessage },
+}
+
 pub struct UartActor {
     command: Sink<MqttSnMessage, 4>,
     events: Source<MqttSnMessage>,
@@ -89,7 +99,7 @@ impl UartActor {
     }
 
     async fn on_cmd_msg(&mut self, msg: MqttSnMessage) {
-        info!("Send message: {:?}", msg);
+        info!("TXD: {:?}", msg);
         let bytes = encode_frame(msg).unwrap();
         let line:String  = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
         debug!(" TXD {}",line);
@@ -100,7 +110,7 @@ impl UartActor {
         let v = self.message_decoder.decode(small_buf);
         // Read characters from UART into read buffer until EOT
         for msg in v {
-            info!("Received message: {:?}", msg);
+            info!("RXD: {:?}", msg);
             self.events.emit(msg);
         }
     }
@@ -108,7 +118,7 @@ impl UartActor {
 }
 
 impl SourceTrait<MqttSnMessage> for UartActor {
-    fn subscribe(&mut self, sink: SinkRef<MqttSnMessage>) {
-        self.events.subscribe(sink);
+    fn add_listener(&mut self, sink: SinkRef<MqttSnMessage>) {
+        self.events.add_listener(sink);
     }
 }

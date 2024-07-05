@@ -21,6 +21,7 @@ use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
 
 use embedded_hal::digital::v2::OutputPin;
+use embedded_svc::http::client::Client;
 use esp_backtrace as _;
 use esp_hal::gpio::any_pin::AnyPin;
 use esp_hal::gpio::{AnyOutput, GpioPin, Io, Level, Output};
@@ -37,7 +38,7 @@ use esp_hal::{
 };
 use esp_hal_embassy::*;
 use esp_println::println;
-use limero::{connect, SourceTrait};
+use limero::{ FlowFunction, SourceTrait};
 use log::info;
 
 use minicbor::decode::info;
@@ -49,7 +50,7 @@ mod protocol;
 use protocol::msg::MqttSnMessage;
 
 mod client;
-use client::{ClientSession, SessionEvent};
+use client::{ClientSession, SessionEvent, SessionInput};
 
 mod uart;
 use uart::UartActor;
@@ -110,7 +111,7 @@ async fn main(_spawner: Spawner) {
     let mut led_actor = Led::new(led_pin); // pass as OutputPin
 
     let mut uart0 = Uart::new_async(peripherals.UART0, &clocks);
-    uart0.change_baud(921600,ClockSource::Apb,&clocks);
+    uart0.change_baud(921600, ClockSource::Apb, &clocks);
 
     if uart0.set_rx_fifo_full_threshold(127).is_err() {
         info!("Error setting RX FIFO full threshold");
@@ -126,16 +127,20 @@ async fn main(_spawner: Spawner) {
     let mut uart_actor = UartActor::new(uart0);
 
     let mut client_session = ClientSession::new(uart_actor.sink_ref());
-    uart_actor.subscribe(client_session.transport_sink_ref());
-    connect(
-        &mut client_session,
-        map_connected_to_blink_fast,
-        led_actor.sink_ref(),
-    );
+    uart_actor.map(|ev| Some(SessionInput::Rxd(ev)), client_session.sink_ref());
+
+    client_session.map(|ev| map_connected_to_blink_fast(ev), led_actor.sink_ref());
+
     let mut sys_actor = Sys::new(client_session.sink_ref());
-    client_session.subscribe(sys_actor.on_session_event());
+    client_session.add_listener(sys_actor.on_session_event());
 
     loop {
-        select4(uart_actor.run(), client_session.run(), led_actor.run(),sys_actor.run()).await;
+        select4(
+            uart_actor.run(),
+            client_session.run(),
+            led_actor.run(),
+            sys_actor.run(),
+        )
+        .await;
     }
 }

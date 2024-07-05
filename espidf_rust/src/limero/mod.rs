@@ -29,13 +29,24 @@ pub trait SinkTrait<M>: Send + Sync {
     fn push(&self, m: M);
 }
 
-pub trait SourceTrait<M> where M : Clone + Send + Sync{
-    fn subscribe(&mut self, sink_ref:SinkRef<M>);
+pub trait SourceTrait<M> where M : Clone + Send + Sync +'static{
+    fn add_listener(&mut self, sink_ref:SinkRef<M>);
+    fn map<U>(&mut self,func: fn(M) -> Option<U>,sink_ref:SinkRef<U>) where U: Clone + Send + Sync 
+    {
+        let flow = FlowFunction::new(func,sink_ref);
+        self.add_listener(flow.sink_ref());
+    }
+    /*fn filter<U>(&mut self,func: fn(M) -> bool,sink_ref:SinkRef<U>) where U: Clone + Send + Sync 
+    {
+        let g = |m:M| -> Option<M> { if func(m) {Some(m)} else {None} };
+        let flow = FlowFunction::new(g,sink_ref);
+        self.add_listener(flow.sink_ref());
+    }*/
 }
 pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
 where
     T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
+    U: Clone + Send + Sync+'static,
 {
 }
 
@@ -53,6 +64,10 @@ where
 {
     sender: Arc<dyn DynSender<M> + Send + Sync>,
 }
+
+
+
+
 
 impl<M, const N: usize> Sink<M, N>
 where
@@ -119,7 +134,7 @@ impl<T> SourceTrait<T> for Source<T>
 where
     T: Clone + Send + Sync,
 {
-    fn subscribe(&mut self, sink_ref: SinkRef<T>) {
+    fn add_listener(&mut self, sink_ref: SinkRef<T>) {
         self.sinks.push(sink_ref);
     }
 }
@@ -183,12 +198,12 @@ where
 }
 
 
-pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink_ref: SinkRef<U>)
+/*pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink_ref: SinkRef<U>)
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
     let flow = FlowFunction::new(func,sink_ref);
-    src.subscribe(flow.sink_ref());
-}
+    src.add_listener(flow.sink_ref());
+}*/
 

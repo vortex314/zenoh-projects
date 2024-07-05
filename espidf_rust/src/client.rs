@@ -14,8 +14,9 @@ use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use embassy_futures::select::Either3::{First, Second, Third};
-use embassy_futures::select::{self, select3, Either3};
+use embassy_futures::select::Either::{First, Second};
+use embassy_futures::select::{self};
+use embassy_futures::select::select;
 use embassy_time::{with_timeout, Duration, Instant};
 use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
@@ -43,11 +44,12 @@ enum State {
 }
 
 #[derive(Clone, Debug)]
-pub enum SessionCmd {
+pub enum SessionInput {
     Publish { topic: String, message: String },
     Subscribe { topic: String },
     Unsubscribe { topic: String },
     Connect { client_id: String },
+    Rxd(MqttSnMessage),
     Disconnect,
 }
 #[derive(Clone, Debug)]
@@ -64,7 +66,7 @@ enum TimerId {
 }
 
 pub struct ClientSession {
-    command: Sink<SessionCmd, 3>,
+    command: Sink<SessionInput, 3>,
     events: Source<SessionEvent>,
     transport_cmd: SinkRef<MqttSnMessage>,
     rxd_msg: Sink<MqttSnMessage, 3>,
@@ -99,7 +101,7 @@ impl ClientSession {
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<SessionCmd> {
+    pub fn sink_ref(&self) -> SinkRef<SessionInput> {
         self.command.sink_ref()
     }
 
@@ -140,21 +142,32 @@ impl ClientSession {
             Duration::from_millis(1_000),
         ));
 
+        self.transport_cmd.push(MqttSnMessage::Connect {
+            flags: Flags(0),
+            duration: 100,
+            client_id: self.client_id.clone(),
+        });
+
         loop {
-            match select3(
+            match select(
                 self.command.read(),
-                self.rxd_msg.read(),
                 self.timers.alarm(),
             )
             .await
             {
                 First(msg) => {
-                    self.on_cmd_message(msg.unwrap()).await;
+                    match msg {
+                        Some(SessionInput::Rxd(m)) => {
+                            self.on_rxd_message(m).await;
+                        },
+                        Some(cmd) => {
+                            self.on_cmd_message(cmd).await;
+                        },
+                        None => { info!("Unexpected {:?}", msg);}
+
+                    }
                 }
-                Second(msg) => {
-                    self.on_rxd_message(msg.unwrap()).await;
-                }
-                Third(idx) => {
+                Second(idx) => {
                     self.on_timeout(idx).await;
                 }
             }
@@ -320,9 +333,9 @@ impl ClientSession {
         }
     }
 
-    pub async fn on_cmd_message(&mut self, cmd: SessionCmd) {
+    pub async fn on_cmd_message(&mut self, cmd: SessionInput) {
         match cmd {
-            SessionCmd::Publish { topic, message } => {
+            SessionInput::Publish { topic, message } => {
                 let topic_id = self.get_client_topic_from_string(&topic);
                 let mut flags = Flags(0);
                 flags.set_qos(0);
@@ -334,7 +347,7 @@ impl ClientSession {
                 });
                 self.msg_id += 1;
             }
-            SessionCmd::Subscribe { topic } => {
+            SessionInput::Subscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
                 self.transport_cmd.push(MqttSnMessage::Register {
@@ -343,7 +356,7 @@ impl ClientSession {
                     topic_name: topic,
                 });
             }
-            SessionCmd::Unsubscribe { topic } => {
+            SessionInput::Unsubscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
                 self.transport_cmd.push(MqttSnMessage::PubAck {
@@ -352,23 +365,26 @@ impl ClientSession {
                     return_code: ReturnCode::Accepted,
                 });
             }
-            SessionCmd::Connect { client_id } => {
+            SessionInput::Connect { client_id } => {
                 self.transport_cmd.push(MqttSnMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: client_id.clone(),
                 });
             }
-            SessionCmd::Disconnect => {
+            SessionInput::Disconnect => {
                 self.transport_cmd
                     .push(MqttSnMessage::Disconnect { duration: 0 });
+            },
+            _ => {
+                info!("Unexpected command {:?}", cmd);
             }
         }
     }
 }
 
 impl SourceTrait<SessionEvent> for ClientSession {
-    fn subscribe(&mut self, sink: SinkRef<SessionEvent>) {
-        self.events.subscribe(sink);
+    fn add_listener(&mut self, sink: SinkRef<SessionEvent>) {
+        self.events.add_listener(sink);
     }
 }

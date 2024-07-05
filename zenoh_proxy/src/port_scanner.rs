@@ -88,8 +88,8 @@ impl PortScanner {
 }
 
 impl SourceTrait<PortScannerEvent> for PortScanner {
-    fn subscribe(&mut self, sink: SinkRef<PortScannerEvent>) {
-        self.events.subscribe(sink);
+    fn add_listener(&mut self, sink: SinkRef<PortScannerEvent>) {
+        self.events.add_listener(sink);
     }
 }
 pub struct PortPattern {

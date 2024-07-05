@@ -23,11 +23,11 @@ use tokio::sync::Mutex;
 use core::result::Result;
 use log::error;
 use log::{debug, info};
+use std::any::type_name;
 use std::error::Error;
 use std::marker::PhantomData;
 use std::sync::Mutex as StdMutex;
 use std::sync::RwLock;
-use std::any::type_name;
 
 mod timer;
 pub use timer::*;
@@ -36,16 +36,29 @@ pub trait SinkTrait<M>: Send + Sync {
     fn push(&self, m: M);
 }
 
-pub trait SourceTrait<M>: Send + Sync
+pub trait SourceTrait<M>: Send + Sync+'static
 where
-    M: Clone + Send + Sync,
+    M: Clone + Send + Sync+'static,
 {
-    fn subscribe(&mut self, sink: SinkRef<M>);
+    fn add_listener(&mut self, sink: SinkRef<M>);
+    fn map<U>(&mut self, func: fn(M) -> Option<U>, sink_ref: SinkRef<U>)
+    where
+        U: Clone + Send + Sync+'static,
+    {
+        let flow = FlowFunction::new(func, sink_ref);
+        self.add_listener(flow.sink_ref());
+    }
+    /*fn filter<U>(&mut self,func: fn(M) -> bool,sink_ref:SinkRef<U>) where U: Clone + Send + Sync
+    {
+        let g = |m:M| -> Option<M> { if func(m) {Some(m)} else {None} };
+        let flow = FlowFunction::new(g,sink_ref);
+        self.add_listener(flow.sink_ref());
+    }*/
 }
 pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
 where
     T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
+    U: Clone + Send + Sync+'static,
 {
 }
 
@@ -101,7 +114,7 @@ impl<T> DynSender<T> for Sender<T> {
     fn send(&self, t: T) {
         match self.try_send(t) {
             Ok(_) => (),
-            Err(e) => error!("Send error '{}' for {} ", e,type_name::<T>()),
+            Err(e) => error!("Send error '{}' for {} ", e, type_name::<T>()),
         }
     }
 }
@@ -142,9 +155,9 @@ where
 
 impl<T> SourceTrait<T> for Source<T>
 where
-    T: Clone + Send + Sync,
+    T: Clone + Send + Sync+'static,
 {
-    fn subscribe(&mut self, sink_ref: SinkRef<T>) {
+    fn add_listener(&mut self, sink_ref: SinkRef<T>) {
         self.sink_refs.push(sink_ref);
     }
 }
@@ -227,24 +240,8 @@ where
     }
 }
 
-impl<T> Shr<SinkRef<T>> for &mut dyn SourceTrait<T>
-where
-    T: Clone + Send + Sync,
-{
-    type Output = ();
-    fn shr(self, sink: SinkRef<T>) -> () {
-        (*self).subscribe(sink);
-    }
-}
 
-pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink: SinkRef<U>)
-where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-{
-    let flow = FlowFunction::new(func, sink);
-    src.subscribe(flow.sink_ref());
-}
+
 
 pub trait ActorTrait<T, U>
 where
@@ -253,7 +250,7 @@ where
 {
     fn run(&mut self);
     fn command_sink(&self) -> SinkRef<T>;
-    fn subscribe(&mut self, sink: SinkRef<U>);
+    fn add_listener(&mut self, sink: SinkRef<U>);
 }
 
 pub fn connect_actors<T, U, V, W>(
@@ -267,5 +264,5 @@ pub fn connect_actors<T, U, V, W>(
     W: Clone + Send + Sync + 'static,
 {
     let flow = FlowFunction::new(func, dst.command_sink());
-    src.subscribe(flow.sink_ref());
+    src.add_listener(flow.sink_ref());
 }
