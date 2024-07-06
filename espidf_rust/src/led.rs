@@ -61,7 +61,7 @@ impl Led {
         self.timers
             .add_timer(Timer::new_repeater(0, Duration::from_millis(1_000)));
         loop {
-            match select(self.commands.read(), self.timers.alarm()).await {
+            match select(self.commands.next(), self.timers.alarm()).await {
                 First(msg) => {
                     self.on_cmd(msg.unwrap());
                 }

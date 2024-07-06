@@ -28,7 +28,10 @@ use protocol::MTU_SIZE;
 
 use crate::transport::*;
 
+use zenoh::open;
 use zenoh::prelude::r#async::*;
+use zenoh::subscriber::Subscriber;
+use zenoh::Session;
 
 const GREEN: &str = "\x1b[0;32m";
 const RESET: &str = "\x1b[m";
@@ -84,6 +87,7 @@ impl ProxySession {
             will_message: None,
             topic_id_counter: 0,
             client_id: None,
+            zenoh_session: None,
         }
     }
 
@@ -118,13 +122,18 @@ impl ProxySession {
     pub async fn run(&mut self) {
         let mut config = Config::from_file("./zenohd.json5");
         if config.is_err() {
-            error!("Error reading zenohd.json5 file, using default config {}", config.err().unwrap());
-            config =Ok(config::default());
+            error!(
+                "Error reading zenohd.json5 file, using default config {}",
+                config.err().unwrap()
+            );
+            config = Ok(config::default());
         } else {
             info!("Using zenohd.json5 file");
         }
-        let zenoh_session = zenoh::open(config.unwrap()).res().await.unwrap();
-        let zenoh_subscriber = zenoh_session
+        self.zenoh_session = Some(zenoh::open(config.unwrap()).res().await.unwrap());
+        let zenoh_subscriber = self
+            .zenoh_session.as_mut()
+            .unwrap()
             .declare_subscriber("esp32/*")
             .res()
             .await
@@ -140,11 +149,11 @@ impl ProxySession {
                     //self.transport_send(MqttSnMessage::Publish { flags:0,topic_id:0, msg_id:0, data: message });
 
                 },
-                cmd = self.commands.read() => {
+                cmd = self.commands.next() => {
                     match cmd.unwrap() {
                         ProxyServerCmd::Publish { topic, message } => {
                             info!("Publishing message to zenoh");
-                            zenoh_session.put(&topic, message).res().await.unwrap();
+                            self.zenoh_session.as_ref().unwrap().put(&topic, message).res().await.unwrap();
                         },
                         ProxyServerCmd::TransportEvent(event) => {
                              self.on_transport_event(event);
@@ -169,7 +178,7 @@ impl ProxySession {
         }
     }
 
-    fn on_transport_rxd(&mut self, event: MqttSnMessage) {
+    async fn on_transport_rxd(&mut self, event: MqttSnMessage) {
         match event {
             MqttSnMessage::Connect {
                 flags: _,
@@ -195,29 +204,34 @@ impl ProxySession {
                 flags,
                 topic_id,
                 msg_id,
-                data: _,
-            } => {
-                match self.client_topics.get(&topic_id) {
-                    Some(_topic) => {
-                        // zenoh_session.put(&topic.name, message).res().await.unwrap();
-                        if flags.qos() == 1 {
-                            self.transport_send(MqttSnMessage::PubAck {
-                                topic_id,
-                                msg_id,
-                                return_code: ReturnCode::Accepted,
-                            });
-                        }
-                    }
-                    None => {
-                        info!("Received Publish message for unknown topic");
+                data,
+            } => match self.client_topics.get(&topic_id) {
+                Some(_topic) => {
+                    info!("Received Publish message for known topic");
+                    let x = self.client_topics.get_mut(&topic_id).unwrap().name.clone();
+                    self.zenoh_session
+                        .unwrap()
+                        .put(&x, data)
+                        .res()
+                        .await
+                        .unwrap();
+                    if flags.qos() == 1 {
                         self.transport_send(MqttSnMessage::PubAck {
                             topic_id,
                             msg_id,
-                            return_code: ReturnCode::InvalidTopicId,
+                            return_code: ReturnCode::Accepted,
                         });
                     }
                 }
-            }
+                None => {
+                    info!("Received Publish message for unknown topic");
+                    self.transport_send(MqttSnMessage::PubAck {
+                        topic_id,
+                        msg_id,
+                        return_code: ReturnCode::InvalidTopicId,
+                    });
+                }
+            },
             MqttSnMessage::Subscribe {
                 flags,
                 msg_id,

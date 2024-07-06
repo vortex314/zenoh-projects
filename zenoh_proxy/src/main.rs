@@ -34,13 +34,16 @@ mod transport;
 use core::result::Result;
 use transport::*;
 
-fn start_proxy(event: PortScannerEvent) -> Option<()> {
+mod ping_pong;
+use ping_pong::*;
+
+fn start_proxy(event: PortScannerEvent)  {
     match event {
         PortScannerEvent::PortAdded { port } => {
             info!("Port added : {:?}", port.port_name);
             let mut transport = Transport::new(port.clone());
             let mut proxy_server = ProxySession::new(port, transport.sink_ref());
-            transport.map(
+            transport.map_to(
                 |ev| Some(ProxyServerCmd::TransportEvent(ev)),
                 proxy_server.sink_ref(),
             );
@@ -55,15 +58,13 @@ fn start_proxy(event: PortScannerEvent) -> Option<()> {
             info!("Port removed : {:?}", port);
         }
     }
-    None
 }
 
 #[tokio::main(worker_threads = 1)]
 async fn main() -> Result<(), Error> {
     logger::init();
     info!("Starting Serial Proxy");
-
-    let null_sink = Sink::<()>::new(1);
+ //   ping_pong::do_test().await;
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),
@@ -73,7 +74,7 @@ async fn main() -> Result<(), Error> {
     }];
 
     let mut port_scanner = PortScanner::new(port_patterns);
-    port_scanner.map( start_proxy, null_sink.sink_ref()); // start a proxy when port detected
+    port_scanner.for_each( start_proxy); // start a proxy when port detected
 
     select! {
         _ = port_scanner.run()  => {

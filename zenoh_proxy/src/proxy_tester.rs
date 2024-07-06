@@ -115,7 +115,7 @@ impl ProxyTester {
                 _msg = zenoh_subscriber.recv_async() => {
 
                 },
-                cmd = self.commands.read() => {
+                cmd = self.commands.next() => {
                     match cmd {
                        _ => {
                            info!("Received command from client ");
@@ -123,7 +123,7 @@ impl ProxyTester {
 
                     }
                 },
-                event = self.transport_event.read() => {
+                event = self.transport_event.next() => {
                     match event {
                         Some(TransportEvent::ConnectionLost {}) => {
                             info!("Connection lost");

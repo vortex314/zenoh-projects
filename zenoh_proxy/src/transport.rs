@@ -80,7 +80,7 @@ impl Transport {
 
             loop {
                 select! {
-                    cmd = self.commands.read() => {
+                    cmd = self.commands.next() => {
                         match cmd.unwrap() {
                             TransportCmd::SendMessage { message } => {
                                 info!("TXD: {:?}", message);

@@ -63,6 +63,9 @@ use sys::*;
 
 mod limero;
 
+mod ping_pong;
+use ping_pong::*;
+
 extern crate alloc;
 
 #[global_allocator]
@@ -99,6 +102,8 @@ async fn main(_spawner: Spawner) {
     // Initialize Embassy with needed timers
     let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
     esp_hal_embassy::init(&clocks, timg0);
+ //   ping_pong::do_test(_spawner).await;
+
 
     // Initialize and configure UART0
 
@@ -127,9 +132,9 @@ async fn main(_spawner: Spawner) {
     let mut uart_actor = UartActor::new(uart0);
 
     let mut client_session = ClientSession::new(uart_actor.sink_ref());
-    uart_actor.map(|ev| Some(SessionInput::Rxd(ev)), client_session.sink_ref());
+    uart_actor.map_to(|ev| Some(SessionInput::Rxd(ev)), client_session.sink_ref());
 
-    client_session.map(|ev| map_connected_to_blink_fast(ev), led_actor.sink_ref());
+    client_session.map_to(|ev| map_connected_to_blink_fast(ev), led_actor.sink_ref());
 
     let mut sys_actor = Sys::new(client_session.sink_ref());
     client_session.add_listener(sys_actor.on_session_event());

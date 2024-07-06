@@ -41,12 +41,15 @@ where
     M: Clone + Send + Sync+'static,
 {
     fn add_listener(&mut self, sink: SinkRef<M>);
-    fn map<U>(&mut self, func: fn(M) -> Option<U>, sink_ref: SinkRef<U>)
-    where
-        U: Clone + Send + Sync+'static,
+    fn map_to<U>(&mut self,func: fn(M) -> Option<U>,sink_ref:SinkRef<U>) where U: Clone + Send + Sync +'static
     {
-        let flow = FlowFunction::new(func, sink_ref);
+        let flow = FlowFunction::new(func,sink_ref);
         self.add_listener(flow.sink_ref());
+    }
+    fn for_each(&mut self,func: fn(M) -> ()) where M: Clone + Send + Sync 
+    {
+        let sink_func = SinkFunction::new(func);
+        self.add_listener(sink_func.sink_ref());
     }
     /*fn filter<U>(&mut self,func: fn(M) -> bool,sink_ref:SinkRef<U>) where U: Clone + Send + Sync
     {
@@ -88,7 +91,7 @@ where
         let (tx, rx) = tokio::sync::mpsc::channel(size);
         Sink { tx, rx }
     }
-    pub async fn read(&mut self) -> Option<M> {
+    pub async fn next(&mut self) -> Option<M> {
         self.rx.recv().await
     }
     pub fn sink_ref(&self) -> SinkRef<M> {
@@ -194,6 +197,33 @@ where
     }
 }
 
+#[derive(Clone)]
+pub struct SinkFunction<M> {
+    func : Arc< fn(M) -> ()>
+}
+
+impl<M:'static> SinkFunction<M> {
+    pub fn new(func: fn(M) -> ()) -> Self {
+        SinkFunction {
+            func: Arc::new(func),
+        }
+    }
+    fn sink_ref(&self) -> SinkRef<M> where M: Clone + Send + Sync{
+        SinkRef { sender: Arc::new((*self).clone()) }
+    }
+}
+
+impl<M> SinkTrait<M> for SinkFunction<M> {
+    fn push(&self, _message: M) {
+        (self.func)(_message);
+    }
+}
+
+impl<M> DynSender<M> for SinkFunction<M>{
+    fn send(&self, _message: M) {
+        (self.func)(_message);
+    }
+}
 pub struct FlowFunction<T, U>
 where
     T: Clone + Send + Sync,
@@ -243,26 +273,14 @@ where
 
 
 
-pub trait ActorTrait<T, U>
+pub trait ActorTrait<T, U> // : SinkTrait<T> + SourceTrait<U>
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
 {
-    fn run(&mut self);
-    fn command_sink(&self) -> SinkRef<T>;
+    async fn run(&mut self);
+    fn sink_ref(&self) -> SinkRef<T>;
     fn add_listener(&mut self, sink: SinkRef<U>);
 }
 
-pub fn connect_actors<T, U, V, W>(
-    src: &mut dyn ActorTrait<T, U>,
-    func: fn(U) -> Option<V>,
-    dst: &dyn ActorTrait<V, W>,
-) where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-    V: Clone + Send + Sync + 'static,
-    W: Clone + Send + Sync + 'static,
-{
-    let flow = FlowFunction::new(func, dst.command_sink());
-    src.add_listener(flow.sink_ref());
-}
+

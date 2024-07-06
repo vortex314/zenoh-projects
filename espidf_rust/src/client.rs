@@ -14,9 +14,9 @@ use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use embassy_futures::select::{self};
-use embassy_futures::select::select;
 use embassy_time::{with_timeout, Duration, Instant};
 use embedded_svc::ws::Receiver;
 use esp_backtrace as _;
@@ -112,7 +112,7 @@ impl ClientSession {
     fn register_topic(&mut self, topic: &str) -> u16 {
         let topic_id = self.topic_id_counter;
         self.topic_id_counter += 1;
-        self.transport_cmd.push(MqttSnMessage::Register {
+        self.txd(MqttSnMessage::Register {
             topic_id: self.topic_id_counter,
             msg_id: 0,
             topic_name: topic.to_string(),
@@ -132,6 +132,10 @@ impl ClientSession {
         topic_id
     }
 
+    fn txd(&mut self, msg: MqttSnMessage) {
+        self.transport_cmd.send(msg);
+    }
+
     pub async fn run(&mut self) {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::ConnectTimer as u32,
@@ -142,31 +146,25 @@ impl ClientSession {
             Duration::from_millis(1_000),
         ));
 
-        self.transport_cmd.push(MqttSnMessage::Connect {
+        self.txd(MqttSnMessage::Connect {
             flags: Flags(0),
             duration: 100,
             client_id: self.client_id.clone(),
         });
 
         loop {
-            match select(
-                self.command.read(),
-                self.timers.alarm(),
-            )
-            .await
-            {
-                First(msg) => {
-                    match msg {
-                        Some(SessionInput::Rxd(m)) => {
-                            self.on_rxd_message(m).await;
-                        },
-                        Some(cmd) => {
-                            self.on_cmd_message(cmd).await;
-                        },
-                        None => { info!("Unexpected {:?}", msg);}
-
+            match select(self.command.next(), self.timers.alarm()).await {
+                First(msg) => match msg {
+                    Some(SessionInput::Rxd(m)) => {
+                        self.on_rxd_message(m).await;
                     }
-                }
+                    Some(cmd) => {
+                        self.on_cmd_message(cmd).await;
+                    }
+                    None => {
+                        info!("Unexpected {:?}", msg);
+                    }
+                },
                 Second(idx) => {
                     self.on_timeout(idx).await;
                 }
@@ -177,7 +175,7 @@ impl ClientSession {
     async fn on_timeout(&mut self, id: u32) {
         if id == TimerId::ConnectTimer as u32 {
             if self.state == State::Disconnected {
-                self.transport_cmd.push(MqttSnMessage::Connect {
+                self.txd(MqttSnMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: self.client_id.clone(),
@@ -185,14 +183,13 @@ impl ClientSession {
             }
         } else if id == TimerId::PingTimer as u32 {
             if self.state == State::Connected {
-                self.transport_cmd.push(MqttSnMessage::PingReq {
+                self.txd(MqttSnMessage::PingReq {
                     timestamp: Instant::now().as_millis() as u64,
                 });
                 self.ping_timeouts += 1;
                 if self.ping_timeouts > 3 {
                     info!("Ping timeout >3 disconnecting    ");
-                    self.transport_cmd
-                        .push(MqttSnMessage::Disconnect { duration: 0 });
+                    self.txd(MqttSnMessage::Disconnect { duration: 0 });
                     self.state = State::Disconnected;
                     self.events.emit(SessionEvent::Disconnected);
                 }
@@ -202,7 +199,7 @@ impl ClientSession {
             self.ping_timeouts += 1;
             if self.ping_timeouts > 3 {
                 self.transport_cmd
-                    .push(MqttSnMessage::Disconnect { duration: 0 });
+                    .send(MqttSnMessage::Disconnect { duration: 0 });
             }
         }
     }
@@ -225,12 +222,12 @@ impl ClientSession {
                     self.state = State::Connected;
                     self.events.emit(SessionEvent::Connected);
                 }
-                self.transport_cmd.push(MqttSnMessage::Register {
+                self.txd(MqttSnMessage::Register {
                     topic_id: 0,
                     msg_id: 0,
                     topic_name: "ESP32".to_string(),
                 });
-                self.transport_cmd.push(MqttSnMessage::Register {
+                self.txd(MqttSnMessage::Register {
                     topic_id: 1,
                     msg_id: 0,
                     topic_name: "latency".to_string(),
@@ -243,7 +240,7 @@ impl ClientSession {
                 let diff: u64 = now - timestamp;
                 debug!("Ping response time {}", diff);
                 let topic_id = self.get_client_topic_from_string("latency");
-                self.transport_cmd.push(MqttSnMessage::Publish {
+                self.txd(MqttSnMessage::Publish {
                     topic_id, // 1 is the topic id for the ping response
                     msg_id: self.msg_id,
                     flags: Flags(0),
@@ -272,13 +269,13 @@ impl ClientSession {
             } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.transport_cmd.push(MqttSnMessage::PubAck {
+                    self.txd(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::Accepted,
                     });
                 } else {
-                    self.transport_cmd.push(MqttSnMessage::PubAck {
+                    self.txd(MqttSnMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::InvalidTopicId,
@@ -305,7 +302,7 @@ impl ClientSession {
                         return;
                     }
                     let topic_name = topic_name.unwrap().0;
-                    self.transport_cmd.push(MqttSnMessage::Register {
+                    self.txd(MqttSnMessage::Register {
                         topic_id,
                         msg_id,
                         topic_name: topic_name.clone(),
@@ -339,7 +336,7 @@ impl ClientSession {
                 let topic_id = self.get_client_topic_from_string(&topic);
                 let mut flags = Flags(0);
                 flags.set_qos(0);
-                self.transport_cmd.push(MqttSnMessage::Publish {
+                self.txd(MqttSnMessage::Publish {
                     flags,
                     topic_id,
                     msg_id: self.msg_id,
@@ -350,7 +347,7 @@ impl ClientSession {
             SessionInput::Subscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
-                self.transport_cmd.push(MqttSnMessage::Register {
+                self.txd(MqttSnMessage::Register {
                     topic_id,
                     msg_id: self.msg_id,
                     topic_name: topic,
@@ -359,14 +356,14 @@ impl ClientSession {
             SessionInput::Unsubscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
-                self.transport_cmd.push(MqttSnMessage::PubAck {
+                self.txd(MqttSnMessage::PubAck {
                     topic_id,
                     msg_id: self.msg_id,
                     return_code: ReturnCode::Accepted,
                 });
             }
             SessionInput::Connect { client_id } => {
-                self.transport_cmd.push(MqttSnMessage::Connect {
+                self.txd(MqttSnMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: client_id.clone(),
@@ -374,8 +371,8 @@ impl ClientSession {
             }
             SessionInput::Disconnect => {
                 self.transport_cmd
-                    .push(MqttSnMessage::Disconnect { duration: 0 });
-            },
+                    .send(MqttSnMessage::Disconnect { duration: 0 });
+            }
             _ => {
                 info!("Unexpected command {:?}", cmd);
             }

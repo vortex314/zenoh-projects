@@ -1,5 +1,5 @@
 [target.xtensa-esp32-none-elf]
-runner = "espflash  --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
+runner = "espflash --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
 
 [env]
 ESP_LOGLEVEL="INFO"
@@ -13,7 +13,7 @@ rustflags = [
 ]
 
 target = "xtensa-esp32-none-elf"
-# runner = "espflash flash --baud=921600 --monitor /dev/ttyUSB0"
+# runner = "espflash flash --monitor --baud=921600 --monitor /dev/ttyUSB0"
 runner = "espflash flash --baud=921600  /dev/ttyUSB0"
 
 [unstable]

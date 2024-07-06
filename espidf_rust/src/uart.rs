@@ -75,7 +75,7 @@ impl UartActor {
         loop {
             match select(
                 self.rx.read_async(&mut small_buf),
-                self.command.read(),
+                self.command.next(),
             )
             .await
             {

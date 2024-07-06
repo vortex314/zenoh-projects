@@ -36,7 +36,7 @@ impl Sys {
 
     pub async fn run(&mut self) {
         loop {
-            match select(self.pub_sub_events.read(), self.timers.alarm()).await {
+            match select(self.pub_sub_events.next(), self.timers.alarm()).await {
                 First(event) => {
                     self.on_event(event.unwrap()).await;
                 }
