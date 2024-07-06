@@ -87,7 +87,6 @@ impl ProxySession {
             will_message: None,
             topic_id_counter: 0,
             client_id: None,
-            zenoh_session: None,
         }
     }
 
@@ -131,7 +130,7 @@ impl ProxySession {
             info!("Using zenohd.json5 file");
         }
         self.zenoh_session = Some(zenoh::open(config.unwrap()).res().await.unwrap());
-        let zenoh_subscriber = self
+        let mut zenoh_subscriber = self
             .zenoh_session.as_mut()
             .unwrap()
             .declare_subscriber("esp32/*")
@@ -210,6 +209,7 @@ impl ProxySession {
                     info!("Received Publish message for known topic");
                     let x = self.client_topics.get_mut(&topic_id).unwrap().name.clone();
                     self.zenoh_session
+                    .as_ref()
                         .unwrap()
                         .put(&x, data)
                         .res()
