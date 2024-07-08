@@ -27,6 +27,7 @@ use protocol::MessageDecoder;
 use protocol::MTU_SIZE;
 
 use crate::transport::*;
+use crate::zenoh_pubsub::*;
 
 use zenoh::open;
 use zenoh::prelude::r#async::*;
@@ -43,10 +44,11 @@ pub enum ProxyServerEvent {
     Publish { topic: String, message: Vec<u8> },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ProxyServerCmd {
     Publish { topic: String, message: Vec<u8> },
     TransportEvent(TransportEvent),
+    PubSubEvent(PubSubEvent),
     Disconnect,
 }
 
@@ -57,10 +59,10 @@ struct TopicId {
 }
 
 pub struct ProxySession {
-    port_info: SerialPortInfo,
     events: Source<ProxyServerEvent>,
-    commands: Sink<ProxyServerCmd>,
+    cmds: Sink<ProxyServerCmd>,
     transport_cmd: SinkRef<TransportCmd>,
+    pubsub_cmd: SinkRef<PubSubCmd>,
     zenoh_session: Option<zenoh::Session>,
     client_topics: BTreeMap<u16, TopicId>,
     server_topics: BTreeMap<u16, TopicId>,
@@ -71,15 +73,15 @@ pub struct ProxySession {
 }
 
 impl ProxySession {
-    pub fn new(port_info: SerialPortInfo, transport: SinkRef<TransportCmd>) -> Self {
+    pub fn new(pubsub_cmd: SinkRef<PubSubCmd>, transport_cmd: SinkRef<TransportCmd>) -> Self {
         let commands = Sink::new(100);
         let events = Source::new();
 
         ProxySession {
-            port_info,
             events,
-            commands,
-            transport_cmd: transport,
+            cmds: commands,
+            transport_cmd,
+            pubsub_cmd,
             zenoh_session: None,
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
@@ -91,7 +93,7 @@ impl ProxySession {
     }
 
     pub fn sink_ref(&self) -> SinkRef<ProxyServerCmd> {
-        self.commands.sink_ref()
+        self.cmds.sink_ref()
     }
 
     pub fn transport_send(&self, message: MqttSnMessage) {
@@ -119,45 +121,27 @@ impl ProxySession {
     }
 
     pub async fn run(&mut self) {
-        let mut config = Config::from_file("./zenohd.json5");
-        if config.is_err() {
-            error!(
-                "Error reading zenohd.json5 file, using default config {}",
-                config.err().unwrap()
-            );
-            config = Ok(config::default());
-        } else {
-            info!("Using zenohd.json5 file");
-        }
-        self.zenoh_session = Some(zenoh::open(config.unwrap()).res().await.unwrap());
-        let mut zenoh_subscriber = self
-            .zenoh_session.as_mut()
-            .unwrap()
-            .declare_subscriber("esp32/*")
-            .res()
-            .await
-            .unwrap();
+        self.pubsub_cmd.push(PubSubCmd::Connect);
+
         let _buf = vec![0u8; MTU_SIZE];
         loop {
             select! {
-                msg = zenoh_subscriber.recv_async() => {
-                    info!("Received message from zenoh {} ",msg.unwrap());
-                    //let message = zenoh_subscriber.recv_async().res().await.unwrap();
-                    //let topic = message.get_topic().unwrap();
-                    //let message = message.get_payload().unwrap();
-                    //self.transport_send(MqttSnMessage::Publish { flags:0,topic_id:0, msg_id:0, data: message });
-
-                },
-                cmd = self.commands.next() => {
-                    match cmd.unwrap() {
+                cmd = self.cmds.next() => {
+                    let cmd = cmd.unwrap();
+                    info!("ProxyServerCmd:: {:?}", &cmd);
+                    match cmd{
                         ProxyServerCmd::Publish { topic, message } => {
                             info!("Publishing message to zenoh");
                             self.zenoh_session.as_ref().unwrap().put(&topic, message).res().await.unwrap();
                         },
                         ProxyServerCmd::TransportEvent(event) => {
-                             self.on_transport_event(event);
+                            info!("Received event from transport {:?}", event);
+                             self.on_transport_event(event).await;
                             }
                         ProxyServerCmd::Disconnect => {
+                        }
+                        ProxyServerCmd::PubSubEvent(event) => {
+                            self.on_pubsub_event(event);
                         }
                     }
                 },
@@ -165,10 +149,32 @@ impl ProxySession {
         }
     }
 
-    fn on_transport_event(&mut self, event: TransportEvent) {
+    fn on_pubsub_event(&mut self, event: PubSubEvent) {
+        match event {
+            PubSubEvent::Connected => {
+                info!("Connected to zenoh");
+                self.events.emit(ProxyServerEvent::Connected);
+            }
+            PubSubEvent::Disconnected => {
+                info!("Disconnected from zenoh");
+                self.events.emit(ProxyServerEvent::Disconnected);
+            }
+            PubSubEvent::Publish { topic, message } => {
+                let topic_id = self.get_server_topic_from_string(&topic);
+                self.transport_send(MqttSnMessage::Publish {
+                    flags: Flags(0),
+                    topic_id,
+                    msg_id: 0,
+                    data: message,
+                });
+            }
+        }
+    }
+
+    async fn on_transport_event(&mut self, event: TransportEvent) {
         match event {
             TransportEvent::RecvMessage { message } => {
-                self.on_transport_rxd(message);
+                self.on_transport_rxd(message).await;
             }
             TransportEvent::ConnectionLost {} => {
                 info!("Connection lost");
@@ -184,7 +190,6 @@ impl ProxySession {
                 duration: _,
                 client_id: _,
             } => {
-                info!("Received Connect message");
                 self.transport_send(MqttSnMessage::ConnAck {
                     return_code: ReturnCode::Accepted,
                 });
@@ -208,13 +213,10 @@ impl ProxySession {
                 Some(_topic) => {
                     info!("Received Publish message for known topic");
                     let x = self.client_topics.get_mut(&topic_id).unwrap().name.clone();
-                    self.zenoh_session
-                    .as_ref()
-                        .unwrap()
-                        .put(&x, data)
-                        .res()
-                        .await
-                        .unwrap();
+                    self.pubsub_cmd.push(PubSubCmd::Publish {
+                        topic: x,
+                        message: data,
+                    });
                     if flags.qos() == 1 {
                         self.transport_send(MqttSnMessage::PubAck {
                             topic_id,
@@ -284,7 +286,7 @@ impl ProxySession {
 
 impl SinkTrait<ProxyServerCmd> for ProxySession {
     fn push(&self, message: ProxyServerCmd) {
-        self.commands.push(message);
+        self.cmds.push(message);
     }
 }
 

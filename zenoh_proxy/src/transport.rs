@@ -33,7 +33,7 @@ pub enum TransportCmd {
     SendMessage { message: MqttSnMessage },
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum TransportEvent {
     RecvMessage { message: MqttSnMessage },
     ConnectionLost {},
@@ -73,7 +73,7 @@ impl Transport {
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
                 self.events.emit(TransportEvent::ConnectionLost {});
-                continue;
+                return;
             }
             let mut serial_stream = serial_stream.unwrap();
             info!("Port {} opened", self.port_info.port_name.clone());

@@ -77,8 +77,7 @@ impl ActorTrait<PongMsg,()> for Pinger {
     fn sink_ref(&self) -> SinkRef<PongMsg> {
         self.sink.sink_ref()
     }
-    fn add_listener(&mut self, _sink: SinkRef<()>) {
-    }
+
 }
 
 impl ActorTrait<PingMsg,()> for Ponger {
@@ -98,6 +97,5 @@ impl ActorTrait<PingMsg,()> for Ponger {
     fn sink_ref(&self) -> SinkRef<PingMsg> {
         self.sink.sink_ref()
     }
-    fn add_listener(&mut self, _sink: SinkRef<()>) {
-    }
+
 }

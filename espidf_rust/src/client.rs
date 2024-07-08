@@ -109,27 +109,25 @@ impl ClientSession {
         self.rxd_msg.sink_ref()
     }
 
-    fn register_topic(&mut self, topic: &str) -> u16 {
-        let topic_id = self.topic_id_counter;
-        self.topic_id_counter += 1;
+    fn register_topic(&mut self, topic: &str)  {
+        let topic_id = self.get_client_topic_from_string(topic);
         self.txd(MqttSnMessage::Register {
-            topic_id: self.topic_id_counter,
+            topic_id,
             msg_id: 0,
             topic_name: topic.to_string(),
         });
-
-        self.client_topics.insert(topic.to_string(), topic_id);
-        self.client_topics_registered.insert(topic_id, true);
-        self.topic_id_counter += 1;
-        topic_id
     }
 
     fn get_client_topic_from_string(&mut self, topic: &str) -> u16 {
-        let topic_id = match self.client_topics.get(topic) {
+         match self.client_topics.get(topic) {
             Some(topic_id) => *topic_id,
-            None => self.register_topic(topic),
-        };
-        topic_id
+            None => {
+                self.topic_id_counter += 1;
+                let topic_id = self.topic_id_counter;
+                self.client_topics.insert(topic.to_string(), topic_id);
+                topic_id
+            }
+        }
     }
 
     fn txd(&mut self, msg: MqttSnMessage) {
@@ -222,16 +220,9 @@ impl ClientSession {
                     self.state = State::Connected;
                     self.events.emit(SessionEvent::Connected);
                 }
-                self.txd(MqttSnMessage::Register {
-                    topic_id: 0,
-                    msg_id: 0,
-                    topic_name: "ESP32".to_string(),
-                });
-                self.txd(MqttSnMessage::Register {
-                    topic_id: 1,
-                    msg_id: 0,
-                    topic_name: "latency".to_string(),
-                });
+                self.register_topic("ESP32");
+                self.register_topic("latency");
+
             }
             MqttSnMessage::PingResp { timestamp } => {
                 debug!("Ping response {:?}", timestamp);

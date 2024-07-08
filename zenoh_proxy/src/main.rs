@@ -37,14 +37,22 @@ use transport::*;
 mod ping_pong;
 use ping_pong::*;
 
+mod zenoh_pubsub;
+use zenoh_pubsub::*;
+
 fn start_proxy(event: PortScannerEvent)  {
     match event {
         PortScannerEvent::PortAdded { port } => {
             info!("Port added : {:?}", port.port_name);
             let mut transport = Transport::new(port.clone());
-            let mut proxy_server = ProxySession::new(port, transport.sink_ref());
+            let mut pubsub_actor = PubSubActor::new();
+            let mut proxy_server = ProxySession::new(pubsub_actor.sink_ref(), transport.sink_ref());
             transport.map_to(
                 |ev| Some(ProxyServerCmd::TransportEvent(ev)),
+                proxy_server.sink_ref(),
+            );
+            pubsub_actor.map_to(
+                |ev| Some(ProxyServerCmd::PubSubEvent(ev)),
                 proxy_server.sink_ref(),
             );
             tokio::spawn(async move {
@@ -52,6 +60,9 @@ fn start_proxy(event: PortScannerEvent)  {
             });
             tokio::spawn(async move {
                 proxy_server.run().await;
+            });
+            tokio::spawn(async move {
+                pubsub_actor.run().await;
             });
         }
         PortScannerEvent::PortRemoved { port } => {

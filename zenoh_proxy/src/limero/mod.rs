@@ -280,7 +280,6 @@ where
 {
     async fn run(&mut self);
     fn sink_ref(&self) -> SinkRef<T>;
-    fn add_listener(&mut self, sink: SinkRef<U>);
 }
 
 
