@@ -1,10 +1,10 @@
 use bytes::BytesMut;
 use log::*;
-use zenoh::buffers::ZSliceBuffer;
 use std::collections::BTreeMap;
 use std::io;
 use std::io::Write;
 use std::result::Result;
+use zenoh::buffers::ZSliceBuffer;
 
 use minicbor::encode;
 use tokio::io::split;
@@ -30,10 +30,10 @@ use protocol::MTU_SIZE;
 
 use crate::transport::*;
 
+use minicbor::display;
 use zenoh::open;
 use zenoh::prelude::r#async::*;
 use zenoh::subscriber::Subscriber;
-use minicbor::display;
 
 #[derive(Clone)]
 pub enum PubSubCmd {
@@ -43,7 +43,7 @@ pub enum PubSubCmd {
     Subscribe { topic: String },
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub enum PubSubEvent {
     Connected,
     Disconnected,
@@ -53,7 +53,6 @@ pub enum PubSubEvent {
 pub struct PubSubActor {
     cmds: Sink<PubSubCmd>,
     events: Source<PubSubEvent>,
-    session: Option<zenoh::Session>,
     config: zenoh::config::Config,
 }
 
@@ -72,7 +71,6 @@ impl PubSubActor {
         PubSubActor {
             cmds: Sink::new(100),
             events: Source::new(),
-            session: None,
             config: config.unwrap(),
         }
     }
@@ -80,20 +78,18 @@ impl PubSubActor {
 
 impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
     async fn run(&mut self) {
+        let static_session: &'static mut Session =
+            Session::leak(zenoh::open(config::default()).res().await.unwrap());
         loop {
             select! {
                 cmd = self.cmds.next() => {
                     match cmd {
                         Some(PubSubCmd::Connect) => {
                             info!("Connecting to zenoh");
-                            self.session = Some(zenoh::open(config::default()).res().await.unwrap());
-                            info!("Connected to zenoh {:?} ", self.session.as_ref().unwrap());
                             self.events.emit(PubSubEvent::Connected);
                         }
                         Some(PubSubCmd::Disconnect) => {
                             info!("Disconnecting from zenoh");
-   //                         self.session.unwrap().close().res().await.unwrap();
-                            self.session = None;
                             self.events.emit(PubSubEvent::Disconnected);
                         }
                         Some(PubSubCmd::Publish { topic, message}) => {
@@ -101,26 +97,31 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                             let s :&str = s.as_str();
                             let v:Value = s.into();
                             info!("Publishing to zenoh: {}", v);
-                            let _res = self.session.as_ref().map(|s| s
+                            let _res = static_session
                                 .put(&topic,v)
                                 .encoding(KnownEncoding::TextPlain)
-                                .res()).unwrap().await;
+                                .res().await;
                         }
-                        Some(PubSubCmd::Subscribe { topic:_ }) => {
+                        Some(PubSubCmd::Subscribe { topic }) => {
                             info!("Subscribing to zenoh");
-                            /*let subscriber = self.session.as_ref().map(|s| s.declare_subscriber(&topic).res()).unwrap().await;
+                            let subscriber = static_session.declare_subscriber(&topic).res().await;
                             match subscriber {
                                 Ok(sub) => {
+                                    let emitter =  self.events.clone();
                                     tokio::spawn(async move {
                                         while let Ok(sample) = sub.recv_async().await {
                                             info!("Received: {}", sample);
+                                            emitter.emit(PubSubEvent::Publish {
+                                                topic: topic.clone(),
+                                                message: vec![1,2,3],
+                                            });
                                         };
                                     });
                                 }
                                 Err(e) => {
                                     error!("Error subscribing to zenoh: {}", e);
                                 }
-                            }*/
+                            }
                         }
                         None => {
                             info!("PubSubActor::run() None");
@@ -134,15 +135,10 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
     fn sink_ref(&self) -> SinkRef<PubSubCmd> {
         self.cmds.sink_ref()
     }
-
 }
 
 impl SourceTrait<PubSubEvent> for PubSubActor {
     fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
         self.events.add_listener(sink);
-    } 
+    }
 }
-
-
-
-

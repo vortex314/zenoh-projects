@@ -41,7 +41,7 @@ pub enum TransportEvent {
 }
 
 pub struct UartActor {
-    command: Sink<MqttSnMessage, 4>,
+    command: Sink<MqttSnMessage, 5>,
     events: Source<MqttSnMessage>,
     tx: UartTx<'static, UART0,Async>,
     rx: UartRx<'static, UART0,Async>,

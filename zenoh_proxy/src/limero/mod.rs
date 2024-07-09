@@ -130,6 +130,8 @@ where
         self.sender.send(message);
     }
 }
+
+#[derive(Clone)]
 pub struct Source<T>
 where
     T: Clone + Send + Sync,

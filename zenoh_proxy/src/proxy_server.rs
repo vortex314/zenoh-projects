@@ -63,9 +63,8 @@ pub struct ProxySession {
     cmds: Sink<ProxyServerCmd>,
     transport_cmd: SinkRef<TransportCmd>,
     pubsub_cmd: SinkRef<PubSubCmd>,
-    zenoh_session: Option<zenoh::Session>,
-    client_topics: BTreeMap<u16, TopicId>,
-    server_topics: BTreeMap<u16, TopicId>,
+    client_topics: BTreeMap<u16, String>,
+    server_topics: BTreeMap<String, u16>,
     will_topic: Option<String>,
     will_message: Option<Vec<u8>>,
     topic_id_counter: u16,
@@ -82,7 +81,6 @@ impl ProxySession {
             cmds: commands,
             transport_cmd,
             pubsub_cmd,
-            zenoh_session: None,
             client_topics: BTreeMap::new(),
             server_topics: BTreeMap::new(),
             will_topic: None,
@@ -102,22 +100,15 @@ impl ProxySession {
     }
 
     fn get_server_topic_from_string(&mut self, topic: &str) -> u16 {
-        for (id, topic_id) in self.server_topics.iter() {
-            if topic_id.name == topic {
-                return *id;
+        match self.server_topics.get(topic) {
+            Some(topic_id) => *topic_id,
+            None => {
+                self.topic_id_counter += 1;
+                let topic_id = self.topic_id_counter;
+                self.server_topics.insert(topic.to_string(),topic_id,);
+                topic_id
             }
         }
-        let topic_id = self.topic_id_counter;
-        self.topic_id_counter += 1;
-        self.server_topics.insert(
-            topic_id,
-            TopicId {
-                id: topic_id,
-                name: topic.to_string(),
-                acked: false,
-            },
-        );
-        topic_id
     }
 
     pub async fn run(&mut self) {
@@ -128,14 +119,14 @@ impl ProxySession {
             select! {
                 cmd = self.cmds.next() => {
                     let cmd = cmd.unwrap();
-                    info!("ProxyServerCmd:: {:?}", &cmd);
+                    debug!("ProxyServerCmd:: {:?}", &cmd);
                     match cmd{
                         ProxyServerCmd::Publish { topic, message } => {
-                            info!("Publishing message to zenoh");
-                            self.zenoh_session.as_ref().unwrap().put(&topic, message).res().await.unwrap();
+                            debug!("Publishing message to zenoh");
+                            self.pubsub_cmd.push(PubSubCmd::Publish { topic, message });
                         },
                         ProxyServerCmd::TransportEvent(event) => {
-                            info!("Received event from transport {:?}", event);
+                            debug!("Received event from transport {:?}", event);
                              self.on_transport_event(event).await;
                             }
                         ProxyServerCmd::Disconnect => {
@@ -160,6 +151,14 @@ impl ProxySession {
                 self.events.emit(ProxyServerEvent::Disconnected);
             }
             PubSubEvent::Publish { topic, message } => {
+                if !self.server_topics.contains_key(&topic) {
+                    let topic_id = self.get_server_topic_from_string(&topic);
+                    self.transport_send(MqttSnMessage::Register {
+                        topic_id,
+                        msg_id: 0,
+                        topic_name: topic.clone(),
+                    });
+                }
                 let topic_id = self.get_server_topic_from_string(&topic);
                 self.transport_send(MqttSnMessage::Publish {
                     flags: Flags(0),
@@ -211,10 +210,9 @@ impl ProxySession {
                 data,
             } => match self.client_topics.get(&topic_id) {
                 Some(_topic) => {
-                    info!("Received Publish message for known topic");
-                    let x = self.client_topics.get_mut(&topic_id).unwrap().name.clone();
+                    let topic = self.client_topics.get(&topic_id).unwrap().clone();
                     self.pubsub_cmd.push(PubSubCmd::Publish {
-                        topic: x,
+                        topic,
                         message: data,
                     });
                     if flags.qos() == 1 {
@@ -237,19 +235,14 @@ impl ProxySession {
             MqttSnMessage::Subscribe {
                 flags,
                 msg_id,
-                topic_id,
-                topic: _,
+                topic,
                 qos: _,
             } => {
-                /*zenoh_subscriber
-                .with_subscriber(topic.clone())
-                .res()
-                .await
-                .unwrap();*/
+                self.pubsub_cmd.push(PubSubCmd::Subscribe { topic });
                 self.transport_send(MqttSnMessage::SubAck {
                     flags,
                     msg_id,
-                    topic_id: topic_id.unwrap(),
+                    topic_id: 1,
                     return_code: ReturnCode::Accepted,
                 });
             }
@@ -258,15 +251,7 @@ impl ProxySession {
                 msg_id,
                 topic_name,
             } => {
-                info!("Received Unsubscribe message");
-                self.client_topics.insert(
-                    topic_id,
-                    TopicId {
-                        id: topic_id,
-                        name: topic_name,
-                        acked: false,
-                    },
-                );
+                self.client_topics.insert(topic_id, topic_name);
                 self.transport_send(MqttSnMessage::RegAck {
                     topic_id,
                     msg_id,

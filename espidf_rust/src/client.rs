@@ -109,7 +109,7 @@ impl ClientSession {
         self.rxd_msg.sink_ref()
     }
 
-    fn register_topic(&mut self, topic: &str)  {
+    fn register_topic(&mut self, topic: &str) {
         let topic_id = self.get_client_topic_from_string(topic);
         self.txd(MqttSnMessage::Register {
             topic_id,
@@ -119,7 +119,7 @@ impl ClientSession {
     }
 
     fn get_client_topic_from_string(&mut self, topic: &str) -> u16 {
-         match self.client_topics.get(topic) {
+        match self.client_topics.get(topic) {
             Some(topic_id) => *topic_id,
             None => {
                 self.topic_id_counter += 1;
@@ -220,9 +220,14 @@ impl ClientSession {
                     self.state = State::Connected;
                     self.events.emit(SessionEvent::Connected);
                 }
-                self.register_topic("ESP32");
-                self.register_topic("latency");
-
+                self.txd(MqttSnMessage::Subscribe {
+                    flags: Flags(0),
+                    msg_id: 1,
+                    topic: "dst/esp32/**".to_string(),
+                    qos: 0,
+                });
+                self.register_topic("src/esp32/sys/uptime");
+                self.register_topic("src/esp32/sys/latency");
             }
             MqttSnMessage::PingResp { timestamp } => {
                 debug!("Ping response {:?}", timestamp);
@@ -230,7 +235,7 @@ impl ClientSession {
                 let now: u64 = Instant::now().as_millis() as u64;
                 let diff: u64 = now - timestamp;
                 debug!("Ping response time {}", diff);
-                let topic_id = self.get_client_topic_from_string("latency");
+                let topic_id = self.get_client_topic_from_string("src/esp32/sys/latency");
                 self.txd(MqttSnMessage::Publish {
                     topic_id, // 1 is the topic id for the ping response
                     msg_id: self.msg_id,

@@ -162,8 +162,7 @@ pub enum MqttSnMessage {
     Subscribe {
         flags: Flags,
         msg_id: u16,
-        topic: Option<String>,
-        topic_id: Option<u16>,
+        topic: String,
         qos: u8,
     },
     SubAck {
@@ -220,7 +219,7 @@ impl Encode<()> for MqttSnMessage {
                 duration,
                 client_id,
             } => {
-                 encoder
+                encoder
                     .u8(0x04)?
                     .encode(flags)?
                     .u16(*duration)?
@@ -300,15 +299,10 @@ impl Encode<()> for MqttSnMessage {
                 flags,
                 msg_id,
                 topic,
-                topic_id,
                 qos,
             } => {
                 encoder.u8(0x12)?.encode(flags)?.u16(*msg_id)?;
-                if let Some(topic) = topic {
-                    encoder.str(&topic)?;
-                } else {
-                    encoder.u16(topic_id.unwrap())?;
-                }
+                encoder.str(&topic)?;
                 encoder.u8(*qos)?;
             }
             MqttSnMessage::SubAck {
@@ -371,8 +365,6 @@ impl Encode<()> for MqttSnMessage {
         Ok(())
     }
 }
-
-
 
 impl<'a> Decode<'a, ()> for Flags {
     fn decode(d: &mut Decoder<'a>, _ctx: &mut ()) -> Result<Self, minicbor::decode::Error> {
@@ -474,13 +466,11 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let flags = d.decode()?;
                 let msg_id = d.u16()?;
                 let topic = d.str()?;
-                let topic_id = d.u16()?;
                 let qos = d.u8()?;
                 Ok(MqttSnMessage::Subscribe {
                     flags,
                     msg_id,
-                    topic: Some(topic.to_string()),
-                    topic_id: Some(topic_id),
+                    topic:topic.to_string(),
                     qos,
                 })
             }
@@ -557,4 +547,3 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
         res
     }
 }
-

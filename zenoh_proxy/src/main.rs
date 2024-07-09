@@ -20,8 +20,6 @@ use protocol::*;
 mod proxy_server;
 use proxy_server::*;
 
-mod proxy_tester;
-use proxy_tester::*;
 
 mod limero;
 use limero::*;

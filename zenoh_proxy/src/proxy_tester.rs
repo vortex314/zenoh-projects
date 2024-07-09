@@ -152,13 +152,8 @@ impl ProxyTester {
                                         },
                                     }
                                 },
-                                MqttSnMessage::Subscribe { flags,msg_id,topic:_,topic_id,qos:_ } => {
+                                MqttSnMessage::Subscribe { flags,msg_id,topic,qos:_ } => {
                                     info!("Received Subscribe message");
-                                    /*zenoh_subscriber
-                                        .with_subscriber(topic.clone())
-                                        .res()
-                                        .await
-                                        .unwrap();*/
                                         self.transport_send(MqttSnMessage::SubAck { flags,topic_id:topic_id.unwrap(), msg_id, return_code: ReturnCode::Accepted });
                                 },
                                 MqttSnMessage::Register{ topic_id,msg_id,topic_name } => {
