@@ -1,6 +1,7 @@
 use core::result;
 
 use alloc::boxed::Box;
+use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use alloc::vec::Vec;
@@ -30,11 +31,11 @@ use esp_println::println;
 use log::{debug, info};
 use minicbor::bytes::ByteVec;
 
-use minicbor::decode::info;
+use minicbor::decode::{self, info};
 use minicbor::{encode::write::EndOfSlice, Decode, Decoder, Encode, Encoder};
 
 use crate::limero::{timer::Timer, timer::Timers, Sink, SinkRef, SinkTrait, Source, SourceTrait};
-use crate::protocol::msg::{Flags, MqttSnMessage, ReturnCode, VecWriter};
+use crate::protocol::msg::{ Flags, ProxyMessage, ReturnCode, VecWriter};
 
 #[derive(PartialEq)]
 
@@ -44,19 +45,47 @@ enum State {
 }
 
 #[derive(Clone, Debug)]
-pub enum SessionInput {
-    Publish { topic: String, message: String },
+pub enum PubSubCmd {
+    Publish { topic: String, message : Vec<u8> },
     Subscribe { topic: String },
     Unsubscribe { topic: String },
     Connect { client_id: String },
-    Rxd(MqttSnMessage),
+    Rxd(ProxyMessage),
     Disconnect,
 }
 #[derive(Clone, Debug)]
-pub enum SessionEvent {
-    Publish { topic_id: u16, message: String },
+pub enum PubSubEvent {
+    Publish { topic: String, message: Vec<u8> },
     Connected,
     Disconnected,
+}
+
+pub fn payload_encode<X>( v: X) -> Vec<u8>
+where
+    X: Encode<()>,
+{
+    let mut buffer = Vec::<u8>::new();
+    let mut encoder = Encoder::new(&mut buffer);
+    let _x = encoder.encode(v);
+    _x.unwrap().writer().to_vec()
+}
+
+pub fn payload_decode<'a,T>(v: &'a Vec<u8>) -> Result<T, decode::Error>
+where T : Decode<'a,()>
+{
+    let mut decoder = Decoder::new(v);
+    decoder.decode::<T>()
+}
+
+
+pub fn payload_display(v: &Vec<u8>) -> String {
+    let line:String  = v.iter().map(|b| format!("{:02X} ", b)).collect();
+    let s = format!("{}", minicbor::display(v.as_slice()));
+    if s.len() == 0 {
+        line
+    } else {
+        s
+    }
 }
 
 enum TimerId {
@@ -65,11 +94,11 @@ enum TimerId {
     ConnectionTimer = 3,
 }
 
-pub struct ClientSession {
-    command: Sink<SessionInput, 3>,
-    events: Source<SessionEvent>,
-    transport_cmd: SinkRef<MqttSnMessage>,
-    rxd_msg: Sink<MqttSnMessage, 3>,
+pub struct PubSubActor {
+    command: Sink<PubSubCmd, 3>,
+    events: Source<PubSubEvent>,
+    transport_cmd: SinkRef<ProxyMessage>,
+    rxd_msg: Sink<ProxyMessage, 3>,
     client_topics: BTreeMap<String, u16>,
     server_topics: BTreeMap<u16, String>,
     client_topics_registered: BTreeMap<u16, bool>,
@@ -81,9 +110,9 @@ pub struct ClientSession {
     timers: Timers,
     topic_id_counter: u16,
 }
-impl ClientSession {
-    pub fn new(txd_msg: SinkRef<MqttSnMessage>) -> ClientSession {
-        ClientSession {
+impl PubSubActor {
+    pub fn new(txd_msg: SinkRef<ProxyMessage>) -> PubSubActor {
+        PubSubActor {
             command: Sink::new(),
             events: Source::new(),
             transport_cmd: txd_msg,
@@ -101,17 +130,17 @@ impl ClientSession {
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<SessionInput> {
+    pub fn sink_ref(&self) -> SinkRef<PubSubCmd> {
         self.command.sink_ref()
     }
 
-    pub fn transport_sink_ref(&self) -> SinkRef<MqttSnMessage> {
+    pub fn transport_sink_ref(&self) -> SinkRef<ProxyMessage> {
         self.rxd_msg.sink_ref()
     }
 
     fn register_topic(&mut self, topic: &str) {
         let topic_id = self.get_client_topic_from_string(topic);
-        self.txd(MqttSnMessage::Register {
+        self.txd(ProxyMessage::Register {
             topic_id,
             msg_id: 0,
             topic_name: topic.to_string(),
@@ -130,7 +159,7 @@ impl ClientSession {
         }
     }
 
-    fn txd(&mut self, msg: MqttSnMessage) {
+    fn txd(&mut self, msg: ProxyMessage) {
         self.transport_cmd.send(msg);
     }
 
@@ -144,7 +173,7 @@ impl ClientSession {
             Duration::from_millis(1_000),
         ));
 
-        self.txd(MqttSnMessage::Connect {
+        self.txd(ProxyMessage::Connect {
             flags: Flags(0),
             duration: 100,
             client_id: self.client_id.clone(),
@@ -153,7 +182,7 @@ impl ClientSession {
         loop {
             match select(self.command.next(), self.timers.alarm()).await {
                 First(msg) => match msg {
-                    Some(SessionInput::Rxd(m)) => {
+                    Some(PubSubCmd::Rxd(m)) => {
                         self.on_rxd_message(m).await;
                     }
                     Some(cmd) => {
@@ -173,7 +202,7 @@ impl ClientSession {
     async fn on_timeout(&mut self, id: u32) {
         if id == TimerId::ConnectTimer as u32 {
             if self.state == State::Disconnected {
-                self.txd(MqttSnMessage::Connect {
+                self.txd(ProxyMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: self.client_id.clone(),
@@ -181,15 +210,15 @@ impl ClientSession {
             }
         } else if id == TimerId::PingTimer as u32 {
             if self.state == State::Connected {
-                self.txd(MqttSnMessage::PingReq {
+                self.txd(ProxyMessage::PingReq {
                     timestamp: Instant::now().as_millis() as u64,
                 });
                 self.ping_timeouts += 1;
                 if self.ping_timeouts > 3 {
                     info!("Ping timeout >3 disconnecting    ");
-                    self.txd(MqttSnMessage::Disconnect { duration: 0 });
+                    self.txd(ProxyMessage::Disconnect { duration: 0 });
                     self.state = State::Disconnected;
-                    self.events.emit(SessionEvent::Disconnected);
+                    self.events.emit(PubSubEvent::Disconnected);
                 }
             }
         } else {
@@ -197,30 +226,22 @@ impl ClientSession {
             self.ping_timeouts += 1;
             if self.ping_timeouts > 3 {
                 self.transport_cmd
-                    .send(MqttSnMessage::Disconnect { duration: 0 });
+                    .send(ProxyMessage::Disconnect { duration: 0 });
             }
         }
     }
 
-    fn encode<X>(&self, v: X) -> Vec<u8>
-    where
-        X: Encode<()>,
-    {
-        let mut buffer = VecWriter::new();
-        let mut encoder = Encoder::new(&mut buffer);
-        let _x = encoder.encode(v);
-        _x.unwrap().writer().to_vec()
-    }
 
-    async fn on_rxd_message(&mut self, msg: MqttSnMessage) {
+
+    async fn on_rxd_message(&mut self, msg: ProxyMessage) {
         match msg {
-            MqttSnMessage::ConnAck { return_code } => {
+            ProxyMessage::ConnAck { return_code } => {
                 info!("Connected code  {:?}", return_code);
                 if self.state == State::Disconnected {
                     self.state = State::Connected;
-                    self.events.emit(SessionEvent::Connected);
+                    self.events.emit(PubSubEvent::Connected);
                 }
-                self.txd(MqttSnMessage::Subscribe {
+                self.txd(ProxyMessage::Subscribe {
                     flags: Flags(0),
                     msg_id: 1,
                     topic: "dst/esp32/**".to_string(),
@@ -229,27 +250,27 @@ impl ClientSession {
                 self.register_topic("src/esp32/sys/uptime");
                 self.register_topic("src/esp32/sys/latency");
             }
-            MqttSnMessage::PingResp { timestamp } => {
+            ProxyMessage::PingResp { timestamp } => {
                 debug!("Ping response {:?}", timestamp);
                 self.ping_timeouts = 0;
                 let now: u64 = Instant::now().as_millis() as u64;
                 let diff: u64 = now - timestamp;
                 debug!("Ping response time {}", diff);
                 let topic_id = self.get_client_topic_from_string("src/esp32/sys/latency");
-                self.txd(MqttSnMessage::Publish {
+                self.txd(ProxyMessage::Publish {
                     topic_id, // 1 is the topic id for the ping response
                     msg_id: self.msg_id,
                     flags: Flags(0),
-                    data: self.encode(diff),
+                    data: payload_encode::<u64>(diff),
                 });
             }
-            MqttSnMessage::Disconnect { duration: _ } => {
+            ProxyMessage::Disconnect { duration: _ } => {
                 info!("Disconnected");
                 self.state = State::Disconnected;
-                self.events.emit(SessionEvent::Disconnected);
+                self.events.emit(PubSubEvent::Disconnected);
                 self.server_topics.clear();
             }
-            MqttSnMessage::Register {
+            ProxyMessage::Register {
                 topic_id,
                 msg_id: _,
                 topic_name,
@@ -257,28 +278,32 @@ impl ClientSession {
                 info!("Registering topic {} with id {}", topic_name, topic_id);
                 self.server_topics.insert(topic_id, topic_name);
             }
-            MqttSnMessage::Publish {
+            ProxyMessage::Publish {
                 flags: _,
                 topic_id,
                 msg_id,
-                data: _,
+                data,
             } => {
                 info!("Received message on topic {} ", topic_id);
                 if self.server_topics.contains_key(&topic_id) {
-                    self.txd(MqttSnMessage::PubAck {
+                    self.events.emit(PubSubEvent::Publish {
+                        topic: self.server_topics.get(&topic_id).unwrap().clone(),
+                        message: data,
+                    });
+                    self.txd(ProxyMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::Accepted,
                     });
                 } else {
-                    self.txd(MqttSnMessage::PubAck {
+                    self.txd(ProxyMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::InvalidTopicId,
                     });
                 }
             }
-            MqttSnMessage::PubAck {
+            ProxyMessage::PubAck {
                 topic_id,
                 msg_id,
                 return_code,
@@ -298,14 +323,14 @@ impl ClientSession {
                         return;
                     }
                     let topic_name = topic_name.unwrap().0;
-                    self.txd(MqttSnMessage::Register {
+                    self.txd(ProxyMessage::Register {
                         topic_id,
                         msg_id,
                         topic_name: topic_name.clone(),
                     });
                 }
             }
-            MqttSnMessage::RegAck {
+            ProxyMessage::RegAck {
                 topic_id,
                 msg_id,
                 return_code,
@@ -326,48 +351,48 @@ impl ClientSession {
         }
     }
 
-    pub async fn on_cmd_message(&mut self, cmd: SessionInput) {
+    pub async fn on_cmd_message(&mut self, cmd: PubSubCmd) {
         match cmd {
-            SessionInput::Publish { topic, message } => {
+            PubSubCmd::Publish { topic, message } => {
                 let topic_id = self.get_client_topic_from_string(&topic);
                 let mut flags = Flags(0);
                 flags.set_qos(0);
-                self.txd(MqttSnMessage::Publish {
+                self.txd(ProxyMessage::Publish {
                     flags,
                     topic_id,
                     msg_id: self.msg_id,
-                    data: message.as_bytes().to_vec(),
+                    data: message,
                 });
                 self.msg_id += 1;
             }
-            SessionInput::Subscribe { topic } => {
+            PubSubCmd::Subscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
-                self.txd(MqttSnMessage::Register {
+                self.txd(ProxyMessage::Register {
                     topic_id,
                     msg_id: self.msg_id,
                     topic_name: topic,
                 });
             }
-            SessionInput::Unsubscribe { topic } => {
+            PubSubCmd::Unsubscribe { topic } => {
                 self.msg_id += 1;
                 let topic_id = self.get_client_topic_from_string(topic.as_str());
-                self.txd(MqttSnMessage::PubAck {
+                self.txd(ProxyMessage::PubAck {
                     topic_id,
                     msg_id: self.msg_id,
                     return_code: ReturnCode::Accepted,
                 });
             }
-            SessionInput::Connect { client_id } => {
-                self.txd(MqttSnMessage::Connect {
+            PubSubCmd::Connect { client_id } => {
+                self.txd(ProxyMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
                     client_id: client_id.clone(),
                 });
             }
-            SessionInput::Disconnect => {
+            PubSubCmd::Disconnect => {
                 self.transport_cmd
-                    .send(MqttSnMessage::Disconnect { duration: 0 });
+                    .send(ProxyMessage::Disconnect { duration: 0 });
             }
             _ => {
                 info!("Unexpected command {:?}", cmd);
@@ -376,8 +401,8 @@ impl ClientSession {
     }
 }
 
-impl SourceTrait<SessionEvent> for ClientSession {
-    fn add_listener(&mut self, sink: SinkRef<SessionEvent>) {
+impl SourceTrait<PubSubEvent> for PubSubActor {
+    fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
         self.events.add_listener(sink);
     }
 }

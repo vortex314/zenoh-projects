@@ -23,7 +23,7 @@ use crate::protocol::encode_frame;
 use crate::ActorTrait;
 use crate::SourceTrait;
 use protocol::msg::Flags;
-use protocol::msg::MqttSnMessage;
+use protocol::msg::ProxyMessage;
 use protocol::msg::ReturnCode;
 use protocol::MessageDecoder;
 use protocol::MTU_SIZE;
@@ -93,13 +93,9 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                             self.events.emit(PubSubEvent::Disconnected);
                         }
                         Some(PubSubCmd::Publish { topic, message}) => {
-                            let s = format!("{}", minicbor::display(message.as_slice()));
-                            let s :&str = s.as_str();
-                            let v:Value = s.into();
-                            info!("Publishing to zenoh: {}", v);
                             let _res = static_session
-                                .put(&topic,v)
-                                .encoding(KnownEncoding::TextPlain)
+                                .put(&topic,message)
+                                .encoding(KnownEncoding::AppOctetStream)
                                 .res().await;
                         }
                         Some(PubSubCmd::Subscribe { topic }) => {
@@ -110,10 +106,12 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                                     let emitter =  self.events.clone();
                                     tokio::spawn(async move {
                                         while let Ok(sample) = sub.recv_async().await {
-                                            info!("Received: {}", sample);
+                                            let data = sample.payload.contiguous().to_vec();
+                                            let s = format!("{}", minicbor::display(&data));
+                                            info!("Received: {}:{}",sample.key_expr.to_string(), s);
                                             emitter.emit(PubSubEvent::Publish {
-                                                topic: topic.clone(),
-                                                message: vec![1,2,3],
+                                                topic: sample.key_expr.to_string(),
+                                                message:sample.payload.contiguous().to_vec(),
                                             });
                                         };
                                     });

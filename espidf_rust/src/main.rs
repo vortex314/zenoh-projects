@@ -7,9 +7,11 @@ use core::ops::Shr;
 use core::{cell::RefCell, mem::MaybeUninit};
 
 use alloc::boxed::Box;
+use alloc::format;
 use alloc::rc::Rc;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 
+use alloc::vec::Vec;
 use embassy_executor::raw::Executor;
 use embassy_executor::Spawner;
 use embassy_futures::join::{join3, join4};
@@ -38,19 +40,20 @@ use esp_hal::{
 };
 use esp_hal_embassy::*;
 use esp_println::println;
-use limero::{ FlowFunction, SourceTrait};
+use limero::{FlowFunction, SourceTrait};
 use log::info;
 
-use minicbor::decode::info;
+use minicbor::decode::{info, Error};
 
 mod logger;
 use logger::semi_logger_init;
 
 mod protocol;
-use protocol::msg::MqttSnMessage;
+use minicbor::{Decode, Encode};
+use protocol::msg::ProxyMessage;
 
-mod client;
-use client::{ClientSession, SessionEvent, SessionInput};
+mod pubsub;
+use pubsub::{PubSubActor, PubSubCmd, PubSubEvent};
 
 mod uart;
 use uart::UartActor;
@@ -62,6 +65,7 @@ mod sys;
 use sys::*;
 
 mod limero;
+use limero::ActorTrait;
 
 mod ping_pong;
 use ping_pong::*;
@@ -80,11 +84,11 @@ fn init_heap() {
     }
 }
 
-fn map_connected_to_blink_fast(event: SessionEvent) -> Option<LedCmd> {
+fn map_connected_to_blink_fast(event: PubSubEvent) -> Option<LedCmd> {
     info!("Event: {:?}", event);
     match event {
-        SessionEvent::Connected => Some(LedCmd::Blink { duration: 100 }),
-        SessionEvent::Disconnected => Some(LedCmd::Blink { duration: 1000 }),
+        PubSubEvent::Connected => Some(LedCmd::Blink { duration: 100 }),
+        PubSubEvent::Disconnected => Some(LedCmd::Blink { duration: 1000 }),
         _ => None,
     }
 }
@@ -102,8 +106,7 @@ async fn main(_spawner: Spawner) {
     // Initialize Embassy with needed timers
     let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
     esp_hal_embassy::init(&clocks, timg0);
- //   ping_pong::do_test(_spawner).await;
-
+    //   ping_pong::do_test(_spawner).await;
 
     // Initialize and configure UART0
 
@@ -131,18 +134,24 @@ async fn main(_spawner: Spawner) {
     });
     let mut uart_actor = UartActor::new(uart0);
 
-    let mut client_session = ClientSession::new(uart_actor.sink_ref());
-    uart_actor.map_to(|ev| Some(SessionInput::Rxd(ev)), client_session.sink_ref());
+    let mut pubsub_actor = PubSubActor::new(uart_actor.sink_ref());
+    uart_actor.map_to(|ev| Some(PubSubCmd::Rxd(ev)), pubsub_actor.sink_ref());
 
-    client_session.map_to(|ev| map_connected_to_blink_fast(ev), led_actor.sink_ref());
+    pubsub_actor.map_to(|ev| map_connected_to_blink_fast(ev), led_actor.sink_ref());
 
-    let mut sys_actor = Sys::new(client_session.sink_ref());
-    client_session.add_listener(sys_actor.on_session_event());
+    let mut sys_actor = Sys::new();
+    pubsub_actor.map_to(|ev| Some(SysCmd::PubSubEvent(ev)), sys_actor.sink_ref());
+    sys_actor.map_to(
+        |ev| match ev {
+            SysEvent::PubSubCmd(cmd) => Some(cmd),
+        },
+        pubsub_actor.sink_ref(),
+    );
 
     loop {
         select4(
             uart_actor.run(),
-            client_session.run(),
+            pubsub_actor.run(),
             led_actor.run(),
             sys_actor.run(),
         )

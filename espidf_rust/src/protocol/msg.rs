@@ -110,7 +110,7 @@ pub enum ReturnCode {
 }
 
 #[derive(Debug, Clone)]
-pub enum MqttSnMessage {
+pub enum ProxyMessage {
     Connect {
         flags: Flags,
         duration: u16,
@@ -206,7 +206,7 @@ pub enum MqttSnMessage {
     },
 }
 
-impl Encode<()> for MqttSnMessage {
+impl Encode<()> for ProxyMessage {
     fn encode<VecWriter: minicbor::encode::Write>(
         &self,
         encoder: &mut minicbor::encode::Encoder<VecWriter>,
@@ -214,7 +214,7 @@ impl Encode<()> for MqttSnMessage {
     ) -> Result<(), minicbor::encode::Error<VecWriter::Error>> {
         encoder.begin_array()?;
         match self {
-            MqttSnMessage::Connect {
+            ProxyMessage::Connect {
                 flags,
                 duration,
                 client_id,
@@ -225,22 +225,22 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*duration)?
                     .str(&client_id)?;
             }
-            MqttSnMessage::ConnAck { return_code } => {
+            ProxyMessage::ConnAck { return_code } => {
                 encoder.u8(0x05)?.encode(return_code)?;
             }
-            MqttSnMessage::WillTopicReq => {
+            ProxyMessage::WillTopicReq => {
                 encoder.u8(0x06)?;
             }
-            MqttSnMessage::WillTopic { flags, topic } => {
+            ProxyMessage::WillTopic { flags, topic } => {
                 encoder.u8(0x07)?.encode(flags)?.str(&topic)?;
             }
-            MqttSnMessage::WillMsgReq => {
+            ProxyMessage::WillMsgReq => {
                 encoder.u8(0x08)?;
             }
-            MqttSnMessage::WillMsg { message } => {
+            ProxyMessage::WillMsg { message } => {
                 encoder.u8(0x09)?.bytes(&message)?;
             }
-            MqttSnMessage::Register {
+            ProxyMessage::Register {
                 topic_id,
                 msg_id,
                 topic_name,
@@ -251,7 +251,7 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*msg_id)?
                     .str(&topic_name)?;
             }
-            MqttSnMessage::RegAck {
+            ProxyMessage::RegAck {
                 topic_id,
                 msg_id,
                 return_code,
@@ -262,7 +262,7 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*msg_id)?
                     .encode(return_code)?;
             }
-            MqttSnMessage::Publish {
+            ProxyMessage::Publish {
                 flags,
                 topic_id,
                 msg_id,
@@ -275,7 +275,7 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*msg_id)?
                     .bytes(&data)?;
             }
-            MqttSnMessage::PubAck {
+            ProxyMessage::PubAck {
                 topic_id,
                 msg_id,
                 return_code,
@@ -286,16 +286,16 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*msg_id)?
                     .encode(return_code)?;
             }
-            MqttSnMessage::PubRec { msg_id } => {
+            ProxyMessage::PubRec { msg_id } => {
                 encoder.u8(0x0e)?.u16(*msg_id)?;
             }
-            MqttSnMessage::PubRel { msg_id } => {
+            ProxyMessage::PubRel { msg_id } => {
                 encoder.u8(0x0f)?.u16(*msg_id)?;
             }
-            MqttSnMessage::PubComp { msg_id } => {
+            ProxyMessage::PubComp { msg_id } => {
                 encoder.u8(0x10)?.u16(*msg_id)?;
             }
-            MqttSnMessage::Subscribe {
+            ProxyMessage::Subscribe {
                 flags,
                 msg_id,
                 topic,
@@ -305,7 +305,7 @@ impl Encode<()> for MqttSnMessage {
                 encoder.str(&topic)?;
                 encoder.u8(*qos)?;
             }
-            MqttSnMessage::SubAck {
+            ProxyMessage::SubAck {
                 flags,
                 topic_id,
                 msg_id,
@@ -318,7 +318,7 @@ impl Encode<()> for MqttSnMessage {
                     .u16(*msg_id)?
                     .encode(return_code)?;
             }
-            MqttSnMessage::Unsubscribe {
+            ProxyMessage::Unsubscribe {
                 flags,
                 msg_id,
                 topic,
@@ -333,31 +333,31 @@ impl Encode<()> for MqttSnMessage {
                 }
                 encoder.u8(*qos)?;
             }
-            MqttSnMessage::UnsubAck {
+            ProxyMessage::UnsubAck {
                 msg_id,
                 return_code,
             } => {
                 encoder.u8(0x15)?.u16(*msg_id)?.encode(return_code)?;
             }
-            MqttSnMessage::PingReq { timestamp } => {
+            ProxyMessage::PingReq { timestamp } => {
                 encoder.u8(0x16)?.u64(*timestamp)?;
             }
-            MqttSnMessage::PingResp { timestamp } => {
+            ProxyMessage::PingResp { timestamp } => {
                 encoder.u8(0x17)?.u64(*timestamp)?;
             }
-            MqttSnMessage::Disconnect { duration } => {
+            ProxyMessage::Disconnect { duration } => {
                 encoder.u8(0x18)?.u16(*duration)?;
             }
-            MqttSnMessage::WillTopicUpd { flags, topic } => {
+            ProxyMessage::WillTopicUpd { flags, topic } => {
                 encoder.u8(0x1a)?.encode(flags)?.str(&topic)?;
             }
-            MqttSnMessage::WillMsgUpd { message } => {
+            ProxyMessage::WillMsgUpd { message } => {
                 encoder.u8(0x1b)?.bytes(&message)?;
             }
-            MqttSnMessage::WillTopicResp { return_code } => {
+            ProxyMessage::WillTopicResp { return_code } => {
                 encoder.u8(0x1c)?.encode(return_code)?;
             }
-            MqttSnMessage::WillMsgResp { return_code } => {
+            ProxyMessage::WillMsgResp { return_code } => {
                 encoder.u8(0x1d)?.encode(return_code)?;
             }
         }
@@ -373,7 +373,7 @@ impl<'a> Decode<'a, ()> for Flags {
     }
 }
 
-impl<'a> Decode<'a, ()> for MqttSnMessage {
+impl<'a> Decode<'a, ()> for ProxyMessage {
     fn decode(d: &mut Decoder<'a>, _ctx: &mut ()) -> Result<Self, minicbor::decode::Error> {
         d.array()?;
         let msg_type = d.u8()?;
@@ -382,7 +382,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let flags = d.decode()?;
                 let duration = d.u16()?;
                 let client_id = d.str()?;
-                Ok(MqttSnMessage::Connect {
+                Ok(ProxyMessage::Connect {
                     flags,
                     duration,
                     client_id: client_id.to_string(),
@@ -390,21 +390,21 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
             }
             0x05 => {
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::ConnAck { return_code })
+                Ok(ProxyMessage::ConnAck { return_code })
             }
-            0x06 => Ok(MqttSnMessage::WillTopicReq),
+            0x06 => Ok(ProxyMessage::WillTopicReq),
             0x07 => {
                 let flags = d.decode()?;
                 let topic = d.str()?;
-                Ok(MqttSnMessage::WillTopic {
+                Ok(ProxyMessage::WillTopic {
                     flags,
                     topic: topic.to_string(),
                 })
             }
-            0x08 => Ok(MqttSnMessage::WillMsgReq),
+            0x08 => Ok(ProxyMessage::WillMsgReq),
             0x09 => {
                 let message = d.bytes()?;
-                Ok(MqttSnMessage::WillMsg {
+                Ok(ProxyMessage::WillMsg {
                     message: message.to_vec(),
                 })
             }
@@ -412,7 +412,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic_id = d.u16()?;
                 let msg_id = d.u16()?;
                 let topic_name = d.str()?;
-                Ok(MqttSnMessage::Register {
+                Ok(ProxyMessage::Register {
                     topic_id,
                     msg_id,
                     topic_name: topic_name.to_string(),
@@ -422,7 +422,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic_id = d.u16()?;
                 let msg_id = d.u16()?;
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::RegAck {
+                Ok(ProxyMessage::RegAck {
                     topic_id,
                     msg_id,
                     return_code,
@@ -433,7 +433,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic_id = d.u16()?;
                 let msg_id = d.u16()?;
                 let data = d.bytes()?;
-                Ok(MqttSnMessage::Publish {
+                Ok(ProxyMessage::Publish {
                     flags,
                     topic_id,
                     msg_id,
@@ -444,7 +444,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic_id = d.u16()?;
                 let msg_id = d.u16()?;
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::PubAck {
+                Ok(ProxyMessage::PubAck {
                     topic_id,
                     msg_id,
                     return_code,
@@ -452,22 +452,22 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
             }
             0x0e => {
                 let msg_id = d.u16()?;
-                Ok(MqttSnMessage::PubRec { msg_id })
+                Ok(ProxyMessage::PubRec { msg_id })
             }
             0x0f => {
                 let msg_id = d.u16()?;
-                Ok(MqttSnMessage::PubRel { msg_id })
+                Ok(ProxyMessage::PubRel { msg_id })
             }
             0x10 => {
                 let msg_id = d.u16()?;
-                Ok(MqttSnMessage::PubComp { msg_id })
+                Ok(ProxyMessage::PubComp { msg_id })
             }
             0x12 => {
                 let flags = d.decode()?;
                 let msg_id = d.u16()?;
                 let topic = d.str()?;
                 let qos = d.u8()?;
-                Ok(MqttSnMessage::Subscribe {
+                Ok(ProxyMessage::Subscribe {
                     flags,
                     msg_id,
                     topic:topic.to_string(),
@@ -479,7 +479,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic_id = d.u16()?;
                 let msg_id = d.u16()?;
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::SubAck {
+                Ok(ProxyMessage::SubAck {
                     flags,
                     topic_id,
                     msg_id,
@@ -492,7 +492,7 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
                 let topic = d.str()?;
                 let topic_id = d.u16()?;
                 let qos = d.u8()?;
-                Ok(MqttSnMessage::Unsubscribe {
+                Ok(ProxyMessage::Unsubscribe {
                     flags,
                     msg_id,
                     topic: Some(topic.to_string()),
@@ -503,47 +503,48 @@ impl<'a> Decode<'a, ()> for MqttSnMessage {
             0x15 => {
                 let msg_id = d.u16()?;
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::UnsubAck {
+                Ok(ProxyMessage::UnsubAck {
                     msg_id,
                     return_code,
                 })
             }
             0x16 => {
                 let timestamp = d.u64()?;
-                Ok(MqttSnMessage::PingReq { timestamp })
+                Ok(ProxyMessage::PingReq { timestamp })
             }
             0x17 => {
                 let timestamp = d.u64()?;
-                Ok(MqttSnMessage::PingResp { timestamp })
+                Ok(ProxyMessage::PingResp { timestamp })
             }
             0x18 => {
                 let duration = d.u16()?;
-                Ok(MqttSnMessage::Disconnect { duration })
+                Ok(ProxyMessage::Disconnect { duration })
             }
             0x1a => {
                 let flags = d.decode()?;
                 let topic = d.str()?;
-                Ok(MqttSnMessage::WillTopicUpd {
+                Ok(ProxyMessage::WillTopicUpd {
                     flags,
                     topic: topic.to_string(),
                 })
             }
             0x1b => {
                 let message = d.bytes()?;
-                Ok(MqttSnMessage::WillMsgUpd {
+                Ok(ProxyMessage::WillMsgUpd {
                     message: message.to_vec(),
                 })
             }
             0x1c => {
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::WillTopicResp { return_code })
+                Ok(ProxyMessage::WillTopicResp { return_code })
             }
             0x1d => {
                 let return_code = d.decode()?;
-                Ok(MqttSnMessage::WillMsgResp { return_code })
+                Ok(ProxyMessage::WillMsgResp { return_code })
             }
             _ => Err(DecodeError::message("unrecognized msg type ")),
         };
         res
     }
 }
+

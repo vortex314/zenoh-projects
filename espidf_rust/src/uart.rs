@@ -24,7 +24,7 @@ use embassy_sync::{
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 use crate::limero::{Flow, Sink, SinkRef, SinkTrait, Source, SourceTrait};
-use crate::protocol::msg::MqttSnMessage;
+use crate::protocol::msg::ProxyMessage;
 use crate::protocol::MessageDecoder;
 use crate::protocol::{decode_frame, encode_frame};
 
@@ -32,17 +32,17 @@ pub const UART_BUFSIZE: usize = 127;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { message: MqttSnMessage },
+    SendMessage { message: ProxyMessage },
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage { message: MqttSnMessage },
+    RecvMessage { message: ProxyMessage },
 }
 
 pub struct UartActor {
-    command: Sink<MqttSnMessage, 5>,
-    events: Source<MqttSnMessage>,
+    command: Sink<ProxyMessage, 5>,
+    events: Source<ProxyMessage>,
     tx: UartTx<'static, UART0,Async>,
     rx: UartRx<'static, UART0,Async>,
     message_decoder: MessageDecoder,
@@ -64,7 +64,7 @@ impl UartActor {
         }
     }
 
-    pub fn sink_ref(&self) -> SinkRef<MqttSnMessage> {
+    pub fn sink_ref(&self) -> SinkRef<ProxyMessage> {
         self.command.sink_ref()
     }
 
@@ -98,7 +98,7 @@ impl UartActor {
         }
     }
 
-    async fn on_cmd_msg(&mut self, msg: MqttSnMessage) {
+    async fn on_cmd_msg(&mut self, msg: ProxyMessage) {
         info!("TXD: {:?}", msg);
         let bytes = encode_frame(msg).unwrap();
         let line:String  = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
@@ -117,8 +117,8 @@ impl UartActor {
     
 }
 
-impl SourceTrait<MqttSnMessage> for UartActor {
-    fn add_listener(&mut self, sink: SinkRef<MqttSnMessage>) {
+impl SourceTrait<ProxyMessage> for UartActor {
+    fn add_listener(&mut self, sink: SinkRef<ProxyMessage>) {
         self.events.add_listener(sink);
     }
 }

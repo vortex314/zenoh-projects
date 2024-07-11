@@ -50,7 +50,7 @@ smoltcp = { version = "0.11.0", default-features = false, features = [
     "socket-tcp",
     "socket-udp",
 ] }
-minicbor = { version = "0.21.1", features=["derive","alloc"] }
+minicbor = { version = "0.21.1", features=["derive","alloc","half"] }
 cobs={ version = "0.2.3", default_features=false,features = [] }
 crc = { version = "3.0.1", features = [] }
 byte = { version="0.2.7"}

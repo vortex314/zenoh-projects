@@ -30,12 +30,12 @@ const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { message: MqttSnMessage },
+    SendMessage { message: ProxyMessage },
 }
 
 #[derive(Clone,Debug)]
 pub enum TransportEvent {
-    RecvMessage { message: MqttSnMessage },
+    RecvMessage { message: ProxyMessage },
     ConnectionLost {},
 }
 

@@ -14,7 +14,7 @@ mod logger;
 use log::{debug, info};
 
 mod protocol;
-use protocol::msg::MqttSnMessage;
+use protocol::msg::ProxyMessage;
 use protocol::*;
 
 mod proxy_server;

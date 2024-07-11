@@ -1,0 +1,21 @@
+[package]
+name = "zenoh_sender"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version="*",  features = ["rt-multi-thread", "time", "io-std"] }
+clap = {  version="*", features = ["derive"] }
+zenoh = { version="*" }
+zenoh-util  = { version="*" }
+minicbor  = { version="*", features =["alloc"] }
+log  = { version="*" }
+chrono = "0.4.19"                                        # for time
+env_logger = "0.11.0"
+
+
+[features]
+shared-memory = ["zenoh/shared-memory"]
+unstable = ["zenoh/unstable"]
+transport_unixpipe = ["zenoh/transport_unixpipe"]
+

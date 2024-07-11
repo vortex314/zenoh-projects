@@ -21,7 +21,7 @@ use crate::protocol::decode_frame;
 use crate::protocol::encode_frame;
 use crate::SourceTrait;
 use protocol::msg::Flags;
-use protocol::msg::MqttSnMessage;
+use protocol::msg::ProxyMessage;
 use protocol::msg::ReturnCode;
 use protocol::MessageDecoder;
 use protocol::MTU_SIZE;
@@ -94,7 +94,7 @@ impl ProxySession {
         self.cmds.sink_ref()
     }
 
-    pub fn transport_send(&self, message: MqttSnMessage) {
+    pub fn transport_send(&self, message: ProxyMessage) {
         self.transport_cmd
             .push(TransportCmd::SendMessage { message });
     }
@@ -153,14 +153,14 @@ impl ProxySession {
             PubSubEvent::Publish { topic, message } => {
                 if !self.server_topics.contains_key(&topic) {
                     let topic_id = self.get_server_topic_from_string(&topic);
-                    self.transport_send(MqttSnMessage::Register {
+                    self.transport_send(ProxyMessage::Register {
                         topic_id,
                         msg_id: 0,
                         topic_name: topic.clone(),
                     });
                 }
                 let topic_id = self.get_server_topic_from_string(&topic);
-                self.transport_send(MqttSnMessage::Publish {
+                self.transport_send(ProxyMessage::Publish {
                     flags: Flags(0),
                     topic_id,
                     msg_id: 0,
@@ -182,28 +182,28 @@ impl ProxySession {
         }
     }
 
-    async fn on_transport_rxd(&mut self, event: MqttSnMessage) {
+    async fn on_transport_rxd(&mut self, event: ProxyMessage) {
         match event {
-            MqttSnMessage::Connect {
+            ProxyMessage::Connect {
                 flags: _,
                 duration: _,
                 client_id: _,
             } => {
-                self.transport_send(MqttSnMessage::ConnAck {
+                self.transport_send(ProxyMessage::ConnAck {
                     return_code: ReturnCode::Accepted,
                 });
                 self.client_topics.clear();
             }
-            MqttSnMessage::WillTopic { flags: _, topic } => {
+            ProxyMessage::WillTopic { flags: _, topic } => {
                 info!("Received WillTopic message");
                 self.will_topic = Some(topic);
-                self.transport_send(MqttSnMessage::WillMsgReq {});
+                self.transport_send(ProxyMessage::WillMsgReq {});
             }
-            MqttSnMessage::WillMsg { message } => {
+            ProxyMessage::WillMsg { message } => {
                 self.will_message = Some(message);
                 info!("Received WillMsg message");
             }
-            MqttSnMessage::Publish {
+            ProxyMessage::Publish {
                 flags,
                 topic_id,
                 msg_id,
@@ -216,7 +216,7 @@ impl ProxySession {
                         message: data,
                     });
                     if flags.qos() == 1 {
-                        self.transport_send(MqttSnMessage::PubAck {
+                        self.transport_send(ProxyMessage::PubAck {
                             topic_id,
                             msg_id,
                             return_code: ReturnCode::Accepted,
@@ -225,42 +225,42 @@ impl ProxySession {
                 }
                 None => {
                     info!("Received Publish message for unknown topic");
-                    self.transport_send(MqttSnMessage::PubAck {
+                    self.transport_send(ProxyMessage::PubAck {
                         topic_id,
                         msg_id,
                         return_code: ReturnCode::InvalidTopicId,
                     });
                 }
             },
-            MqttSnMessage::Subscribe {
+            ProxyMessage::Subscribe {
                 flags,
                 msg_id,
                 topic,
                 qos: _,
             } => {
                 self.pubsub_cmd.push(PubSubCmd::Subscribe { topic });
-                self.transport_send(MqttSnMessage::SubAck {
+                self.transport_send(ProxyMessage::SubAck {
                     flags,
                     msg_id,
                     topic_id: 1,
                     return_code: ReturnCode::Accepted,
                 });
             }
-            MqttSnMessage::Register {
+            ProxyMessage::Register {
                 topic_id,
                 msg_id,
                 topic_name,
             } => {
                 self.client_topics.insert(topic_id, topic_name);
-                self.transport_send(MqttSnMessage::RegAck {
+                self.transport_send(ProxyMessage::RegAck {
                     topic_id,
                     msg_id,
                     return_code: ReturnCode::Accepted,
                 });
             }
 
-            MqttSnMessage::PingReq { timestamp } => {
-                self.transport_send(MqttSnMessage::PingResp { timestamp });
+            ProxyMessage::PingReq { timestamp } => {
+                self.transport_send(ProxyMessage::PingResp { timestamp });
             }
             _ => {
                 // Ignore

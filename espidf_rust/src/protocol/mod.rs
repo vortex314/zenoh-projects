@@ -74,7 +74,7 @@ pub mod msg;
 
 use byte::TryRead;
 use byte::TryWrite;
-use msg::MqttSnMessage   ;
+use msg::ProxyMessage  ;
 // use mqtt_sn::defs::Message as ProxyMessage;
 
 
@@ -88,7 +88,7 @@ impl MessageDecoder {
         Self { buffer: Vec::new() }
     }
 
-    pub fn decode(&mut self, data: &[u8]) -> Vec<MqttSnMessage> {
+    pub fn decode(&mut self, data: &[u8]) -> Vec<ProxyMessage> {
         let mut messages_found = Vec::new();
         for byte in data {
             self.buffer.push(*byte);
@@ -114,7 +114,7 @@ impl MessageDecoder {
 
 
 
-pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
+pub fn encode_frame(msg: ProxyMessage) -> Result<Vec<u8>, String> {
 
     let writer = msg::VecWriter::new();
     let mut encoder = minicbor::encode::Encoder::new(writer);
@@ -149,7 +149,7 @@ pub fn encode_frame(msg: MqttSnMessage) -> Result<Vec<u8>, String> {
     
 }
 
-pub fn decode_frame(queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
+pub fn decode_frame(queue: &Vec<u8>) -> Result<ProxyMessage, String> {
    let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue);
@@ -172,7 +172,7 @@ pub fn decode_frame(queue: &Vec<u8>) -> Result<MqttSnMessage, String> {
                 return Err(format!("CRC error : {:04X} != {:04X}", crc, crc_received));
             }
             let mut d = minicbor::decode::Decoder::new(&output[0..(output_size - 2)]);
-            let msg_res = MqttSnMessage::decode(&mut d, &mut());
+            let msg_res = ProxyMessage::decode(&mut d, &mut());
             match msg_res {
                 Ok(m) => {
                     return Ok(m);
