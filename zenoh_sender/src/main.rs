@@ -48,7 +48,7 @@ async fn main() {
         tokio::time::sleep(Duration::from_millis(10)).await;
         info!("Publishing data... {}", idx  );
         let v  = compose_data(idx).unwrap();
-        session.put("dst/esp32/test/data", v).res().await.unwrap();
+        session.put("dst/esp32/test/data2", v).res().await.unwrap();
     }
 }
 

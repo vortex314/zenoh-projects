@@ -12,6 +12,7 @@ use crate::pubsub::PubSubCmd;
 use crate::pubsub::PubSubEvent;
 use crate::pubsub::payload_decode;
 use crate::pubsub::payload_encode;
+use crate::ALLOCATOR;
 
 use alloc::boxed::Box;
 use alloc::fmt::format;
@@ -86,10 +87,17 @@ impl Sys {
         }
     }
     async fn on_timer(&mut self, _timer_id: u32) {
-        info!("Timer fired");
         self.events.emit(SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/uptime".to_string(),
             message: payload_encode(Instant::now().as_millis() as u64),
+        }));
+        self.events.emit(SysEvent::PubSubCmd(PubSubCmd::Publish {
+            topic: "sys/heap_free".to_string(),
+            message: payload_encode(ALLOCATOR.free() as u64),
+        }));
+        self.events.emit(SysEvent::PubSubCmd(PubSubCmd::Publish {
+            topic: "sys/heap_used".to_string(),
+            message: payload_encode(ALLOCATOR.used() as u64),
         }));
     }
 }

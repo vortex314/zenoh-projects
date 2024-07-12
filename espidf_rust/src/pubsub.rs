@@ -121,7 +121,7 @@ impl PubSubActor {
             server_topics: BTreeMap::new(),
             client_topics_registered: BTreeMap::new(),
             //           client_topics_sender: BTreeMap::new(),
-            client_id: "ESP32_1".to_string(),
+            client_id: "esp32".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
             msg_id: 0,
@@ -354,7 +354,8 @@ impl PubSubActor {
     pub async fn on_cmd_message(&mut self, cmd: PubSubCmd) {
         match cmd {
             PubSubCmd::Publish { topic, message } => {
-                let topic_id = self.get_client_topic_from_string(&topic);
+                let full_topic = format!("src/{}/{}", self.client_id,topic);
+                let topic_id = self.get_client_topic_from_string(&full_topic);
                 let mut flags = Flags(0);
                 flags.set_qos(0);
                 self.txd(ProxyMessage::Publish {

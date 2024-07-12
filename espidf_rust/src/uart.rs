@@ -99,7 +99,7 @@ impl UartActor {
     }
 
     async fn on_cmd_msg(&mut self, msg: ProxyMessage) {
-        info!("TXD: {:?}", msg);
+        debug!("TXD: {:?}", msg);
         let bytes = encode_frame(msg).unwrap();
         let line:String  = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
         debug!(" TXD {}",line);
@@ -110,7 +110,7 @@ impl UartActor {
         let v = self.message_decoder.decode(small_buf);
         // Read characters from UART into read buffer until EOT
         for msg in v {
-            info!("RXD: {:?}", msg);
+            debug!("RXD: {:?}", msg);
             self.events.emit(msg);
         }
     }
