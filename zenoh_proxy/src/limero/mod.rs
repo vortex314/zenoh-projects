@@ -51,6 +51,12 @@ where
         let sink_func = SinkFunction::new(func);
         self.add_listener(sink_func.sink_ref());
     }
+    fn for_all(&mut self,func:Box< dyn Fn(M) -> () + Send + Sync >) where M: Clone + Send + Sync 
+    {
+        let sink_func = SinkLambda::new(func);
+        self.add_listener(sink_func.sink_ref());
+    }
+
     /*fn filter<U>(&mut self,func: fn(M) -> bool,sink_ref:SinkRef<U>) where U: Clone + Send + Sync
     {
         let g = |m:M| -> Option<M> { if func(m) {Some(m)} else {None} };
@@ -199,6 +205,32 @@ where
     }
 }
 
+struct SinkLambda<M> {
+    func: Arc<Box<dyn Fn(M) -> () + Send + Sync >>,
+}
+
+impl<M> SinkLambda<M> {
+    pub fn new(func:Box<dyn Fn(M) -> () + Send + Sync>) -> Self where M: Clone + Send + Sync  {
+        SinkLambda {
+            func : Arc::new(func)
+        }
+    }
+    pub fn sink_ref(&self) -> SinkRef<M> where M: Clone + Send + Sync +'static{
+        SinkRef { sender:  Arc::new( SinkLambda { func : self.func.clone() }) }
+    }
+}
+
+impl<M> SinkTrait<M> for SinkLambda<M> {
+    fn push(&self, m: M) {
+        (self.func)(m);
+    }
+}
+
+impl<M> DynSender<M> for SinkLambda<M>{
+    fn send(&self, _message: M) {
+        (self.func)(_message);
+    }
+}
 #[derive(Clone)]
 pub struct SinkFunction<M> {
     func : Arc< fn(M) -> ()>
