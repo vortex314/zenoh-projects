@@ -8,7 +8,7 @@ use alloc::boxed::Box;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use embassy_time::Duration;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use esp_hal::gpio::any_pin::AnyPin;
 use esp_hal::prelude::*;
 use esp_hal::{

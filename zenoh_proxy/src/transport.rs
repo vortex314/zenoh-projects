@@ -83,7 +83,7 @@ impl Transport {
                     cmd = self.commands.next() => {
                         match cmd.unwrap() {
                             TransportCmd::SendMessage { message } => {
-                                info!("TXD: {:?}", message);
+                                debug!("TXD: {:?}", message);
                                 let x = encode_frame(message);
                                 let line : String = x.clone().unwrap().as_slice().iter().map(|b| format!("{:02X} ", b)).collect();
                                 debug!("TXD : {}", line);
@@ -114,7 +114,7 @@ impl Transport {
                                 };
                             } else {
                                 for message in _res {
-                                    info!("RXD: {:?}", message);
+                                    debug!("RXD: {:?}", message);
                                     self.events.emit(TransportEvent::RecvMessage { message: message });
                                 }
                             }

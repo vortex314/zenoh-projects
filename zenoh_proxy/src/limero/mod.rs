@@ -36,22 +36,28 @@ pub trait SinkTrait<M>: Send + Sync {
     fn push(&self, m: M);
 }
 
-pub trait SourceTrait<M>: Send + Sync+'static
+pub trait SourceTrait<M>: Send + Sync + 'static
 where
-    M: Clone + Send + Sync+'static,
+    M: Clone + Send + Sync + 'static,
 {
     fn add_listener(&mut self, sink: SinkRef<M>);
-    fn map_to<U>(&mut self,func: fn(M) -> Option<U>,sink_ref:SinkRef<U>) where U: Clone + Send + Sync +'static
+    fn map_to<U>(&mut self, func: fn(M) -> Option<U>, sink_ref: SinkRef<U>)
+    where
+        U: Clone + Send + Sync + 'static,
     {
-        let flow = FlowFunction::new(func,sink_ref);
+        let flow = FlowFunction::new(func, sink_ref);
         self.add_listener(flow.sink_ref());
     }
-    fn for_each(&mut self,func: fn(M) -> ()) where M: Clone + Send + Sync 
+    fn for_each(&mut self, func: fn(M) -> ())
+    where
+        M: Clone + Send + Sync,
     {
         let sink_func = SinkFunction::new(func);
         self.add_listener(sink_func.sink_ref());
     }
-    fn for_all(&mut self,func:Box< dyn Fn(M) -> () + Send + Sync >) where M: Clone + Send + Sync 
+    fn for_all(&mut self, func: Box<dyn Fn(M) -> () + Send + Sync>)
+    where
+        M: Clone + Send + Sync,
     {
         let sink_func = SinkLambda::new(func);
         self.add_listener(sink_func.sink_ref());
@@ -67,7 +73,7 @@ where
 pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
 where
     T: Clone + Send + Sync,
-    U: Clone + Send + Sync+'static,
+    U: Clone + Send + Sync + 'static,
 {
 }
 
@@ -166,7 +172,7 @@ where
 
 impl<T> SourceTrait<T> for Source<T>
 where
-    T: Clone + Send + Sync+'static,
+    T: Clone + Send + Sync + 'static,
 {
     fn add_listener(&mut self, sink_ref: SinkRef<T>) {
         self.sink_refs.push(sink_ref);
@@ -206,17 +212,27 @@ where
 }
 
 struct SinkLambda<M> {
-    func: Arc<Box<dyn Fn(M) -> () + Send + Sync >>,
+    func: Arc<Box<dyn Fn(M) -> () + Send + Sync>>,
 }
 
 impl<M> SinkLambda<M> {
-    pub fn new(func:Box<dyn Fn(M) -> () + Send + Sync>) -> Self where M: Clone + Send + Sync  {
+    pub fn new(func: Box<dyn Fn(M) -> () + Send + Sync>) -> Self
+    where
+        M: Clone + Send + Sync,
+    {
         SinkLambda {
-            func : Arc::new(func)
+            func: Arc::new(func),
         }
     }
-    pub fn sink_ref(&self) -> SinkRef<M> where M: Clone + Send + Sync +'static{
-        SinkRef { sender:  Arc::new( SinkLambda { func : self.func.clone() }) }
+    pub fn sink_ref(&self) -> SinkRef<M>
+    where
+        M: Clone + Send + Sync + 'static,
+    {
+        SinkRef {
+            sender: Arc::new(SinkLambda {
+                func: self.func.clone(),
+            }),
+        }
     }
 }
 
@@ -226,24 +242,29 @@ impl<M> SinkTrait<M> for SinkLambda<M> {
     }
 }
 
-impl<M> DynSender<M> for SinkLambda<M>{
+impl<M> DynSender<M> for SinkLambda<M> {
     fn send(&self, _message: M) {
         (self.func)(_message);
     }
 }
 #[derive(Clone)]
 pub struct SinkFunction<M> {
-    func : Arc< fn(M) -> ()>
+    func: Arc<fn(M) -> ()>,
 }
 
-impl<M:'static> SinkFunction<M> {
+impl<M: 'static> SinkFunction<M> {
     pub fn new(func: fn(M) -> ()) -> Self {
         SinkFunction {
             func: Arc::new(func),
         }
     }
-    fn sink_ref(&self) -> SinkRef<M> where M: Clone + Send + Sync{
-        SinkRef { sender: Arc::new((*self).clone()) }
+    fn sink_ref(&self) -> SinkRef<M>
+    where
+        M: Clone + Send + Sync,
+    {
+        SinkRef {
+            sender: Arc::new((*self).clone()),
+        }
     }
 }
 
@@ -253,7 +274,7 @@ impl<M> SinkTrait<M> for SinkFunction<M> {
     }
 }
 
-impl<M> DynSender<M> for SinkFunction<M>{
+impl<M> DynSender<M> for SinkFunction<M> {
     fn send(&self, _message: M) {
         (self.func)(_message);
     }
@@ -304,10 +325,7 @@ where
     }
 }
 
-
-
-
-pub trait ActorTrait<T, U> // : SinkTrait<T> + SourceTrait<U>
+pub trait ActorTrait<T, U>
 where
     T: Clone + Send + Sync + 'static,
     U: Clone + Send + Sync + 'static,
@@ -316,4 +334,14 @@ where
     fn sink_ref(&self) -> SinkRef<T>;
 }
 
-
+impl<T, F> Shr<F> for &mut Source<T> 
+where
+    T: Clone + Send + Sync + 'static,
+    F: Fn(T) -> () + Send + Sync +'static,
+{
+    type Output = ();
+    fn shr(self, func: F) -> Self::Output
+    {
+        self.for_all(Box::new(func))
+    }
+}

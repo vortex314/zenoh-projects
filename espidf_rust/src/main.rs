@@ -22,7 +22,7 @@ use embassy_sync::channel::DynamicSender;
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 use embassy_time::{with_timeout, Duration, Timer};
 
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::digital::OutputPin;
 use embedded_svc::http::client::Client;
 use esp_backtrace as _;
 use esp_hal::gpio::any_pin::AnyPin;
@@ -30,8 +30,9 @@ use esp_hal::gpio::{AnyOutput, GpioPin, Io, Level, Output};
 use esp_hal::peripheral::Peripheral;
 use esp_hal::system::SystemControl;
 use esp_hal::timer::timg::TimerGroup;
+use esp_hal::timer::{ErasedTimer, OneShotTimer};
 use esp_hal::uart::config::{Config, DataBits, Parity, StopBits};
-use esp_hal::uart::{ClockSource, TxRxPins};
+use esp_hal::uart::{ClockSource, DefaultRxPin, DefaultTxPin};
 use esp_hal::{
     clock::ClockControl,
     peripherals::{Peripherals, UART0},
@@ -70,6 +71,16 @@ use limero::ActorTrait;
 mod ping_pong;
 use ping_pong::*;
 
+// When you are okay with using a nightly compiler it's better to use https://docs.rs/static_cell/2.1.0/static_cell/macro.make_static.html
+macro_rules! mk_static {
+    ($t:ty,$val:expr) => {{
+        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
+        #[deny(unused_attributes)]
+        let x = STATIC_CELL.uninit().write(($val));
+        x
+    }};
+}
+
 extern crate alloc;
 
 #[global_allocator]
@@ -104,8 +115,12 @@ async fn main(_spawner: Spawner) {
     let clocks = ClockControl::max(system.clock_control).freeze();
 
     // Initialize Embassy with needed timers
-    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
-    esp_hal_embassy::init(&clocks, timg0);
+   
+    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks,None);
+    let timer0: ErasedTimer = timg0.timer0.into();
+    let timers = [OneShotTimer::new(timer0)];
+    let timers = mk_static!([OneShotTimer<ErasedTimer>; 1], timers);
+    esp_hal_embassy::init(&clocks, timers);
     //   ping_pong::do_test(_spawner).await;
 
     // Initialize and configure UART0
@@ -118,12 +133,21 @@ async fn main(_spawner: Spawner) {
 
     let mut led_actor = Led::new(led_pin); // pass as OutputPin
 
-    let mut uart0 = Uart::new_async(peripherals.UART0, &clocks);
-    uart0.change_baud(921600, ClockSource::Apb, &clocks);
+    let mut uart0 = Uart::new_async_with_config(peripherals.UART0, 
+        Config {
+            baudrate: 921600,
+            data_bits: DataBits::DataBits8,
+            parity: Parity::ParityNone,
+            stop_bits: StopBits::STOP1,
+            clock_source: ClockSource::Apb,
+            rx_fifo_full_threshold: 127,
+            rx_timeout  : None,
+        },
+        &clocks,
+        io.pins.gpio1,
+        io.pins.gpio3).unwrap();
 
-    if uart0.set_rx_fifo_full_threshold(127).is_err() {
-        info!("Error setting RX FIFO full threshold");
-    }
+
     uart0.set_at_cmd(AtCmdConfig {
         // catch sentinel char 0x00
         pre_idle_count: Some(1),

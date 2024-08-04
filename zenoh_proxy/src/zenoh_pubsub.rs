@@ -107,8 +107,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                                     tokio::spawn(async move {
                                         while let Ok(sample) = sub.recv_async().await {
                                             let data = sample.payload.contiguous().to_vec();
-                                            let s = format!("{}", minicbor::display(&data));
-                                            info!("Received: {}:{}",sample.key_expr.to_string(), s);
+                                            info!("Received: {}:{}",sample.key_expr.to_string(), payload_display(&data));
                                             emitter.emit(PubSubEvent::Publish {
                                                 topic: sample.key_expr.to_string(),
                                                 message:sample.payload.contiguous().to_vec(),

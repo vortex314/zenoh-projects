@@ -17,19 +17,19 @@ esp-backtrace = { version = "0.11.0", features = [
     "panic-handler",
     "println",
 ] }
-esp-hal = { version = "0.18.0", features = [ "esp32","async","log" ] }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy.git", version = "0.5.0" }
-esp-hal-embassy     = { version="*",features=["esp32","time-timg0"] }
+esp-hal = { version = "*", features = [ "esp32","async","log" ] }
+embassy-sync = { git = "https://github.com/embassy-rs/embassy.git", version = "0.6.0" }
+esp-hal-embassy     = { version="*",features=["esp32"] }
 # 
 embassy-executor = { version = "0.5.0"}
 embassy-time = { version ="0.3.0", features=["generic-queue"]}
 embassy-futures = { version ="*" }
 
-esp-println = { version = "0.9.0", features = ["esp32", "log"] }
+esp-println = { version = "*", features = ["esp32", "log"] }
 log = { version = "0.4.20" }
-esp-alloc = { version = "0.3.0" }
+esp-alloc = { version = "*" }
 embedded-hal = "*"
-embedded-svc = { version = "0.26.1", default-features = false, features = [] }
+embedded-svc = { version = "*", default-features = false, features = [] }
 embedded-io = "0.6.1"
 embedded-io-async={ version ="*"}
 esp-wifi = { version = "*", features = [
@@ -50,11 +50,12 @@ smoltcp = { version = "0.11.0", default-features = false, features = [
     "socket-tcp",
     "socket-udp",
 ] }
-minicbor = { version = "0.21.1", features=["derive","alloc","half"] }
+minicbor = { version = "*", features=["derive","alloc","half"] }
 cobs={ version = "0.2.3", default_features=false,features = [] }
 crc = { version = "3.0.1", features = [] }
 byte = { version="0.2.7"}
-bitfield = "0.15.0"
+bitfield = "0.16.1"
+static_cell="*"
 
 [profile.release]
 codegen-units = 1 # LLVM can perform better optimizations using a single thread

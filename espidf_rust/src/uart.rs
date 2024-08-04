@@ -50,9 +50,6 @@ pub struct UartActor {
 
 impl UartActor {
     pub fn new(mut uart0: Uart<'static, UART0,Async>) -> Self {
-        uart0
-            .set_rx_fifo_full_threshold(UART_BUFSIZE as u16)
-            .unwrap();
         // Split UART0 to create seperate Tx and Rx handles
         let (tx, rx) = uart0.split();
         Self {

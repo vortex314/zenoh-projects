@@ -16,6 +16,8 @@ use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::Source;
+use crate::pubsub::PubSubCmd;
+use crate::pubsub::PubSubEvent;
 use crate::protocol;
 use crate::protocol::decode_frame;
 use crate::protocol::encode_frame;
@@ -123,7 +125,7 @@ impl ProxySession {
                     match cmd{
                         ProxyServerCmd::Publish { topic, message } => {
                             debug!("Publishing message to zenoh");
-                            self.pubsub_cmd.push(PubSubCmd::Publish { topic, message });
+                            self.pubsub_cmd.push(PubSubCmd::Publish { topic, payload: message });
                         },
                         ProxyServerCmd::TransportEvent(event) => {
                             debug!("Received event from transport {:?}", event);
@@ -150,7 +152,7 @@ impl ProxySession {
                 info!("Disconnected from zenoh");
                 self.events.emit(ProxyServerEvent::Disconnected);
             }
-            PubSubEvent::Publish { topic, message } => {
+            PubSubEvent::Publish { topic, payload } => {
                 if !self.server_topics.contains_key(&topic) {
                     let topic_id = self.get_server_topic_from_string(&topic);
                     self.transport_send(ProxyMessage::Register {
@@ -164,7 +166,7 @@ impl ProxySession {
                     flags: Flags(0),
                     topic_id,
                     msg_id: 0,
-                    data: message,
+                    data: payload,
                 });
             }
         }
@@ -213,7 +215,7 @@ impl ProxySession {
                     let topic = self.client_topics.get(&topic_id).unwrap().clone();
                     self.pubsub_cmd.push(PubSubCmd::Publish {
                         topic,
-                        message: data,
+                        payload: data,
                     });
                     if flags.qos() == 1 {
                         self.transport_send(ProxyMessage::PubAck {
