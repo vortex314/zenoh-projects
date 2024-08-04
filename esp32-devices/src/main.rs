@@ -5,6 +5,11 @@
 #![allow(dead_code)]
 
 mod limero;
+mod pubsub;
+use pubsub::PubSubCmd;
+use pubsub::PubSubEvent;
+mod pubsub_mqtt;
+use pubsub_mqtt::*;
 use alloc::boxed::Box;
 use embassy_executor::Spawner;
 use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Stack, StackResources};
@@ -19,6 +24,7 @@ use esp_wifi::{
     EspWifiInitFor,
 };
 use limero::*;
+use limero::ActorTrait;
 
 use esp_backtrace as _;
 use esp_hal::{
@@ -96,7 +102,7 @@ async fn main(spawner: Spawner) {
         stack_resource,
         seed,
     );
-    let stack = Box::leak(Box::new(stack));
+    let stack:&'static Stack<WifiDevice<WifiStaDevice>>  = Box::leak(Box::new(stack));
 
     spawner.spawn(connection(controller)).ok();
     spawner.spawn(net_task(stack)).ok();
@@ -119,6 +125,9 @@ async fn main(spawner: Spawner) {
         }
         Timer::after(Duration::from_millis(500)).await;
     }
+
+    let mut mqtt_actor = MqttActor::new(&stack);
+    mqtt_actor.run().await;
 
     loop {
         Timer::after(Duration::from_millis(1_000)).await;
@@ -157,6 +166,7 @@ async fn main(spawner: Spawner) {
                 }
             };
             info!("{}", core::str::from_utf8(&buf[..n]).unwrap());
+            info!(" heap_free: {}",ALLOCATOR.free());
         }
         Timer::after(Duration::from_millis(3000)).await;
     }
