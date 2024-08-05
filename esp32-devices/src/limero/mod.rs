@@ -22,7 +22,8 @@ use log::error;
 use log::{debug, info};
 
 pub mod timer;
-use timer::*;
+
+pub use timer::Timers as Timers;
 
 pub mod logger;
 pub use logger::semi_logger_init as init_logger;

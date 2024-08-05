@@ -11,7 +11,7 @@ pub use payload::payload_encode as payload_encode;
 
 #[derive(Clone, Debug)]
 pub enum PubSubCmd {
-    Publish { topic: String, message : Vec<u8> },
+    Publish { topic: String, payload : Vec<u8> },
     Subscribe { topic: String },
     Unsubscribe { topic: String },
     Connect { client_id: String },
@@ -19,7 +19,7 @@ pub enum PubSubCmd {
 }
 #[derive(Clone, Debug)]
 pub enum PubSubEvent {
-    Publish { topic: String, message: Vec<u8> },
+    Publish { topic: String, payload: Vec<u8> },
     Connected,
     Disconnected,
 }

@@ -65,6 +65,6 @@ pub fn payload_as_bool (payload: &Vec<u8>) -> Result<bool, decode::Error> {
     }
     match v[0] {
         Token::Bool(b) => Ok(b),
-        token => Err(Error::end_of_input()),
+        _ => Err(Error::end_of_input()),
     }
 }

@@ -6,10 +6,11 @@
 
 mod limero;
 mod pubsub;
+use alloc::string::ToString;
+use embassy_futures::select::select4;
 use pubsub::PubSubCmd;
 use pubsub::PubSubEvent;
-mod mqtt_actor;
-use mqtt_actor::*;
+
 use alloc::boxed::Box;
 use embassy_executor::Spawner;
 use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Stack, StackResources};
@@ -18,13 +19,13 @@ use embassy_time::{Duration, Timer};
 use esp_wifi::{
     current_millis,
     wifi::{
-        ClientConfiguration,Configuration, WifiController, WifiDevice, WifiError, WifiEvent, WifiStaDevice, WifiState,
-        utils::create_network_interface, AccessPointInfo, 
+        utils::create_network_interface, AccessPointInfo, ClientConfiguration, Configuration,
+        WifiController, WifiDevice, WifiError, WifiEvent, WifiStaDevice, WifiState,
     },
     EspWifiInitFor,
 };
-use limero::*;
 use limero::ActorTrait;
+use limero::*;
 
 use esp_backtrace as _;
 use esp_hal::{
@@ -39,7 +40,11 @@ use esp_hal::{
 use log::info;
 use smoltcp::iface::SocketStorage;
 
+mod wifi_actor;
+use wifi_actor::*;
 
+mod mqtt_actor;
+use mqtt_actor::*;
 
 extern crate alloc;
 use core::mem::MaybeUninit;
@@ -61,7 +66,7 @@ async fn main(spawner: Spawner) {
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::max(system.clock_control).freeze();
-//    let _delay = Delay::new(&clocks);
+    //    let _delay = Delay::new(&clocks);
     init_heap();
 
     //   esp_info::logger::init_logger_from_env();
@@ -81,28 +86,43 @@ async fn main(spawner: Spawner) {
     let button_actor = ButtonActor::new(peripherals.BUTTON, Duration::from_millis(500));
     spawner.spawn(button_actor.run()).ok();*/
 
-    let mut wifi_actor = WifiActor::new(wifi:WIFI, wifi_timer: PeriodicTimer, clocks: ClockControl, spawner: Spawner);
-    let stack = wifi_actor.stack();
-    let mut mqtt_actor = MqttActor::new(&stack);
+    let mut wifi_actor = WifiActor::new(
+        peripherals.WIFI,
+        wifi_timer,
+        &clocks,
+        Rng::new(peripherals.RNG),
+        peripherals.RADIO_CLK,
+        spawner,
+    );
+    let _stack = wifi_actor.stack();
+    /*let mut mqtt_actor = MqttActor::new(&stack);
 
-    wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
-    &wifi_actor >> connect_on_wifi_ready >> mqtt_actor.sink_ref();
+        wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
+        &wifi_actor >> connect_on_wifi_ready >> mqtt_actor.sink_ref();
+    */
 
-    spawner.spawn(wifi_actor.run()).ok();
-    spawner.spawn(mqtt_actor.run()).ok();
-
+    loop {
+        select4(
+            wifi_actor.run(),
+            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
+            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
+            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
+        )
+        .await;
+    }
 }
 
-fn connect_on_wifi_ready(event : WifiEvent) -> Option<PubSubCmd> {
+fn connect_on_wifi_ready(event: WifiActorEvent) -> Option<PubSubCmd> {
     match event {
-        WifiEvent::Connected => {
+        WifiActorEvent::Connected => {
             info!("Wifi Connected");
-            Some(PubSubCmd::Connect)
+            Some(PubSubCmd::Connect {
+                client_id: "my_esp32".to_string(),
+            })
         }
-        WifiEvent::Disconnected => {
+        WifiActorEvent::Disconnected => {
             info!("Wifi Disconnected");
             Some(PubSubCmd::Disconnect)
         }
-        _ => {None}
     }
 }
