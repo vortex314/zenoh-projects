@@ -61,3 +61,8 @@ incremental = false
 lto = 'fat'
 opt-level = 's'
 overflow-checks = false
+
+[features]
+default = ["mqtt"]
+mqtt = ["rust-mqtt"]
+serial=[]

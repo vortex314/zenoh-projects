@@ -256,3 +256,48 @@ where
     fn sink_ref(&self) -> SinkRef<T>;
     fn add_listener(&mut self, sink_ref: SinkRef<U>);
 }
+/* 
+pub struct Actor<C,E,N> {
+    cmds: Sink<C,N>,
+    events: Source<E>,
+    timers: Timers,
+}
+
+impl<C,E,N> Actor<C,E,N> {
+    pub fn new() -> Self {
+        Actor {
+            cmds: Sink::new(),
+            events: Source::new(),
+            timers: Timers::new(),
+        }
+    }
+    pub fn sink_ref(&self) -> SinkRef<C> {
+        self.cmds.sink_ref()
+    }
+
+}
+
+impl ActorTrait for Actor {
+    async fn run(&mut self) {
+        loop {
+            let cmd = self.cmds.next().await;
+            match cmd {
+                Some(cmd) => {
+                    self.handle(cmd);
+                }
+                None => {}
+            }
+        }
+    }
+    fn add_listener(&mut self, sink_ref: SinkRef<E>) {
+        self.events.add_listener(sink_ref);
+    }
+    fn handle(&mut self, cmd: C) {
+        let event = self.process(cmd);
+        self.events.emit(event);
+    }
+    fn process(&mut self, cmd: C) -> E {
+        unimplemented!()
+    }
+}
+    */

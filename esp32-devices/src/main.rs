@@ -8,8 +8,8 @@ mod limero;
 mod pubsub;
 use pubsub::PubSubCmd;
 use pubsub::PubSubEvent;
-mod pubsub_mqtt;
-use pubsub_mqtt::*;
+mod mqtt_actor;
+use mqtt_actor::*;
 use alloc::boxed::Box;
 use embassy_executor::Spawner;
 use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Stack, StackResources};
@@ -39,8 +39,7 @@ use esp_hal::{
 use log::info;
 use smoltcp::iface::SocketStorage;
 
-const SSID: &str = env!("WIFI_SSID");
-const PASSWORD: &str = env!("WIFI_PASS");
+
 
 extern crate alloc;
 use core::mem::MaybeUninit;
@@ -61,9 +60,8 @@ fn init_heap() {
 async fn main(spawner: Spawner) {
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
-
     let clocks = ClockControl::max(system.clock_control).freeze();
-    let _delay = Delay::new(&clocks);
+//    let _delay = Delay::new(&clocks);
     init_heap();
 
     //   esp_info::logger::init_logger_from_env();
@@ -71,144 +69,40 @@ async fn main(spawner: Spawner) {
 
     let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks, None);
     let timer0: ErasedTimer = timg0.timer0.into();
-    let timers = [OneShotTimer::new(timer0)];
-    let timers = Box::leak(Box::new(timers));
-    esp_hal_embassy::init(&clocks, timers);
+    let embassy_timer = [OneShotTimer::new(timer0)];
+    let embassy_timer = Box::leak(Box::new(embassy_timer)); // leak the timers to make them 'static
+    esp_hal_embassy::init(&clocks, embassy_timer);
 
     let timer1: ErasedTimer = timg0.timer1.into();
     let wifi_timer = PeriodicTimer::new(timer1);
 
-    let init = esp_wifi::initialize(
-        EspWifiInitFor::Wifi,
-        wifi_timer,
-        Rng::new(peripherals.RNG),
-        peripherals.RADIO_CLK,
-        &clocks,
-    )
-    .expect("wifi init failed");
+    /*let led_actor = LedActor::new(peripherals.LED, Duration::from_millis(500));
+    spawner.spawn(led_actor.run()).ok();
+    let button_actor = ButtonActor::new(peripherals.BUTTON, Duration::from_millis(500));
+    spawner.spawn(button_actor.run()).ok();*/
 
-    let wifi = peripherals.WIFI;
-    let (wifi_interface, controller) =
-        esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
-
-    let config = Config::dhcpv4(Default::default());
-
-    let seed = 1234; // very random, very secure seed
-
-    let stack_resource = Box::leak(Box::new(StackResources::<3>::new()));
-    let stack/* :  Stack<WifiDevice<'_, WifiStaDevice>>*/ = Stack::new(
-        wifi_interface,
-        config,
-        stack_resource,
-        seed,
-    );
-    let stack:&'static Stack<WifiDevice<WifiStaDevice>>  = Box::leak(Box::new(stack));
-
-    spawner.spawn(connection(controller)).ok();
-    spawner.spawn(net_task(stack)).ok();
-
-    let mut rx_buffer = [0; 4096];
-    let mut tx_buffer = [0; 4096];
-
-    loop {
-        if stack.is_link_up() {
-            break;
-        }
-        Timer::after(Duration::from_millis(500)).await;
-    }
-
-    info!("Waiting to get IP address...");
-    loop {
-        if let Some(config) = stack.config_v4() {
-            info!("Got IP: {}", config.address);
-            break;
-        }
-        Timer::after(Duration::from_millis(500)).await;
-    }
-
+    let mut wifi_actor = WifiActor::new(wifi:WIFI, wifi_timer: PeriodicTimer, clocks: ClockControl, spawner: Spawner);
+    let stack = wifi_actor.stack();
     let mut mqtt_actor = MqttActor::new(&stack);
-    mqtt_actor.run().await;
 
-    loop {
-        Timer::after(Duration::from_millis(1_000)).await;
+    wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
+    &wifi_actor >> connect_on_wifi_ready >> mqtt_actor.sink_ref();
 
-        let mut socket = TcpSocket::new(&stack, &mut rx_buffer, &mut tx_buffer);
+    spawner.spawn(wifi_actor.run()).ok();
+    spawner.spawn(mqtt_actor.run()).ok();
 
-        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-
-        let remote_endpoint = (Ipv4Address::new(142, 250, 185, 115), 80);
-        info!("connecting...");
-        let r = socket.connect(remote_endpoint).await;
-        if let Err(e) = r {
-            info!("connect error: {:?}", e);
-            continue;
-        }
-        info!("connected!");
-        let mut buf = [0; 1024];
-        loop {
-            use embedded_io_async::Write;
-            let r = socket
-                .write_all(b"GET / HTTP/1.0\r\nHost: www.mobile-j.de\r\n\r\n")
-                .await;
-            if let Err(e) = r {
-                info!("write error: {:?}", e);
-                break;
-            }
-            let n = match socket.read(&mut buf).await {
-                Ok(0) => {
-                    info!("read EOF");
-                    break;
-                }
-                Ok(n) => n,
-                Err(e) => {
-                    info!("read error: {:?}", e);
-                    break;
-                }
-            };
-            info!("{}", core::str::from_utf8(&buf[..n]).unwrap());
-            info!(" heap_free: {}",ALLOCATOR.free());
-        }
-        Timer::after(Duration::from_millis(3000)).await;
-    }
 }
 
-#[embassy_executor::task]
-async fn connection(mut controller: WifiController<'static>) {
-    info!("start connection task");
-    info!("Device capabilities: {:?}", controller.get_capabilities());
-    loop {
-        match esp_wifi::wifi::get_wifi_state() {
-            WifiState::StaConnected => {
-                // wait until we're no longer connected
-                controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                Timer::after(Duration::from_millis(5000)).await
-            }
-            _ => {}
+fn connect_on_wifi_ready(event : WifiEvent) -> Option<PubSubCmd> {
+    match event {
+        WifiEvent::Connected => {
+            info!("Wifi Connected");
+            Some(PubSubCmd::Connect)
         }
-        if !matches!(controller.is_started(), Ok(true)) {
-            let client_config = Configuration::Client(ClientConfiguration {
-                ssid: SSID.try_into().unwrap(),
-                password: PASSWORD.try_into().unwrap(),
-                ..Default::default()
-            });
-            controller.set_configuration(&client_config).unwrap();
-            info!("Starting wifi");
-            controller.start().await.unwrap();
-            info!("Wifi started!");
+        WifiEvent::Disconnected => {
+            info!("Wifi Disconnected");
+            Some(PubSubCmd::Disconnect)
         }
-        info!("About to connect...");
-
-        match controller.connect().await {
-            Ok(_) => info!("Wifi connected!"),
-            Err(e) => {
-                info!("Failed to connect to wifi: {e:?}");
-                Timer::after(Duration::from_millis(5000)).await
-            }
-        }
+        _ => {None}
     }
-}
-
-#[embassy_executor::task]
-async fn net_task(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) {
-    stack.run().await
 }

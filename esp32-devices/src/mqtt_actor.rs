@@ -51,11 +51,6 @@ enum TimerId {
 pub struct MqttActor {
     command: Sink<PubSubCmd, 3>,
     events: Source<PubSubEvent>,
-    client_topics: BTreeMap<String, u16>,
-    server_topics: BTreeMap<u16, String>,
-    client_topics_registered: BTreeMap<u16, bool>,
-    //    client_topics_sender: BTreeMap<u16, Box<dyn Subscriber>>,
-    client_id: String,
     state: State,
     ping_timeouts: u32,
     msg_id: u16,
@@ -68,11 +63,6 @@ impl MqttActor {
         MqttActor {
             command: Sink::new(),
             events: Source::new(),
-            client_topics: BTreeMap::new(),
-            server_topics: BTreeMap::new(),
-            client_topics_registered: BTreeMap::new(),
-            //           client_topics_sender: BTreeMap::new(),
-            client_id: "esp32".to_string(),
             state: State::Disconnected,
             ping_timeouts: 0,
             msg_id: 0,
@@ -152,11 +142,57 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
                     }
                 },
             }
+            loop {
+                
+                match select(self.command.next(), self.timers.alarm(),client.recv_messsage()).await {
+                    First(msg) => match msg {
+                        Some(cmd) => {
+                            match cmd {
+                                PubSubCmd::Publish(topic, payload) => {
+                                    let res = client.send_message(topic, payload).await;
+                                    info!("Publish sent {:?}", res);
+                                }
+                                PubSubCmd::Subscribe(topic) => {
+                                    let res = client.subscribe_to_topics(vec![topic]).await;
+                                    info!("
+                                    Subscribe sent {:?}", res);
+                                }
+                                PubSubCmd::Unsubscribe(topic) => {
+                                    let res = client.unsubscribe_from_topic(topic).await;
+                                    info!("Unsubscribe sent {:?}", res);
+                                }
+                                _ => {}
+                            }
+                        }
+                        None => {
+                            info!("Unexpected {:?}", msg);
+                        }
+                    },
+                    Second(idx) => {
+                        self.on_timeout(idx).await;
+                        let res = client.send_ping().await;
+                        info!("Ping sent {:?}", res);
+                    },
+                    Third(msg) => {
+                        match msg {
+                            Ok((topic,payload))) => {
+                                self.events.emit(PubSubEvent::Publish(topic,payload));
+                            }
+                            Err(e) => {
+                                info!("MQTT Error: {:?}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            let res = client.disconnect().await;
+            info!("Disconnect sent {:?}", res);
         }
     }
 
     fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        todo!()
+        self.command.sink_ref()
     }
 
     fn add_listener(&mut self, sink_ref: SinkRef<PubSubEvent>) {
