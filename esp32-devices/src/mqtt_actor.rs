@@ -52,29 +52,141 @@ enum TimerId {
     ConnectionTimer = 3,
 }
 
-pub struct MqttActor<'a> {
+struct Network<'a> {
+    stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
+    rx_buffer: [u8; 4096],
+    tx_buffer: [u8; 4096],
+    recv_buffer: [u8; 256],
+    write_buffer: [u8; 256],
+
+    client: Option<MqttClient<'a, TcpSocket<'a>, 5, CountingRng>>,
+}
+
+impl<'a> Network<'a> {
+    pub fn new(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) -> Network {
+        Network {
+            stack,
+            rx_buffer: [0u8; 4096],
+            tx_buffer: [0u8; 4096],
+            recv_buffer: [0u8; 256],
+            write_buffer: [0u8; 256],
+            client: None,
+        }
+    }
+    pub async fn connect(&mut self) -> Result<(), ReasonCode> {
+        let mut socket = TcpSocket::new(self.stack, &mut self.rx_buffer, &mut self.tx_buffer);
+        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+
+        let mut config:ClientConfig<5, CountingRng> = ClientConfig::new(
+            rust_mqtt::client::client_config::MqttVersion::MQTTv5,
+            CountingRng(20000),
+        );
+        config.add_max_subscribe_qos(rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1);
+        config.add_client_id("esp32");
+        config.max_packet_size = 256;
+
+        info!("connecting...");
+        let server_address = match self
+            .stack
+            .dns_query("test.mosquitto.org", DnsQueryType::A)
+            .await
+            .map(|a| a[0])
+        {
+            // 0 is the first address
+            Ok(address) => Ok(address),
+            Err(e) => {
+                info!("DNS lookup error: {e:?}");
+                Err(ReasonCode::UnspecifiedError)
+            }
+        }?;
+        let server_endpoint = (server_address, 1883);
+        socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
+        socket.connect(server_endpoint).await.map_err(|e| {
+            info!("connect error: {:?}", e);
+            ReasonCode::UnspecifiedError
+        })?;
+
+        info!("connected!");
+        let mut client = MqttClient::new(
+            socket,
+            &mut self.write_buffer,
+            256,
+            &mut self.recv_buffer,
+            256,
+            config,
+        );
+        client.connect_to_broker().await?;
+ //       self.client = Some(client);
+        Ok(())
+    }
+    pub fn disconnect(&mut self) {
+        let _ = self.client.as_mut().expect("").disconnect().await;
+    }
+
+    pub async fn send_message(
+        &mut self,
+        topic: &str,
+        payload: &[u8],
+        qos: QualityOfService,
+        retain: bool,
+    ) {
+        let _ = self.client
+            .as_mut()
+            .expect("")
+            .send_message(topic, payload, qos, retain).await;
+    }
+
+    pub async fn subscribe_to_topic(&mut self, topic: &str) {
+        let _ = self.client.as_mut().expect("").subscribe_to_topic(topic).await;
+    }
+
+    pub async fn unsubscribe_from_topic(&mut self, topic: &str) {
+        let _ = self.client
+            .as_mut()
+            .expect("")
+            .unsubscribe_from_topic(topic).await;
+    }
+
+    pub async fn receive_message(&mut self) -> Result<(&str, &[u8]), ReasonCode> {
+        self.client.as_mut().expect("").receive_message().await
+    }
+
+    pub async fn get_dns_address_server(&self) -> Result<IpAddress, ReasonCode> {
+        match self
+            .stack
+            .dns_query("test.mosquitto.org", DnsQueryType::A)
+            .await
+            .map(|a| a[0])
+        {
+            // 0 is the first address
+            Ok(address) => Ok(address),
+            Err(e) => {
+                info!("DNS lookup error: {e:?}");
+                Err(ReasonCode::UnspecifiedError)
+            }
+        }
+    }
+
+    pub async fn send_ping(&mut self) -> Result<(), ReasonCode> {
+        self.client.as_mut().expect("").send_ping().await
+    }
+}
+
+pub struct MqttActor {
     cmds: Sink<PubSubCmd, 3>,
     events: Source<PubSubEvent>,
     ping_timeouts: u32,
     timers: Timers,
-    stack: &'a Stack<WifiDevice<'a, WifiStaDevice>>,
-    rx_buffer : &'a mut [u8; 4096],
-    tx_buffer : &'a mut [u8; 4096],
-    recv_buffer : &'a mut [u8; 256],
-    write_buffer : &'a mut [u8; 256],
+    network: Network<'static>,
 }
-impl<'a> MqttActor<'a> {
-    pub fn new(stack: &'a Stack<WifiDevice<WifiStaDevice>>) -> MqttActor<'a> {
+impl MqttActor {
+    pub fn new(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) -> MqttActor {
         MqttActor {
             cmds: Sink::new(),
             events: Source::new(),
             ping_timeouts: 0,
             timers: Timers::new(),
-            stack,
-            rx_buffer: &mut [0; 4096],
-            tx_buffer:  &mut [0; 4096],
-            recv_buffer:  &mut [0; 256],
-            write_buffer: &mut [0; 256],
+            network: Network::new(stack),
         }
     }
 
@@ -82,48 +194,41 @@ impl<'a> MqttActor<'a> {
         self.cmds.sink_ref()
     }
 
-    pub async fn handle_cmd(
-        &mut self,
-        cmd: PubSubCmd,
-        client: &mut MqttClient<'static, TcpSocket<'static>, 5, CountingRng>,
-    ) {
+    pub async fn handle_cmd(&mut self, cmd: PubSubCmd) {
         match cmd {
             PubSubCmd::Connect { client_id: _ } => {}
             PubSubCmd::Disconnect => {
-                client.disconnect();
+                self.network.disconnect();
             }
             PubSubCmd::Publish { topic, payload } => {
-                client.send_message(topic.as_str(), &payload, QualityOfService::QoS1, false);
+                let _ = self.network
+                    .send_message(topic.as_str(), &payload, QualityOfService::QoS1, false).await;
             }
             PubSubCmd::Subscribe { topic } => {
-                client.subscribe_to_topic(topic.as_str());
+                let _ = self.network.subscribe_to_topic(topic.as_str()).await;
             }
             PubSubCmd::Unsubscribe { topic } => {
-                client.unsubscribe_from_topic(topic.as_str());
+                let _ = self.network.unsubscribe_from_topic(topic.as_str()).await;
             }
         }
     }
 }
 
 impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
-    async fn run(&mut self) {
+    async fn run(& mut self) {
+       // 
         loop {
-            info!("WifiActor::run");
-            let mut client = loop {
-                let cl = connect(self.stack,self.rx_buffer,self.tx_buffer,self.recv_buffer,self.write_buffer).await;
-                if cl.is_ok() {
-                    break cl.unwrap();
-                }
-            };
+            info!("MqttActor::run");
             match select3(
                 self.timers.alarm(),
-                client.receive_message(),
+                self.network.receive_message(),
                 self.cmds.next(),
             )
             .await
             {
                 First(_idx) => {
-                    let res = client.send_ping().await;
+                    self.network.connect().await.unwrap();
+                    let res = self.network.send_ping().await;
                     info!("Ping sent {:?}", res);
                 }
                 Second(msg) => match msg {
@@ -139,73 +244,23 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
                     }
                 },
                 Third(cmd) => {
-                    self.handle_cmd(cmd.unwrap(), &mut client).await;
+                    self.handle_cmd(cmd.unwrap()).await;
                 }
             }
         }
     }
 
     fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        todo!()
+        self.cmds.sink_ref()
     }
 
     fn add_listener(&mut self, sink_ref: SinkRef<PubSubEvent>) {
-        todo!()
+        self.events.add_listener(sink_ref);
     }
 }
 
-impl<'a> SourceTrait<PubSubEvent> for MqttActor {
+impl SourceTrait<PubSubEvent> for MqttActor {
     fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
         self.events.add_listener(sink);
     }
-}
-
-pub async fn get_dns_address_server(
-    stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
-) -> Result<IpAddress, ReasonCode> {
-    match stack
-        .dns_query("test.mosquitto.org", DnsQueryType::A)
-        .await
-        .map(|a| a[0])
-    {
-        // 0 is the first address
-        Ok(address) => Ok(address),
-        Err(e) => {
-            info!("DNS lookup error: {e:?}");
-            Err(ReasonCode::UnspecifiedError)
-        }
-    }
-}
-
-pub async fn connect<'a>(
-    stack: &'a Stack<WifiDevice<'a, WifiStaDevice>>,
-    rx_buffer: &'a mut [u8; 4096],
-    tx_buffer: &'a mut [u8; 4096],
-    recv_buffer: &'a  mut [u8; 256],
-    write_buffer: &'a  mut [u8; 256],
-) -> Result<MqttClient<TcpSocket<'a>, 5, CountingRng>, ReasonCode> {
-    let mut socket = TcpSocket::new(stack, rx_buffer, tx_buffer);
-    socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-
-    let mut config = ClientConfig::new(
-        rust_mqtt::client::client_config::MqttVersion::MQTTv5,
-        CountingRng(20000),
-    );
-    config.add_max_subscribe_qos(rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1);
-    config.add_client_id("esp32");
-    config.max_packet_size = 256;
-
-    info!("connecting...");
-    let server_address = get_dns_address_server(stack).await?;
-    let server_endpoint = (server_address, 1883);
-    socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-    socket.connect(server_endpoint).await.map_err(|e| {
-        info!("connect error: {:?}", e);
-        ReasonCode::UnspecifiedError
-    })?;
-
-    info!("connected!");
-    let mut client = MqttClient::new(socket, write_buffer, 256, recv_buffer, 256, config);
-    client.connect_to_broker().await?;
-    Ok(client)
 }
