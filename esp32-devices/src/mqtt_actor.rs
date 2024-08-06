@@ -9,6 +9,8 @@ use client::client::MqttClient;
 use client::client_config::ClientConfig;
 use embassy_executor::Spawner;
 
+use embassy_net::dns::Error;
+use embassy_net::tcp::ConnectError;
 use embassy_net::IpAddress;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::{DynamicReceiver, DynamicSender, Sender};
@@ -33,7 +35,7 @@ use packet::v5::publish_packet::QualityOfService;
 use packet::v5::reason_codes::ReasonCode;
 use rust_mqtt::*;
 
-use log::{debug, info};
+use log::{debug, error, info};
 use utils::rng_generator::CountingRng;
 
 use crate::limero::{timer::Timer, timer::Timers, Sink, SinkRef, SinkTrait, Source, SourceTrait};
@@ -44,6 +46,13 @@ use crate::{ActorTrait, PubSubCmd, PubSubEvent};
 enum State {
     Disconnected,
     Connected,
+}
+
+#[derive(Debug)]
+enum MqttError {
+    Network(ReasonCode),
+    ConnectionError(ConnectError),
+    Dns(embassy_net::dns::Error)
 }
 
 enum TimerId {
@@ -73,11 +82,11 @@ impl<'a> Network<'a> {
             client: None,
         }
     }
-    pub async fn connect(&mut self) -> Result<(), ReasonCode> {
+    pub async fn connect(&mut self) -> Result<(), MqttError> {
         let mut socket = TcpSocket::new(self.stack, &mut self.rx_buffer, &mut self.tx_buffer);
         socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
 
-        let mut config:ClientConfig<5, CountingRng> = ClientConfig::new(
+        let mut config: ClientConfig<5, CountingRng> = ClientConfig::new(
             rust_mqtt::client::client_config::MqttVersion::MQTTv5,
             CountingRng(20000),
         );
@@ -85,28 +94,24 @@ impl<'a> Network<'a> {
         config.add_client_id("esp32");
         config.max_packet_size = 256;
 
-        info!("connecting...");
-        let server_address = match self
+        info!("DNS Query ...");
+        let server_address = self
             .stack
             .dns_query("test.mosquitto.org", DnsQueryType::A)
             .await
             .map(|a| a[0])
-        {
-            // 0 is the first address
-            Ok(address) => Ok(address),
-            Err(e) => {
-                info!("DNS lookup error: {e:?}");
-                Err(ReasonCode::UnspecifiedError)
-            }
-        }?;
+            .map_err(|e| MqttError::Dns(e))?;
+
         let server_endpoint = (server_address, 1883);
         socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
-        socket.connect(server_endpoint).await.map_err(|e| {
-            info!("connect error: {:?}", e);
-            ReasonCode::UnspecifiedError
-        })?;
 
-        info!("connected!");
+        info!("Connecting to socket server ...");
+        socket
+            .connect(server_endpoint)
+            .await
+            .map_err(|e| MqttError::ConnectionError(e))?;
+
+        info!("MQTT connect ...");
         let mut client = MqttClient::new(
             socket,
             &mut self.write_buffer,
@@ -115,11 +120,14 @@ impl<'a> Network<'a> {
             256,
             config,
         );
-        client.connect_to_broker().await?;
- //       self.client = Some(client);
+        client
+            .connect_to_broker()
+            .await
+            .map_err(|err| MqttError::Network(err))?;
+        //       self.client = Some(client);
         Ok(())
     }
-    pub fn disconnect(&mut self) {
+    pub async fn disconnect(&mut self) {
         let _ = self.client.as_mut().expect("").disconnect().await;
     }
 
@@ -130,25 +138,54 @@ impl<'a> Network<'a> {
         qos: QualityOfService,
         retain: bool,
     ) {
-        let _ = self.client
+        if self.client.is_none() {
+            error!("No client for sending messages");
+            return;
+        }
+        let _ = self
+            .client
             .as_mut()
             .expect("")
-            .send_message(topic, payload, qos, retain).await;
+            .send_message(topic, payload, qos, retain)
+            .await;
     }
 
     pub async fn subscribe_to_topic(&mut self, topic: &str) {
-        let _ = self.client.as_mut().expect("").subscribe_to_topic(topic).await;
+        if self.client.is_none() {
+            error!("No client for subscription");
+            return;
+        }
+        let _ = self
+            .client
+            .as_mut()
+            .expect("")
+            .subscribe_to_topic(topic)
+            .await;
     }
 
     pub async fn unsubscribe_from_topic(&mut self, topic: &str) {
-        let _ = self.client
+        if self.client.is_none() {
+            error!("No client for unsubscription");
+            return;
+        }
+        let _ = self
+            .client
             .as_mut()
             .expect("")
-            .unsubscribe_from_topic(topic).await;
+            .unsubscribe_from_topic(topic)
+            .await;
     }
 
     pub async fn receive_message(&mut self) -> Result<(&str, &[u8]), ReasonCode> {
-        self.client.as_mut().expect("").receive_message().await
+        if self.client.is_none() {
+            error!("No client for receiving messages");
+            return Err(ReasonCode::UnspecifiedError);
+        }
+        self.client
+            .as_mut()
+            .expect("no client ")
+            .receive_message()
+            .await
     }
 
     pub async fn get_dns_address_server(&self) -> Result<IpAddress, ReasonCode> {
@@ -198,11 +235,13 @@ impl MqttActor {
         match cmd {
             PubSubCmd::Connect { client_id: _ } => {}
             PubSubCmd::Disconnect => {
-                self.network.disconnect();
+                let _ = self.network.disconnect().await;
             }
             PubSubCmd::Publish { topic, payload } => {
-                let _ = self.network
-                    .send_message(topic.as_str(), &payload, QualityOfService::QoS1, false).await;
+                let _ = self
+                    .network
+                    .send_message(topic.as_str(), &payload, QualityOfService::QoS1, false)
+                    .await;
             }
             PubSubCmd::Subscribe { topic } => {
                 let _ = self.network.subscribe_to_topic(topic.as_str()).await;
@@ -215,10 +254,13 @@ impl MqttActor {
 }
 
 impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
-    async fn run(& mut self) {
-       // 
+    async fn run(&mut self) {
+        embassy_time::Timer::after(Duration::from_millis(5000)).await;
+
+        info!("MqttActor::run");
         loop {
-            info!("MqttActor::run");
+            info!("MqttActor::loop");
+            embassy_time::Timer::after(Duration::from_millis(500)).await;
             match select3(
                 self.timers.alarm(),
                 self.network.receive_message(),
@@ -227,6 +269,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
             .await
             {
                 First(_idx) => {
+                    info!("Alarm -- connecting ");
                     self.network.connect().await.unwrap();
                     let res = self.network.send_ping().await;
                     info!("Ping sent {:?}", res);
@@ -240,7 +283,6 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
                     }
                     Err(e) => {
                         info!("MQTT Error: {:?}", e);
-                        break;
                     }
                 },
                 Third(cmd) => {

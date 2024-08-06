@@ -123,8 +123,9 @@ impl WifiActor {
 
 impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
     async fn run(&mut self) {
+        info!("WifiActor::run");
         loop {
-            info!("WifiActor::run");
+            info!("WifiActor::loop");
             match select3(
                 connection(&mut self.controller, self.stack, &self.events),
                 self.stack.run(),
@@ -174,6 +175,7 @@ async fn connection(
     info!("start connection task");
     info!("Device capabilities: {:?}", controller.get_capabilities());
     loop {
+        Timer::after(Duration::from_millis(1000)).await;
         match esp_wifi::wifi::get_wifi_state() {
             WifiState::StaConnected => {
                 // wait until we're no longer connected
@@ -213,5 +215,11 @@ async fn connection(
             }
             Timer::after(Duration::from_millis(500)).await;
         }
+    }
+}
+
+impl SourceTrait<WifiActorEvent> for WifiActor {
+    fn add_listener(&mut self, sink: SinkRef<WifiActorEvent>) {
+        self.events.add_listener(sink);
     }
 }

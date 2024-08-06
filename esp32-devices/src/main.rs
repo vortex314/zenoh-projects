@@ -25,6 +25,7 @@ use esp_wifi::{
     EspWifiInitFor,
 };
 use limero::ActorTrait;
+use limero::SourceTrait;
 use limero::*;
 
 use esp_backtrace as _;
@@ -95,16 +96,14 @@ async fn main(spawner: Spawner) {
         spawner,
     );
     let stack = wifi_actor.stack();
-    let mut _mqtt_actor = MqttActor::new(&stack);
+    let mut mqtt_actor = MqttActor::new(&stack);
 
-    /*     wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
-        &wifi_actor >> connect_on_wifi_ready >> mqtt_actor.sink_ref();
-    */
+    wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
 
     loop {
         select4(
             wifi_actor.run(),
-            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
+            mqtt_actor.run(),
             embassy_time::Timer::after(Duration::from_millis(1_000_000)),
             embassy_time::Timer::after(Duration::from_millis(1_000_000)),
         )
