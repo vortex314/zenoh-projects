@@ -1,9 +1,12 @@
+use core::borrow::BorrowMut;
+use core::cell::RefCell;
 use core::result;
 
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::rc::Rc;
 use alloc::string::ToString;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use client::client::MqttClient;
 use client::client_config::ClientConfig;
@@ -52,7 +55,7 @@ enum State {
 enum MqttError {
     Network(ReasonCode),
     ConnectionError(ConnectError),
-    Dns(embassy_net::dns::Error)
+    Dns(embassy_net::dns::Error),
 }
 
 enum TimerId {
@@ -61,18 +64,18 @@ enum TimerId {
     ConnectionTimer = 3,
 }
 
-struct Network<'a> {
+struct Network {
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
     rx_buffer: [u8; 4096],
     tx_buffer: [u8; 4096],
     recv_buffer: [u8; 256],
     write_buffer: [u8; 256],
 
-    client: Option<MqttClient<'a, TcpSocket<'a>, 5, CountingRng>>,
+    client: Option<MqttClient<'static, TcpSocket<'static>, 5, CountingRng>>,
 }
 
-impl<'a> Network<'a> {
-    pub fn new(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) -> Network {
+impl Network {
+    pub fn new(stack: &'static Stack<WifiDevice<WifiStaDevice>>) -> Network {
         Network {
             stack,
             rx_buffer: [0u8; 4096],
@@ -82,7 +85,7 @@ impl<'a> Network<'a> {
             client: None,
         }
     }
-    pub async fn connect(&mut self) -> Result<(), MqttError> {
+    pub async fn connect(&'static mut self) -> Result<(), MqttError> {
         let mut socket = TcpSocket::new(self.stack, &mut self.rx_buffer, &mut self.tx_buffer);
         socket.set_timeout(Some(embassy_time::Duration::from_secs(10)));
 
@@ -124,7 +127,7 @@ impl<'a> Network<'a> {
             .connect_to_broker()
             .await
             .map_err(|err| MqttError::Network(err))?;
-        //       self.client = Some(client);
+        self.client = Some(client);
         Ok(())
     }
     pub async fn disconnect(&mut self) {
@@ -214,7 +217,7 @@ pub struct MqttActor {
     events: Source<PubSubEvent>,
     ping_timeouts: u32,
     timers: Timers,
-    network: Network<'static>,
+    network: &'static mut Network,
 }
 impl MqttActor {
     pub fn new(stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>) -> MqttActor {
@@ -223,7 +226,7 @@ impl MqttActor {
             events: Source::new(),
             ping_timeouts: 0,
             timers: Timers::new(),
-            network: Network::new(stack),
+            network: Box::leak(Box::new(Network::new(stack))),
         }
     }
 
@@ -235,19 +238,25 @@ impl MqttActor {
         match cmd {
             PubSubCmd::Connect { client_id: _ } => {}
             PubSubCmd::Disconnect => {
-                let _ = self.network.disconnect().await;
+                let _ = (*self.network).borrow_mut().disconnect().await;
             }
             PubSubCmd::Publish { topic, payload } => {
-                let _ = self
-                    .network
+                let _ = (*self.network)
+                    .borrow_mut()
                     .send_message(topic.as_str(), &payload, QualityOfService::QoS1, false)
                     .await;
             }
             PubSubCmd::Subscribe { topic } => {
-                let _ = self.network.subscribe_to_topic(topic.as_str()).await;
+                let _ = (*self.network)
+                    .borrow_mut()
+                    .subscribe_to_topic(topic.as_str())
+                    .await;
             }
             PubSubCmd::Unsubscribe { topic } => {
-                let _ = self.network.unsubscribe_from_topic(topic.as_str()).await;
+                let _ = (*self.network)
+                    .borrow_mut()
+                    .unsubscribe_from_topic(topic.as_str())
+                    .await;
             }
         }
     }
@@ -255,34 +264,40 @@ impl MqttActor {
 
 impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
     async fn run(&mut self) {
-        embassy_time::Timer::after(Duration::from_millis(5000)).await;
-
         info!("MqttActor::run");
         loop {
             info!("MqttActor::loop");
-            embassy_time::Timer::after(Duration::from_millis(500)).await;
+            embassy_time::Timer::after(Duration::from_millis(1000)).await;
             match select3(
-                self.timers.alarm(),
-                self.network.receive_message(),
-                self.cmds.next(),
+                async {
+                    let idx = self.timers.alarm().await;
+                    idx
+                },
+                async {
+                     let message = self.network.receive_message().await.map(|(topic, payload)| {
+                        (topic.to_string(), payload.to_vec())
+                    });
+                    message
+                },
+                async {
+                    let cmd = self.cmds.next().await;
+                    cmd
+                },
             )
             .await
             {
                 First(_idx) => {
                     info!("Alarm -- connecting ");
-                    self.network.connect().await.unwrap();
-                    let res = self.network.send_ping().await;
-                    info!("Ping sent {:?}", res);
+                   // let _r = self.network.connect().await;
+                    //                   let res = self.network.send_ping().await;
+                    //                  info!("Ping sent {:?}", res);
                 }
                 Second(msg) => match msg {
                     Ok((topic, payload)) => {
-                        self.events.emit(PubSubEvent::Publish {
-                            topic: topic.to_string(),
-                            payload: payload.to_vec(),
-                        });
+                        self.events.emit(PubSubEvent::Publish { topic, payload });
                     }
-                    Err(e) => {
-                        info!("MQTT Error: {:?}", e);
+                    Err(_) => {
+                        info!("MQTT Error");
                     }
                 },
                 Third(cmd) => {

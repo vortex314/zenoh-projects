@@ -49,6 +49,8 @@ embedded-svc = { version = "*", default-features = false, features = [] }
 
 rust-mqtt = {version="0.3.0", default-features = false}
 minicbor = { version = "*", features=["derive","alloc","half"] }
+anyhow = {version="1.0.86", default-features = false,features=[]}
+static_cell = {version="2.1.0", default-features = false,features=[]}
 
 [profile.dev]
 # Rust debug is too slow.

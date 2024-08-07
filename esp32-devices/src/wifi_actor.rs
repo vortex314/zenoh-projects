@@ -200,7 +200,6 @@ async fn connection(
         match controller.connect().await {
             Ok(_) => {
                 info!("Wifi connected!");
-                source.emit(WifiActorEvent::Connected);
             }
             Err(e) => {
                 info!("Failed to connect to wifi: {e:?}");
@@ -211,6 +210,8 @@ async fn connection(
         loop {
             if let Some(config) = stack.config_v4() {
                 info!("Got IP: {}", config.address);
+                source.emit(WifiActorEvent::Connected);
+                info!("Connected");
                 break;
             }
             Timer::after(Duration::from_millis(500)).await;

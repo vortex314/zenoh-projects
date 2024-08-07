@@ -95,8 +95,7 @@ async fn main(spawner: Spawner) {
         peripherals.RADIO_CLK,
         spawner,
     );
-    let stack = wifi_actor.stack();
-    let mut mqtt_actor = MqttActor::new(&stack);
+    let mut mqtt_actor = MqttActor::new(wifi_actor.stack());
 
     wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
 
