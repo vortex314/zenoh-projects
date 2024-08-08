@@ -179,7 +179,7 @@ impl Network {
             .await;
     }
 
-    pub async fn receive_message(&mut self) -> Result<(&str, &[u8]), ReasonCode> {
+    pub async fn receive_message(&mut self) -> Result<(String, Vec<u8>), ReasonCode> {
         if self.client.is_none() {
             error!("No client for receiving messages");
             return Err(ReasonCode::UnspecifiedError);
@@ -189,6 +189,7 @@ impl Network {
             .expect("no client ")
             .receive_message()
             .await
+            .map(|(topic, payload)| (topic.to_string(), payload.to_vec()))
     }
 
     pub async fn get_dns_address_server(&self) -> Result<IpAddress, ReasonCode> {
@@ -269,20 +270,9 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
             info!("MqttActor::loop");
             embassy_time::Timer::after(Duration::from_millis(1000)).await;
             match select3(
-                async {
-                    let idx = self.timers.alarm().await;
-                    idx
-                },
-                async {
-                     let message = self.network.receive_message().await.map(|(topic, payload)| {
-                        (topic.to_string(), payload.to_vec())
-                    });
-                    message
-                },
-                async {
-                    let cmd = self.cmds.next().await;
-                    cmd
-                },
+                self.timers.alarm(),
+                self.network.receive_message(),
+                self.cmds.next(),
             )
             .await
             {
