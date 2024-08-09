@@ -28,7 +28,9 @@ use minicbor::decode::info;
 use crate::limero::{Sink, SinkRef, Source, Timers};
 use crate::{limero::ActorTrait, SourceTrait};
 
-const SSID: &str = env!("WIFI_SSID");
+ const SSID: &str = env!("WIFI_SSID");
+//const SSID: &str = "Merckx3";
+
 const PASSWORD: &str = env!("WIFI_PASS");
 
 #[derive(Clone, Debug)]
@@ -74,12 +76,7 @@ impl WifiActor {
         let seed = 1234; // very random, very secure seed
 
         let stack_resource = Box::leak(Box::new(StackResources::<3>::new()));
-        let stack/* :  Stack<WifiDevice<'_, WifiStaDevice>>*/ = Stack::new(
-            wifi_interface,
-            config,
-            stack_resource,
-            seed,
-        );
+        let stack = Stack::new(wifi_interface, config, stack_resource, seed);
         let stack: &'static Stack<WifiDevice<WifiStaDevice>> = Box::leak(Box::new(stack));
 
         //      spawner.spawn(connection(controller)).ok();
@@ -123,9 +120,8 @@ impl WifiActor {
 
 impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
     async fn run(&mut self) {
-        info!("WifiActor::run");
         loop {
-            info!("WifiActor::loop");
+            info!("WifiActor::run");
             match select3(
                 connection(&mut self.controller, self.stack, &self.events),
                 self.stack.run(),
@@ -151,38 +147,30 @@ impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
     }
 }
 
+impl SourceTrait<WifiActorEvent> for WifiActor {
+    fn add_listener(&mut self, sink_ref: SinkRef<WifiActorEvent>) {
+        self.events.add_listener(sink_ref);
+    }
+}
+
 async fn connection(
     controller: &mut WifiController<'static>,
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
     source: &Source<WifiActorEvent>,
 ) {
-    /*    loop {
-        info!("Waiting for link up...");
-        if stack.is_link_up() {
-            break;
-        }
-        Timer::after(Duration::from_millis(1000)).await;
-    }
 
-    info!("Waiting to get IP address...");
-    loop {
-        if let Some(config) = stack.config_v4() {
-            info!("Got IP: {}", config.address);
-            break;
-        }
-        Timer::after(Duration::from_millis(500)).await;
-    }*/
-    info!("start connection task");
     info!("Device capabilities: {:?}", controller.get_capabilities());
     loop {
-        Timer::after(Duration::from_millis(1000)).await;
         match esp_wifi::wifi::get_wifi_state() {
             WifiState::StaConnected => {
                 // wait until we're no longer connected
+                info!("Waiting for disconnection...");
                 controller.wait_for_event(WifiEvent::StaDisconnected).await;
                 Timer::after(Duration::from_millis(5000)).await
             }
-            _ => {}
+            state => {
+                info!(" wifi state: {:?}", state);
+            }
         }
         if !matches!(controller.is_started(), Ok(true)) {
             let client_config = Configuration::Client(ClientConfiguration {
@@ -203,24 +191,20 @@ async fn connection(
             }
             Err(e) => {
                 info!("Failed to connect to wifi: {e:?}");
-                Timer::after(Duration::from_millis(5000)).await
+                Timer::after(Duration::from_millis(5000)).await;
+                continue;
             }
         }
         info!("Waiting to get IP address...");
         loop {
             if let Some(config) = stack.config_v4() {
                 info!("Got IP: {}", config.address);
+                info!("DNS : {:?}",config.dns_servers);
+                info!(" Stack up : {} ",stack.is_link_up());
                 source.emit(WifiActorEvent::Connected);
-                info!("Connected");
                 break;
             }
             Timer::after(Duration::from_millis(500)).await;
         }
-    }
-}
-
-impl SourceTrait<WifiActorEvent> for WifiActor {
-    fn add_listener(&mut self, sink: SinkRef<WifiActorEvent>) {
-        self.events.add_listener(sink);
     }
 }
