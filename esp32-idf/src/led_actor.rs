@@ -1,23 +1,15 @@
+use std::borrow::BorrowMut;
+use std::time::Duration;
+
 use crate::limero::timer::{Timer, Timers};
 use crate::limero::Flow;
 use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::SourceTrait;
-use alloc::boxed::Box;
-use embassy_futures::select::select;
-use embassy_futures::select::Either::{First, Second};
-use embassy_time::Duration;
-use embedded_hal::digital::OutputPin;
-use esp_hal::gpio::any_pin::AnyPin;
-use esp_hal::prelude::*;
-use esp_hal::{
-    clock::ClockControl,
-    gpio::{AnyOutput, Output, Pin},
-    peripherals::{Peripherals, UART0},
-    prelude::*,
-    uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
-};
+use esp_idf_hal::gpio::*; 
+
+use futures::FutureExt;
 use log::info;
 use minicbor::decode::info;
 
@@ -36,37 +28,40 @@ enum LedState {
     PULSE { duration: u32 },
 }
 
-pub struct Led {
-    commands: Sink<LedCmd, 2>,
+pub struct LedActor {
+    commands: Sink<LedCmd>,
     timers: Timers,
     state: LedState,
-    pin: AnyOutput<'static>,
+    pin_driver: PinDriver<'static,AnyOutputPin,Output>,
     pin_level_high: bool,
 }
 
-impl Led {
-    pub fn new(pin: AnyOutput<'static>) -> Self {
+impl LedActor {
+    pub fn new(pin: AnyOutputPin) -> Self {
+        let pin_driver = PinDriver::output(pin).unwrap();
         Self {
             commands: Sink::new(),
             timers: Timers::new(),
-            state: LedState::BLINK { duration: 2000 },
-            pin,
+            state: LedState::BLINK { duration: 50 },
+            pin_driver,
             pin_level_high: false,
         }
     }
 }
 
-impl Led {
+impl LedActor {
     pub async fn run(&mut self) {
         self.timers
             .add_timer(Timer::new_repeater(0, Duration::from_millis(1_000)));
         loop {
-            match select(self.commands.next(), self.timers.alarm()).await {
-                First(msg) => {
-                    self.on_cmd(msg.unwrap());
+            futures::select!{
+                cmd = self.commands.next().fuse() => {
+                    if let Some(cmd) = cmd {
+                        self.on_cmd(cmd);
+                    }
                 }
-                Second(id) => {
-                    self.on_timer(id);
+                _ = self.timers.alarm().fuse() => {
+                    self.on_timer(0);
                 }
             }
         }
@@ -110,9 +105,9 @@ impl Led {
 
     fn set_led_high(&mut self, high: bool) {
         if high {
-            self.pin.set_high()
+            let _ = self.pin_driver.set_high();
         } else {
-            self.pin.set_low()
+            let _ = self.pin_driver.set_low();
         }
     }
     pub fn sink_ref(&self) -> SinkRef<LedCmd> {

@@ -1,18 +1,14 @@
-[target.xtensa-esp32-none-elf]
-runner = "espflash --monitor  /dev/ttyUSB0" # Select this runner for espflash v2.x.x
-# runner = "espflash --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
+# runner = "espflash --monitor  /dev/ttyUSB0" # Select this runner for espflash v2.x.x
+[build]
+target = "xtensa-esp32-espidf"
+
+[target.xtensa-esp32-espidf]
+linker = "ldproxy"
+rustflags = ["--cfg", "espidf_time64"]
 
 [env]
-ESP_LOGLEVEL="INFO"
-[build]
-rustflags = [
-
-  "-C", "link-arg=-nostartfiles",
-]
-
-target = "xtensa-esp32-none-elf"
-# runner = "espflash flash --monitor --baud=921600 --monitor /dev/ttyUSB0"
-runner = "espflash flash --baud=921600  /dev/ttyUSB0"
+ESP_IDF_SDKCONFIG_DEFAULTS = ".github/configs/sdkconfig.defaults"
+ESP_IDF_VERSION = "v5.2.2"
 
 [unstable]
-build-std = ["alloc", "core"]
+build-std = ["std", "panic_abort"]

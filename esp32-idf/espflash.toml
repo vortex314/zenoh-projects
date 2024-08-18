@@ -1,0 +1,9 @@
+[connection]
+serial = "/dev/ttyUSB0"
+baudrate = 921600
+
+[flash]
+mode = "qio"
+size = "8MB"
+frequency = "40MHz"
+

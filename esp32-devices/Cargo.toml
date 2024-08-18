@@ -5,68 +5,14 @@ authors = ["lieven <lieven.merckx@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+
 [dependencies]
-esp-backtrace = { version = "0.13.0", features = [
-    "esp32",
-    "exception-handler",
-    "panic-handler",
-    "println",
-] }
-esp-hal = { version = "0.19.0", features = [ "esp32" ] }
-esp-println = { version = "0.10.0", features = ["esp32", "log"] }
-log = { version = "0.4.21" }
-esp-alloc = { version = "0.4.0" }
-embedded-io = "0.6.1"
-esp-wifi = { version = "0.7.0", features = [
-    "esp32",
-    "utils",
-    "wifi",
-    "embassy-net",
-] }
-heapless = { version = "0.8.0", default-features = false }
-smoltcp = { version = "0.11.0", default-features = false, features = [
-    "medium-ethernet",
-    "proto-dhcpv4",
-    "proto-igmp",
-    "proto-ipv4",
-    "socket-dhcpv4",
-    "socket-icmp",
-    "socket-raw",
-    "socket-tcp",
-    "socket-udp",
-        "dns-max-server-count-8"
-] }
-esp-hal-embassy     = { version="0.2.0",features=["esp32"] }
-# 
-embassy-executor = { version = "0.5.0",features = ["task-arena-size-65536"] }
-embassy-time = { version ="0.3.0", features=["generic-queue"]}
-embassy-futures = { version ="*" }
-embassy-sync ="*"
-embassy-net = { version = "0.4.0", features = [ "tcp", "udp", "dhcpv4", "medium-ethernet","dns","proto-ipv4"] }
+log = { version = "0.4.17", default-features = false }
+esp-idf-sys = { version = "0.35.0", default-features = false }
+esp-idf-hal = { version = "0.44.1", optional = true, default-features = false }
+esp-idf-svc = { version = "0.49.1", optional = true, default-features = false }
+embedded-svc = { version = "0.28.0", optional = true, default-features = false }
+anyhow = "1.0.75"
 
-embedded-io-async="*"
-embedded-svc = { version = "*", default-features = false, features = [] }
-
-rust-mqtt = {version="0.3.0", default-features = false}
-minicbor = { version = "*", features=["derive","alloc","half"] }
-anyhow = {version="1.0.86", default-features = false,features=[]}
-static_cell = {version="2.1.0", default-features = false,features=[]}
-
-[profile.dev]
-# Rust debug is too slow.
-# For debug builds always builds with some optimization
-opt-level = "s"
-
-[profile.release]
-codegen-units = 1 # LLVM can perform better optimizations using a single thread
-debug = 2
-debug-assertions = false
-incremental = false
-lto = 'fat'
-opt-level = 3
-overflow-checks = false
-
-[features]
-default = ["mqtt"]
-mqtt = []
-serial=[]
+[build-dependencies]
+embuild = "0.32.0"

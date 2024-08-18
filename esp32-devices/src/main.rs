@@ -1,126 +1,94 @@
-#![no_std]
-#![no_main]
-#![feature(type_alias_impl_trait)]
-#![allow(unused_imports)]
-#![allow(dead_code)]
+/*
+For a detailed explanation of this code check out the associated blog post:
+https://apollolabsblog.hashnode.dev/edge-iot-with-rust-on-esp-mqtt-subscriber
 
-mod limero;
-mod pubsub;
-use alloc::string::ToString;
-use embassy_futures::select::select4;
-use pubsub::PubSubCmd;
-use pubsub::PubSubEvent;
+GitHub Repo containing source code and other examples:
+https://github.com/apollolabsdev
 
-use alloc::boxed::Box;
-use embassy_executor::Spawner;
-use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Stack, StackResources};
-use embassy_time::{Duration, Timer};
+For notifications on similar examples and more, subscribe to newsletter here:
+https://www.theembeddedrustacean.com/subscribe
+*/
 
-use esp_wifi::{
-    current_millis,
-    wifi::{
-        utils::create_network_interface, AccessPointInfo, ClientConfiguration, Configuration,
-        WifiController, WifiDevice, WifiError, WifiEvent, WifiStaDevice, WifiState,
-    },
-    EspWifiInitFor,
-};
-use limero::ActorTrait;
-use limero::SourceTrait;
-use limero::*;
+use anyhow;
+use embedded_svc::mqtt::client::Event;
+use embedded_svc::mqtt::client::QoS;
+use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
+use esp_idf_hal::peripherals::Peripherals;
+use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::mqtt::client::{EspMqttClient, MqttClientConfiguration};
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
+use std::{thread::sleep, time::Duration};
 
-use esp_backtrace as _;
-use esp_hal::{
-    clock::ClockControl,
-    delay::Delay,
-    peripherals::Peripherals,
-    prelude::*,
-    rng::Rng,
-    system::SystemControl,
-    timer::{timg::TimerGroup, ErasedTimer, OneShotTimer, PeriodicTimer},
-};
-use log::info;
-use smoltcp::iface::SocketStorage;
+static WIFI_SSID: &str = env!("WIFI_SSID");
+static WIFI_PASS: &str = env!("WIFI_PASS");
 
-mod wifi_actor;
-use wifi_actor::*;
+fn main() -> anyhow::Result<()> {
+    // It is necessary to call this function once. Otherwise some patches to the runtime
+    // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
+    esp_idf_sys::link_patches();
 
-mod mqtt_actor;
-use mqtt_actor::*;
+    let peripherals = Peripherals::take().unwrap();
+    let sysloop = EspSystemEventLoop::take()?;
+    let nvs = EspDefaultNvsPartition::take()?;
 
-extern crate alloc;
-use core::mem::MaybeUninit;
+    let mut wifi = BlockingWifi::wrap(
+        EspWifi::new(peripherals.modem, sysloop.clone(), Some(nvs))?,
+        sysloop,
+    )?;
 
-#[global_allocator]
-static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
+    wifi.set_configuration(&Configuration::Client(ClientConfiguration {
+        ssid: WIFI_SSID.into(),
+        bssid: None,
+        auth_method: AuthMethod::None,
+        password: WIFI_PASS.into(),
+        channel: None,
+    }))?;
 
-fn init_heap() {
-    const HEAP_SIZE: usize = 64 * 1024;
-    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+    // Start Wifi
+    wifi.start()?;
 
-    unsafe {
-        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+    // Connect Wifi
+    wifi.connect()?;
+
+    // Wait until the network interface is up
+    wifi.wait_netif_up()?;
+
+    // Print Out Wifi Connection Configuration
+    while !wifi.is_connected().unwrap() {
+        // Get and print connection configuration
+        let config = wifi.get_configuration().unwrap();
+        println!("Waiting for station {:?}", config);
     }
-}
 
-#[main]
-async fn main(spawner: Spawner) {
-    let peripherals = Peripherals::take();
-    let system = SystemControl::new(peripherals.SYSTEM);
-    let clocks = ClockControl::max(system.clock_control).freeze();
-    //    let _delay = Delay::new(&clocks);
-    init_heap();
+    println!("Wifi Connected");
 
-    //   esp_info::logger::init_logger_from_env();
-    let _ = limero::init_logger();
+    // Set up handle for MQTT Config
+    let mqtt_config = MqttClientConfiguration::default();
 
-    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks, None);
-    let timer0: ErasedTimer = timg0.timer0.into();
-    let embassy_timer = [OneShotTimer::new(timer0)];
-    let embassy_timer = Box::leak(Box::new(embassy_timer)); // leak the timers to make them 'static
-    esp_hal_embassy::init(&clocks, embassy_timer);
+    // Create Client Instance and Define Behaviour on Event
+    let mut client = EspMqttClient::new(
+        "mqtt://broker.mqttdashboard.com",
+        &mqtt_config,
+        move |message_event| {
+            match message_event.as_ref().unwrap() {
+                Event::Connected(_) => println!("Connected"),
+                Event::Subscribed(id) => println!("Subscribed to {} id", id),
+                Event::Received(msg) => {
+                    if msg.data() != [] {
+                        println!("Recieved {}", std::str::from_utf8(msg.data()).unwrap())
+                    }
+                }
+                _ => println!("{:?}", message_event.as_ref().unwrap()),
+            };
+        },
+    )?;
 
-    let timer1: ErasedTimer = timg0.timer1.into();
-    let wifi_timer = PeriodicTimer::new(timer1);
-
-    /*let led_actor = LedActor::new(peripherals.LED, Duration::from_millis(500));
-    spawner.spawn(led_actor.run()).ok();
-    let button_actor = ButtonActor::new(peripherals.BUTTON, Duration::from_millis(500));
-    spawner.spawn(button_actor.run()).ok();*/
-
-    let mut wifi_actor = WifiActor::new(
-        peripherals.WIFI,
-        wifi_timer,
-        &clocks,
-        Rng::new(peripherals.RNG),
-        peripherals.RADIO_CLK,
-        spawner,
-    );
-    let mut mqtt_actor = MqttActor::new(wifi_actor.stack());
-
-    wifi_actor.map_to(connect_on_wifi_ready, mqtt_actor.sink_ref());
+    // Subscribe to MQTT Topic
+    client.subscribe("testtopic/1", QoS::AtLeastOnce)?;
 
     loop {
-        select4(
-            wifi_actor.run(),
-            mqtt_actor.run(),
-            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
-            embassy_time::Timer::after(Duration::from_millis(1_000_000)),
-        )
-        .await;
-    }
-}
-
-fn connect_on_wifi_ready(event: WifiActorEvent) -> Option<PubSubCmd> {
-    match event {
-        WifiActorEvent::Connected => {
-            info!("Wifi Connected");
-            Some(PubSubCmd::Connect {
-                client_id: "my_esp32".to_string(),
-            })
-        }
-        WifiActorEvent::Disconnected => {
-            info!("Wifi Disconnected");
-            Some(PubSubCmd::Disconnect)
-        }
+        // Keep waking up device to avoid watchdog reset
+        sleep(Duration::from_millis(1000));
     }
 }
