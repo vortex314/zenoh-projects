@@ -1,13 +1,13 @@
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
+//==============================================================================
+// Timer
+//==============================================================================
+use embassy_time::Duration;
+use embassy_time::Instant;
 
-
-
-use std::collections::BTreeMap;
-use std::time::{Duration, Instant};
-
-use log::{debug, error};
+use log::error;
 use log::info;
-
-use super::async_wait_millis;
 const FOREVER : Duration = Duration::from_millis(0xFFFFFFFF);
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
@@ -92,7 +92,7 @@ impl Timers {
         }
     }
     pub fn add_timer(&mut self, timer: Timer) {
-        debug!("adding timer {:?}", timer);
+        info!("adding timer {:?}", timer);
         self.timers.insert(timer.id, timer);
     }
     pub fn remove_timer(&mut self, id: u32) {
@@ -143,7 +143,7 @@ impl Timers {
             if timer.wait_time() < Duration::from_secs(0) {
                error!("negative duration");// sleep forever 
             }
-            async_wait_millis(timer.wait_time().as_millis() as u32).await;
+            embassy_time::Timer::after(timer.wait_time()).await;
             if timer.expired() {
                 timer.reload();
                 return timer.id();
@@ -151,7 +151,7 @@ impl Timers {
                 0
             }
         } else {
-            async_wait_millis(10000000).await;
+            embassy_time::Timer::after(Duration::from_secs(100000)).await; // sleep forever 
             0
         }
     }

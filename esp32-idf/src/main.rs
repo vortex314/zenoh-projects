@@ -2,8 +2,7 @@
 #![allow(dead_code)]
 
 use anyhow;
-use edge_executor::Executor;
-use edge_executor::LocalExecutor;
+
 use embedded_svc::mqtt::client::EventPayload;
 use embedded_svc::mqtt::client::QoS;
 use embedded_svc::wifi::{AuthMethod, ClientConfiguration, Configuration};
@@ -41,6 +40,7 @@ use led_actor::LedActor;
 mod mqtt_actor;
 use mqtt_actor::MqttActor;
 
+
 static WIFI_SSID: &str = env!("WIFI_SSID");
 static WIFI_PASS: &str = env!("WIFI_PASS");
 static MQTT_BROKER: &str = "test.mosquitto.org";
@@ -51,7 +51,6 @@ fn main() -> anyhow::Result<()> {
     error!("test error log");
     info!("test info log");
 
- //   let ex: LocalExecutor = Default::default();
     block_on(main_handler())?;
     sleep(Duration::from_millis(10000000));
     Ok(())
@@ -71,6 +70,15 @@ async fn main_handler() -> anyhow::Result<()> {
     let mut led_actor = LedActor::new(led_on_board.into() );
     mqtt_actor.map_to(connected_to_blink, led_actor.sink_ref());
     wifi_actor.map_to(connected_to_mqtt, mqtt_actor.sink_ref());
+    mqtt_actor.for_each(|ev| {
+        match ev {
+            PubSubEvent::Publish { topic,payload } => {
+              info!("Publish: {} {:?}",topic, payload_display_json(&payload));
+              info!("Publish: {} {:?}",topic, payload_as_f64_json(&payload));
+            }
+            _ => {} 
+        }
+    });
 
     //   local_ex.spawn(wifi_actor.run()).detach();
  //   local_ex.spawn(mqtt_actor.run()).detach();
@@ -88,7 +96,6 @@ async fn main_handler() -> anyhow::Result<()> {
 
 
 fn connected_to_blink ( event : PubSubEvent) -> Option<LedCmd> {
-    info!(" ====> event {:?}",event);
     match event {
         PubSubEvent::Connected => Some(LedCmd::Blink { duration: 500 }),
         PubSubEvent::Disconnected => Some(LedCmd::Blink { duration: 50 }),
@@ -97,12 +104,10 @@ fn connected_to_blink ( event : PubSubEvent) -> Option<LedCmd> {
 }
 
 fn connected_to_mqtt ( event : WifiActorEvent) -> Option<PubSubCmd> {
-    info!(" ====> event {:?}",event);
     match event {
         WifiActorEvent::Connected => Some(PubSubCmd::Connect {
             client_id: MQTT_CLIENT_ID.to_string(),
         }),
         WifiActorEvent::Disconnected => Some(PubSubCmd::Disconnect),
-        _ => None
     }
 }

@@ -40,6 +40,8 @@ minicbor = { version = "*", features=["derive","alloc","half"] }
 edge-executor = "*"
 async-channel="*"
 futures="*"
+serde_json="*"
+serde="*"
 
 [build-dependencies]
 embuild = "0.32.0"
