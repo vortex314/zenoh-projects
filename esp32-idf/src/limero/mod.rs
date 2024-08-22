@@ -1,272 +1,162 @@
-#![allow(unused_imports)]
-#![allow(dead_code)]
-
-use async_channel::unbounded;
-use core::any::type_name;
-use core::cell::RefCell;
-use core::marker::PhantomData;
-use core::ops::Shr;
-use core::result::Result;
-use std::sync::Arc;
 use std::time::Duration;
 
 use esp_idf_svc::timer::EspTimerService;
+use futures::{
+    channel::mpsc::{channel, Receiver, Sender},
+    SinkExt, StreamExt,
+};
 use log::error;
-use log::{debug, info};
-
 pub mod timer;
-
+pub use timer::Timer;
 pub use timer::Timers;
 
 pub mod logger;
 pub use logger::semi_logger_init as init_logger;
 
-pub trait SinkTrait<M>: Send + Sync {
-    fn send(&self, m: M);
+pub trait Handler<T>: Send {
+    fn handle(&mut self, item: &T);
 }
 
-pub trait SourceTrait<M>
-where
-    M: Clone + Send + Sync + 'static,
-{
-    fn add_listener(&mut self, sink_ref: SinkRef<M>);
-    fn map_to<U>(&mut self, func: fn(M) -> Option<U>, sink_ref: SinkRef<U>)
-    where
-        U: Clone + Send + Sync,
-    {
-        let flow = FlowFunction::new(func, sink_ref);
-        self.add_listener(flow.sink_ref());
-    }
-    fn for_each(&mut self, func: fn(M) -> ())
-    where
-        M: Clone + Send + Sync,
-    {
-        let sink_func = SinkFunction::new(func);
-        self.add_listener(sink_func.sink_ref());
-    }
-    /*fn filter<U>(&mut self,func: fn(M) -> bool,sink_ref:SinkRef<U>) where U: Clone + Send + Sync
-    {
-        let g = |m:M| -> Option<M> { if func(m) {Some(m)} else {None} };
-        let flow = FlowFunction::new(g,sink_ref);
-        self.add_listener(flow.sink_ref());
-    }*/
-}
-pub trait Flow<T, U>: SinkTrait<T> + SourceTrait<U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync + 'static,
-{
-}
-
-pub struct Sink<M> {
-    sender: async_channel::Sender<M>,
-    receiver: async_channel::Receiver<M>,
-}
-
-trait DynSender<T> {
-    fn send(&self, message: T);
-}
-
-#[derive(Clone)]
-pub struct SinkRef<M>
-where
-    M: Clone + Send + Sync + 'static,
-{
-    sender: Arc<dyn DynSender<M> + Send + Sync>,
-}
-
-impl<M> Sink<M>
-where
-    M: Clone + Send + Sync,
-{
-    pub fn new() -> Self {
-        let (sender, receiver) = async_channel::unbounded();
-        Sink { sender, receiver }
-    }
-    pub async fn next(&mut self) -> Option<M> {
-        self.receiver.recv().await.ok()
-    }
-    pub fn sink_ref(&self) -> SinkRef<M> {
-        SinkRef {
-            sender: Arc::new(self.sender.clone()),
-        }
-    }
-}
-
-impl<T> DynSender<T> for async_channel::Sender<T> {
-    fn send(&self, message: T) {
-        match self.try_send(message) {
-            Ok(()) => {}
-            Err(_) => {
-                error!(
-                    "Send fails on channel : Queue Full for {} ",
-                    type_name::<T>()
-                );
-            }
-        };
-    }
-}
-
-impl<M> SinkTrait<M> for SinkRef<M>
-where
-    M: Clone + Send + Sync,
-{
-    fn send(&self, message: M) {
-        let _ = self.sender.send(message);
-    }
-}
-
-pub struct Source<T>
-where
-    T: Clone + Send + Sync + 'static,
-{
-    sinks: Vec<SinkRef<T>>,
-}
-
-impl<T> Source<T>
-where
-    T: Clone + Send + Sync,
-{
-    pub fn new() -> Self {
-        Self { sinks: Vec::new() }
-    }
-    pub fn emit(&self, m: T)
-    where
-        T: Clone + Send + Sync,
-    {
-        for sink in self.sinks.iter() {
-            sink.send(m.clone());
-        }
-    }
-}
-
-impl<T> SourceTrait<T> for Source<T>
-where
-    T: Clone + Send + Sync,
-{
-    fn add_listener(&mut self, sink_ref: SinkRef<T>) {
-        self.sinks.push(sink_ref);
-    }
-}
-
-struct FlowState<T, U>
-where
-    U: Clone + Sync + Send + 'static,
-    T: Clone + Sync + Send,
-{
-    func: fn(T) -> Option<U>,
-    sink_ref: SinkRef<U>,
-}
-
-impl<T, U> DynSender<T> for FlowState<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    fn send(&self, t: T) {
-        (self.func)(t).map(|u| self.sink_ref.send(u));
-    }
-}
-
-#[derive(Clone)]
-pub struct SinkFunction<M> {
-    func: Arc<fn(M) -> ()>,
-}
-
-impl<M> SinkFunction<M> {
-    pub fn new(func: fn(M) -> ()) -> Self {
-        SinkFunction {
-            func: Arc::new(func),
-        }
-    }
-    fn sink_ref(&self) -> SinkRef<M>
-    where
-        M: Clone + Send + Sync,
-    {
-        SinkRef {
-            sender: Arc::new(self.clone()),
-        }
-    }
-}
-
-impl<M> SinkTrait<M> for SinkFunction<M> {
-    fn send(&self, _message: M) {
-        (self.func)(_message);
-    }
-}
-
-impl<M> DynSender<M> for SinkFunction<M> {
-    fn send(&self, _message: M) {
-        (self.func)(_message);
-    }
-}
-
-pub struct FlowFunction<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync + 'static,
-{
-    flow_state: Arc<FlowState<T, U>>,
-}
-
-impl<T, U> FlowFunction<T, U>
-where
-    T: Clone + Send + Sync,
-    U: Clone + Send + Sync,
-{
-    pub fn new(func: fn(T) -> Option<U>, sink_ref: SinkRef<U>) -> Self
-    where
-        T: Clone + Send + Sync,
-        U: Clone + Send + Sync,
-    {
-        FlowFunction {
-            flow_state: Arc::new(FlowState { func, sink_ref }),
-        }
-    }
-    fn sink_ref(&self) -> SinkRef<T>
-    where
-        T: Clone + Send + Sync,
-    {
-        SinkRef {
-            sender: self.flow_state.clone(),
-        }
-    }
-
-    /*pub fn push(&self, t: T) {
-        (self.flow_state.func)(t).map(|u| self.flow_state.sink_ref.push(u));
-    }*/
-}
-
-impl<C, E> DynSender<C> for FlowFunction<C, E>
-where
-    C: Clone + Send + Sync + 'static,
-    E: Clone + Send + Sync + 'static,
-{
-    fn send(&self, message: C) {
-        self.flow_state.send(message);
-    }
-}
-
-/*pub fn connect<T, U>(src: &mut dyn SourceTrait<T>, func: fn(T) -> Option<U>, sink_ref: SinkRef<U>)
-where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-{
-    let flow = FlowFunction::new(func,sink_ref);
-    src.add_listener(flow.sink_ref());
-}*/
-
-pub trait ActorTrait<T, U>
-where
-    T: Clone + Send + Sync + 'static,
-    U: Clone + Send + Sync + 'static,
-{
+pub trait Actor<CMD, EVENT> {
     async fn run(&mut self);
-    fn sink_ref(&self) -> SinkRef<T>;
-    fn add_listener(&mut self, sink_ref: SinkRef<U>);
+    fn handler(&self) -> Box<dyn Handler<CMD>>;
+    fn add_listener(&mut self, handler: Box<dyn Handler<EVENT>>);
+    fn map_to<CMD2>(&mut self, func : fn(&EVENT)->Option<CMD2>, handler: Box<dyn Handler<CMD2>>) where CMD2 : 'static,EVENT:'static  {
+        struct MapHandler<E,C> {
+            func: fn(&E)->Option<C>,
+            handler: Box<dyn Handler<C>>,
+        }
+
+        impl<E,C> Handler<E> for MapHandler<E,C> {
+            fn handle(&mut self, event: &E) {
+                match (self.func)(event) {
+                    Some(cmd) => self.handler.handle(&cmd),
+                    None => {}
+                }
+            }
+        }
+
+        let map_handler = MapHandler::<EVENT,CMD2> {
+            func,
+            handler,
+        };
+
+        self.add_listener(Box::new(map_handler));
+    }
+    fn for_each(&mut self, func: fn(&EVENT) -> ())
+    where
+        EVENT: 'static,
+        Self: Actor<CMD, EVENT>,
+    {
+        struct EventHandlerImpl<C> {
+            func: fn(&C) -> (),
+        }
+
+        impl<C> Handler<C> for EventHandlerImpl<C> {
+            fn handle(&mut self, cmd: &C) {
+                (self.func)(cmd);
+            }
+        }
+
+        let handler = EventHandlerImpl::<EVENT> { func };
+
+        self.add_listener(Box::new(handler));
+    }
 }
 
-pub async fn async_wait_millis(millis:u32) -> () {
+pub trait ActorExt<CMD, EVENT> {
+    fn for_each_event(&mut self, func: fn(&EVENT) -> ())
+    where
+        EVENT: 'static,
+        Self: Actor<CMD, EVENT>,
+    {
+        struct EventHandlerImpl<E> {
+            func: fn(&E) -> (),
+        }
+
+        impl<E> Handler<E> for EventHandlerImpl<E> {
+            fn handle(&mut self, event: &E) {
+                (self.func)(event);
+            }
+        }
+
+        let handler = EventHandlerImpl::<EVENT> { func };
+
+        self.add_listener(Box::new(handler));
+    }
+}
+
+pub trait EventHandler<T> {
+    fn on_event(&mut self, event: T);
+}
+
+pub struct CmdQueue<T> {
+    sender: Sender<T>,
+    receiver: Receiver<T>,
+}
+
+impl<T> CmdQueue<T>
+where
+    T: 'static + Clone + Send,
+{
+    pub fn new(capacity: usize) -> Self {
+        let (sender, receiver) = channel(capacity);
+        Self { sender, receiver }
+    }
+
+    pub async fn next(&mut self) -> Option<T> {
+        self.receiver.next().await
+    }
+
+    pub fn handler(&self) -> Box<dyn Handler<T>> {
+        struct HandlerImpl<E>
+        where
+            E: 'static,
+        {
+            sender: Sender<E>,
+        }
+
+        impl<E> Handler<E> for HandlerImpl<E>
+        where
+            E: Clone + Send,
+        {
+            fn handle(&mut self, event: &E) {
+                let r = self.sender.try_send(event.clone());
+                if r.is_err() {
+                    error!("Failed to send event");
+                }
+            }
+        }
+
+        let handler = HandlerImpl::<T> {
+            sender: self.sender.clone(),
+        };
+
+        Box::new(handler)
+    }
+}
+
+pub struct EventHandlers<T> {
+    handlers: Vec<Box<dyn Handler<T>>>,
+}
+
+impl<T> EventHandlers<T> {
+    pub fn new() -> Self {
+        Self {
+            handlers: Vec::new(),
+        }
+    }
+    pub fn add(&mut self, handler: Box<dyn Handler<T>>) {
+        self.handlers.push(handler);
+    }
+    pub fn on_event(&mut self, event: T) {
+        for handler in self.handlers.iter_mut() {
+            handler.handle(&event);
+        }
+    }
+}
+
+pub async fn async_wait_millis(millis: u32) -> () {
     let timer_svc = EspTimerService::new().unwrap();
     let mut timer = timer_svc.timer_async().unwrap();
     match timer.after(Duration::from_millis(millis as u64)).await {
@@ -276,49 +166,3 @@ pub async fn async_wait_millis(millis:u32) -> () {
         }
     }
 }
-
-/*
-pub struct Actor<C,E,N> {
-    cmds: Sink<C,N>,
-    events: Source<E>,
-    timers: Timers,
-}
-
-impl<C,E,N> Actor<C,E,N> {
-    pub fn new() -> Self {
-        Actor {
-            cmds: Sink::new(),
-            events: Source::new(),
-            timers: Timers::new(),
-        }
-    }
-    pub fn sink_ref(&self) -> SinkRef<C> {
-        self.cmds.sink_ref()
-    }
-
-}
-
-impl ActorTrait for Actor {
-    async fn run(&mut self) {
-        loop {
-            let cmd = self.cmds.next().await;
-            match cmd {
-                Some(cmd) => {
-                    self.handle(cmd);
-                }
-                None => {}
-            }
-        }
-    }
-    fn add_listener(&mut self, sink_ref: SinkRef<E>) {
-        self.events.add_listener(sink_ref);
-    }
-    fn handle(&mut self, cmd: C) {
-        let event = self.process(cmd);
-        self.events.emit(event);
-    }
-    fn process(&mut self, cmd: C) -> E {
-        unimplemented!()
-    }
-}
-    */

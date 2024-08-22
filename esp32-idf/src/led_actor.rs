@@ -1,13 +1,13 @@
 use std::borrow::BorrowMut;
 use std::time::Duration;
 
-use crate::limero::timer::{Timer, Timers};
-use crate::limero::Flow;
-use crate::limero::Sink;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
-use crate::limero::SourceTrait;
-use esp_idf_hal::gpio::*; 
+use esp_idf_hal::gpio::*;
+
+use crate::limero::Actor;
+use crate::CmdQueue;
+use crate::Handler;
+use crate::EventHandlers;
+use crate::Timers;
 
 use futures::FutureExt;
 use log::info;
@@ -29,10 +29,11 @@ enum LedState {
 }
 
 pub struct LedActor {
-    commands: Sink<LedCmd>,
+    cmds: CmdQueue<LedCmd>,
+    events: EventHandlers<()>,
     timers: Timers,
     state: LedState,
-    pin_driver: PinDriver<'static,AnyOutputPin,Output>,
+    pin_driver: PinDriver<'static, AnyOutputPin, Output>,
     pin_level_high: bool,
 }
 
@@ -40,7 +41,8 @@ impl LedActor {
     pub fn new(pin: AnyOutputPin) -> Self {
         let pin_driver = PinDriver::output(pin).unwrap();
         Self {
-            commands: Sink::new(),
+            cmds: CmdQueue::new(10),
+            events: EventHandlers::new(),
             timers: Timers::new(),
             state: LedState::BLINK { duration: 50 },
             pin_driver,
@@ -50,23 +52,6 @@ impl LedActor {
 }
 
 impl LedActor {
-    pub async fn run(&mut self) {
-        self.timers
-            .add_timer(Timer::new_repeater(0, Duration::from_millis(1_000)));
-        loop {
-            futures::select!{
-                cmd = self.commands.next().fuse() => {
-                    if let Some(cmd) = cmd {
-                        self.on_cmd(cmd);
-                    }
-                }
-                _ = self.timers.alarm().fuse() => {
-                    self.on_timer(0);
-                }
-            }
-        }
-    }
-
     fn on_cmd(&mut self, msg: LedCmd) {
         match msg {
             LedCmd::On => {
@@ -110,7 +95,32 @@ impl LedActor {
             let _ = self.pin_driver.set_low();
         }
     }
-    pub fn sink_ref(&self) -> SinkRef<LedCmd> {
-        self.commands.sink_ref()
+}
+
+impl Actor<LedCmd, ()> for LedActor {
+    async fn run(&mut self) {
+        self.timers
+            .add_timer(crate::Timer::new_repeater(0, Duration::from_millis(1_000)));
+        loop {
+            futures::select! {
+                cmd = self.cmds.next().fuse() => {
+                    if let Some(cmd) = cmd {
+                        self.on_cmd(cmd);
+                    }
+                }
+                _id = self.timers.alarm().fuse() => {
+                    self.on_timer(0);
+                }
+
+            }
+        }
+    }
+
+    fn handler(&self) -> Box<dyn Handler<LedCmd>> {
+        self.cmds.handler()
+    }
+
+    fn add_listener(&mut self, handler: Box<dyn Handler<()>>) {
+        self.events.add(handler);
     }
 }

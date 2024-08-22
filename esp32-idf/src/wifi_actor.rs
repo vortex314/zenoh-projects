@@ -18,11 +18,12 @@ use log::info;
 use log::warn;
 use minicbor::decode::info;
 
-
-
 use crate::async_wait_millis;
-use crate::limero::{Sink, SinkRef, Source, Timers};
-use crate::{limero::ActorTrait, SourceTrait};
+use crate::limero::Actor;
+use crate::CmdQueue;
+use crate::EventHandlers;
+use crate::Handler;
+use crate::Timers;
 
 #[derive(Clone, Debug)]
 pub enum WifiCmd {
@@ -38,8 +39,8 @@ pub enum WifiActorEvent {
 }
 
 pub struct WifiActor {
-    cmds: Sink<WifiCmd>,
-    events: Source<WifiActorEvent>,
+    cmds: CmdQueue<WifiCmd>,
+    events: EventHandlers<WifiActorEvent>,
     timers: Timers,
     wifi: BlockingWifi<EspWifi<'static>>,
 }
@@ -72,15 +73,11 @@ impl WifiActor {
         }))?;
 
         Ok(WifiActor {
-            cmds: Sink::new(),
-            events: Source::new(),
+            cmds: CmdQueue::new(10),
+            events: EventHandlers::new(),
             timers: Timers::new(),
             wifi,
         })
-    }
-
-    pub fn sink_ref(&self) -> SinkRef<WifiCmd> {
-        self.cmds.sink_ref()
     }
 
     async fn handle_cmd(&mut self, cmd: WifiCmd) {
@@ -98,7 +95,7 @@ impl WifiActor {
     }
 }
 
-impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
+impl Actor<WifiCmd, WifiActorEvent> for WifiActor {
     async fn run(&mut self) {
         info!("WifiActor::run");
         loop {
@@ -127,7 +124,7 @@ impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
                 let config = self.wifi.get_configuration().unwrap();
                 info!("Waiting for station {:?}", config);
             }
-            self.events.emit(WifiActorEvent::Connected);
+            self.events.on_event(WifiActorEvent::Connected);
 
             info!("Wifi Connected");
             while self.wifi.is_connected().unwrap() {
@@ -136,17 +133,11 @@ impl ActorTrait<WifiCmd, WifiActorEvent> for WifiActor {
         }
     }
 
-    fn sink_ref(&self) -> SinkRef<WifiCmd> {
-        self.cmds.sink_ref()
+    fn add_listener(&mut self, handler: Box<dyn Handler<WifiActorEvent>>) {
+        self.events.add(handler);
     }
 
-    fn add_listener(&mut self, sink_ref: SinkRef<WifiActorEvent>) {
-        self.events.add_listener(sink_ref);
-    }
-}
-
-impl SourceTrait<WifiActorEvent> for WifiActor {
-    fn add_listener(&mut self, sink_ref: SinkRef<WifiActorEvent>) {
-        self.events.add_listener(sink_ref);
+    fn handler(&self) -> Box<dyn Handler<WifiCmd>> {
+        self.cmds.handler()
     }
 }

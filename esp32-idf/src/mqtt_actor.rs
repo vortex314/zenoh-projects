@@ -17,9 +17,9 @@ use futures::FutureExt;
 use log::{debug, error, info};
 
 use crate::limero::{
-    async_wait_millis, timer::Timer, timer::Timers, Sink, SinkRef, SinkTrait, Source, SourceTrait,
+    async_wait_millis, timer::Timer, timer::Timers
 };
-use crate::{timer, ActorTrait, PubSubCmd, PubSubEvent};
+use crate::{timer, Actor, CmdQueue, EventHandlers, Handler, PubSubCmd, PubSubEvent};
 use anyhow::Result;
 
 #[derive(PartialEq)]
@@ -43,8 +43,8 @@ enum TimerId {
 }
 
 pub struct MqttActor {
-    cmds: Sink<PubSubCmd>,
-    events: Arc<RwLock<Source<PubSubEvent>>>,
+    cmds: CmdQueue<PubSubCmd>,
+    events: EventHandlers<PubSubEvent>,
     timers: Timers,
     mqtt_host: String,
     mqtt_client: Option<EspMqttClient<'static>>,
@@ -55,13 +55,11 @@ pub struct MqttActor {
     lwt_payload_online: Vec<u8>,
     lwt_payload_offline: Vec<u8>,
     esp_mdns: EspMdns,
-    mqtt_events: Sink<MqttEvent>,
+    mqtt_events: CmdQueue<MqttEvent>,
 }
 impl MqttActor {
     pub fn new(client_id: &str, mqtt_host: &str) -> MqttActor {
         // Set up handle for MQTT Config
-        let events = Arc::new(RwLock::new(Source::new()));
-        let cmds = Sink::new();
         let lwt_payload_offline = "offline".as_bytes().to_vec();
         let lwt_payload_online = "online".as_bytes().to_vec();
         let lwt_topic = format!("src/{}/sys/lwt", client_id);
@@ -69,8 +67,8 @@ impl MqttActor {
         let uptime_topic = format!("src/{}/sys/uptime", client_id);
 
         MqttActor {
-            cmds,
-            events,
+            cmds: CmdQueue::new(10),
+            events: EventHandlers::new(),
             timers: Timers::new(),
             mqtt_host: mqtt_host.to_string(),
             mqtt_client: None,
@@ -81,12 +79,8 @@ impl MqttActor {
             lwt_payload_online: lwt_payload_online.clone(),
             lwt_payload_offline: lwt_payload_offline.clone(),
             esp_mdns: EspMdns::take().unwrap(),
-            mqtt_events: Sink::new(),
+            mqtt_events: CmdQueue::new(3),
         }
-    }
-
-    pub fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        self.cmds.sink_ref()
     }
 
     pub fn create_client(&mut self) -> Result<()> {
@@ -107,7 +101,7 @@ impl MqttActor {
         mqtt_config.keep_alive_interval = Some(Duration::from_secs(3));
         mqtt_config.reconnect_timeout = Some(Duration::from_secs(1));
 
-        let sink_ref = self.mqtt_events.sink_ref();
+        let mut handler = self.mqtt_events.handler();
 
         let mqtt_broker = format!("mqtt://{}", ipv4);
         info!("MQTT connecting {}", mqtt_broker);
@@ -120,11 +114,11 @@ impl MqttActor {
                 }
                 EventPayload::Connected(b) => {
                     info!("Connect {}", b);
-                    sink_ref.send(MqttEvent::Connected);
+                    handler.handle(&MqttEvent::Connected);
                 }
                 EventPayload::Disconnected => {
                     info!("Disconnected");
-                    sink_ref.send(MqttEvent::Disconnected);
+                    handler.handle(&MqttEvent::Disconnected);
                 }
                 EventPayload::Received {
                     id:_,
@@ -132,7 +126,7 @@ impl MqttActor {
                     data,
                     details:_,
                 } => {
-                    sink_ref.send(MqttEvent::Publish {
+                    handler.handle(&MqttEvent::Publish {
                         topic: topic.unwrap().to_string(),
                         payload: data.to_vec(),
                     });
@@ -197,11 +191,8 @@ impl MqttActor {
         Ok(())
     }
 
-    fn emit_event(&self, event: PubSubEvent) -> Result<()> {
-        let r = self.events.try_write().map(|w| w.emit(event));
-        if r.is_err() {
-            return Err(anyhow::anyhow!("Error emitting event"));
-        };
+    fn emit_event(&mut self, event: PubSubEvent) -> Result<()> {
+        self.events.on_event(event);
         Ok(())
     }
 
@@ -215,7 +206,7 @@ impl MqttActor {
                 EventPayload::Connected(b) => {
                     info!("Connect {}", b);
                     self.emit_event(PubSubEvent::Disconnected)?;
-                    self.cmds.sink_ref().send(PubSubCmd::Connect {
+                    self.cmds.handler().handle(&PubSubCmd::Connect {
                         client_id: self.client_id.clone(),
                     });
                 }
@@ -245,7 +236,7 @@ impl MqttActor {
     }
 }
 
-impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
+impl Actor<PubSubCmd, PubSubEvent> for MqttActor {
     async fn run(&mut self) {
         info!("MqttActor::run");
 
@@ -254,7 +245,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
             Duration::from_secs(1),
         ));
         loop {
-            futures::select! {
+             futures::select! {
                 cmd = self.cmds.next().fuse() => {
                     if let Some(cmd) = cmd {
                         let r  = self.handle_cmd(cmd);
@@ -266,7 +257,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
                 timer_idx = self.timers.alarm().fuse() => {
                     if timer_idx == TimerId::PingTimer as u32 {
                     let line = format!("{}",std::time::UNIX_EPOCH.elapsed().unwrap().as_millis());
-                    self.cmds.sink_ref().send(PubSubCmd::Publish { topic:self.uptime_topic.clone(), payload:line.as_bytes().to_vec() });
+                    self.cmds.handler().handle(&PubSubCmd::Publish { topic:self.uptime_topic.clone(), payload:line.as_bytes().to_vec() });
                     }
                 }
                 event = self.mqtt_events.next().fuse() => {
@@ -289,21 +280,17 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttActor {
         }
     }
 
-    fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        self.cmds.sink_ref()
-    }
 
-    fn add_listener(&mut self, sink_ref: SinkRef<PubSubEvent>) {
+
+    fn add_listener(&mut self, handler : Box<dyn Handler<PubSubEvent>>) {
         self.events
-            .borrow_mut()
-            .write()
-            .unwrap()
-            .add_listener(sink_ref);
+            .add(handler);
     }
+
+    fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {
+        self.cmds.handler()
+    }
+
 }
 
-impl SourceTrait<PubSubEvent> for MqttActor {
-    fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
-        self.events.borrow_mut().write().unwrap().add_listener(sink);
-    }
-}
+
