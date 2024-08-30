@@ -1,0 +1,15 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml",
+        "./Cargo.toml"
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "xml.fileAssociations": [
+        {"pattern": "./config.xsd", "systemId": "http://www.w3.org/2001/XMLSchema"}
+    ],
+    "[xml]": {
+        "editor.defaultFormatter": "DotJoshJohnson.xml",
+        "editor.tabSize": 2
+    },
+    "git.ignoreLimitWarning": true,
+}

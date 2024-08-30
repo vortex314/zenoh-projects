@@ -18,7 +18,8 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-default = ["std",  "esp-idf-svc/native"]
+default = ["std",  "esp-idf-svc/native","json"]
+json = []
 
 pio = ["esp-idf-svc/pio"]
 std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
@@ -37,6 +38,7 @@ anyhow="*"
 esp-idf-sys="*"
 heapless="*"
 minicbor = { version = "*", features=["derive","alloc","half"] }
+minicbor-ser = { version = "*",  features=["alloc"]}
 # edge-executor = "*"
 #   futures="*"
 serde_json="*"

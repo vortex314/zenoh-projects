@@ -124,7 +124,7 @@ impl Actor<WifiCmd, WifiActorEvent> for WifiActor {
                 let config = self.wifi.get_configuration().unwrap();
                 info!("Waiting for station {:?}", config);
             }
-            self.events.on_event(WifiActorEvent::Connected);
+            self.events.handle(&WifiActorEvent::Connected);
 
             info!("Wifi Connected");
             while self.wifi.is_connected().unwrap() {

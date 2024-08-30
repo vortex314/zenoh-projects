@@ -1,0 +1,4 @@
+[workspace]
+members = ["esp32-bare", "limero-esp32-embassy","pubsub","zenoh_proxy"]
+exclude = ["esp_no_std","esp32-devices","esp32-idf","esp32-mqtt","espidf_serial","espidf_tcp","examples","zenoh_egui","zenoh_proxy","zenoh_sender","zenohd"]
+resolver="2"

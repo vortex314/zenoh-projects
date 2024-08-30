@@ -1,0 +1,12 @@
+[package]
+name = "limero"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4", features = [] }
+embassy-sync = "0.5.0"
+embassy-time = "0.3.2"
+esp-println = { version = "*", features = ["esp32", "log"] }
+async-channel ={ version = "2.3.1", features = [], default-features = false }
+# anyhow = { version = "*", features = [], default-features = false }

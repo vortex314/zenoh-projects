@@ -1,0 +1,9 @@
+[package]
+name = "zenoh_egui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui = "0.28.1"
+eframe = "*"
+env_logger = "*"

@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../limero-esp32-embassy"
+		}
+	],
+	"settings": {
+		"rust-analyzer.check.allTargets": false
+	}
+}

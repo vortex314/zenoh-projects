@@ -19,7 +19,9 @@ use log::{debug, error, info};
 use crate::limero::{
     async_wait_millis, timer::Timer, timer::Timers
 };
-use crate::{timer, Actor, CmdQueue, EventHandlers, Handler, PubSubCmd, PubSubEvent};
+use crate::payload_cbor::Cbor;
+use crate::payload_json::Json;
+use crate::{timer, Actor, CmdQueue, Codec, EventHandlers, Handler, PayloadCodec, PubSubCmd, PubSubEvent};
 use anyhow::Result;
 
 #[derive(PartialEq)]
@@ -56,6 +58,7 @@ pub struct MqttActor {
     lwt_payload_offline: Vec<u8>,
     esp_mdns: EspMdns,
     mqtt_events: CmdQueue<MqttEvent>,
+    codec : Codec,
 }
 impl MqttActor {
     pub fn new(client_id: &str, mqtt_host: &str) -> MqttActor {
@@ -80,6 +83,7 @@ impl MqttActor {
             lwt_payload_offline: lwt_payload_offline.clone(),
             esp_mdns: EspMdns::take().unwrap(),
             mqtt_events: CmdQueue::new(3),
+            codec : Codec::Json,
         }
     }
 
@@ -100,6 +104,7 @@ impl MqttActor {
         mqtt_config.lwt = Some(lwt_config);
         mqtt_config.keep_alive_interval = Some(Duration::from_secs(3));
         mqtt_config.reconnect_timeout = Some(Duration::from_secs(1));
+        
 
         let mut handler = self.mqtt_events.handler();
 
@@ -142,18 +147,30 @@ impl MqttActor {
         Ok(())
     }
 
+    fn display_payload(&self, payload: &Vec<u8>) -> String {
+        match self.codec {
+            Codec::Json => Json::to_string(payload),
+            Codec::Cbor => Cbor::to_string(payload),
+        }
+    }
+
     pub fn handle_cmd(&mut self, cmd: PubSubCmd) -> Result<()> {
         match cmd {
             PubSubCmd::Publish { topic, payload } => {
                 if let Some(cl) = self.mqtt_client.as_mut() {
-                    cl.publish(topic.as_str(), QoS::AtLeastOnce, false, &payload)?;
+                    info!("MQTT Publish to {} : {}", topic, match self.codec {
+                        Codec::Json => Json::to_string(&payload),
+                        Codec::Cbor => Cbor::to_string(&payload),
+                    });   
+
+                    cl.publish(topic.as_str(), QoS::AtMostOnce, false, &payload)?;
                 } else {
                     return Err(anyhow::anyhow!("Not connected"));
                 }
             }
             PubSubCmd::Subscribe { topic } => {
                 if let Some(cl) = self.mqtt_client.as_mut() {
-                    cl.subscribe(topic.as_str(), QoS::AtLeastOnce)?;
+                    cl.subscribe(topic.as_str(), QoS::AtMostOnce)?;
                 } else {
                     return Err(anyhow::anyhow!("Not connected"));
                 }
@@ -173,15 +190,15 @@ impl MqttActor {
                 info!("MQTT Subscribe to {}", self.subscribe_topic);
                 self.mqtt_client
                     .as_mut()
-                    .map(|cl| cl.subscribe(&self.subscribe_topic, QoS::AtLeastOnce)); // Subscribe to topic
-                info!("MQTT Publish to {}", self.lwt_topic);
+                    .map(|cl| cl.subscribe(&self.subscribe_topic, QoS::AtMostOnce)); // Subscribe to topic
+                info!("MQTT Publish to {} : {}", self.lwt_topic, self.display_payload(&self.lwt_payload_online));
                 self.mqtt_client.as_mut().map(|cl| {
                     cl.publish(
                         &self.lwt_topic,
                         QoS::AtLeastOnce,
                         false,
                         &self.lwt_payload_online,
-                    )
+                    ) // Publish LWT 
                 });
             }
             cmd => {
@@ -191,8 +208,8 @@ impl MqttActor {
         Ok(())
     }
 
-    fn emit_event(&mut self, event: PubSubEvent) -> Result<()> {
-        self.events.on_event(event);
+    fn emit_event(&mut self, event: &PubSubEvent) -> Result<()> {
+        self.events.handle(event);
         Ok(())
     }
 
@@ -201,18 +218,18 @@ impl MqttActor {
             match event.payload() {
                 EventPayload::BeforeConnect => {
                     info!("Before Connect");
-                    self.emit_event(PubSubEvent::Disconnected)?;
+                    self.emit_event(&PubSubEvent::Disconnected)?;
                 }
                 EventPayload::Connected(b) => {
                     info!("Connect {}", b);
-                    self.emit_event(PubSubEvent::Disconnected)?;
+                    self.emit_event(&PubSubEvent::Disconnected)?;
                     self.cmds.handler().handle(&PubSubCmd::Connect {
                         client_id: self.client_id.clone(),
                     });
                 }
                 EventPayload::Disconnected => {
                     info!("Disconnected");
-                    self.emit_event(PubSubEvent::Disconnected)?;
+                    self.emit_event(&PubSubEvent::Disconnected)?;
                 }
                 EventPayload::Received {
                     id,
@@ -221,7 +238,7 @@ impl MqttActor {
                     details,
                 } => {
                     info!("Received {:?} {:?} {:?}", id, topic, details);
-                    self.emit_event(PubSubEvent::Publish {
+                    self.emit_event(&PubSubEvent::Publish {
                         topic: topic.unwrap().to_string(),
                         payload: data.to_vec(),
                     })?;
@@ -264,13 +281,13 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttActor {
                     if let Some(event) = event {
                         match event {
                             MqttEvent::Connected => {
-                                self.emit_event(PubSubEvent::Connected).unwrap();
+                                self.emit_event(&PubSubEvent::Connected).unwrap();
                             }
                             MqttEvent::Disconnected => {
-                                self.emit_event(PubSubEvent::Disconnected).unwrap();
+                                self.emit_event(&PubSubEvent::Disconnected).unwrap();
                             }
                             MqttEvent::Publish { topic, payload } => {
-                                self.emit_event(PubSubEvent::Publish { topic, payload }).unwrap();
+                                self.emit_event(&PubSubEvent::Publish { topic, payload }).unwrap();
                             }
                         }
                     }

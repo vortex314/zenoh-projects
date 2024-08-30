@@ -1,0 +1,8 @@
+#!/home/lieven/workspace/zenoh-projects/esp32-devices/.embuild/espressif/python_env/idf5.3_py3.10_env/bin/python
+# -*- coding: utf-8 -*-
+import re
+import sys
+from esp_coredump.scripts.espcoredump import main
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main())

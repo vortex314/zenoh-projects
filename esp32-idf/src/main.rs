@@ -114,8 +114,8 @@ fn print_pubsub_event(event: &PubSubEvent) {
         PubSubEvent::Connected => info!("Connected"),
         PubSubEvent::Disconnected => info!("Disconnected"),
         PubSubEvent::Publish { topic, payload } => {
-            info!("Publish: {} {:?}", topic, payload_display_json(&payload));
-            info!("Publish: {} {:?}", topic, payload_as_f64_json(&payload));
+            info!("Publish: {} {:?}", topic, Cbor::to_string(&payload));
+            info!("Publish: {} {:?}", topic, Json::to_string(&payload));
         }
     }
 }

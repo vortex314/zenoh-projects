@@ -1,0 +1,1 @@
+esp_idf_nvs_partition_gen

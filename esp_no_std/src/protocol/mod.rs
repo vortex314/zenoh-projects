@@ -11,7 +11,7 @@ use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
 use log::{debug, info};
 
-#[cfg(feature = "embassy")]
+//#[cfg(feature = "embassy")]
 use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
 
 extern crate alloc;

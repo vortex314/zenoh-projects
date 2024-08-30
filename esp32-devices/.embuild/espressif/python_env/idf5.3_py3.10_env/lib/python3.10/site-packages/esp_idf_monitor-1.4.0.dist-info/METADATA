@@ -1,0 +1,84 @@
+Metadata-Version: 2.1
+Name: esp-idf-monitor
+Version: 1.4.0
+Summary: Serial monitor for esp-idf
+Author: Espressif Systems
+Project-URL: Homepage, https://github.com/espressif/esp-idf-monitor
+Keywords: espressif,embedded,monitor,serial
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Natural Language :: English
+Classifier: Environment :: Console
+Classifier: Topic :: Software Development :: Embedded Systems
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: MacOS :: MacOS X
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pyserial >=3.3
+Requires-Dist: esp-coredump ~=1.2
+Requires-Dist: esp-idf-panic-decoder ~=1.0
+Provides-Extra: dev
+Requires-Dist: pre-commit ; extra == 'dev'
+Requires-Dist: commitizen ; extra == 'dev'
+Provides-Extra: host_test
+Requires-Dist: pytest ; extra == 'host_test'
+Requires-Dist: pytest-rerunfailures ; extra == 'host_test'
+Requires-Dist: esptool ; extra == 'host_test'
+Provides-Extra: ide
+Requires-Dist: websocket-client ; extra == 'ide'
+Provides-Extra: target_test
+Requires-Dist: SimpleWebSocketServer ; extra == 'target_test'
+Requires-Dist: pytest ; extra == 'target_test'
+Requires-Dist: pytest-embedded ; extra == 'target_test'
+Requires-Dist: pytest-embedded-idf ; extra == 'target_test'
+Requires-Dist: pytest-embedded-serial-esp ; extra == 'target_test'
+Requires-Dist: idf-build-apps ~=1.0.1 ; extra == 'target_test'
+Requires-Dist: idf-component-manager ; extra == 'target_test'
+
+# Espressif IDF Monitor
+
+The ```esp-idf-monitor``` is a Python-based, open-source package that is part of the [ESP-IDF](https://github.com/espressif/esp-idf) SDK for Espressif products.
+
+The main responsibility of the IDF Monitor is serial communication input and output in ESP-IDF projects. More information about IDF Monitor can be found in [IDF documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-monitor.html).
+
+## Customizable Config
+
+```esp-idf-monitor``` supports customizable menu keystrokes using a config file. For more information about setting up the config and supported options please follow [IDF documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-monitor.html#configuration-file).
+
+## Contributing
+
+### Code Style & Static Analysis
+
+Please follow these coding standards when writing code for ``esp-idf-monitor``:
+
+#### Pre-commit checks
+
+[pre-commit](https://pre-commit.com/) is a framework for managing pre-commit hooks. These hooks help to identify simple issues before committing code for review.
+
+To use the tool, first install ``pre-commit``. Then enable the ``pre-commit`` and ``commit-msg`` git hooks:
+
+```sh
+python -m pip install pre-commit
+pre-commit install -t pre-commit -t commit-msg
+```
+
+On the first commit ``pre-commit`` will install the hooks, subsequent checks will be significantly faster. If an error is found an appropriate error message will be displayed.
+
+
+#### Conventional Commits
+
+``esp-idf-monitor`` complies with the [Conventional Commits standard](https://www.conventionalcommits.org/en/v1.0.0/#specification). Every commit message is checked with [Conventional Precommit Linter](https://github.com/espressif/conventional-precommit-linter), ensuring it adheres to the standard.
+
+
+## License
+
+This document and the attached source code are released as Free Software under Apache License Version 2 or later. See the accompanying [LICENSE file](https://github.com/espressif/esp-idf-monitor/blob/master/LICENSE) for a copy.

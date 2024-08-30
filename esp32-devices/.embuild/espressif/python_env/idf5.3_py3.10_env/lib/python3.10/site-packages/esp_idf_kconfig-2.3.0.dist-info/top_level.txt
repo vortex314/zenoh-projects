@@ -1,0 +1,6 @@
+esp_idf_kconfig
+kconfcheck
+kconfgen
+kconfiglib
+kconfserver
+menuconfig
