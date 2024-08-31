@@ -6,3 +6,8 @@
 .vscode/ipch
 **/target/
 **/build/
+**/Cargo.lock
+**/debug/
+**/target/
+**/*.rs.bk
+

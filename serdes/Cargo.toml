@@ -1,0 +1,18 @@
+[package]
+name = "serdes"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4",   features = [] }
+minicbor = { version = "0.24.2", default-features = false, features=["derive","alloc","half"] }
+minicbor-ser = { version = "*", default-features = false,  features=["alloc"]}
+serde-json-core="*"
+serde = { version = "1.0", default-features = false } # disable std
+anyhow = { version = "1.0", default-features = false }
+cobs={ version = "0.2.3", default-features=false,features = [] }
+crc = { version = "3.0.1", features = [] }
+byte = { version="0.2.7"}
+bitfield = "0.16.1"
+
+

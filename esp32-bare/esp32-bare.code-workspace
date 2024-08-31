@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../limero-esp32-embassy"
+		},
+		{
+			"path": "../pubsub"
+		},
+		{
+			"path": "../serdes"
 		}
 	],
 	"settings": {

@@ -1,4 +1,4 @@
-use core::result;
+use core::{result};
 
 use alloc::boxed::Box;
 use alloc::format;
@@ -30,32 +30,49 @@ use esp_wifi::{
     esp_now::{EspNowManager, EspNowReceiver, EspNowSender, PeerInfo, BROADCAST_ADDRESS},
     initialize, EspWifiInitFor,
 };
-use log::{debug, info};
+use log::{debug, info,error};
 
 use crate::proxy_message::{Flags, ProxyMessage, ReturnCode, VecWriter};
+use anyhow::Error;
+use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
+use minicbor::Encode;
+use minicbor::{decode, Decode, Decoder, Encoder};
 use pubsub::Cbor;
 use pubsub::PayloadCodec;
-use minicbor::Encode;
-use minicbor::{decode, Decoder, Encoder, Decode};
 
-enum TimerId {
-    PingTimer = 1,
-    ConnectTimer = 2,
-    ConnectionTimer = 3,
+#[derive(Clone,Debug)]
+pub enum EspNowEvent {
+    Rxd {
+        peer: [u8; 6],
+        data: Vec<u8>,
+    },
+    Broadcast {
+        peer: [u8; 6],
+        rssi: u8,
+        data: Vec<u8>,
+    },
+}
+
+#[derive(Clone)]
+pub enum EspNowCmd {
+    Txd { peer: [u8; 6], data: Vec<u8> },
+    Broadcast { data: Vec<u8> },
+    Connect { peer: [u8; 6] },
+    Disconnect,
 }
 
 pub struct EspNowActor {
-    cmds: CmdQueue<ProxyMessage>,
-    events: EventHandlers<ProxyMessage>,
+    cmds: CmdQueue<EspNowCmd>,
+    events: EventHandlers<EspNowEvent>,
     timers: Timers,
     manager: &'static mut EspNowManager<'static>,
     sender: &'static mut Mutex<NoopRawMutex, EspNowSender<'static>>,
     receiver: EspNowReceiver<'static>,
 }
 
-impl Actor<ProxyMessage, ProxyMessage> for EspNowActor {
+impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
     async fn run(&mut self) {
         loop {
             match select3(
@@ -66,23 +83,24 @@ impl Actor<ProxyMessage, ProxyMessage> for EspNowActor {
             .await
             {
                 First(msg) => {
-                    // send data
-                    self.on_cmd_message(msg.unwrap()).await;
+                    if let Err(x) = self.on_cmd_message(msg.unwrap()).await {
+                        error!("Error: {:?}", x);
+                    }
                 }
                 Second(idx) => {
                     self.on_timeout(idx).await;
                 }
                 Third(msg) => {
-                    self.on_rxd_message(msg).await;
+                    self.events.handle(&msg);
                 }
             }
         }
     }
-    fn add_listener(&mut self, listener: Box<dyn Handler<ProxyMessage>>) {
+    fn add_listener(&mut self, listener: Box<dyn Handler<EspNowEvent>>) {
         self.events.add_listener(listener);
     }
 
-    fn handler(&self) -> Box<dyn Handler<ProxyMessage>> {
+    fn handler(&self) -> Box<dyn Handler<EspNowCmd>> {
         self.cmds.handler()
     }
 }
@@ -120,22 +138,34 @@ impl EspNowActor {
 
     async fn on_timeout(&mut self, _id: u32) {}
 
-    async fn on_rxd_message(&mut self, _data: Vec<u8>) {}
-
-    pub async fn on_cmd_message(&mut self, msg: ProxyMessage) {
-        let v = payload_encode(msg);
-        let mut sender = self.sender.lock().await;
-        let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
-        info!("TXD >> {}", status);
+    async fn on_cmd_message(&mut self, msg: EspNowCmd) -> Result<()> {
+        match msg {
+            EspNowCmd::Txd { peer, data } => {
+                let mut sender = self.sender.lock().await;
+                sender.send_async(&peer, &data).await.map_err(|e| {
+                    Error::msg(format!("Failed to send data: {:?}", e))
+                })?;
+            }
+            EspNowCmd::Connect { peer: _ } => {}
+            EspNowCmd::Disconnect => {}
+            EspNowCmd::Broadcast { data } => {
+                let mut sender = self.sender.lock().await;
+                sender
+                    .send_async(&BROADCAST_ADDRESS, &data)
+                    .await
+                    .map_err(|e| Error::msg(format!("Failed to send data: {:?}", e)))?;
+            }
+        }
+        Ok(())
     }
 }
 
 async fn listener(
     manager: &EspNowManager<'static>,
     receiver: &mut EspNowReceiver<'static>,
-) -> Vec<u8> {
+) -> EspNowEvent {
     let r = receiver.receive_async().await;
-    debug!("source {:?}", mac_to_string(r.info.src_address));
+    debug!("source {:?}", mac_to_string(&r.info.src_address));
     debug!("rx_control {:?}", r.info.rx_control);
     debug!("Received {:?}", r.get_data());
     if r.info.dst_address == BROADCAST_ADDRESS {
@@ -148,20 +178,29 @@ async fn listener(
                     encrypt: false,
                 })
                 .unwrap();
-            info!("Added peer {:?}", r.info.src_address);
+            info!("Added peer {:?}", mac_to_string(&r.info.src_address));
+        }
+        EspNowEvent::Broadcast {
+            peer: r.info.src_address,
+            rssi: r.info.rx_control.rssi as u8,
+            data: r.data[..r.len as usize].to_vec(),
+        }
+    } else {
+        EspNowEvent::Rxd {
+            peer: r.info.src_address,
+            data: r.data[..r.len as usize].to_vec(),
         }
     }
-    r.data.to_vec()
 }
 
-fn mac_to_string(mac: [u8; 6]) -> String {
+pub fn mac_to_string(mac: &[u8; 6]) -> String {
     mac.iter()
         .map(|b| format!("{:02X}", b))
         .collect::<Vec<_>>()
         .join(":")
 }
 
-pub fn payload_encode<X>(v: X) -> Vec<u8>
+pub fn payload_encode<X>(v: &X) -> Vec<u8>
 where
     X: Encode<()>,
 {

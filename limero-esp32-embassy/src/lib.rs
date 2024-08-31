@@ -25,7 +25,7 @@ pub trait Handler<T>: Send {
     fn handle(&mut self, item: &T);
 }
 
-// type Endpoint<T> = Box<dyn Handler<T>>;
+pub type Endpoint<T> = Box<dyn Handler<T>>;
 
 pub trait Actor<CMD, EVENT> {
     async fn run(&mut self);

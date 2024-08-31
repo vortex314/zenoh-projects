@@ -11,11 +11,4 @@ serde-json-core="*"
 serde = { version = "1.0", default-features = false } # disable std
 anyhow = { version = "1.0", default-features = false }
 
-[profile.release]
-codegen-units    = 1
-debug            = 2
-debug-assertions = false
-incremental      = false
-opt-level        = 3
-lto = 'fat'
-overflow-checks  = false
+

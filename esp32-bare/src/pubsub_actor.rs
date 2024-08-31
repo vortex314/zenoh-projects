@@ -50,7 +50,6 @@ enum State {
 enum TimerId {
     PingTimer = 1,
     ConnectTimer = 2,
-    ConnectionTimer = 3,
 }
 
 pub struct PubSubActor {

@@ -1508,6 +1508,7 @@ version = "0.0.0"
 dependencies = [
  "aes",
  "aligned",
+ "anyhow",
  "bitfield 0.16.1",
  "bleps",
  "byte",
@@ -1553,6 +1554,8 @@ dependencies = [
  "p256",
  "portable-atomic",
  "pubsub",
+ "serde",
+ "serdes",
  "sha2",
  "static_cell",
 ]
@@ -3878,6 +3881,22 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
+]
+
+[[package]]
+name = "serdes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitfield 0.16.1",
+ "byte",
+ "cobs",
+ "crc",
+ "log",
+ "minicbor 0.24.2",
+ "minicbor-ser",
+ "serde",
+ "serde-json-core",
 ]
 
 [[package]]

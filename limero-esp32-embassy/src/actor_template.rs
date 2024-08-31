@@ -42,6 +42,9 @@ enum State {
     Connected,
 }
 
+pub enum PubSubCmd {}
+pub enum PubSubEvent {}
+
 enum TimerId {
     PingTimer = 1,
     ConnectTimer = 2,
@@ -77,55 +80,32 @@ impl PubSubActor {
 
     pub async fn on_cmd_message(&mut self, cmd: PubSubCmd) {
         match cmd {
-            
+        }
     }
 }
 
-impl Actor<PubSubCmd, PubSubEvent> for PubSubActor {
+impl Actor<ProxyMessage, ProxyMessage> for EspNowActor {
 
-     async fn run(&mut self) {
-        self.timers.add_timer(Timer::new_repeater(
-            TimerId::ConnectTimer as u32,
-            Duration::from_millis(5_000),
-        ));
-        self.timers.add_timer(Timer::new_repeater(
-            TimerId::PingTimer as u32,
-            Duration::from_millis(1_000),
-        ));
+    async fn run(&mut self) {
+       loop {
+           match select(self.cmds.next(), self.timers.alarm()).await {
+               First(msg) => match msg {
+                   _ => {}
+               },
+               Second(idx) => {
+                   self.on_timeout(idx).await;
+               }
+           }
+       }
+   }
+   fn add_listener(&mut self, listener: Box<dyn Handler<ProxyMessage>>) {
+       self.events.add_listener(listener);
+   }
 
-        self.txd(ProxyMessage::Connect {
-            flags: Flags(0),
-            duration: 100,
-            client_id: self.client_id.clone(),
-        });
-
-        loop {
-            match select(self.cmds.next(), self.timers.alarm()).await {
-                First(msg) => match msg {
-                    Some(PubSubCmd::Rxd(m)) => {
-                        self.on_rxd_message(m).await;
-                    }
-                    Some(cmd) => {
-                        self.on_cmd_message(cmd).await;
-                    }
-                    None => {
-                        info!("Unexpected {:?}", msg);
-                    }
-                },
-                Second(idx) => {
-                    self.on_timeout(idx).await;
-                }
-            }
-        }
-    }
-    fn add_listener(&mut self, listener: Box<dyn Handler<PubSubEvent>>) {
-        self.events.add_listener(listener);
-    }
-
-    fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {
-        Box::new(self.cmds.handler())
-    }
-    
+   fn handler(&self) -> Box<dyn Handler<ProxyMessage>> {
+       self.cmds.handler()
+   }
+   
 }
 
 
