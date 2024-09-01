@@ -1,4 +1,4 @@
-use core::{result};
+use core::result;
 
 use alloc::boxed::Box;
 use alloc::format;
@@ -30,7 +30,7 @@ use esp_wifi::{
     esp_now::{EspNowManager, EspNowReceiver, EspNowSender, PeerInfo, BROADCAST_ADDRESS},
     initialize, EspWifiInitFor,
 };
-use log::{debug, info,error};
+use log::{debug, error, info};
 
 use crate::proxy_message::{Flags, ProxyMessage, ReturnCode, VecWriter};
 use anyhow::Error;
@@ -42,7 +42,7 @@ use minicbor::{decode, Decode, Decoder, Encoder};
 use pubsub::Cbor;
 use pubsub::PayloadCodec;
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub enum EspNowEvent {
     Rxd {
         peer: [u8; 6],
@@ -63,6 +63,10 @@ pub enum EspNowCmd {
     Disconnect,
 }
 
+enum TimerId {
+    BroadcastTimer = 1,
+}
+
 pub struct EspNowActor {
     cmds: CmdQueue<EspNowCmd>,
     events: EventHandlers<EspNowEvent>,
@@ -74,6 +78,10 @@ pub struct EspNowActor {
 
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
     async fn run(&mut self) {
+        self.timers.add_timer(Timer::new_repeater(
+            TimerId::BroadcastTimer as u32,
+            Duration::from_millis(1_000),
+        ));
         loop {
             match select3(
                 self.cmds.next(),
@@ -124,27 +132,27 @@ impl EspNowActor {
         }
     }
 
-    async fn broadcaster(sender: &'static Mutex<NoopRawMutex, EspNowSender<'static>>) {
-        let mut ticker = Ticker::every(Duration::from_secs(1));
-        loop {
-            ticker.next().await;
-
-            info!("Send Broadcast...");
-            let mut sender = sender.lock().await;
-            let status = sender.send_async(&BROADCAST_ADDRESS, b"Hello.").await;
-            info!("Send broadcast status: {:?}", status);
-        }
+    async fn broadcast(&mut self) {
+        info!("Send Broadcast...");
+        let mut sender = self.sender.lock().await;
+        let status = sender.send_async(&BROADCAST_ADDRESS, b"Hello.").await;
+        info!("Send broadcast status: {:?}", status);
     }
 
-    async fn on_timeout(&mut self, _id: u32) {}
+    async fn on_timeout(&mut self, _id: u32) {
+        if _id == TimerId::BroadcastTimer as u32 {
+            self.broadcast().await;
+        }
+    }
 
     async fn on_cmd_message(&mut self, msg: EspNowCmd) -> Result<()> {
         match msg {
             EspNowCmd::Txd { peer, data } => {
                 let mut sender = self.sender.lock().await;
-                sender.send_async(&peer, &data).await.map_err(|e| {
-                    Error::msg(format!("Failed to send data: {:?}", e))
-                })?;
+                sender
+                    .send_async(&peer, &data)
+                    .await
+                    .map_err(|e| Error::msg(format!("Failed to send data: {:?}", e)))?;
             }
             EspNowCmd::Connect { peer: _ } => {}
             EspNowCmd::Disconnect => {}
@@ -200,23 +208,7 @@ pub fn mac_to_string(mac: &[u8; 6]) -> String {
         .join(":")
 }
 
-pub fn payload_encode<X>(v: &X) -> Vec<u8>
-where
-    X: Encode<()>,
-{
-    let mut buffer = Vec::<u8>::new();
-    let mut encoder = Encoder::new(&mut buffer);
-    let _x = encoder.encode(v);
-    _x.unwrap().writer().to_vec()
-}
 
-pub fn payload_decode<'a, T>(v: &'a Vec<u8>) -> Result<T, decode::Error>
-where
-    T: Decode<'a, ()>,
-{
-    let mut decoder = Decoder::new(v);
-    decoder.decode::<T>()
-}
 
 /*
 let mut ticker = Ticker::every(Duration::from_millis(500));

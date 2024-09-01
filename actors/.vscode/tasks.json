@@ -14,18 +14,15 @@
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
             "args": [
-                "run",
+                "build",
                 "--release",
-                // "--debug",
-                // "--",
-                // "arg1"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "presentation": {
-                "clear": true                        // <-- this line
+                "clear": true // <-- this line
             }
         }
     ]

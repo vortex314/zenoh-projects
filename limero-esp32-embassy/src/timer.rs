@@ -71,8 +71,9 @@ impl Timer {
         Instant::now() >= self.expires_at && self.active
     }
     pub fn wait_time(&self) -> Duration {
-        if self.active && self.expires_at > Instant::now() {
-            self.expires_at - Instant::now()
+        let now = Instant::now();
+        if self.active && self.expires_at > now {
+            self.expires_at - now
         } else {
             Duration::from_millis(0)
         }
@@ -138,9 +139,6 @@ impl Timers {
         }
         if lowest_timer.is_some() {
             let timer = lowest_timer.unwrap();
-            if timer.wait_time() < Duration::from_secs(0) {
-               error!("negative duration");// sleep forever 
-            }
             async_wait_millis(timer.wait_time().as_millis() as u32).await;
             if timer.expired() {
                 timer.reload();

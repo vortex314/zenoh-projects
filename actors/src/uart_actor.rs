@@ -35,7 +35,7 @@ pub const UART_BUFSIZE: usize = 127;
 
 #[derive(Clone)]
 pub enum UartCmd {
-    SendFrame(Vec<u8>),
+    TransmitFrame(Vec<u8>),
 }
 
 #[derive(Clone)]
@@ -116,7 +116,7 @@ impl Actor<UartCmd, UartEvent> for UartActor {
 impl UartActor {
     async fn on_cmd_msg(&mut self, msg: UartCmd) -> Result<()> {
         match msg {
-            UartCmd::SendFrame(bytes) => {
+            UartCmd::TransmitFrame(bytes) => {
                 let bytes = frame(&bytes)?;
                 let line: String = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
                 debug!(" TXD {}", line);

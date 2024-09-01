@@ -1,5 +1,5 @@
 #[cfg(feature = "esp32")]
-use alloc::{collections::VecDeque, fmt::format, string::String, string::ToString, vec::Vec};
+use alloc::{collections::VecDeque, fmt::format, string::String, string::ToString, vec::Vec,format};
 use minicbor::decode::Error as DecodeError;
 
 #[cfg(feature = "linux")]
@@ -16,11 +16,16 @@ use minicbor::encode::Write;
 use byte::TryRead;
 use byte::TryWrite;
 use core::result::Result;
+use core::result::Result::Ok;
+use core::option::Option;
+
 use minicbor::bytes::ByteArray;
 use minicbor::encode::Error as EncodeError;
 use minicbor::{Decode, Decoder, Encode, Encoder};
 
 use bitfield::{bitfield_bitrange, bitfield_fields};
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct Flags(pub u8);
@@ -35,6 +40,25 @@ impl Flags {
       pub will, set_will: 3;
       pub clean_session, set_clean_session: 2;
       pub topic_id_type, set_topic_id_type: 1, 0;
+    }
+}
+
+impl Serialize for Flags {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_u8(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Flags {
+    fn deserialize<D>(deserializer: D) -> Result<Flags, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let flags = u8::deserialize(deserializer)?;
+        Ok(Flags(flags))
     }
 }
 
@@ -109,7 +133,7 @@ pub enum ReturnCode {
     NotSupported,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone)]  
 pub enum ProxyMessage {
     Connect {
         flags: Flags,
@@ -209,6 +233,34 @@ pub enum ProxyMessage {
         id: u16,
         address:Option<Vec<u8>>,
     },
+}
+
+impl Serialize for ProxyMessage {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let mut vec_writer = VecWriter::new();
+        let mut encoder = minicbor::encode::Encoder::new(&mut vec_writer);
+        self.encode(&mut encoder, &mut ()).unwrap();
+        let bytes = vec_writer.to_inner();
+        serializer.serialize_bytes(&bytes)
+    }
+}
+
+impl<'a> Deserialize<'a> for ProxyMessage {
+    fn deserialize<D>(deserializer: D) -> Result<ProxyMessage, D::Error>
+    where
+        D: serde::de::Deserializer<'a>,
+    {
+        let bytes = Vec::<u8>::deserialize(deserializer)?;
+        let mut decoder = Decoder::new(&bytes);
+        let res = ProxyMessage::decode(&mut decoder, &mut ());
+        match res {
+            Ok(msg) => Ok(msg),
+            Err(e) => Err(serde::de::Error::custom(format!("Error decoding message {:?}", e))),
+        }
+    }
 }
 
 impl Encode<()> for ProxyMessage {

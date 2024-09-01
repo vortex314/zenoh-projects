@@ -12,6 +12,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "actors"
+version = "0.1.0"
+dependencies = [
+ "aes",
+ "aligned",
+ "anyhow",
+ "bitfield 0.16.1",
+ "bleps",
+ "byte",
+ "cfg-if",
+ "cobs",
+ "crc",
+ "critical-section",
+ "crypto-bigint",
+ "elliptic-curve",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-sync 0.6.0",
+ "embassy-time",
+ "embassy-time-driver",
+ "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-storage",
+ "esp-alloc",
+ "esp-backtrace",
+ "esp-hal",
+ "esp-hal-embassy",
+ "esp-ieee802154",
+ "esp-println",
+ "esp-storage",
+ "esp-wifi",
+ "fugit",
+ "heapless 0.8.0",
+ "hex-literal",
+ "hmac",
+ "ieee80211",
+ "ieee802154",
+ "limero",
+ "lis3dh-async",
+ "log",
+ "minicbor 0.18.0",
+ "minicbor-ser",
+ "nb 1.1.0",
+ "p192",
+ "p256",
+ "portable-atomic",
+ "pubsub",
+ "serde",
+ "serdes",
+ "sha2",
+ "static_cell",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1503,9 +1561,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "esp32-bare"
+name = "espnow-gateway"
 version = "0.0.0"
 dependencies = [
+ "actors",
  "aes",
  "aligned",
  "anyhow",
@@ -1547,7 +1606,7 @@ dependencies = [
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.24.2",
+ "minicbor 0.18.0",
  "minicbor-ser",
  "nb 1.1.0",
  "p192",
@@ -1911,6 +1970,12 @@ dependencies = [
  "rand_core",
  "subtle",
 ]
+
+[[package]]
+name = "half"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
 
 [[package]]
 name = "half"
@@ -2485,6 +2550,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a20020e8e2d1881d8736f64011bb5ff99f1db9947ce3089706945c8915695cb"
 dependencies = [
+ "half 1.8.3",
  "minicbor-derive 0.12.0",
 ]
 
@@ -2494,7 +2560,7 @@ version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f8e213c36148d828083ae01948eed271d03f95f7e72571fa242d78184029af2"
 dependencies = [
- "half",
+ "half 2.4.1",
  "minicbor-derive 0.15.0",
 ]
 

@@ -27,6 +27,23 @@ pub trait Handler<T>: Send {
 
 pub type Endpoint<T> = Box<dyn Handler<T>>;
 
+pub struct HandlerFunction<C,F> where F: FnMut(&C) -> (),C:Send {
+    func: F,
+    v: core::marker::PhantomData<C>,
+}
+
+impl <C,F> HandlerFunction<C,F>  where F: FnMut(&C) -> (), C:Send {
+    pub fn new(func: F) -> Self where F: FnMut(&C) -> (), C:Send {
+        Self { func, v: core::marker::PhantomData }
+    }
+}
+
+impl<C,F> Handler<C> for HandlerFunction<C,F> where F: FnMut(&C) -> ()+Send,C:Send {
+    fn handle(&mut self, cmd: &C) {
+        (self.func)(cmd);
+    }
+}
+
 pub trait Actor<CMD, EVENT> {
     async fn run(&mut self);
     fn handler(&self) -> Box<dyn Handler<CMD>>;

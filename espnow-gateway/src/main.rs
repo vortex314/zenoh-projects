@@ -45,6 +45,7 @@ use crate::alloc::string::ToString;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use alloc::boxed::Box;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -69,23 +70,12 @@ macro_rules! mk_static {
 }
 use pubsub::PubSubCmd;
 
-mod pubsub_actor;
-use pubsub_actor::PubSubActor;
-
-mod esp_now_actor;
-use esp_now_actor::*;
-
-mod proxy_message;
-use proxy_message::*;
-
-mod uart_actor;
-use uart_actor::UartActor;
-
-mod sys_actor;
-use sys_actor::SysActor;
-
-mod led_actor;
-use led_actor::*;
+mod 
+use actors::pubsub_actor::*;
+use actors::uart_actor::*;
+use actors::led_actor::*;
+use actors::esp_now_actor::*;
+use actors::sys_actor::*;
 
 use serdes::*;
 
@@ -176,9 +166,8 @@ async fn main(_spawner: Spawner) -> ! {
 
     esp_now_actor.map_to(
         |ev| match ev {
-            EspNowEvent::Rxd { peer, data } => Some(LedCmd::Pulse { duration: 100 }),
-            EspNowEvent::Broadcast { peer, rssi, data } => Some(LedCmd::Pulse { duration: 100 }),
-            _ => None,
+            EspNowEvent::Rxd { peer:_, data:_ } => Some(LedCmd::Pulse { duration: 100 }),
+            EspNowEvent::Broadcast { peer:_, rssi:_, data:_ } => Some(LedCmd::Pulse { duration: 100 }),
         },
         led_actor.handler(),
     );
@@ -213,7 +202,17 @@ async fn main(_spawner: Spawner) -> ! {
     }
     #[cfg(feature = "client")]
     {
-        let mut pubsub_actor = PubSubActor::new(transport_actor.handler());
+        let transport_handler = mk_static!(Endpoint<EspNowCmd>,esp_now_actor.handler());
+        let transport_function = |cmd: &ProxyMessage|  {
+            let v = Cbor::encode(cmd);
+            let v = serdes::frame(&v).unwrap();
+            transport_handler.handle(&EspNowCmd::Txd {
+                peer: BROADCAST_ADDRESS,
+                data: v,
+            });
+        };
+        let hf = Box::new(HandlerFunction::new(transport_function));
+        let mut pubsub_actor = PubSubActor::new(hf);
         pubsub_actor.handler().handle(&PubSubCmd::Connect {
             client_id: "esp-now".to_string(),
         });
