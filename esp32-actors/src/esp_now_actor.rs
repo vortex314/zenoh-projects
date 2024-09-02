@@ -1,46 +1,22 @@
-use core::result;
-
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::rc::Rc;
-use alloc::string::ToString;
 use alloc::vec::Vec;
 
-use alloc::collections::BTreeMap;
 use alloc::string::String;
-use embassy_executor::Spawner;
 use embassy_futures::select::select3;
 use embassy_futures::select::Either3::{First, Second, Third};
-use embassy_futures::select::{self};
 
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex, mutex::MutexGuard};
-use embassy_time::{with_timeout, Instant};
-use embassy_time::{Duration, Ticker};
+use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
+use embassy_time::Duration;
 use esp_backtrace as _;
-use esp_hal::peripherals::WIFI;
-use esp_hal::{
-    clock::ClockControl,
-    peripherals::{Peripherals, UART0},
-    prelude::*,
-    uart::{config::AtCmdConfig, UartRx, UartTx},
-};
-use esp_println::println;
 use esp_wifi::esp_now::EspNow;
-use esp_wifi::{
-    esp_now::{EspNowManager, EspNowReceiver, EspNowSender, PeerInfo, BROADCAST_ADDRESS},
-    initialize, EspWifiInitFor,
-};
+use esp_wifi::esp_now::{EspNowManager, EspNowReceiver, EspNowSender, PeerInfo, BROADCAST_ADDRESS};
 use log::{debug, error, info};
 
-use crate::proxy_message::{Flags, ProxyMessage, ReturnCode, VecWriter};
 use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use minicbor::Encode;
-use minicbor::{decode, Decode, Decoder, Encoder};
-use pubsub::Cbor;
-use pubsub::PayloadCodec;
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
@@ -117,11 +93,9 @@ impl EspNowActor {
     pub fn new(esp_now: EspNow<'static>) -> EspNowActor {
         info!("esp-now version {}", esp_now.get_version().unwrap());
         let (manager, sender, receiver) = esp_now.split();
-        let manager = mk_static!(EspNowManager<'static>, manager);
-        let sender = mk_static!(
-            Mutex::<NoopRawMutex, EspNowSender<'static>>,
-            Mutex::<NoopRawMutex, _>::new(sender)
-        );
+
+        let manager = Box::leak(Box::new(manager));
+        let sender = Box::leak(Box::new(Mutex::<NoopRawMutex, _>::new(sender)));
         EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
@@ -207,8 +181,6 @@ pub fn mac_to_string(mac: &[u8; 6]) -> String {
         .collect::<Vec<_>>()
         .join(":")
 }
-
-
 
 /*
 let mut ticker = Ticker::every(Duration::from_millis(500));

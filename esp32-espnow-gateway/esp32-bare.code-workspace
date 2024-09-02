@@ -4,13 +4,13 @@
 			"path": "."
 		},
 		{
-			"path": "../limero-esp32-embassy"
-		},
-		{
 			"path": "../pubsub"
 		},
 		{
 			"path": "../serdes"
+		},
+		{
+			"path": "../esp32-limero-embassy"
 		}
 	],
 	"settings": {

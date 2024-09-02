@@ -1,5 +1,5 @@
 [package]
-name = "esp32-actors"
+name = "actors"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -28,9 +28,6 @@ embassy-futures = "0.1.1"
 embassy-sync = "0.6.0"
 embassy-time = "0.3.1"
 embassy-time-driver = { version = "0.1.0", optional = true }
-# embassy-usb         = { version = "0.2.0", default-features = false, optional = true }
-# embedded-can        = "0.4.1"
-# embedded-graphics   = "0.8.1"
 embedded-hal = "1.0.0"
 embedded-hal-02 = { version = "0.2.7", package = "embedded-hal", features = [
     "unproven",
@@ -96,7 +93,7 @@ byte = { version = "0.2.7" }
 bitfield = "0.16.1"
 anyhow = { version = "1.0", default-features = false }
 
-limero = { path = "../limero-esp32-embassy" }
+limero = { path = "../esp32-limero-embassy" }
 pubsub = { path = "../pubsub" }
 serdes = { path = "../serdes" }
 serde = { version = "1.0", default-features = false }

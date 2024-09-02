@@ -1,10 +1,9 @@
-use esp_hal::gpio::{AnyOutput, Output, Pin};
+use esp_hal::gpio::AnyOutput;
 use limero::{timer::Timer, timer::Timers};
-use limero::{Actor, CmdQueue, EventHandlers, Handler,Endpoint};
+use limero::{Actor, CmdQueue, EventHandlers,Endpoint};
 use embassy_time::Duration;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
-use embassy_futures::select::{self};
 
 #[derive(Clone)]
 pub enum LedCmd {
@@ -19,8 +18,8 @@ pub enum LedEvent {}
 enum LedState {
     ON,
     OFF,
-    BLINK { duration: u32 },
-    PULSE { duration: u32 },
+    BLINK ,
+    PULSE ,
 }
 
 pub struct LedActor {
@@ -38,7 +37,7 @@ impl LedActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
             timers: Timers::new(),
-            state: LedState::BLINK { duration: 2000 },
+            state: LedState::ON ,
             pin,
             pin_level_high: false,
         }
@@ -79,13 +78,13 @@ impl LedActor {
                 self.state = LedState::OFF;
             }
             LedCmd::Blink { duration } => {
-                self.state = LedState::BLINK { duration };
+                self.state = LedState::BLINK ;
                 self.set_led_high(true);
                 self.timers
                     .set_interval(0, Duration::from_millis(duration as u64));
             }
             LedCmd::Pulse { duration } => {
-                self.state = LedState::PULSE { duration };
+                self.state = LedState::PULSE ;
                 self.set_led_high(true);
                 self.timers
                     .set_interval(0, Duration::from_millis(duration as u64));
@@ -95,11 +94,11 @@ impl LedActor {
 
     fn on_timer(&mut self, _id: u32) {
         match self.state {
-            LedState::BLINK { duration: _ } => {
+            LedState::BLINK  => {
                 self.pin_level_high = !self.pin_level_high;
                 self.set_led_high(self.pin_level_high);
             }
-            LedState::PULSE { duration: _ } => {
+            LedState::PULSE  => {
                 self.set_led_high(false);
             }
             _ => {}

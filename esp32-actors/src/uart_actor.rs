@@ -1,46 +1,34 @@
-use core::fmt::Debug;
 
-use alloc::boxed::Box;
 use alloc::format;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use esp_hal::{
-    clock::ClockControl,
-    peripherals::{Peripherals, UART0},
-    prelude::*,
+    peripherals::UART0,
     uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
 };
-use esp_hal::{Async, Blocking};
+use esp_hal::Async;
 
 use alloc::string::String;
 use alloc::vec::Vec;
 use log::{debug, info};
-use minicbor::decode::info;
-
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    channel::{DynamicReceiver, DynamicSender},
-};
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
 
 use anyhow::Result;
 use anyhow::Error;
-use limero::{timer::Timer, timer::Timers};
+use limero::timer::Timers;
 use limero::{Actor, CmdQueue, Endpoint, EventHandlers, Handler};
-use serdes::deframe;
-use serdes::frame;
+use serdes::cobs_crc_frame;
 use serdes::FrameExtractor;
 
 pub const UART_BUFSIZE: usize = 127;
 
 #[derive(Clone)]
 pub enum UartCmd {
-    TransmitFrame(Vec<u8>),
+    Txd(Vec<u8>),
 }
 
 #[derive(Clone)]
 pub enum UartEvent {
-    ReceivedFrame(Vec<u8>),
+    Rxd(Vec<u8>),
 }
 
 pub struct UartActor {
@@ -116,8 +104,8 @@ impl Actor<UartCmd, UartEvent> for UartActor {
 impl UartActor {
     async fn on_cmd_msg(&mut self, msg: UartCmd) -> Result<()> {
         match msg {
-            UartCmd::TransmitFrame(bytes) => {
-                let bytes = frame(&bytes)?;
+            UartCmd::Txd(bytes) => {
+                let bytes = cobs_crc_frame(&bytes)?;
                 let line: String = bytes.iter().map(|b| format!("{:02X} ", b)).collect();
                 debug!(" TXD {}", line);
                 embedded_io_async::Write::write(&mut self.tx, bytes.as_slice())
@@ -135,7 +123,7 @@ impl UartActor {
         // Read characters from UART into read buffer until EOT
         for msg in v {
             debug!("RXD: {:?}", msg);
-            self.events.handle(&UartEvent::ReceivedFrame(msg));
+            self.events.handle(&UartEvent::Rxd(msg));
         }
     }
 }

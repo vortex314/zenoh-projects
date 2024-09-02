@@ -1,27 +1,17 @@
 #[cfg(feature = "esp32")]
-use alloc::{collections::VecDeque, fmt::format, string::String, string::ToString, vec::Vec,format};
+use alloc::{ string::String, string::ToString, vec::Vec,format};
+use core::result::Result::Err;
+use core::option::Option::Some;
 use minicbor::decode::Error as DecodeError;
 
 #[cfg(feature = "linux")]
 use std::{collections::VecDeque, fmt::format, string::String, vec::Vec};
 
-use cobs::CobsDecoder;
-use crc::Crc;
-use crc::CRC_16_IBM_SDLC;
-use log::{debug, info};
-
-use minicbor::bytes::ByteVec;
-use minicbor::encode::Write;
-
-use byte::TryRead;
-use byte::TryWrite;
 use core::result::Result;
 use core::result::Result::Ok;
 use core::option::Option;
 
-use minicbor::bytes::ByteArray;
-use minicbor::encode::Error as EncodeError;
-use minicbor::{Decode, Decoder, Encode, Encoder};
+use minicbor::{Decode, Decoder, Encode};
 
 use bitfield::{bitfield_bitrange, bitfield_fields};
 
@@ -75,13 +65,13 @@ impl VecWriter {
         self.buffer.len()
     }
 
-    fn to_bytes(&self) -> &[u8] {
+    /*fn to_bytes(&self) -> &[u8] {
         self.buffer.as_slice()
     }
 
     fn push(&mut self, data: u8) {
         self.buffer.push(data);
-    }
+    }*/
 
     pub fn to_vec(&self) -> Vec<u8> {
         self.buffer.to_vec()

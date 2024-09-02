@@ -7,30 +7,22 @@ use limero::Endpoint;
 use limero::CmdQueue;
 use limero::EventHandlers;
 
-use crate::ProxyMessage;
 use pubsub::PubSubCmd;
 use pubsub::PubSubEvent;
-use pubsub::payload_decode;
-use pubsub::payload_encode;
-use pubsub::Codec;
-use crate::ALLOCATOR;
 
-use alloc::boxed::Box;
-use alloc::fmt::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
-use embassy_futures::select::{self, select3, Either3};
 use embassy_time::Duration;
 use embassy_time::Instant;
 use log::info;
-use minicbor::Decode;
-use minicbor::Encode;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde::Deserialize;
 
 use serdes::Cbor;
 use serdes::PayloadCodec;
+
 
 #[derive(Clone)]
 pub enum SysCmd {
@@ -41,7 +33,7 @@ pub enum SysEvent {
     PubSubCmd(PubSubCmd),
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone,Deserialize,Serialize)]
 
 struct EchoReq {
     timestamp: u64,
@@ -77,7 +69,7 @@ impl SysActor {
                     if let Ok(echo_req) = Cbor::decode::<EchoReq>(&payload) {
                         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
                             topic: echo_req.reply_to,
-                            payload: payload_encode(&echo_req.timestamp, Codec::Cbor),
+                            payload: Cbor::encode(&echo_req.timestamp),
                         }))
                     } else {
                         info!("Failed to decode echo request");
@@ -92,16 +84,16 @@ impl SysActor {
     async fn on_timer(&mut self, _timer_id: u32) {
         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/uptime".to_string(),
-            payload: payload_encode(&(Instant::now().as_millis() as u64),Codec::Cbor),
+            payload: Cbor::encode(&(Instant::now().as_millis() as u64)),
         }));
-        self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
+        /*self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/heap_free".to_string(),
-            payload: payload_encode(&(ALLOCATOR.free() as u64),Codec::Cbor),
+            payload: Cbor::encode(&(ALLOCATOR.free() as u64)),
         }));
         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/heap_used".to_string(),
-            payload: payload_encode(&(ALLOCATOR.used() as u64),Codec::Cbor),
-        }));
+            payload: Cbor::encode(&(ALLOCATOR.used() as u64)),
+        }));*/
     }
 }
 

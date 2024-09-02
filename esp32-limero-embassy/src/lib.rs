@@ -90,6 +90,10 @@ pub trait Actor<CMD, EVENT> {
 
         self.add_listener(Box::new(handler));
     }
+    fn for_all<F>(&mut self, func :  F ) where EVENT: 'static, Self: Actor<CMD, EVENT> , F: FnMut(&EVENT) -> (), F : Sized+Send+'static,EVENT:Send {
+        let handler = HandlerFunction::<EVENT,F>::new(func);
+        self.add_listener(Box::new(handler));
+    }
 }
 
 pub trait ActorExt<CMD, EVENT> {

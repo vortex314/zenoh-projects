@@ -5,8 +5,8 @@ pub mod payload_cbor;
 pub use payload_json::Json as Json;
 pub use payload_cbor::Cbor as Cbor;
 pub mod framer;
-pub use framer::cobs_crc_frame as frame;
-pub use framer::cobs_crc_deframe as deframe;
+pub use framer::cobs_crc_frame as cobs_crc_frame;
+pub use framer::cobs_crc_deframe as cobs_crc_deframe;
 pub use framer::FrameExtractor as FrameExtractor;
 
 extern crate alloc;

@@ -1,44 +1,24 @@
-use core::result;
-
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::rc::Rc;
 use alloc::string::ToString;
-use alloc::vec::Vec;
-use cobs::CobsEncoder;
-use embassy_executor::Spawner;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::{DynamicReceiver, DynamicSender, Sender};
-use embassy_sync::pubsub::publisher::Pub;
-use embassy_sync::pubsub::PubSubChannel;
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, channel::Channel};
+use core::option::Option::Some;
 use embassy_futures::select::select3;
-use embassy_futures::select::Either3::{First, Second,Third};
-/*use embassy_futures::select::select;
-use embassy_futures::select::Either::{First, Second};
-use embassy_futures::select::{self};*/
+use embassy_futures::select::Either3::{First, Second, Third};
 
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 
-use embassy_time::{with_timeout, Duration, Instant};
+use embassy_time::{Duration, Instant};
 use esp_backtrace as _;
-use esp_hal::{
-    clock::ClockControl,
-    peripherals::{Peripherals, UART0},
-    prelude::*,
-    uart::{config::AtCmdConfig, UartRx, UartTx},
-};
-use esp_println::println;
 use log::{debug, info};
 
-use limero::{ Actor,CmdQueue,EventHandlers,Handler};
+use crate::proxy_message::{Flags, ProxyMessage, ReturnCode};
 use limero::{timer::Timer, timer::Timers};
-use crate::proxy_message::{ Flags, ProxyMessage, ReturnCode, VecWriter};
-use pubsub::PubSubEvent;
-use pubsub::PubSubCmd;
+use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use pubsub::Cbor;
 use pubsub::PayloadCodec;
+use pubsub::PubSubCmd;
+use pubsub::PubSubEvent;
 
 #[derive(PartialEq)]
 
@@ -120,7 +100,7 @@ impl PubSubActor {
     async fn on_timeout(&mut self, id: u32) {
         if id == TimerId::ConnectTimer as u32 {
             if self.state == State::Disconnected {
-                self.txd( ProxyMessage::SearchGateway);
+                self.txd(ProxyMessage::SearchGateway);
                 self.txd(ProxyMessage::Connect {
                     flags: Flags(0),
                     duration: 100,
@@ -149,8 +129,6 @@ impl PubSubActor {
             }
         }
     }
-
-
 
     async fn on_rxd_message(&mut self, msg: ProxyMessage) {
         match msg {
@@ -273,7 +251,7 @@ impl PubSubActor {
     pub async fn on_cmd_message(&mut self, cmd: PubSubCmd) {
         match cmd {
             PubSubCmd::Publish { topic, payload } => {
-                let full_topic = format!("src/{}/{}", self.client_id,topic);
+                let full_topic = format!("src/{}/{}", self.client_id, topic);
                 let topic_id = self.get_client_topic_from_string(&full_topic);
                 let mut flags = Flags(0);
                 flags.set_qos(0);
@@ -319,8 +297,7 @@ impl PubSubActor {
 }
 
 impl Actor<PubSubCmd, PubSubEvent> for PubSubActor {
-
-     async fn run(&mut self) {
+    async fn run(&mut self) {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::ConnectTimer as u32,
             Duration::from_millis(5_000),
@@ -337,7 +314,7 @@ impl Actor<PubSubCmd, PubSubEvent> for PubSubActor {
         });
 
         loop {
-            match select3(self.cmds.next(), self.timers.alarm(),self.rxd_msg.next()).await {
+            match select3(self.cmds.next(), self.timers.alarm(), self.rxd_msg.next()).await {
                 First(msg) => match msg {
                     Some(cmd) => {
                         self.on_cmd_message(cmd).await;
@@ -348,7 +325,7 @@ impl Actor<PubSubCmd, PubSubEvent> for PubSubActor {
                 },
                 Second(idx) => {
                     self.on_timeout(idx).await;
-                },
+                }
                 Third(msg) => match msg {
                     Some(cmd) => {
                         self.on_rxd_message(cmd).await;
@@ -367,7 +344,4 @@ impl Actor<PubSubCmd, PubSubEvent> for PubSubActor {
     fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {
         self.cmds.handler()
     }
-    
 }
-
-
