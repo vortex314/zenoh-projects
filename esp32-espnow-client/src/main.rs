@@ -70,7 +70,6 @@ macro_rules! mk_static {
 }
 use pubsub::PubSubCmd;
 
-mod 
 use actors::pubsub_actor::*;
 use actors::uart_actor::*;
 use actors::led_actor::*;
@@ -205,7 +204,7 @@ async fn main(_spawner: Spawner) -> ! {
         let transport_handler = mk_static!(Endpoint<EspNowCmd>,esp_now_actor.handler());
         let transport_function = |cmd: &ProxyMessage|  {
             let v = Cbor::encode(cmd);
-            let v = serdes::frame(&v).unwrap();
+            let v = serdes::cobs_crc_frame(&v).unwrap();
             transport_handler.handle(&EspNowCmd::Txd {
                 peer: BROADCAST_ADDRESS,
                 data: v,

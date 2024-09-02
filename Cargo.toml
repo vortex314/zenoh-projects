@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["espnow-gateway", "limero-esp32-embassy","pubsub","zenoh_proxy","serdes"]
+members = ["esp32-espnow-gateway", "esp32-limero-embassy","pubsub","zenoh_proxy","serdes","esp32-actors"]
 exclude = ["esp_no_std","esp32-devices","esp32-idf","esp32-mqtt","espidf_serial","espidf_tcp","examples","zenoh_egui","zenoh_proxy","zenoh_sender","zenohd"]
 resolver="2"
 

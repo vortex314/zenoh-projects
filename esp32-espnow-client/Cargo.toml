@@ -1,5 +1,5 @@
 [package]
-name = "espnow-gateway"
+name = "esp32-espnow-gateway"
 version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -96,14 +96,14 @@ byte = { version = "0.2.7" }
 bitfield = "0.16.1"
 anyhow = { version = "1.0", default-features = false }
 
-limero = { path = "../limero-esp32-embassy" }
+limero = { path = "../esp32-limero-embassy" }
 pubsub = { path = "../pubsub" }
 serdes = { path = "../serdes" }
-actors = { path = "../actors" }
+actors = { path = "../esp32-actors" }
 serde = { version = "1.0", default-features = false }
 
 [features]
-default = ["esp32","gateway"]
+default = ["esp32"]
 esp32 = ["esp-println/esp32", "esp-storage?/esp32"]
 linux = []
 async = ["esp-hal/async"]

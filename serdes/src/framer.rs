@@ -90,7 +90,7 @@ impl FrameExtractor {
             self.buffer.push(*byte);
             if *byte == 0 {
                 // decode cobs from frame
-                let msg = deframe(&self.buffer);
+                let msg = cobs_crc_deframe(&self.buffer);
                 msg.into_iter().for_each(|m| {
                     messages_found.push(m);
                 });
@@ -115,10 +115,10 @@ where
     let  bytes = minicbor_ser::to_vec(msg).map_err(|_| Error::msg("CBOR decode failed "))?;
 
     debug!("Encoded MQTT-SN : {:02X?}", bytes);
-    frame(&bytes)
+    cobs_crc_frame(&bytes)
 }
 
-pub fn frame(input: &Vec<u8>) -> Result<Vec<u8>>
+pub fn cobs_crc_frame(input: &Vec<u8>) -> Result<Vec<u8>>
 {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(input);
@@ -145,7 +145,7 @@ pub fn frame(input: &Vec<u8>) -> Result<Vec<u8>>
     Ok(res_vec)
 }
 
-pub fn deframe(queue: &Vec<u8>) -> Result<Vec<u8>> {
+pub fn cobs_crc_deframe(queue: &Vec<u8>) -> Result<Vec<u8>> {
     let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue).map_err(|e| Error::msg(e))?;
