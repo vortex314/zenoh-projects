@@ -1,0 +1,4 @@
+## References 
+- Platformio [image board](https://github.com/EFeru/hoverboard-firmware-hack-FOC?tab=readme-ov-file)
+- [Lycus Rausch](https://github.com/lucysrausch/hoverboard-firmware-hack)
+- variant with USART2

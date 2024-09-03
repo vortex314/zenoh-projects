@@ -1,25 +1,18 @@
-#![no_std]
-#![allow(unused_imports)]
-#![allow(async_fn_in_trait)]
-extern crate alloc;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 
-use embassy_sync::channel::Receiver;
-use embassy_sync::channel::Sender;
-use embassy_sync::blocking_mutex::raw::RawMutex;
-use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
-use embassy_sync::channel::Channel;
-use embassy_sync::channel::DynamicSender;
-use embassy_time::Duration;
-use embassy_time::Instant;
+#![allow(async_fn_in_trait)]
+
+
 use log::error;
 pub mod timer;
 pub use timer::Timer;
 pub use timer::Timers;
 
 pub mod logger;
-pub use logger::semi_logger_init as init_logger;
+pub use logger::init as init_logger;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Sender;
+
 
 pub trait Handler<T>: Send {
     fn handle(&mut self, item: &T);
@@ -116,8 +109,8 @@ pub trait ActorExt<CMD, EVENT> {
 
 
 pub struct CmdQueue<T> {
-    sender : async_channel::Sender<T>,
-    receiver : async_channel::Receiver<T>,
+    sender : Sender<T>,
+    receiver : Receiver<T>,
 }
 
 impl<T> CmdQueue<T>
@@ -125,12 +118,12 @@ where
     T: 'static + Clone + Send,
 {
     pub fn new(capacity: usize) -> Self {
-        let (sender,receiver) = async_channel::bounded(capacity);
+        let (sender,receiver) = mpsc::channel(capacity);
         Self { sender,receiver}
     }
 
     pub async fn next(&mut self) -> Option<T> {
-        self.receiver.recv().await.ok()
+        self.receiver.recv().await
     }
 
     pub fn handler(&self) -> Box<dyn Handler<T>> {
@@ -138,7 +131,7 @@ where
         where
             E: 'static,
         {
-            sender: async_channel::Sender<E>,
+            sender: Sender<E>,
         }
 
         impl<'ch,E> Handler<E> for HandlerImpl<E>
@@ -185,7 +178,7 @@ impl<T> Handler<T> for EventHandlers<T> {
 }
 
 pub async fn async_wait_millis(millis: u32) -> () {
-    embassy_time::Timer::after_millis(millis as u64).await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(millis as u64)).await;
 }
 
 

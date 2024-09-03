@@ -79,3 +79,28 @@ where
         Codec::Cbor => Cbor::encode(payload),
     }
 }
+
+
+// =============== pubsub interface actor ===============
+
+type TopicId = u32;
+struct TopicEndpoint<T> {
+    name: String,
+    id:TopicId,
+    description : Option<String>,
+    range : Option<(f64,f64)>,
+    last_value : T,
+}
+
+// to topic
+enum TopicReq {
+    NameReq { id : TopicId  },
+    DescReq { id : TopicId  },
+    Set { id : TopicId, value : Vec<u8> },
+}
+
+// from topic
+enum TopicResp {
+    NameResp { name:String },
+    DescResp { desc:Option<String> },
+}

@@ -136,10 +136,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
     #[derive(Debug, Serialize, Deserialize)]
-    struct UartMsg {
-        mac: [u8; 6],
-        data: Vec<u8>,
-    }
+    struct UartMsg([u8; 6], Vec<u8>);
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
 
@@ -166,31 +163,23 @@ async fn main(_spawner: Spawner) -> ! {
 
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 
-    esp_now_actor.for_all(|ev| match ev {
-        EspNowEvent::Rxd { peer, data } => {
-            info!(
-                "Rxd: {:?} {:?}",
-                mac_to_string(&peer),
-                String::from_utf8_lossy(&data).to_string()
-            );
-            uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg {
-                mac: *peer,
-                data: data.to_vec(),
-            })));
-        }
-        EspNowEvent::Broadcast { peer, rssi, data } => {
-            info!(
-                "Broadcast: {:?} {:?} {:?}",
-                mac_to_string(&peer),
-                rssi,
-                String::from_utf8_lossy(&data).to_string()
-            );
-            uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg {
-                mac: *peer,
-                data: data.to_vec(),
-            })));
-        }
+    // esp_now_actor >> esp_now_to_uart >> uart_actor;
+    // uart_actor >> uart_to_esp_now >> esp_now_actor;
+    /*
+    let emitter = Emitter(func);
+    emitter.add_listener(esp_now_actor.handler());
+    uart_handler.add_listener(emitter);
+
+     */
+
+    esp_now_actor.for_all(|ev| {
+        let (peer, data) = match ev {
+            EspNowEvent::Rxd { peer, data } => (peer, data),
+            EspNowEvent::Broadcast { peer, rssi, data } => (peer, data),
+        };
+        uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
     });
+
     loop {
         select(
             uart_actor.run(),
