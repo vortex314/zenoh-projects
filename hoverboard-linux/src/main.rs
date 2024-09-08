@@ -53,7 +53,7 @@ impl HbCmd {
 
     fn crc(&self) -> u16 {
         let mut crc = 0;
-        crc = crc ^ (START_FRAME ) as u16;
+        crc = crc ^ (START_FRAME) as u16;
         crc = crc ^ self.steer as u16;
         crc = crc ^ self.speed as u16;
         crc
@@ -84,10 +84,14 @@ impl HbInfo {
         self.frame = data.pop_front().unwrap() as u16 | (data.pop_front().unwrap() as u16) << 8;
         self.cmd1 = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
         self.cmd2 = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
-        self.speed_right = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
-        self.speed_left = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
-        self.battery_voltage = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
-        self.board_temperature = data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
+        self.speed_right =
+            data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
+        self.speed_left =
+            data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
+        self.battery_voltage =
+            data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
+        self.board_temperature =
+            data.pop_front().unwrap() as i16 | (data.pop_front().unwrap() as i16) << 8;
         self.cmd_led = data.pop_front().unwrap() as u16 | (data.pop_front().unwrap() as u16) << 8;
         self.crc = data.pop_front().unwrap() as u16 | (data.pop_front().unwrap() as u16) << 8;
     }
@@ -118,7 +122,7 @@ async fn main() -> tokio_serial::Result<()> {
     let tty_path = args.nth(1).unwrap_or_else(|| DEFAULT_TTY.into());
     info!("Reading from serial port: {}", tty_path);
 
-    let mut serial_stream = tokio_serial::new(tty_path, 115200).open_native_async()?;
+    let mut serial_stream = tokio_serial::new(tty_path, 19200).open_native_async()?;
     info!("Serial port opened");
     #[cfg(unix)]
     serial_stream
@@ -169,21 +173,24 @@ impl UartActor {
     }
 
     fn fill_buffer(&mut self, byte: u8) -> Option<HbInfo> {
-        if byte == (START_FRAME >>8) as u8 {
+        if byte == (START_FRAME >> 8) as u8 {
             if self.buffer.len() > 0 && self.prev_byte == (START_FRAME & 0xFF) as u8 {
                 self.buffer.clear();
                 self.buffer.push_back((START_FRAME & 0xFF) as u8);
                 self.buffer.push_back((START_FRAME >> 8) as u8);
                 info!("Restarting buffer");
+            } else {
+                self.buffer.push_back(byte);
             }
         } else {
             self.buffer.push_back(byte);
         }
         self.prev_byte = byte;
-  //      info!("Received: {:02X?}", self.buffer);
+              info!("Received: {:02X?}", self.buffer);
 
         if self.buffer.len() > 100 {
             self.buffer.clear();
+            info!("Buffer too long");
         }
         if self.buffer.len() == 18
             && self.buffer[1] == (START_FRAME >> 8) as u8
@@ -201,7 +208,8 @@ impl UartActor {
 }
 impl Actor<UartCmd, UartEvent> for UartActor {
     async fn run(&mut self) {
-        self.timers.add_timer(Timer::new_repeater(5,Duration::from_millis(100)));
+        self.timers
+            .add_timer(Timer::new_repeater(5, Duration::from_millis(10)));
         loop {
             tokio::select! {
                 cmd = self.cmds.next() => {
@@ -224,7 +232,7 @@ impl Actor<UartCmd, UartEvent> for UartActor {
                         _ => {}
                     }
                 }
-                 res = self.serial_stream.readable() => {
+                   res = self.serial_stream.readable() => {
                     let mut buf = [0; 1024];
                     match  self.serial_stream.read(&mut buf).await {
                         Ok(n) => {
@@ -245,8 +253,20 @@ impl Actor<UartCmd, UartEvent> for UartActor {
                 }
                 timeout = self.timers.alarm() => {
                     info!("Timeout");
-                    let v = HbCmd { steer: 200, speed: 100 };
-                    self.cmds.handler().handle(&UartCmd::Send(v));
+                    let cmd = HbCmd { steer: 0, speed: 300 };
+                    let mut data = cmd.encode();
+                    cmd.add_crc(&mut data);
+                    info!("Sending: {:02X?}", data);
+                    let r = self.serial_stream.try_write(&data);
+                    match r {
+                        Ok(_) => {
+                            info!("Sent: {:?}", cmd);
+                        }
+                        Err(e) => {
+                            info!("Error sending data: {}", e);
+                        }
+                    }
+                    // self.cmds.handler().handle(&UartCmd::Send(v));
                 }
             }
         }
