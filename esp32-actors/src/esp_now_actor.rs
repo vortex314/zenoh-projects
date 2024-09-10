@@ -17,6 +17,7 @@ use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
+use serdes::{Cbor, PayloadCodec};
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
@@ -108,7 +109,8 @@ impl EspNowActor {
 
     async fn broadcast(&mut self) {
         let mut sender = self.sender.lock().await;
-        let status = sender.send_async(&BROADCAST_ADDRESS, b"Hello.").await;
+        let v = Cbor::encode(&"Alive.");
+        let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
         if status.is_err() { error!("Send broadcast status: {:?}", status); };
     }
 
