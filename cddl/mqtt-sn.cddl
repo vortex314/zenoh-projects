@@ -1,0 +1,175 @@
+mqtt-sn-message = [MQTT-SN-Header] mqtt-sn-payload
+
+MQTT-SN-Header = (
+    message-type: uint8,
+    flags: uint8,
+    length: uint16
+)
+
+mqtt-sn-payload = (
+    case message-type: uint8 {
+        0: ADVERTISE,
+        1: SEARCHGW,
+        2: GWINFO,
+        3: CONNECT,
+        4: CONNACK,
+        5: WILLTOPICREQ,
+        6: WILLTOPIC,
+        7: WILLMSGREQ,
+        8: WILLMSG,
+        9: REGISTER,
+        10: REGACK,
+        11: PUBLISH,
+        12: PUBACK,
+        13: PUBCOMP,
+        14: PUBREC,
+        15: PUBREL,
+        16: SUBSCRIBE,
+        17: SUBACK,
+        18: UNSUBSCRIBE,
+        19: UNSUBACK,
+        20: PINGREQ,
+        21: PINGRESP,
+        22: DISCONNECT,
+        23: WILLTOPICUPD,
+        24: WILLTOPICRESP,
+        25: WILLMSGUPD,
+        26: WILLMSGRESP,
+        27: ENCAPSULATED
+    },
+    payload: bstr
+)
+
+ADVERTISE = (
+    gw-id: uint8,
+    duration: uint16
+)
+
+SEARCHGW = (
+    radius: uint8
+)
+
+GWINFO = (
+    gw-id: uint8,
+    gw-add: text
+)
+
+CONNECT = (
+    flags: uint8,
+    protocol-id: uint8,
+    duration: uint16,
+    client-id: text
+)
+
+CONNACK = (
+    return-code: uint8
+)
+
+// Define other message types and their structures here...
+WILLTOPICREQ = ()
+
+WILLTOPIC = (
+    flags: uint8,
+    will-topic: text
+)
+
+WILLMSGREQ = ()
+
+WILLMSG = (
+    flags: uint8,
+    will-message: bstr
+)
+
+REGISTER = (
+    topic-id: uint16,
+    message-id: uint16,
+    topic-name: text
+)
+
+REGACK = (
+    topic-id: uint16,
+    message-id: uint16,
+    return-code: uint8
+)
+
+PUBLISH = (
+    flags: uint8,
+    topic-id: uint16,
+    message-id: uint16,
+    data: bstr
+)
+
+PUBACK = (
+    topic-id: uint16,
+    message-id: uint16,
+    return-code: uint8
+)
+
+PUBCOMP = (
+    topic-id: uint16,
+    message-id: uint16
+)
+
+PUBREC = (
+    topic-id: uint16,
+    message-id: uint16
+)
+
+PUBREL = (
+    topic-id: uint16,
+    message-id: uint16
+)
+
+SUBSCRIBE = (
+    flags: uint8,
+    message-id: uint16,
+    topic-id: uint16,
+    topic-filter: text
+)
+
+SUBACK = (
+    flags: uint8,
+    message-id: uint16,
+    return-code: uint8
+)
+
+UNSUBSCRIBE = (
+    flags: uint8,
+    message-id: uint16,
+    topic-id: uint16
+)
+
+UNSUBACK = (
+    message-id: uint16
+)
+
+PINGREQ = ()
+
+PINGRESP = ()
+
+DISCONNECT = (
+    duration: uint16
+)
+
+WILLTOPICUPD = (
+    flags: uint8,
+    will-topic: text
+)
+
+WILLTOPICRESP = (
+    return-code: uint8
+)
+
+WILLMSGUPD = (
+    flags: uint8,
+    will-message: bstr
+)
+
+WILLMSGRESP = (
+    return-code: uint8
+)
+
+ENCAPSULATED = (
+    flags: uint8,
+    encapsulated-message: bstr
+)

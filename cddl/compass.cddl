@@ -1,0 +1,4 @@
+compass-event = {
+    direction: int,
+    accuracy: int
+}
