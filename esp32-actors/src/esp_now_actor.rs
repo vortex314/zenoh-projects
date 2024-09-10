@@ -107,10 +107,9 @@ impl EspNowActor {
     }
 
     async fn broadcast(&mut self) {
-        info!("Send Broadcast...");
         let mut sender = self.sender.lock().await;
         let status = sender.send_async(&BROADCAST_ADDRESS, b"Hello.").await;
-        info!("Send broadcast status: {:?}", status);
+        if status.is_err() { error!("Send broadcast status: {:?}", status); };
     }
 
     async fn on_timeout(&mut self, _id: u32) {

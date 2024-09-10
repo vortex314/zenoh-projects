@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../limero-esp32-embassy"
+		},
+		{
+			"path": "../pubsub"
+		},
+		{
+			"path": "../serdes"
+		}
+	],
+	"settings": {
+		"rust-analyzer.check.allTargets": false
+	}
+}

@@ -51,7 +51,7 @@ smoltcp = { version = "0.11.0", default-features = false, features = [
     "socket-udp",
 ] }
 minicbor = { version = "*", features=["derive","alloc","half"] }
-cobs={ version = "0.2.3", default_features=false,features = [] }
+cobs={ version = "0.2.3", default-features=false,features = [] }
 crc = { version = "3.0.1", features = [] }
 byte = { version="0.2.7"}
 bitfield = "0.16.1"

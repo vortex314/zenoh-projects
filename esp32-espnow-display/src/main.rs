@@ -78,7 +78,7 @@ use actors::uart_actor::*;
 
 use serdes::*;
 
-#[esp_hal_embassy::main]
+#[main]
 async fn main(_spawner: Spawner) -> ! {
     //esp_info::logger::init_logger_from_env();
     init_heap();
@@ -126,55 +126,49 @@ async fn main(_spawner: Spawner) -> ! {
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
-    esp_now_actor.for_each(|ev| {
-        match ev {
-            EspNowEvent::Rxd { peer, data } => {
-                info!(
-                    "Rxd: {:?} {:?}",
-                    mac_to_string(peer),
-                    String::from_utf8_lossy(data).to_string()
-                );
-                // led_actor.handler().handle(&LedCmd::Blink { duration: 100 });
-            }
-            EspNowEvent::Broadcast { peer, rssi, data } => {
-                info!(
-                    "Broadcast: {:?} {:?} {:?}",
-                    mac_to_string(peer),
-                    rssi,
-                    String::from_utf8_lossy(data).to_string()
-                );
-                //  led_actor.handler().handle(&LedCmd::Pulse { duration: 100 });
-            }
+    esp_now_actor.map_to(event_to_blink, led_actor.handler());
+
+    esp_now_actor.for_each(|ev| match ev {
+        EspNowEvent::Rxd { peer, data } => {
+            info!(
+                "Rxd: {:?} {:?}",
+                mac_to_string(peer),
+                String::from_utf8_lossy(data).to_string()
+            );
+            info!(
+                "Rxd: {:?} {:?}",
+                mac_to_string(peer),
+                serdes::Cbor::to_string(data)
+            );
+        }
+        EspNowEvent::Broadcast { peer, rssi, data } => {
+            info!(
+                "Broadcast: {:?} {:?} {:?}",
+                mac_to_string(peer),
+                rssi,
+                String::from_utf8_lossy(data).to_string()
+            );
+            info!(
+                "Broadcast: {:?} {:?}",
+                mac_to_string(peer),
+                serdes::Cbor::to_string(data)
+            );
         }
     });
 
-    esp_now_actor.map_to(
-        |ev| match ev {
-            EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
-            EspNowEvent::Broadcast {
-                peer: _,
-                rssi: _,
-                data: _,
-            } => Some(LedCmd::Pulse { duration: 100 }),
-        },
-        led_actor.handler(),
-    );
 
-    let transport_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
-    let transport_function = |cmd: &ProxyMessage| {
-        let v = Cbor::encode(cmd);
-        let v = serdes::cobs_crc_frame(&v).unwrap();
-        transport_handler.handle(&EspNowCmd::Txd {
-            peer: BROADCAST_ADDRESS,
-            data: v,
-        });
-    };
-    let hf = Box::new(HandlerFunction::new(transport_function));
-    let mut pubsub_actor = PubSubActor::new(hf);
-    pubsub_actor.handler().handle(&PubSubCmd::Connect {
-        client_id: "esp-now".to_string(),
-    });
     loop {
-        select(pubsub_actor.run(), esp_now_actor.run()).await;
+        select(led_actor.run(), esp_now_actor.run()).await;
+    }
+}
+
+fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
+    match ev {
+        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
+        EspNowEvent::Broadcast {
+            peer: _,
+            rssi: _,
+            data: _,
+        } => Some(LedCmd::Pulse { duration: 100 }),
     }
 }

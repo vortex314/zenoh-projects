@@ -1,6 +1,6 @@
 use anyhow::Result;
 use decode::Error;
-use minicbor::data::Token;
+use minicbor::decode::Token;
 use minicbor::*;
 use minicbor_ser::*;
 use serde::de::DeserializeOwned;
