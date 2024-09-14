@@ -105,7 +105,6 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-    // let esp_now = mk_static!(esp_wifi::esp_now::EspNow<'static>, esp_now);
 
     let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
     esp_hal_embassy::init(
@@ -133,29 +132,26 @@ async fn main(_spawner: Spawner) -> ! {
             info!(
                 "Rxd: {:?} {:?}",
                 mac_to_string(peer),
-                String::from_utf8_lossy(data).to_string()
-            );
-            info!(
-                "Rxd: {:?} {:?}",
-                mac_to_string(peer),
                 serdes::Cbor::to_string(data)
             );
         }
-        EspNowEvent::Broadcast { peer, rssi, data } => {
+        EspNowEvent::Broadcast {
+            peer,
+            rssi: _,
+            data,
+        } => {
+            let s = match String::from_utf8(data.clone()) {
+                Ok(string) => string,
+                Err(_) => data.iter().map(|b| format!("{:02X} ", b)).collect(),
+            };
             info!(
                 "Broadcast: {:?} {:?} {:?}",
                 mac_to_string(peer),
-                rssi,
-                String::from_utf8_lossy(data).to_string()
-            );
-            info!(
-                "Broadcast: {:?} {:?}",
-                mac_to_string(peer),
-                serdes::Cbor::to_string(data)
+                serdes::Cbor::to_string(data),
+                s,
             );
         }
     });
-
 
     loop {
         select(led_actor.run(), esp_now_actor.run()).await;

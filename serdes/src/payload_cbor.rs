@@ -35,6 +35,8 @@ impl PayloadCodec for Cbor {
             _ => anyhow::bail!("type mismatch"),
         }
     }
+
+
     fn to_string(payload:&Vec<u8>) -> String {
         let line: String = payload.iter().map(|b| format!("{:02X} ", b)).collect();
         let s = format!("{}", minicbor::display(payload.as_slice()));

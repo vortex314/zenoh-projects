@@ -82,7 +82,7 @@ where
 
 
 // =============== pubsub interface actor ===============
-
+/* 
 type TopicId = u32;
 struct TopicEndpoint<T> {
     name: String,
@@ -103,4 +103,4 @@ enum TopicReq {
 enum TopicResp {
     NameResp { name:String },
     DescResp { desc:Option<String> },
-}
+}*/

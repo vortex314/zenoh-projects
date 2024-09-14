@@ -1067,6 +1067,65 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp32-hoverboard"
+version = "0.0.0"
+dependencies = [
+ "actors",
+ "aes",
+ "aligned",
+ "anyhow",
+ "bitfield 0.16.1",
+ "bleps",
+ "byte",
+ "cfg-if",
+ "cobs",
+ "crc",
+ "critical-section",
+ "crypto-bigint",
+ "elliptic-curve",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-sync 0.6.0",
+ "embassy-time",
+ "embassy-time-driver",
+ "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-storage",
+ "esp-alloc",
+ "esp-backtrace",
+ "esp-hal",
+ "esp-hal-embassy",
+ "esp-ieee802154",
+ "esp-println",
+ "esp-storage",
+ "esp-wifi",
+ "fugit",
+ "heapless 0.8.0",
+ "hex-literal",
+ "hmac",
+ "ieee80211",
+ "ieee802154",
+ "limero",
+ "lis3dh-async",
+ "log",
+ "minicbor 0.18.0",
+ "minicbor-ser",
+ "nb 1.1.0",
+ "p192",
+ "p256",
+ "portable-atomic",
+ "pubsub",
+ "serde",
+ "serdes",
+ "sha2",
+ "static_cell",
+]
+
+[[package]]
 name = "event-listener"
 version = "5.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

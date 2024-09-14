@@ -16,17 +16,21 @@ use core::mem::MaybeUninit;
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 
+use msg::MotorCmd;
+use msg::START_FRAME;
+use msg::MotorEvent;
+
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
     gpio::{AnyOutput, Io, Level},
     peripherals::Peripherals,
+    peripherals::UART2,
     prelude::*,
     rng::Rng,
     system::SystemControl,
     timer::{ErasedTimer, OneShotTimer, PeriodicTimer},
     uart::{
-        self,
         config::{Config, DataBits, Parity, StopBits},
         ClockSource, Uart,
     },
@@ -35,18 +39,16 @@ use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use serdes::cobs_crc_frame;
 use serdes::{Cbor, PayloadCodec};
 
 extern crate alloc;
-use crate::alloc::string::ToString;
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
 
 #[global_allocator]
 pub static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
 fn init_heap() {
-    const HEAP_SIZE: usize = 16 * 1024;
+    const HEAP_SIZE: usize = 32 * 1024;
     static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
 
     unsafe {
@@ -71,6 +73,49 @@ fn mk_static<T>(val: T) -> &'static T {
 use actors::esp_now_actor::*;
 use actors::led_actor::*;
 use actors::uart_actor::*;
+
+mod msg;
+
+struct MotorDeFramer {
+    buffer: VecDeque<u8>,
+    prev_byte: u8,
+}
+
+impl MotorDeFramer {
+    fn write_byte(&mut self, byte: u8) -> Option<MotorEvent> {
+        if byte == (START_FRAME >> 8) as u8 {
+            if self.buffer.len() > 0 && self.prev_byte == (START_FRAME & 0xFF) as u8 {
+                self.buffer.clear();
+                self.buffer.push_back((START_FRAME & 0xFF) as u8);
+                self.buffer.push_back((START_FRAME >> 8) as u8);
+//                info!("Restarting buffer");
+            } else {
+                self.buffer.push_back(byte);
+            }
+        } else {
+            self.buffer.push_back(byte);
+        }
+        self.prev_byte = byte;
+ //       info!("Received: {:02X?}", self.buffer);
+
+        if self.buffer.len() > 100 {
+            self.buffer.clear();
+            info!("Buffer too long");
+        }
+        if self.buffer.len() == 18
+            && self.buffer[1] == (START_FRAME >> 8) as u8
+            && self.buffer[0] == (START_FRAME & 0xFF) as u8
+        {
+//           info!("Received: {:02X?}", self.buffer);
+            let mut event = MotorEvent::new();
+            event.decode(&mut self.buffer);
+            self.buffer.clear();
+            Some(event)
+        } else {
+            None
+        }
+    }
+}
 
 #[main]
 async fn main(_spawner: Spawner) -> ! {
@@ -99,51 +144,41 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-    // let esp_now = mk_static!(esp_wifi::esp_now::EspNow<'static>, esp_now);
-
-    #[cfg(feature = "esp32")]
-    {
-        let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
-        esp_hal_embassy::init(
-            &clocks,
-            mk_static!(
-                [OneShotTimer<ErasedTimer>; 1],
-                [OneShotTimer::new(timg1.timer0.into())]
-            ),
-        );
-    }
-
-    #[cfg(not(feature = "esp32"))]
-    {
-        let systimer = esp_hal::timer::systimer::SystemTimer::new(peripherals.SYSTIMER);
-        esp_hal_embassy::init(
-            &clocks,
-            mk_static!(
-                [OneShotTimer<ErasedTimer>; 1],
-                [OneShotTimer::new(systimer.alarm0.into())]
-            ),
-        );
-    }
+    let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
+    esp_hal_embassy::init(
+        &clocks,
+        mk_static!(
+            [OneShotTimer<ErasedTimer>; 1],
+            [OneShotTimer::new(timg1.timer0.into())]
+        ),
+    );
 
     let wifi = peripherals.WIFI;
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
     let led_pin = io.pins.gpio2;
+    let (tx_pin, rx_pin) = (io.pins.gpio17, io.pins.gpio16);
+
     let led_pin: AnyOutput = AnyOutput::new(led_pin, Level::Low);
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
+    let mut motor_deframer = MotorDeFramer {
+        buffer: VecDeque::new(),
+        prev_byte: 0,
+    };
+    esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
     #[derive(Debug, Serialize, Deserialize)]
     struct UartMsg([u8; 6], Vec<u8>);
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
 
-    let uart0 = Uart::new_async_with_config(
+    let uart = Uart::new_async_with_config(
         peripherals.UART2,
         Config {
-            baudrate: 115200,
+            baudrate: 19200,
             data_bits: DataBits::DataBits8,
             parity: Parity::ParityNone,
             stop_bits: StopBits::STOP1,
@@ -152,32 +187,37 @@ async fn main(_spawner: Spawner) -> ! {
             rx_timeout: None,
         },
         &clocks,
-        io.pins.gpio17,
-        io.pins.gpio16,
+        rx_pin, // RXD
+        tx_pin, // TXD
     )
     .unwrap();
 
-    let mut uart_actor = UartActor::new(uart0);
-
-    esp_now_actor.map_to(espnow_rxd_to_pulse, led_actor.handler());
+    let mut uart_actor = UartActor::<UART2>::new(uart);
 
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
-
-    // esp_now_actor >> esp_now_to_uart >> uart_actor;
-    // uart_actor >> uart_to_esp_now >> esp_now_actor;
-    /*
-    let emitter = Emitter(func);
-    emitter.add_listener(esp_now_actor.handler());
-    uart_handler.add_listener(emitter);
-
-     */
 
     esp_now_actor.for_all(|ev| {
         let (peer, data) = match ev {
             EspNowEvent::Rxd { peer, data } => (peer, data),
             EspNowEvent::Broadcast { peer, rssi, data } => (peer, data),
         };
-        uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
+        let ev =  Ps4Event::decode(data);
+        // info!("ESP-NOW RXD {:?}", data.len());
+        uart_handler.handle(&UartCmd::Txd(msg::MotorCmd { steer: 0, speed: 200 }.encode()));
+        //    uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
+    });
+
+    uart_actor.for_all(move |msg: &UartEvent| {
+        match msg {
+            UartEvent::Rxd(data) => {
+                for b in data {
+                    if let Some(ev) = motor_deframer.write_byte(*b) {
+                       // info!("MotorEvent {:?}", ev);
+                    }
+                }
+                // info!("UART RXD {:?}", data.len());
+            }
+        }
     });
 
     loop {
@@ -187,30 +227,9 @@ async fn main(_spawner: Spawner) -> ! {
         )
         .await;
     }
-
-    /*
-    {
-        let transport_handler = mk_static!(Endpoint<EspNowCmd>,esp_now_actor.handler());
-        let transport_function = |cmd: &ProxyMessage|  {
-            let v = Cbor::encode(cmd);
-            let v = serdes::cobs_crc_frame(&v).unwrap();
-            transport_handler.handle(&EspNowCmd::Txd {
-                peer: BROADCAST_ADDRESS,
-                data: v,
-            });
-        };
-        let hf = Box::new(HandlerFunction::new(transport_function));
-        let mut pubsub_actor = PubSubActor::new(hf);
-        pubsub_actor.handler().handle(&PubSubCmd::Connect {
-            client_id: "esp-now".to_string(),
-        });
-        loop {
-            select(pubsub_actor.run(), esp_now_actor.run()).await;
-        }
-    }*/
 }
 
-fn espnow_rxd_to_pulse(ev: &EspNowEvent) -> Option<LedCmd> {
+fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
         EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
         EspNowEvent::Broadcast {
