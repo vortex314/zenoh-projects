@@ -28,9 +28,10 @@ nightly = ["esp-idf-svc/nightly"]
 experimental = ["esp-idf-svc/experimental"]
 embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
 
+
 [dependencies]
-log = { version = "0.4", default-features = false, features = ["std"] }
-esp-idf-svc = { version = "0.49", default-features = false }
+log = { version = "*", default-features = false, features = ["std"] }
+esp-idf-svc = { version = "*", default-features = false }
 embedded-svc = "*"
 embedded-hal = "*"
 esp-idf-hal="*"
@@ -39,12 +40,16 @@ esp-idf-sys="*"
 heapless="*"
 minicbor = { version = "*", features=["derive","alloc","half"] }
 minicbor-ser = { version = "*",  features=["alloc"]}
-# edge-executor = "*"
+edge-executor = "*"
 #   futures="*"
 serde_json="*"
 serde="*"
 futures= { version = "*", features=["executor","thread-pool"] }
-
+redis = "*"
+limero = { path = "../esp32-limero-embassy" }
+# embassy-executor = { version = "0.6", features = ["arch-std", "executor-thread", "log"] }
+# embassy-time = { version = "*", features = ["tick-hz-1_000","generic-queue"] }
+static_cell = "2"
 
 [build-dependencies]
 embuild = "0.32.0"

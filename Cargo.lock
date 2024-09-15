@@ -53,7 +53,7 @@ dependencies = [
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.18.0",
+ "minicbor 0.24.2",
  "minicbor-ser",
  "nb 1.1.0",
  "p192",
@@ -335,6 +335,12 @@ checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
 ]
+
+[[package]]
+name = "const-fnv1a-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32b13ea120a812beba79e34316b3942a857c86ec1593cb34f27bb28272ce2cca"
 
 [[package]]
 name = "const-oid"
@@ -1053,7 +1059,7 @@ dependencies = [
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.18.0",
+ "minicbor 0.24.2",
  "minicbor-ser",
  "nb 1.1.0",
  "p192",
@@ -1079,6 +1085,7 @@ dependencies = [
  "byte",
  "cfg-if",
  "cobs",
+ "const-fnv1a-hash",
  "crc",
  "critical-section",
  "crypto-bigint",
@@ -1112,7 +1119,7 @@ dependencies = [
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.18.0",
+ "minicbor 0.24.2",
  "minicbor-ser",
  "nb 1.1.0",
  "p192",
@@ -1261,12 +1268,6 @@ dependencies = [
  "rand_core",
  "subtle",
 ]
-
-[[package]]
-name = "half"
-version = "1.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
 
 [[package]]
 name = "half"
@@ -1544,7 +1545,6 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a20020e8e2d1881d8736f64011bb5ff99f1db9947ce3089706945c8915695cb"
 dependencies = [
- "half 1.8.3",
  "minicbor-derive 0.12.0",
 ]
 
@@ -1554,7 +1554,7 @@ version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f8e213c36148d828083ae01948eed271d03f95f7e72571fa242d78184029af2"
 dependencies = [
- "half 2.4.1",
+ "half",
  "minicbor-derive 0.15.0",
 ]
 
@@ -2035,6 +2035,7 @@ dependencies = [
  "bitfield 0.16.1",
  "byte",
  "cobs",
+ "const-fnv1a-hash",
  "crc",
  "log",
  "minicbor 0.24.2",

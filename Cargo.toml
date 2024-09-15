@@ -13,6 +13,7 @@ exclude = [
   "zenohd",
   "esp32-espnow-display",
   "esp32-limero-embassy",
+  "esp32-limero-std",
   "pubsub",
   "zenoh_proxy",
   "serdes",

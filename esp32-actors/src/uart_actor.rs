@@ -2,25 +2,17 @@ use alloc::format;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use esp_hal::prelude::_esp_hal_uart_Instance;
-use esp_hal::uart::Instance;
 use esp_hal::Async;
 use esp_hal::{
-    peripherals::UART0,
-    peripherals::UART1,
-    peripherals::UART2,
     uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
 };
 
-use alloc::string::String;
 use alloc::vec::Vec;
-use log::{debug, info};
+use log:: info;
 
 use anyhow::Error;
 use anyhow::Result;
-use limero::timer::Timers;
 use limero::{Actor, CmdQueue, Endpoint, EventHandlers, Handler};
-use serdes::cobs_crc_frame;
-use serdes::FrameExtractor;
 
 pub const UART_BUFSIZE: usize = 127;
 
@@ -40,7 +32,6 @@ where
 {
     cmds: CmdQueue<UartCmd>,
     events: EventHandlers<UartEvent>,
-    timers: Timers,
     tx: UartTx<'static, UART, Async>,
     rx: UartRx<'static, UART, Async>,
 }
@@ -63,7 +54,6 @@ where
         Self {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
-            timers: Timers::new(),
             tx,
             rx,
         }

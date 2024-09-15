@@ -1,0 +1,11 @@
+[package]
+name = "limero"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4", features = [] }
+esp-println = { version = "*", features = ["esp32", "log"] }
+async-channel ={ version = "2.3.1", features = [], default-features = false }
+edge-executor = { version = "*", features = [] }
+# anyhow = { version = "*", features = [], default-features = false }

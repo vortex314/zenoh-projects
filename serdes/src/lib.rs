@@ -8,6 +8,20 @@ pub mod framer;
 pub use framer::cobs_crc_frame as cobs_crc_frame;
 pub use framer::cobs_crc_deframe as cobs_crc_deframe;
 pub use framer::FrameExtractor as FrameExtractor;
+pub mod msg;
+pub use msg::MotorEvent as MotorEvent;
+pub use msg::MotorCmd as MotorCmd;
+pub use msg::Ps4Event as Ps4Event;
+pub use msg::Ps4PropIdx as Ps4PropIdx;
+pub use msg::EspNowHeader as EspNowHeader;
+pub use msg::fnv as fnv;
+pub use msg::START_FRAME as START_FRAME;
+pub use msg::PS4_ID as PS4_ID;
+
+pub use msg::MsgType as MsgType;
+pub use msg::reply as reply;
+pub use msg::request as request;
+
 
 extern crate alloc;
 

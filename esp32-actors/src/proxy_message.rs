@@ -77,9 +77,9 @@ impl VecWriter {
         self.buffer.to_vec()
     }
 
-    fn clear(&mut self) {
+    /*fn clear(&mut self) {
         self.buffer.clear();
-    }
+    }*/
     pub fn to_inner(self) -> Vec<u8> {
         self.buffer.clone()
     }

@@ -16,10 +16,6 @@ use core::mem::MaybeUninit;
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
 
-use msg::MotorCmd;
-use msg::START_FRAME;
-use msg::MotorEvent;
-
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -38,11 +34,25 @@ use esp_hal::{
 use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::{info, warn};
+use minicbor::Decoder;
+use minicbor::Encoder;
 use serde::{Deserialize, Serialize};
-use serdes::{Cbor, PayloadCodec};
 
 extern crate alloc;
-use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
+use alloc::{collections::vec_deque::VecDeque, vec::Vec};
+
+use actors::esp_now_actor::*;
+use actors::led_actor::*;
+use actors::uart_actor::*;
+
+use serdes::request;
+use serdes::EspNowHeader;
+use serdes::MotorCmd;
+use serdes::MotorEvent;
+use serdes::MsgType;
+use serdes::Ps4Event;
+use serdes::PS4_ID;
+use serdes::START_FRAME;
 
 #[global_allocator]
 pub static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -66,15 +76,9 @@ macro_rules! mk_static {
     }};
 }
 
-fn mk_static<T>(val: T) -> &'static T {
+/*fn mk_static<T>(val: T) -> &'static T {
     Box::leak(Box::new(val))
-}
-
-use actors::esp_now_actor::*;
-use actors::led_actor::*;
-use actors::uart_actor::*;
-
-mod msg;
+}*/
 
 struct MotorDeFramer {
     buffer: VecDeque<u8>,
@@ -88,7 +92,7 @@ impl MotorDeFramer {
                 self.buffer.clear();
                 self.buffer.push_back((START_FRAME & 0xFF) as u8);
                 self.buffer.push_back((START_FRAME >> 8) as u8);
-//                info!("Restarting buffer");
+            //                info!("Restarting buffer");
             } else {
                 self.buffer.push_back(byte);
             }
@@ -96,7 +100,7 @@ impl MotorDeFramer {
             self.buffer.push_back(byte);
         }
         self.prev_byte = byte;
- //       info!("Received: {:02X?}", self.buffer);
+        //       info!("Received: {:02X?}", self.buffer);
 
         if self.buffer.len() > 100 {
             self.buffer.clear();
@@ -106,7 +110,7 @@ impl MotorDeFramer {
             && self.buffer[1] == (START_FRAME >> 8) as u8
             && self.buffer[0] == (START_FRAME & 0xFF) as u8
         {
-//           info!("Received: {:02X?}", self.buffer);
+            //           info!("Received: {:02X?}", self.buffer);
             let mut event = MotorEvent::new();
             event.decode(&mut self.buffer);
             self.buffer.clear();
@@ -157,9 +161,8 @@ async fn main(_spawner: Spawner) -> ! {
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
     let led_pin = io.pins.gpio2;
-    let (tx_pin, rx_pin) = (io.pins.gpio17, io.pins.gpio16);
-
     let led_pin: AnyOutput = AnyOutput::new(led_pin, Level::Low);
+    let (tx_pin, rx_pin) = (io.pins.gpio17, io.pins.gpio16);
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
@@ -178,7 +181,7 @@ async fn main(_spawner: Spawner) -> ! {
     let uart = Uart::new_async_with_config(
         peripherals.UART2,
         Config {
-            baudrate: 19200,
+            baudrate: 115200,
             data_bits: DataBits::DataBits8,
             parity: Parity::ParityNone,
             stop_bits: StopBits::STOP1,
@@ -195,24 +198,64 @@ async fn main(_spawner: Spawner) -> ! {
     let mut uart_actor = UartActor::<UART2>::new(uart);
 
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
+    let mut controller = Controller::new();
 
-    esp_now_actor.for_all(|ev| {
-        let (peer, data) = match ev {
+    esp_now_actor.for_all(move |ev| {
+        let (_peer, data) = match ev {
             EspNowEvent::Rxd { peer, data } => (peer, data),
-            EspNowEvent::Broadcast { peer, rssi, data } => (peer, data),
+            EspNowEvent::Broadcast {
+                peer,
+                rssi: _,
+                data,
+            } => (peer, data),
         };
-        let ev =  Ps4Event::decode(data);
-        // info!("ESP-NOW RXD {:?}", data.len());
-        uart_handler.handle(&UartCmd::Txd(msg::MotorCmd { steer: 0, speed: 200 }.encode()));
-        //    uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
+        let mut decoder = Decoder::new(&data);
+        //  info!("Received: {:?}", serdes::Cbor::to_string(&buffer));
+        let maybe_header = EspNowHeader::from_decoder(&mut decoder);
+        if let Ok(header) = maybe_header {
+            if header.src.is_some() && header.src.unwrap() == PS4_ID {
+                let ev = Ps4Event::from_decoder(&mut decoder);
+                if let Ok(ev) = ev {
+                    controller.update(&ev);
+                    let motor_cmd = controller.motor_cmd();
+                    uart_handler.handle(&UartCmd::Txd(motor_cmd.encode()));
+                } 
+            }
+        } else {
+            info!("Parse header fails from {:X?} : {:?} ", _peer, maybe_header);
+        }
     });
+
+    let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
+    let last_motor_event = mk_static!(MotorEvent, MotorEvent::new());
 
     uart_actor.for_all(move |msg: &UartEvent| {
         match msg {
             UartEvent::Rxd(data) => {
                 for b in data {
                     if let Some(ev) = motor_deframer.write_byte(*b) {
-                       // info!("MotorEvent {:?}", ev);
+                        if *last_motor_event != ev {
+                            info!(
+                                "MotorEvent left : {} right : {} , temp : {} C , battery : {} V",
+                                ev.speed_left, ev.speed_right,ev.board_temperature as f32 /10.0,ev.battery_voltage as f32 /100.0
+                            );
+                            *last_motor_event = ev.clone();
+                            let header = EspNowHeader {
+                                dst: None,
+                                src: Some(serdes::fnv("lm/motor")),
+                                msg_type: request(MsgType::PubReq),
+                                msg_id: None,
+                            };
+                            let mut encoder = Encoder::new(Vec::new());
+                            let _ = header.encode(&mut encoder);
+                            let _ = ev.encode(&mut encoder);
+                            let _ = encoder.end();
+                            espnow_handler.handle(&EspNowCmd::Broadcast {
+                                data: encoder.into_writer(),
+                            });
+                            
+
+                        }
                     }
                 }
                 // info!("UART RXD {:?}", data.len());
@@ -231,11 +274,56 @@ async fn main(_spawner: Spawner) -> ! {
 
 fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
-        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
+        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 10 }),
         EspNowEvent::Broadcast {
             peer: _,
             rssi: _,
             data: _,
-        } => Some(LedCmd::Pulse { duration: 100 }),
+        } => Some(LedCmd::Pulse { duration: 10 }),
+    }
+}
+
+struct Controller {
+    motor_speed: i16,
+    motor_steer: i16,
+}
+
+impl Controller {
+    fn new() -> Controller {
+        Controller {
+            motor_speed: 0,
+            motor_steer: 0,
+        }
+    }
+    fn update(&mut self, ev: &Ps4Event) {
+        let mut changed = false;
+        if ev.right_axis_y > 100 {
+            self.motor_speed -= 5;
+            changed = true;
+        } else if ev.right_axis_y < -100 {
+            self.motor_speed += 5;
+            changed = true;
+        }
+        if ev.left_axis_x > 100 {
+            self.motor_steer += 5;
+            changed = true;
+        } else if ev.left_axis_x < -100 {
+            self.motor_steer -= 5;
+            changed = true;
+        }
+        if changed {
+            info!(" speed {} steer {}", self.motor_speed, self.motor_steer);
+        }
+    }
+    fn motor_cmd(&self) -> MotorCmd {
+        MotorCmd {
+            speed: self.motor_speed,
+            steer: self.motor_steer,
+        }
+    }
+
+    fn reset(&mut self) {
+        self.motor_speed = 0;
+        self.motor_steer = 0;
     }
 }

@@ -96,6 +96,7 @@ pubsub = { path = "../pubsub" }
 serdes = { path = "../serdes" }
 actors = { path = "../esp32-actors" }
 serde = { version = "1.0", default-features = false }
+const-fnv1a-hash = "1.1.0"
 
 [features]
 default = ["esp32"]

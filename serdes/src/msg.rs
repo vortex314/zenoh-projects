@@ -145,7 +145,7 @@ impl Ps4Event {
 pub const PS4_ID: u32 = fnv("ps4");
 
 #[derive(Debug, Clone)]
-struct Ps4Cmd {
+pub struct Ps4Cmd {
     pub red_led: u8,
     pub green_led: u8,
     pub blue_led: u8,

@@ -3,7 +3,7 @@ use core::cell::RefCell;
 use core::result;
 use std::sync::{Arc, RwLock};
 use std::task::Poll;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use embedded_svc::http::{client, Query};
 use esp_idf_svc::mdns::{EspMdns, QueryResult};
@@ -16,7 +16,7 @@ use esp_idf_sys::EspError;
 use futures::FutureExt;
 use log::{debug, error, info};
 
-use crate::limero::{
+use limero::{
     async_wait_millis, timer::Timer, timer::Timers
 };
 use crate::payload_cbor::Cbor;
@@ -89,7 +89,7 @@ impl MqttActor {
 
     pub fn create_client(&mut self) -> Result<()> {
         info!("MDNS Query");
-        let ipv4 = self.esp_mdns.query_a("pcthink", Duration::from_secs(3))?; // Query for IP Address
+        let ipv4 = self.esp_mdns.query_a("pcthink", std::time::Duration::from_secs(3))?; // Query for IP Address
 
         info!("MDNS Query =>  {:?}", ipv4);
 
@@ -102,8 +102,8 @@ impl MqttActor {
             retain: false,
         };
         mqtt_config.lwt = Some(lwt_config);
-        mqtt_config.keep_alive_interval = Some(Duration::from_secs(3));
-        mqtt_config.reconnect_timeout = Some(Duration::from_secs(1));
+        mqtt_config.keep_alive_interval = Some(std::time::Duration::from_secs(3));
+        mqtt_config.reconnect_timeout = Some(std::time::Duration::from_secs(1));
         
 
         let mut handler = self.mqtt_events.handler();
@@ -301,7 +301,7 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttActor {
 
     fn add_listener(&mut self, handler : Box<dyn Handler<PubSubEvent>>) {
         self.events
-            .add(handler);
+            .add_listener(handler);
     }
 
     fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use esp_idf_hal::gpio::*;
 
-use crate::limero::Actor;
+use limero::Actor;
 use crate::CmdQueue;
 use crate::Handler;
 use crate::EventHandlers;
@@ -121,6 +121,6 @@ impl Actor<LedCmd, ()> for LedActor {
     }
 
     fn add_listener(&mut self, handler: Box<dyn Handler<()>>) {
-        self.events.add(handler);
+        self.events.add_listener(handler);
     }
 }

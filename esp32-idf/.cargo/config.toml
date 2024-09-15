@@ -4,16 +4,23 @@ target = "xtensa-esp32-espidf"
 [target.xtensa-esp32-espidf]
 linker = "ldproxy"
 runner = "espflash flash --baud=921600 --monitor -p /dev/ttyUSB0 -m dio -s 4mb"
-rustflags = [ "--cfg",  "espidf_time64","--cfg", "esp_idf_comp_mdns_enabled"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
+rustflags = [
+  "--cfg",
+  "espidf_time64",
+  "--cfg",
+  "esp_idf_comp_mdns_enabled",
+#  "-C",
+#  "link-arg=-Tesp32_rom_functions.x",
+] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
 
 [unstable]
 build-std = ["std", "panic_abort"]
 
 [env]
-MCU="esp32"
+MCU = "esp32"
 # Note: this variable is not used by the pio builder (`cargo build --features pio`)
+CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG = "true"
 ESP_IDF_VERSION = "v5.2.2"
-CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG="true"
 
 # Workaround for https://github.com/esp-rs/esp-idf-template/issues/174 
 CRATE_CC_NO_DEFAULTS = "1"

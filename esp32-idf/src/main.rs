@@ -33,7 +33,6 @@ use std::env;
 use std::{thread::sleep, time::Duration};
 use wifi_actor::WifiActorEvent;
 
-mod limero;
 use limero::*;
 
 mod pubsub;
@@ -73,6 +72,25 @@ fn run() -> anyhow::Result<()> {
     // Wire actors together
     mqtt_actor.map_to(connected_to_blink, led_actor.handler());
     wifi_actor.map_to(connected_to_mqtt, mqtt_actor.handler());
+
+    wifi_actor.for_each(|event| {
+        match event {
+            WifiActorEvent::Connected => {
+                info!("Connected to wifi");
+                let client = redis::Client::open("redis://192.168.0.240/");
+                match client {
+                    Ok(client) =>  {
+                        info!("Connected to redis");
+                        let mut con = client.get_connection().unwrap();
+                        let _ = redis::cmd("SET").arg("key").arg(42).exec(&mut con);
+                    },
+                    Err(e) => error!("Failed to connect to redis: {:?}", e),
+                }
+            },
+            WifiActorEvent::Disconnected => info!("Disconnected from wifi"),
+        }
+    }); 
+    
     mqtt_actor.for_each(print_pubsub_event);
 
     let wifi_actor = Box::leak(Box::new(wifi_actor));

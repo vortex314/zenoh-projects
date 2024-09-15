@@ -19,7 +19,7 @@ use log::warn;
 use minicbor::decode::info;
 
 use crate::async_wait_millis;
-use crate::limero::Actor;
+use limero::Actor;
 use crate::CmdQueue;
 use crate::EventHandlers;
 use crate::Handler;
@@ -134,7 +134,7 @@ impl Actor<WifiCmd, WifiActorEvent> for WifiActor {
     }
 
     fn add_listener(&mut self, handler: Box<dyn Handler<WifiActorEvent>>) {
-        self.events.add(handler);
+        self.events.add_listener(handler);
     }
 
     fn handler(&self) -> Box<dyn Handler<WifiCmd>> {

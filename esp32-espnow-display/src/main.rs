@@ -160,11 +160,11 @@ async fn main(_spawner: Spawner) -> ! {
 
 fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
-        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
+        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 10 }),
         EspNowEvent::Broadcast {
             peer: _,
             rssi: _,
             data: _,
-        } => Some(LedCmd::Pulse { duration: 100 }),
+        } => Some(LedCmd::Pulse { duration: 10 }),
     }
 }
