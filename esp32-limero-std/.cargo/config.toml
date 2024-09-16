@@ -4,13 +4,15 @@ runner = "espflash flash --monitor"
 
 [env]
 ESP_LOGLEVEL="INFO"
+ESP_IDF_VERSION = "v5.1.4"
+# Workaround for https://github.com/esp-rs/esp-idf-template/issues/174 
+CRATE_CC_NO_DEFAULTS = "1"
 
 [build]
-rustflags = [
-  "-C", "link-arg=-nostartfiles",
-]
-
+linker = "ldproxy"
+runner = "espflash flash --monitor" # Select this runner for espflash v3.x.x
+rustflags = [ "--cfg",  "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
 target = "xtensa-esp32-none-elf"
 
 [unstable]
-build-std = ["core","alloc","std"]
+build-std = ["std","panic_abort"]

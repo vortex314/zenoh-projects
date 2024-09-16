@@ -16,14 +16,19 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <zenoh-pico.h>
+#include <esp_now.h>
+#include <malloc.h>
+#include <esp_log.h>
+#include <codec.h>
+#include <esp_gtw.h>
 
 #if Z_FEATURE_PUBLICATION == 1
-#define SSID "Merckx3"
-#define PASS "LievenMarletteEwoutRonald"
+#define SSID XSTR(WIFI_SSID)
+#define PASS XSTR(WIFI_PASS)
 
 // Client mode values (comment/uncomment as needed)
 #define MODE "client"
-#define CONNECT "tcp/192.168.0.197:7447"  // If empty, it will scout
+#define CONNECT "tcp/192.168.0.197:7447" // If empty, it will scout
 // Peer mode values (comment/uncomment as needed)
 // #define MODE "peer"
 // #define CONNECT "udp/224.0.0.225:7447#iface=en0"
@@ -34,11 +39,15 @@
 z_owned_session_t s;
 z_owned_publisher_t pub;
 static int idx = 0;
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+EspGtw esp_gtw;
 
-void setup() {
+void setup()
+{
     // Initialize Serial for debug
     Serial.begin(115200);
-    while (!Serial) {
+    while (!Serial)
+    {
         delay(1000);
     }
 
@@ -46,32 +55,44 @@ void setup() {
     Serial.print("Connecting to WiFi...");
     WiFi.mode(WIFI_STA);
     WiFi.begin(SSID, PASS);
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFi.status() != WL_CONNECTED)
+    {
         delay(5000);
     }
-    Serial.println("OK");
+    esp_gtw.init().on_error([](const char *msg)
+                            {
+        Serial.print("Failed to initialize ESP-NOW" );
+        Serial.println(msg);
+        while (1)
+        {
+            ;
+        } });
 
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config;
     z_config_default(&config);
     zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_MODE_KEY, MODE);
-    if (strcmp(CONNECT, "") != 0) {
+    if (strcmp(CONNECT, "") != 0)
+    {
         zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_CONNECT_KEY, CONNECT);
     }
 
     // Open Zenoh session
     Serial.print("Opening Zenoh Session...");
-    while (z_open(&s, z_config_move(&config), NULL) < 0) {
+    while (z_open(&s, z_config_move(&config), NULL) < 0)
+    {
         Serial.println("Unable to open session!");
         delay(1000);
     }
     Serial.println("OK");
 
     // Start read and lease tasks for zenoh-pico
-    if (zp_start_read_task(z_session_loan_mut(&s), NULL) < 0 || zp_start_lease_task(z_session_loan_mut(&s), NULL) < 0) {
+    if (zp_start_read_task(z_session_loan_mut(&s), NULL) < 0 || zp_start_lease_task(z_session_loan_mut(&s), NULL) < 0)
+    {
         Serial.println("Unable to start read and lease tasks\n");
         z_close(z_session_move(&s), NULL);
-        while (1) {
+        while (1)
+        {
             ;
         }
     }
@@ -82,9 +103,11 @@ void setup() {
     Serial.println("...");
     z_view_keyexpr_t ke;
     z_view_keyexpr_from_str_unchecked(&ke, KEYEXPR);
-    if (z_declare_publisher(&pub, z_session_loan(&s), z_view_keyexpr_loan(&ke), NULL) < 0) {
+    if (z_declare_publisher(&pub, z_session_loan(&s), z_view_keyexpr_loan(&ke), NULL) < 0)
+    {
         Serial.println("Unable to declare publisher for key expression!");
-        while (1) {
+        while (1)
+        {
             ;
         }
     }
@@ -94,8 +117,9 @@ void setup() {
     delay(300);
 }
 
-void loop() {
-    delay(1000);
+void loop()
+{
+    delay(100);
     char buf[256];
     sprintf(buf, "[%4d] %s", idx++, VALUE);
 
@@ -109,12 +133,16 @@ void loop() {
     z_owned_bytes_t payload;
     z_bytes_serialize_from_str(&payload, buf);
 
-    if (z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL) < 0) {
+    if (z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL) < 0)
+    {
         Serial.println("Error while publishing data");
     }
+    esp_gtw.send((uint8_t *)buf, strlen(buf)).on_error([](const char *msg)
+                                                       { Serial.println(msg); });
 }
 #else
-void setup() {
+void setup()
+{
     Serial.println("ERROR: Zenoh pico was compiled without Z_FEATURE_PUBLICATION but this example requires it.");
     return;
 }
