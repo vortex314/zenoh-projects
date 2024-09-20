@@ -106,7 +106,17 @@ Result<Void> FrameEncoder::write_byte(uint8_t byte)
     return Result<Void>::Ok(Void());
 }
 
-Result<Void> FrameEncoder::encode_int32(int32_t value)
+template <typename T>
+Result<Void> FrameEncoder::encode(Option<T> value)
+{
+    if (value.is_none())
+    {
+        return encode_null();
+    }
+    return encode(value.unwrap());
+}
+
+Result<Void> FrameEncoder::encode(int32_t value)
 {
     if (_buffer.size() + 4 > _max)
     {
@@ -164,7 +174,7 @@ Result<Void> FrameEncoder::encode_int32(int32_t value)
     return Result<Void>::Ok({});
 }
 
-Result<Void> FrameEncoder::encode_uint32(uint32_t value)
+Result<Void> FrameEncoder::encode(uint32_t value)
 {
     if (value <= 23)
     {
@@ -210,7 +220,7 @@ Result<Void> FrameEncoder::encode_uint32(uint32_t value)
     return Result<Void>::Ok({});
 }
 
-Result<Void> FrameEncoder::encode_str(const char *str)
+Result<Void> FrameEncoder::encode(const char *str)
 {
     size_t len = strlen(str);
 
@@ -223,7 +233,7 @@ Result<Void> FrameEncoder::encode_str(const char *str)
     return Result<Void>::Ok(Void());
 }
 
-Result<Void> FrameEncoder::encode_bstr(std::vector<uint8_t> &buffer)
+Result<Void> FrameEncoder::encode(std::vector<uint8_t> &buffer)
 {
     size_t len = buffer.size();
     if (_buffer.size() + len + 1 > _max)
@@ -300,6 +310,11 @@ Result<Void> FrameEncoder::read_buffer(std::vector<unsigned char> &buf)
 {
     buf = _buffer;
     return Result<Void>::Ok(Void());
+}
+
+Result<std::vector<uint8_t>> FrameEncoder::get_buffer()
+{
+    return Result<std::vector<uint8_t>>::Ok(_buffer);
 }
 
 Result<Void> FrameEncoder::clear()
@@ -417,7 +432,96 @@ Result<CborType> FrameDecoder::peek_type()
     {
         return Result<CborType>::Ok(CBOR_INT32);
     }
-    return Result<CborType>::Err(EINVAL, "Unknown CBOR type");
+    else if (header == 0x9F)
+    {
+        return Result<CborType>::Ok(CBOR_ARRAY);
+    }
+    else if (header == 0xBF)
+    {
+        return Result<CborType>::Ok(CBOR_MAP);
+    }
+    else if (header == 0xFF)
+    {
+        return Result<CborType>::Ok(CBOR_END);
+    }
+    else if (header == 0xF6)
+    {
+        return Result<CborType>::Ok(CBOR_NULL);
+    }
+    else if (header == 0xF5 || header == 0xF4)
+    {
+        return Result<CborType>::Ok(CBOR_BOOL);
+    }
+}
+
+template <typename T>
+Result<Option<T>> FrameDecoder::decode()
+{
+    auto r = peek_type();
+    if (r.is_err())
+    {
+        return Result<Option<T>>::Err(EINVAL, "Buffer is empty");
+    }
+    CborType cbor_type = r.unwrap();
+    if (cbor_type == CBOR_UINT32)
+    {
+        auto r = decode_uint32();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding uint32");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
+    }
+    else if (cbor_type == CBOR_INT32)
+    {
+        auto r = decode_int32();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding int32");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
+    }
+    else if (cbor_type == CBOR_STR)
+    {
+        auto r = decode_str();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding string");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
+    }
+    else if (cbor_type == CBOR_BSTR)
+    {
+        auto r = decode_bstr();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding byte string");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
+    }
+    else if (cbor_type == CBOR_FLOAT)
+    {
+        auto r = decode_float();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding float");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
+    }
+    else if (cbor_type == CBOR_NULL)
+    {
+        return Result<Option<T>>::Ok(Option<T>());
+    }
+    else if (cbor_type == CBOR_BOOL)
+    {
+        auto r = read_next();
+        if (r.is_err())
+        {
+            return Result<Option<T>>::Err(EINVAL, "Error decoding bool");
+        }
+        return Result<Option<T>>::Ok(Option<T>(r.unwrap() == 0xF5));
+    }
+    return Result<Option<T>>::Err(EINVAL, "Unknown CBOR type");
 }
 
 Result<Void> FrameDecoder::decode_array()
@@ -536,7 +640,7 @@ Result<int32_t> FrameDecoder::decode_int32()
         return Result<int32_t>::Err(EINVAL, "Buffer decode_int32 read_next fails");
     }
     uint8_t header = r2.unwrap();
-    int32_t value=0;
+    int32_t value = 0;
     if ((header & 0x20) == 0x20)
     {
         value = -(header & 0x1F) - 1;
@@ -575,7 +679,7 @@ Result<uint32_t> FrameDecoder::decode_uint32()
     }
     INFO("Read next byte : 0x%X", r2.unwrap());
     uint8_t header = r2.unwrap();
-    uint32_t value=0;
+    uint32_t value = 0;
     if ((header & 0x1F) <= 23)
     {
         value = header;
@@ -666,5 +770,3 @@ Result<Void> FrameDecoder::rewind()
     _index = 0;
     return Result<Void>::Ok(Void());
 }
-
-
