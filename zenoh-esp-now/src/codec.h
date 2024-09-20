@@ -226,7 +226,7 @@ private:
     uint32_t _max;
     Result<uint8_t> read_next();
     Result<uint8_t> peek_next();
-    Result<CborType> peek_type();
+    Result<CborType> peek_type(Cb);
 
 public:
     FrameDecoder(uint32_t max);
@@ -289,14 +289,13 @@ public:
     Result<Void> encode(FrameEncoder &encoder)
     {
         RET_ERR(encoder.encode(dst));
-        REencoder.encode(src);
-        encoder.encode(msg_type);
-        encoder.encode(msg_id);
+        RET_ERR(encoder.encode(src));
+        RET_ERR(encoder.encode(msg_type));
+        RET_ERR(encoder.encode(msg_id));
         return Result<Void>::Ok(Void());
     }
     Result<Void> decode(FrameDecoder &decoder)
     {
-        { auto __r = decoder.decode_array(); if (__r.is_err()) return __r; };
         RET_ERR(decoder.decode(src));
         RET_ERR(decoder.decode(dst));
         RET_ERR(decoder.decode(&msg_type));
@@ -327,12 +326,12 @@ public:
     }
     Result<std::vector<uint8_t>> encode(FrameEncoder &encoder)
     {
-        encoder.encode_array();
-        encoder.encode(prop_id);
-        encoder.encode(name.c_str());
-        encoder.encode(desc);
-        encoder.encode(value_type);
-        encoder.encode(value_mode);
+        RET_ERR(encoder.encode_array());
+        RET_ERR(encoder.encode(prop_id));
+        RET_ERR(encoder.encode(name.c_str()));
+        RET_ERR(encoder.encode(desc));
+        RET_ERR(encoder.encode(value_type));
+        RET_ERR(encoder.encode(value_mode));
         return Result<std::vector<uint8_t>>::Ok(encoder.get_buffer());
     }
 }

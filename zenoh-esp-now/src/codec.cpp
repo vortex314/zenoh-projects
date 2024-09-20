@@ -183,20 +183,17 @@ Result<Void> FrameEncoder::encode(uint32_t value)
     }
     else if (value <= 0xFF)
     {
-        // Values from -25 to -256 are encoded with 0x38 followed by 1 byte
         RET_ERR(write_byte(0x18)); // CBOR additional info for 1-byte negative integer
         RET_ERR(write_byte(value));
     }
     else if (value <= 0xFFFF)
     {
-        // Values from -257 to -65536 are encoded with 0x39 followed by 2 bytes (big-endian)
         RET_ERR(write_byte(0x19));                // CBOR additional info for 2-byte negative integer
         RET_ERR(write_byte((value >> 8) & 0xFF)); // High byte
         RET_ERR(write_byte(value & 0xFF));        // Low byte
     }
     else if (value <= 0xFFFFFFFF)
     {
-        // Values from -65537 to -4294967296 are encoded with 0x3A followed by 4 bytes (big-endian)
         RET_ERR(write_byte(0x1A));                 // CBOR additional info for 4-byte negative integer
         RET_ERR(write_byte((value >> 24) & 0xFF)); // Highest byte
         RET_ERR(write_byte((value >> 16) & 0xFF));
@@ -205,7 +202,6 @@ Result<Void> FrameEncoder::encode(uint32_t value)
     } /*
      else
      {
-         // Values smaller than -4294967296 are encoded with 0x3B followed by 8 bytes (big-endian)
          RET_ERR(write_byte(0x1B));                         // CBOR additional info for 8-byte negative integer
          RET_ERR(write_byte((value >> 56) & 0xFF)); // Highest byte
          RET_ERR(write_byte((value >> 48) & 0xFF));
@@ -455,74 +451,19 @@ Result<CborType> FrameDecoder::peek_type()
 }
 
 template <typename T>
-Result<Option<T>> FrameDecoder::decode()
+Result<Void> FrameDecoder::decode(Option<T>& value)
 {
-    auto r = peek_type();
-    if (r.is_err())
-    {
-        return Result<Option<T>>::Err(EINVAL, "Buffer is empty");
+    auto r = CHECK(peek_type());
+    if (  r == CBOR_NULL ) {
+        value = Option<T>::None();
+        return Result<Void>::Ok(Void());
+    } else {
+        T v;
+        auto r2 = CHECK(decode(v));
+        value = Option<T>::Some(v);
+        return Result<Void>::Ok(Void());
     }
-    CborType cbor_type = r.unwrap();
-    if (cbor_type == CBOR_UINT32)
-    {
-        auto r = decode_uint32();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding uint32");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
-    }
-    else if (cbor_type == CBOR_INT32)
-    {
-        auto r = decode_int32();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding int32");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
-    }
-    else if (cbor_type == CBOR_STR)
-    {
-        auto r = decode_str();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding string");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
-    }
-    else if (cbor_type == CBOR_BSTR)
-    {
-        auto r = decode_bstr();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding byte string");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
-    }
-    else if (cbor_type == CBOR_FLOAT)
-    {
-        auto r = decode_float();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding float");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap()));
-    }
-    else if (cbor_type == CBOR_NULL)
-    {
-        return Result<Option<T>>::Ok(Option<T>());
-    }
-    else if (cbor_type == CBOR_BOOL)
-    {
-        auto r = read_next();
-        if (r.is_err())
-        {
-            return Result<Option<T>>::Err(EINVAL, "Error decoding bool");
-        }
-        return Result<Option<T>>::Ok(Option<T>(r.unwrap() == 0xF5));
-    }
-    return Result<Option<T>>::Err(EINVAL, "Unknown CBOR type");
-}
+}   
 
 Result<Void> FrameDecoder::decode_array()
 {
@@ -570,7 +511,7 @@ Result<Void> FrameDecoder::decode_end()
     return Result<Void>::Ok(Void());
 }
 
-Result<std::string> FrameDecoder::decode_str()
+Result<Void> FrameDecoder::decode_s(std::string &str)
 {
     auto r = peek_type();
     if (r.is_err())
