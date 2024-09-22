@@ -1,5 +1,12 @@
 #include <codec.h>
 
+void panic(const char *msg)
+{
+    ERROR("Panic: %s\n", msg);
+    while (1)
+    {
+    }
+}
 // CRC-16 function (CRC-CCITT)
 uint16_t crc16(const uint8_t *data, size_t length)
 {
@@ -125,7 +132,7 @@ Result<Void> FrameEncoder::encode(int32_t value)
     // First, calculate the positive encoding of the absolute value minus 1
     if (value >= 0)
     {
-        return encode_uint32(value);
+        return encode(value);
     }
     uint32_t encoded_value = -(value + 1); // CBOR encodes -1 as 0, -2 as 1, etc.
                                            //  INFO("Encoded value : %llu", encoded_value);
@@ -241,7 +248,7 @@ Result<Void> FrameEncoder::encode(std::vector<uint8_t> &buffer)
     return Result<Void>::Ok(Void());
 }
 
-Result<Void> FrameEncoder::encode_float(float value)
+Result<Void> FrameEncoder::encode(float value)
 {
     RET_ERR(write_byte(0xFA)); // Major type 7, additional 26 (32-bit float)
     uint32_t float_bits;
@@ -308,9 +315,9 @@ Result<Void> FrameEncoder::read_buffer(std::vector<unsigned char> &buf)
     return Result<Void>::Ok(Void());
 }
 
-Result<std::vector<uint8_t>> FrameEncoder::get_buffer()
+std::vector<uint8_t> FrameEncoder::get_buffer()
 {
-    return Result<std::vector<uint8_t>>::Ok(_buffer);
+    return _buffer;
 }
 
 Result<Void> FrameEncoder::clear()
@@ -347,16 +354,16 @@ Result<uint8_t> FrameDecoder::peek_next()
     return Result<uint8_t>::Ok(value);
 }
 
-Result<bool> FrameDecoder::fill_buffer(std::vector<uint8_t> buffer)
+Result<Void> FrameDecoder::fill_buffer(std::vector<uint8_t> &buffer)
 {
     if (buffer.size() > _max)
     {
-        return Result<bool>::Err(ENOSPC, "Buffer overflow");
+        return Result<Void>::Err(ENOSPC, "Buffer overflow");
     }
     _buffer.clear();
     _buffer.insert(_buffer.end(), buffer.begin(), buffer.end());
     _index = 0;
-    return Result<bool>::Ok(Void());
+    return Result<Void>::Ok(Void());
 }
 
 Result<bool> FrameDecoder::fill_buffer(uint8_t *buffer, uint32_t size)
@@ -448,22 +455,8 @@ Result<CborType> FrameDecoder::peek_type()
     {
         return Result<CborType>::Ok(CBOR_BOOL);
     }
+    return Result<CborType>::Err(EINVAL, "Unknown CBOR type");
 }
-
-template <typename T>
-Result<Void> FrameDecoder::decode(Option<T>& value)
-{
-    auto r = CHECK(peek_type());
-    if (  r == CBOR_NULL ) {
-        value = Option<T>::None();
-        return Result<Void>::Ok(Void());
-    } else {
-        T v;
-        auto r2 = CHECK(decode(v));
-        value = Option<T>::Some(v);
-        return Result<Void>::Ok(Void());
-    }
-}   
 
 Result<Void> FrameDecoder::decode_array()
 {
@@ -511,77 +504,55 @@ Result<Void> FrameDecoder::decode_end()
     return Result<Void>::Ok(Void());
 }
 
-Result<Void> FrameDecoder::decode_s(std::string &str)
+Result<Void> FrameDecoder::decode(std::string &str)
 {
-    auto r = peek_type();
-    if (r.is_err())
-    {
-        return Result<std::string>::Err(EINVAL, "Buffer is empty");
-    }
-    uint8_t cbor_type = r.unwrap();
+    auto cbor_type = CHECK_MAP(Void, peek_type());
+
     if (cbor_type != CBOR_STR)
     {
-        return Result<std::string>::Err(EINVAL, "Not a CBOR string");
+        return Result<Void>::Err(EINVAL, "Not a CBOR string");
     }
     size_t len = read_next().unwrap() & 0x1F;
-    std::string str = "";
+    str = "";
     for (size_t i = 0; i < len; i++)
     {
-        auto r = read_next();
-        if (r.is_err())
-        {
-            return Result<std::string>::Err(EINVAL, "Buffer is empty");
-        }
-        str += r.unwrap();
+        auto r = CHECK_MAP(Void, read_next());
+        str += r;
     }
-    return Result<std::string>::Ok(str);
+    return Result<Void>::Ok(Void());
 }
 
-Result<std::vector<uint8_t>> FrameDecoder::decode_bstr()
+Result<Void> FrameDecoder::decode(ByteString &bstr)
 {
-    auto r = peek_type();
-    if (r.is_err())
-    {
-        return Result<std::vector<uint8_t>>::Err(EINVAL, "Buffer is empty");
-    }
-    uint8_t cbor_type = r.unwrap();
+    auto cbor_type = CHECK_MAP(Void, peek_type());
     if (cbor_type != CBOR_BSTR)
     {
-        return Result<std::vector<uint8_t>>::Err(EINVAL, "Not a CBOR string");
+        return Result<Void>::Err(EINVAL, "Not a CBOR string");
     }
     size_t len = read_next().unwrap() & 0x1F;
-    std::vector<uint8_t> buffer;
+    bstr.clear();
     for (size_t i = 0; i < len; i++)
     {
-        auto r = read_next();
-        if (r.is_err())
-        {
-            return Result<std::vector<uint8_t>>::Err(EINVAL, "Buffer is empty");
-        }
-        buffer.push_back(r.unwrap());
+        auto r = CHECK_MAP(Void, read_next());
+        bstr.push_back(r);
     }
-    return Result<std::vector<uint8_t>>::Ok(buffer);
+    return Result<Void>::Ok(Void());
 }
 
-Result<int32_t> FrameDecoder::decode_int32()
+Result<Void> FrameDecoder::decode(int32_t &value)
 {
-    auto r = peek_type();
-    if (r.is_err())
-    {
-        return Result<int32_t>::Err(EINVAL, "Buffer decode_int32 peek_next fails");
-    }
-    uint8_t cbor_type = r.unwrap();
+    auto cbor_type = CHECK_MAP(Void, peek_type());
     if (cbor_type != CBOR_INT32)
     {
-        return Result<int32_t>::Err(EINVAL, "Not a CBOR int32");
+        return Result<Void>::Err(EINVAL, "Not a CBOR int32");
     }
     auto r2 = read_next();
     if (r2.is_err())
     {
-        return Result<int32_t>::Err(EINVAL, "Buffer decode_int32 read_next fails");
+        return Result<Void>::Err(EINVAL, "Buffer decode_int32 read_next fails");
     }
     uint8_t header = r2.unwrap();
-    int32_t value = 0;
+    value = 0;
     if ((header & 0x20) == 0x20)
     {
         value = -(header & 0x1F) - 1;
@@ -598,29 +569,24 @@ Result<int32_t> FrameDecoder::decode_int32()
     {
         value = -(read_next().unwrap() << 24) | (read_next().unwrap() << 16) | (read_next().unwrap() << 8) | read_next().unwrap();
     }
-    return Result<int32_t>::Ok(value);
+    return Result<Void>::Ok(Void());
 }
 
-Result<uint32_t> FrameDecoder::decode_uint32()
+Result<Void> FrameDecoder::decode(uint32_t &value)
 {
-    auto r = peek_type();
-    if (r.is_err())
-    {
-        return Result<uint32_t>::Err(EINVAL, "Peek next fails in decode_uint32");
-    }
-    uint8_t cbor_type = r.unwrap();
+    auto cbor_type = CHECK_MAP(Void, peek_type());
     if (cbor_type != CBOR_UINT32)
     {
-        return Result<uint32_t>::Err(EINVAL, "Not a CBOR uint32");
+        return Result<Void>::Err(EINVAL, "Not a CBOR uint32");
     }
     auto r2 = read_next();
     if (r2.is_err())
     {
-        return Result<uint32_t>::Err(EINVAL, "Read_next fails in decode_uint32");
+        return Result<Void>::Err(EINVAL, "Read_next fails in decode_uint32");
     }
     INFO("Read next byte : 0x%X", r2.unwrap());
     uint8_t header = r2.unwrap();
-    uint32_t value = 0;
+    value = 0;
     if ((header & 0x1F) <= 23)
     {
         value = header;
@@ -637,35 +603,55 @@ Result<uint32_t> FrameDecoder::decode_uint32()
     {
         value = (read_next().unwrap() << 24) | (read_next().unwrap() << 16) | (read_next().unwrap() << 8) | read_next().unwrap();
     }
-    return Result<uint32_t>::Ok(value);
+    return Result<Void>::Ok(Void());
 }
 
-Result<float> FrameDecoder::decode_float()
+Result<Void> FrameDecoder::decode(uint16_t &value)
 {
-    auto r = peek_type();
-    if (r.is_err())
+    uint32_t v;
+    auto r = CHECK(decode(v));
+    value = v;
+    return Result<Void>::Ok(Void());
+}
+
+template <typename T>
+Result<Void> FrameDecoder::decode_opt(Option<T> &value)
+{
+    auto r = CHECK_MAP(Void, peek_type());
+    if (r == CBOR_NULL)
     {
-        return Result<float>::Err(EINVAL, "Buffer decode_float peek_next fails");
+        value = Option<T>::None();
     }
-    uint8_t header = r.unwrap();
-    if (header != CBOR_FLOAT)
+    else
     {
-        return Result<float>::Err(EINVAL, "Not a CBOR float");
+        T v;
+        auto r2 = CHECK(decode(v));
+        value = Option<T>::Some(v);
+    }
+    return Result<Void>::Ok(Void());
+}
+
+Result<Void> FrameDecoder::decode(float &value)
+{
+    auto cbor_type = CHECK_MAP(Void, peek_type());
+    if (cbor_type != CBOR_FLOAT)
+    {
+        return Result<Void>::Err(EINVAL, "Not a CBOR float");
     }
     read_next(); // consume type byte
-    float value;
+    value;
     uint32_t float_bits = 0;
     for (size_t i = 0; i < 4; i++)
     {
         auto r = read_next();
         if (r.is_err())
         {
-            return Result<float>::Err(EINVAL, "Buffer is empty");
+            return Result<Void>::Err(EINVAL, "Buffer is empty");
         }
         float_bits = (float_bits << 8) | r.unwrap();
     }
     std::memcpy(&value, &float_bits, sizeof(float));
-    return Result<float>::Ok(value);
+    return Result<Void>::Ok(Void());
 }
 
 Result<bool> FrameDecoder::check_crc()
@@ -710,4 +696,55 @@ Result<Void> FrameDecoder::rewind()
 {
     _index = 0;
     return Result<Void>::Ok(Void());
+}
+
+Result<Void> MsgHeader::encode(FrameEncoder &encoder)
+{
+    RET_ERR(encoder.encode_array());
+    RET_ERR(encoder.encode(dst));
+    RET_ERR(encoder.encode(src));
+    RET_ERR(encoder.encode(msg_type));
+    RET_ERR(encoder.encode(msg_id));
+    return Result<Void>();
+}
+Result<MsgHeader> MsgHeader::decode(FrameDecoder &decoder)
+{
+    MsgHeader header;
+    INFO("Decoding MsgHeader");
+    CHECK_MAP(MsgHeader, decoder.decode_array());
+    INFO("Decoded array");
+    CHECK_MAP(MsgHeader, decoder.decode_opt<TopicId>(header.src));
+    INFO("Decoded source");
+    CHECK_MAP(MsgHeader, decoder.decode_opt<TopicId>(header.dst));
+    INFO("Decoded destination");
+    uint32_t type;
+    CHECK_MAP(MsgHeader, decoder.decode(type));
+    INFO("Decoded type");
+    header.msg_type = (MsgType)type;
+    CHECK_MAP(MsgHeader, decoder.decode_opt<MsgId>(header.msg_id));
+    INFO("Decoded msg_id");
+    return Result<MsgHeader>(header);
+}
+
+Result<Void> DescMsg::encode(FrameEncoder &encoder)
+{
+    DescMsg msg = DescMsg();
+    RET_ERR(encoder.encode_array());
+    RET_ERR(encoder.encode(prop_id));
+    RET_ERR(encoder.encode(name.c_str()));
+    RET_ERR(encoder.encode(desc));
+    RET_ERR(encoder.encode(value_type));
+    RET_ERR(encoder.encode(value_mode));
+    return Result<Void>();
+}
+Result<DescMsg> DescMsg::decode(FrameDecoder &decoder)
+{
+    DescMsg msg;
+    CHECK_MAP(DescMsg, decoder.decode_array());
+    CHECK_MAP(DescMsg, decoder.decode_opt<uint8_t>(msg.prop_id));
+    CHECK_MAP(DescMsg, decoder.decode(msg.name));
+    CHECK_MAP(DescMsg, decoder.decode_opt<std::string>(msg.desc));
+    CHECK_MAP(DescMsg, decoder.decode_opt<ValueType>(msg.value_type));
+    CHECK_MAP(DescMsg, decoder.decode_opt<ValueMode>(msg.value_mode));
+    return Result<DescMsg>(msg);
 }

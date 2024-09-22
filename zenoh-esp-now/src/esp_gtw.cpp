@@ -16,7 +16,6 @@ const char* TAG = "gtw_espnow";
 static esp_err_t gtw_espnow_init(void);
 static esp_err_t gtw_wifi_init(void);
 
-Log logger(10);
 
 Result<Void> EspGtw::init() {
     /*if (gtw_wifi_init() != ESP_OK) {
@@ -99,7 +98,13 @@ static esp_err_t gtw_espnow_init(void) {
     peer->ifidx = ESPNOW_WIFI_IF;
     peer->encrypt = false;
     memcpy(peer->peer_addr, broadcast_mac, ESP_NOW_ETH_ALEN);
-    ESP_ERROR_CHECK(esp_now_add_peer(peer));
+    auto erc = esp_now_add_peer(peer);
+    if ( erc != ESP_OK && erc != ESP_ERR_ESPNOW_EXIST) {
+        ESP_LOGE(TAG, "Add broadcast peer fail");
+        free(peer);
+        esp_now_deinit();
+        return ESP_FAIL;
+    }
     free(peer);
     return ESP_OK;
 }

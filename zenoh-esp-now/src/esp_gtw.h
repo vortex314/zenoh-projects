@@ -17,15 +17,17 @@
 #include "esp_mac.h"
 #include "stdint.h"
 
-//const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+// const uint8_t broadcast_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-class EspGtw {
-   public:
+class EspGtw
+{
+public:
+    EspGtw() {}
     Result<Void> init();
-    Result<Void> set_callback_receive(void (*func)(const uint8_t* mac_addr, const uint8_t* data, int len));
+    Result<Void> set_callback_receive(void (*func)(const uint8_t *mac_addr, const uint8_t *data, int len));
     Result<Void> set_pmk();
     Result<Void> add_peer();
-    Result<Void> send(const uint8_t* data, int len);
+    Result<Void> send(const uint8_t *data, int len);
     Result<Void> deinit();
 };
 

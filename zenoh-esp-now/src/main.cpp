@@ -19,8 +19,9 @@
 #include <esp_now.h>
 #include <malloc.h>
 #include <esp_log.h>
-#include <codec.h>
+#include <map>
 #include <esp_gtw.h>
+#include <codec.h>
 
 #define SSID XSTR(WIFI_SSID)
 #define PASS XSTR(WIFI_PASS)
@@ -40,7 +41,7 @@ z_owned_publisher_t pub;
 static int idx = 0;
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 EspGtw esp_gtw;
-FrameDecoder frame_decoder;
+FrameDecoder frame_decoder(256);
 MsgHeader msg_header;
 struct ComposedId
 {
@@ -48,90 +49,57 @@ struct ComposedId
     uint8_t prop_id;
 };
 
-struct Desc
-{
-    uint32_t Option<topic_id>;
-    uint8_t prop_id;
-    uint8_t type;
-    std::string name;
-    Option<std::string> desc;
-};
+std::map<struct ComposedId, DescMsg> msg_type_map;
 
-std::map<struct ComposedId, struct Desc> msg_type_map;
-
-void cbor_to_json(FrameDecoder &decoder, std::map<struct ComposedId, struct Desc> &msg_type_map)
+void cbor_to_json(FrameDecoder &decoder, std::map<struct ComposedId, DescMsg> &msg_type_map)
 {
     struct ComposedId composed_id;
-    struct Desc desc;
+    DescMsg desc;
 }
 
 void on_esp_now_publish(MsgHeader &msg_header, FrameDecoder &decoder)
 {
-    if (decoder.decode_array().is_ok())
-    { //
-
-        cbor_to_json(decoder, msg_type_map);
-    }
-    else
-    {
-        ERROR("Error decoding ESP-NOW message");
-    }
 }
 
-void on_esp_now_desc(MsgHeader &msg_header, FrameDecoder &decoder)
+Result<Void> on_esp_now_desc_msg(MsgHeader &msg_header, FrameDecoder &decoder)
 {
-    if (decoder.decode_array().is_ok())
-    { //
-        struct Desc desc;
-        desc.topic_id = msg_header.src.unwrap();
-        desc.topic_id = decoder.decode_uint32().unwrap();
-    }
-    else if (decoder.decode_map().is_ok())
-    {
-    }
-    else
-    {
-        ERROR("Error decoding ESP-NOW message");
-    }
+    return Result<Void>::Ok(Void());
 }
 
 void on_esp_now_message(const uint8_t *mac_addr, const uint8_t *data, int len)
 {
-    Serial.print("Received ESP-NOW message from ");
-    for (int i = 0; i < 6; i++)
+    frame_decoder.fill_buffer((uint8_t *)data, len);
+    INFO("Received ESP-NOW message %d", len);
+    auto msg = MsgHeader::decode(frame_decoder);
+    if (msg.is_err())
     {
-        Serial.print(mac_addr[i], HEX);
-        if (i < 5)
-        {
-            Serial.print(":");
-        }
-    }
-    Serial.print(" with data: ");
-    Serial.println((const char *)data);
-    if (msg_header.decode(frame_decoder).is_err())
-    {
-        Serial.println("Error decoding message header");
+        ERROR("Error decoding ESP-NOW message");
         return;
     }
+    INFO("Received ESP-NOW message");
+    MsgHeader msg_header = msg.unwrap();
     switch (msg_header.msg_type)
     {
-    case 0:
-        Serial.println("Received message type 0");
+    case MsgType::Pub:
+        on_esp_now_publish(msg_header, frame_decoder);
         break;
-    case 1:
-        Serial.println("Received message type 1");
+    case MsgType::Info:
+        on_esp_now_desc_msg(msg_header, frame_decoder);
         break;
-    default:
-    {
+
+    case MsgType::Alive:
         break;
-    }
     }
 }
+
+Log logger(256);
 
 void setup()
 {
     // Initialize Serial for debug
     Serial.begin(115200);
+    frame_decoder = FrameDecoder(256);
+
     while (!Serial)
     {
         delay(1000);
@@ -139,22 +107,24 @@ void setup()
 
     // Set WiFi in STA mode and trigger attachment
     Serial.print("Connecting to WiFi...");
+    INFO("Connecting to WiFi...");
     WiFi.mode(WIFI_STA);
+    WiFi.channel(1);
     WiFi.begin(SSID, PASS);
+    WiFi.channel(1);
+
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(5000);
     }
     esp_gtw.init().on_error([](const char *msg)
                             {
-        Serial.print("Failed to initialize ESP-NOW" );
-        Serial.println(msg);
+        INFO("Failed to initialize ESP-NOW {} ",msg );
         while (1)
         {
             ;
         } });
-    frame_decoder = FrameDecoder(256);
-    esp_gtw.on_message(on_esp_now_message);
+    esp_gtw.set_callback_receive(on_esp_now_message);
 
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config;
@@ -169,15 +139,15 @@ void setup()
     Serial.print("Opening Zenoh Session...");
     while (z_open(&s, z_config_move(&config), NULL) < 0)
     {
-        Serial.println("Unable to open session!");
+        INFO("Unable to open session!");
         delay(1000);
     }
-    Serial.println("OK");
+    INFO("OK");
 
     // Start read and lease tasks for zenoh-pico
     if (zp_start_read_task(z_session_loan_mut(&s), NULL) < 0 || zp_start_lease_task(z_session_loan_mut(&s), NULL) < 0)
     {
-        Serial.println("Unable to start read and lease tasks\n");
+        INFO("Unable to start read and lease tasks\n");
         z_close(z_session_move(&s), NULL);
         while (1)
         {
@@ -188,34 +158,29 @@ void setup()
     // Declare Zenoh publisher
     Serial.print("Declaring publisher for ");
     Serial.print(KEYEXPR);
-    Serial.println("...");
+    INFO("...");
     z_view_keyexpr_t ke;
     z_view_keyexpr_from_str_unchecked(&ke, KEYEXPR);
     if (z_declare_publisher(&pub, z_session_loan(&s), z_view_keyexpr_loan(&ke), NULL) < 0)
     {
-        Serial.println("Unable to declare publisher for key expression!");
+        INFO("Unable to declare publisher for key expression!");
         while (1)
         {
             ;
         }
     }
-    Serial.println("OK");
-    Serial.println("Zenoh setup finished!");
+    INFO("OK");
+    INFO("Zenoh setup finished!");
 
-    delay(300);
+    delay(1000);
 }
 
 void loop()
 {
-    delay(100);
+    delay(1000);
     char buf[256];
     sprintf(buf, "[%4d] %s", idx++, VALUE);
-
-    Serial.print("Writing Data ('");
-    Serial.print(KEYEXPR);
-    Serial.print("': '");
-    Serial.print(buf);
-    Serial.println("')");
+    INFO("Publishing data. %s = %s ", KEYEXPR, buf);
 
     // Create payload
     z_owned_bytes_t payload;
@@ -223,8 +188,8 @@ void loop()
 
     if (z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL) < 0)
     {
-        Serial.println("Error while publishing data");
+        ERROR("Error while publishing data");
     }
     esp_gtw.send((uint8_t *)buf, strlen(buf)).on_error([](const char *msg)
-                                                       { Serial.println(msg); });
+                                                       { ERROR(msg); });
 }

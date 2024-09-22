@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -13,20 +14,20 @@
 #define XSTR(s) STR(s)
 #define STR(s) #s
 
-typedef enum
+typedef enum MsgType : uint8_t
 {
     Alive = 0,
     Pub,
     Info,
 } MsgType;
 
-typedef enum
+typedef enum ValueMode : uint8_t
 {
     Read = 1,
     Write = 2,
 } ValueMode;
 
-typedef enum
+typedef enum ValueType : uint8_t
 {
     Uint32 = 0,
     Str = 1,
@@ -43,9 +44,10 @@ typedef uint32_t TopicId;
 typedef uint8_t PropId;
 typedef uint16_t MsgId;
 typedef std::vector<uint8_t> ByteBuffer;
-typedef void Null;
-
+typedef std::vector<uint8_t> ByteString;
 typedef bool Void;
+
+void panic(const char *msg);
 
 template <typename T>
 class Option
@@ -55,6 +57,7 @@ private:
     T _value;
 
 public:
+    Option() : _none(true) {}
     static Option<T> None()
     {
         Option<T> option(true);
@@ -95,20 +98,35 @@ public:
         }
         return *this;
     }
+    Option<T>(const Option<T> &other)
+    {
+        _none = other._none;
+        if (!_none)
+            _value = other._value;
+    }
 };
 
 template <typename T>
 class Result
 {
-    T _value;
-    int _err;
-    const char *_msg;
+    bool _ok;
+    union
+    {
+        T _value;
+        struct
+        {
+            int _err;
+            const char *_msg;
+        };
+    };
 
 public:
-    Result() : _value(), _err(0) {}
-    Result(T value) : _value(value), _err(0) {}
+    Result() : _ok(false), _err(0), _msg("") {};
+    Result(int err, const char *msg) : _ok(false), _err(err), _msg(msg) {};
+    Result(T value) : _value(value), _ok(true) {};
+    ~Result() {}
     int erc() { return _err; }
-    T value() { return _value; }
+    T &value() { return _value; }
     bool is_ok() { return _err == 0; }
     bool is_err() { return _err != 0; }
     const char *get_err_msg() { return (_err == 0) ? "No error" : _msg; }
@@ -132,46 +150,45 @@ public:
         }
         return *this;
     }
+    Result(const Result<T> &other)
+    {
+        _ok = other._ok;
+        if (_ok)
+            _value = other._value;
+        else
+        {
+            _err = other._err;
+            _msg = other._msg;
+        }
+    }
     template <typename U>
     Result<U> map_err()
     {
         if (_err != 0)
             return Result<U>::Err(_err, _msg);
+        else
+            return Result<U>::Ok(U());
     }
     T unwrap()
     {
-        if (_err != 0)
-        {
-            ERROR("Error: %d\n", _err);
-        }
+        if (!_ok)
+            panic("Error: unwrap()");
         return _value;
     }
-    static Result<T> Ok(T value)
-    {
-        Result<T> result;
-        result._value = value;
-        result._err = 0;
-        return result;
-    }
-    static Result<T> Err(int err)
-    {
-        Result<T> result;
-        result._err = err;
-        result._msg = strerror(err);
-        return result;
-    }
-    static Result<T> Err(int err, const char *msg)
-    {
-        Result<T> result;
-        result._err = err;
-        result._msg = msg;
-        return result;
-    }
+    static Result<T> Ok(T value) { return Result<T>(value); }
+    static Result<T> Err(int err) { return Result<T>(err, ""); }
+    static Result<T> Err(int err, const char *msg) { return Result<T>(err, msg); }
 };
 
+#define CHECK_MAP(U, _r) ({ auto __r=_r;if (__r.is_err()) return Result<U>::Err(__r.erc(), __r.get_err_msg()) ; __r.value() ; })
 #define CHECK(_r) ({ auto __r=_r;if (__r.is_err()) return __r ; __r.value() ; })
 #define RET_ERR_MSG(_r, _msg) ({ auto& __r=_r;if (__r.is_err()) return Result<T>::Err(__r.erc(), _msg) ; __r.value() ; })
-#define RET_ERR(_r) { auto __r=_r;if (__r.is_err()) return __r ; }
+#define RET_ERR(_r)       \
+    {                     \
+        auto __r = _r;    \
+        if (__r.is_err()) \
+            return __r;   \
+    }
 
 class FrameEncoder
 {
@@ -181,12 +198,14 @@ private:
     Result<Void> write_byte(uint8_t byte);
 
 public:
-    FrameEncoder(uint32_t max);
+    FrameEncoder(uint32_t max = 256);
     Result<Void> encode_array();
     Result<Void> encode_map();
     Result<Void> encode_end();
+    Result<Void> encode(uint16_t value);
     Result<Void> encode(uint32_t input_value);
     Result<Void> encode(const char *str);
+    Result<Void> encode(std::string str);
     Result<Void> encode(std::vector<uint8_t> &buffer);
     Result<Void> encode(float value);
     Result<Void> encode(int32_t value);
@@ -203,7 +222,7 @@ public:
     Result<std::string> to_string();
 };
 
-enum CborType
+typedef enum
 {
     CBOR_UINT32 = 0,
     CBOR_STR = 1,
@@ -216,7 +235,7 @@ enum CborType
     CBOR_NULL = 8,
     CBOR_BOOL = 9,
     CBOR_END = 10,
-};
+} CborType;
 
 class FrameDecoder
 {
@@ -226,30 +245,37 @@ private:
     uint32_t _max;
     Result<uint8_t> read_next();
     Result<uint8_t> peek_next();
-    Result<CborType> peek_type(Cb);
+    Result<CborType> peek_type();
 
 public:
     FrameDecoder(uint32_t max);
     Result<Void> decode_array();
     Result<Void> decode_map();
     Result<Void> decode_end();
+    Result<Void> decode(uint8_t &value);
+    Result<Void> decode(uint16_t &value);
     Result<Void> decode(uint32_t &value);
-    template <typename T>
-    Result<Void> decode(T &value);
+    Result<Void> decode(int32_t &value);
     Result<Void> decode(std::string &value);
     Result<Void> decode(float &value);
-    Result<Void> decode(int32_t &value);
-    Result<Void> decode_bstr(ByteArray &value); // ByteArray is std::vector<uint8_t>
+    Result<Void> decode(ByteString &value); // ByteArray is std::vector<uint8_t>
     Result<Void> check_crc();
     Result<Void> decode_cobs();
     Result<Void> add_byte(uint8_t byte);
-    Result<Void> fill_buffer(std::vector<uint8_t> buffer);
+    Result<Void> fill_buffer(std::vector<uint8_t> &buffer);
     Result<Void> fill_buffer(uint8_t *buffer, uint32_t size);
     Result<Void> read_buffer(uint8_t *buffer, size_t len);
+    Result<Void> read_buffer(std::vector<unsigned char> &buffer);
     Result<std::vector<uint8_t>> get_buffer();
     Result<Void> clear();
     Result<Void> rewind();
     Result<std::string> to_string();
+    Result<Void> decode_opt(Option<unsigned int> &value);
+
+    template <typename T>
+    Result<Void> decode_opt(Option<T> &value);
+    template <typename T>
+    Result<Void> decode(T &value);
 };
 
 // FNV-1a hash function for 32-bit hash value
@@ -265,18 +291,6 @@ constexpr uint32_t FNV(const char (&str)[N])
     return fnv1a_32_1(str);
 }
 
-typedef enum MsgType
-{
-    Alive = 0,
-    Pub0Req = 1,
-    Pub1Req,
-    PingReq,
-    NameReq,
-    DescReq,
-    SetReq,
-    GetReq,
-} MsgType;
-
 class MsgHeader
 {
 public:
@@ -286,54 +300,24 @@ public:
     Option<MsgId> msg_id;
 
 public:
-    Result<Void> encode(FrameEncoder &encoder)
-    {
-        RET_ERR(encoder.encode(dst));
-        RET_ERR(encoder.encode(src));
-        RET_ERR(encoder.encode(msg_type));
-        RET_ERR(encoder.encode(msg_id));
-        return Result<Void>::Ok(Void());
-    }
-    Result<Void> decode(FrameDecoder &decoder)
-    {
-        RET_ERR(decoder.decode(src));
-        RET_ERR(decoder.decode(dst));
-        RET_ERR(decoder.decode(&msg_type));
-        RET_ERR(decoder.decode(msg_id));
-        return Result<Void>::Ok(Void());
-    }
+    MsgHeader() {}
+    Result<Void> encode(FrameEncoder &encoder);
+    static Result<MsgHeader> decode(FrameDecoder &decoder);
 };
 
 class DescMsg
 {
 public:
-    Option<uint8_t> prop_id;
+    Option<PropId> prop_id;
     std::string name;
     Option<std::string> desc;
-    Option<uint8_t> value_type;
-    Option<uint8_t> value_mode;
+    Option<ValueType> value_type;
+    Option<ValueMode> value_mode;
 
 public:
-    Result<Void> decode(FrameDecoder &decoder)
-    {
-        RET_ERR(decoder.decode_array().map_err<DescMsg>());
-        RET_ERR(decoder.decode(prop_id));
-        RET_ERR(decoder.decode(name));
-        RET_ERR(decoder.decode(value_type));
-        RET_ERR(decoder.decode(value_mode));
-        RET_ERR(decoder.decode(value_mode));
-        return Result<Void>::Ok(*this);
-    }
-    Result<std::vector<uint8_t>> encode(FrameEncoder &encoder)
-    {
-        RET_ERR(encoder.encode_array());
-        RET_ERR(encoder.encode(prop_id));
-        RET_ERR(encoder.encode(name.c_str()));
-        RET_ERR(encoder.encode(desc));
-        RET_ERR(encoder.encode(value_type));
-        RET_ERR(encoder.encode(value_mode));
-        return Result<std::vector<uint8_t>>::Ok(encoder.get_buffer());
-    }
-}
+    DescMsg() {}
+    Result<Void> encode(FrameEncoder &encoder);
+    static Result<DescMsg> decode(FrameDecoder &decoder);
+};
 
 #endif
