@@ -21,11 +21,13 @@ exclude = [
   "esp32-espnow-client",
   "zenoh_proxy",
   "esp_no_std",
+  "limero-linux-tokio",
 ]
 members = [
   "esp32-espnow-gateway",
   "esp32-hoverboard",
-	]
+  "msg",
+]
 
 resolver = "2"
 [workspace.dependencies]

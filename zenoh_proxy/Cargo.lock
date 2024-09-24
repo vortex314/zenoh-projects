@@ -386,6 +386,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c821a6e124197eb56d907ccc2188eab1038fb919c914f47976e64dd8dbc855d1"
 
 [[package]]
+name = "bitfield"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f798d2d157e547aa99aab0967df39edd0b70307312b6f8bd2848e6abe40896e0"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1363,6 +1369,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "limero"
+version = "0.1.0"
+dependencies = [
+ "bitfield 0.15.0",
+ "byte",
+ "bytes 1.6.0",
+ "chrono",
+ "env_logger",
+ "log",
+ "regex",
+ "simplelog",
+ "tokio",
+ "tokio-serial",
+ "tokio-stream",
+ "tokio-util",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1386,9 +1410,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.21"
+version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
+checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 dependencies = [
  "value-bag",
 ]
@@ -1443,9 +1467,19 @@ dependencies = [
 
 [[package]]
 name = "minicbor"
-version = "0.24.1"
+version = "0.24.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2c61c1932311c3d02c362003b23b3e9aaecdf98fea71fdaca595436e2b8cea9"
+checksum = "29be4f60e41fde478b36998b88821946aafac540e53591e76db53921a0cc225b"
+dependencies = [
+ "half",
+ "minicbor-derive",
+]
+
+[[package]]
+name = "minicbor"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
 dependencies = [
  "half",
  "minicbor-derive",
@@ -1527,6 +1561,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090163ffd34d1e19613433eb4860a0d69a002db215d5120fb1278daa5a54f978"
 dependencies = [
  "bytes 0.4.12",
+]
+
+[[package]]
+name = "msg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitfield 0.17.0",
+ "byte",
+ "cobs",
+ "crc",
+ "log",
+ "minicbor 0.24.4",
+ "minicbor-derive",
 ]
 
 [[package]]
@@ -2462,18 +2510,18 @@ checksum = "61697e0a1c7e512e84a621326239844a24d8207b4669b41bc18b32ea5cbf988b"
 
 [[package]]
 name = "serde"
-version = "1.0.203"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
+checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.203"
+version = "1.0.210"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "500cbc0ebeb6f46627f50f3f5811ccf6bf00643be300b4c3eabc0ef55dc5b5ba"
+checksum = "243902eda00fad750862fc144cea25caca5e20d615af0a81bee94ca738f1df1f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2513,31 +2561,6 @@ dependencies = [
  "ryu",
  "serde",
  "unsafe-libyaml",
-]
-
-[[package]]
-name = "serial_proxy"
-version = "0.1.0"
-dependencies = [
- "bitfield",
- "byte",
- "bytes 1.6.0",
- "chrono",
- "cobs",
- "crc",
- "env_logger",
- "fred",
- "log",
- "minicbor",
- "mqtt-async-client",
- "regex",
- "serde",
- "simplelog",
- "tokio",
- "tokio-serial",
- "tokio-stream",
- "tokio-util",
- "zenoh",
 ]
 
 [[package]]
@@ -4016,6 +4039,33 @@ dependencies = [
  "winapi",
  "zenoh-core",
  "zenoh-result",
+]
+
+[[package]]
+name = "zenoh_proxy"
+version = "0.1.0"
+dependencies = [
+ "bitfield 0.17.0",
+ "byte",
+ "bytes 1.6.0",
+ "chrono",
+ "cobs",
+ "crc",
+ "env_logger",
+ "fred",
+ "limero",
+ "log",
+ "minicbor 0.25.1",
+ "mqtt-async-client",
+ "msg",
+ "regex",
+ "serde",
+ "simplelog",
+ "tokio",
+ "tokio-serial",
+ "tokio-stream",
+ "tokio-util",
+ "zenoh",
 ]
 
 [[package]]

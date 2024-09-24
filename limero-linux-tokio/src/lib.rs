@@ -126,6 +126,12 @@ where
         self.receiver.recv().await
     }
 
+    pub fn handle(&self, cmd: &T) {
+        if let Err(x)  = self.sender.try_send(cmd.clone()) {
+            error!("Failed to send command directly via handle {:?}",x);
+        }
+    }
+
     pub fn handler(&self) -> Box<dyn Handler<T>> {
         struct HandlerImpl<E>
         where

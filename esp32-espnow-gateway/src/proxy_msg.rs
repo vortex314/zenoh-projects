@@ -1,57 +1,78 @@
-use minicbor::{Encode, Decode};
+use alloc::string::String;
+use alloc::vec::Vec;
+use minicbor::{Decode, Encode};
+use minicbor_derive::*;
 
-#[derive(Encode, Decode),cbor(array)]
+#[derive(Encode, Decode)]
+#[cbor(array)]
 
-struct EspNowHeader {
-    #[n(0)] dst : [u8,6],
-    #[n(1)] src: [u8,6],
-    #[n(2)] channel : u8,
-    #[n(3)] rssi : i8,
+pub struct EspNowHeader {
+    #[n(0)]
+    pub dst: Option<[u8; 6]>,
+    #[n(1)]
+    pub src: Option<[u8; 6]>,
+    #[n(2)]
+    pub channel: u8,
+    #[n(3)]
+    pub rssi: u8,
 }
 
-#[derive(Encode, Decode),cbor(index_only)]
-enum LogLevel {
-    Debug=0,
+#[derive(Encode, Decode)]
+#[cbor(index_only)]
+pub enum LogLevel {
+    #[n(0)]
+    Debug,
+    #[n(1)]
     Info,
+    #[n(2)]
     Warn,
+    #[n(3)]
     Error,
 }
 
-#[derive(Encode, Decode),cbor(array)]
-struct Log {
-    #[n(0)] timestamp : u64,
-    #[n(1)] message : &str,
-    #[n(2)] file_line : Option<&str>,
-    #[n(3)] level : Option<LogLevel>,
-}
-
-#[derive(Encode, Decode),cbor(array)]
-struct Send {
+#[derive(Encode, Decode)]
+#[cbor(array)]
+pub struct Log {
     #[n(0)]
-    header : EspNowHeader;
+    pub timestamp: u64,
     #[n(1)]
-    payload : [u8; 250];
-}
-
-struct Recv {
-    #[n(0)]
-    header : EspNowHeader;
-    #[n(1)]
-    payload : [u8; 250];
-}
-
-#[derive(Encode, Decode),cbor(array)]
-
-enum ProxyMessage {
-    #[n(0)]
-    Recv(Recv),
-    #[n(1)]
-    Send(Send), 
+    pub message: String,
     #[n(2)]
-    Log(Log)
+    pub file_line: Option<String>,
+    #[n(3)]
+    pub level: Option<LogLevel>,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(array)]
+pub struct SendCmd {
+    #[n(0)]
+    pub header: EspNowHeader,
+    #[n(1)]
+    pub payload: Vec<u8>,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(array)]
+pub struct RecvEvent {
+    #[n(0)]
+    pub header: EspNowHeader,
+    #[n(1)]
+    pub payload: Vec<u8>,
+}
+
+#[derive(Encode, Decode)]
+#[cbor(array)]
+pub enum ProxyMessage {
+    #[n(0)]
+    RecvEvent(#[n(0)] RecvEvent),
+    #[n(1)]
+    SendCmd(#[n(0)] SendCmd),
+    #[n(2)]
+    Log(#[n(0)] Log),
 }
 /*
-decode Recv message to Pub and Info message 
+decode Recv message to Pub and Info message
 - register info messages to translate id's to names
 - send pub messages to broker
 - message from broker that meet subs criteria are sent to the device
@@ -60,13 +81,13 @@ decode Recv message to Pub and Info message
 #[test]
 fn test() {
     let msg = ProxyMessage::Recv(Recv {
-        header : EspNowHeader {
-            dst : [0,0,0,0,0,0],
-            src : [0,0,0,0,0,0],
-            channel : 0,
-            rssi : 0,
+        header: EspNowHeader {
+            dst: [0, 0, 0, 0, 0, 0],
+            src: [0, 0, 0, 0, 0, 0],
+            channel: 0,
+            rssi: 0,
         },
-        payload : [0; 250],
+        payload: [0; 250],
     });
 
     let mut buf = [0; 300];

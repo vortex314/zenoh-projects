@@ -9,7 +9,7 @@
 
 #![no_std]
 #![no_main]
-// #![allow(unused_imports)]
+#![allow(unused_imports)]
 #![warn(unused_extern_crates)]
 
 use core::mem::MaybeUninit;
@@ -26,7 +26,6 @@ use esp_hal::{
     system::SystemControl,
     timer::{ErasedTimer, OneShotTimer, PeriodicTimer},
     uart::{
-        self,
         config::{Config, DataBits, Parity, StopBits},
         ClockSource, Uart,
     },
@@ -34,6 +33,7 @@ use esp_hal::{
 use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::{info, warn};
+use minicbor::Encode;
 use serde::{Deserialize, Serialize};
 use serdes::cobs_crc_frame;
 use serdes::{Cbor, PayloadCodec};
@@ -41,6 +41,9 @@ use serdes::{Cbor, PayloadCodec};
 extern crate alloc;
 use crate::alloc::string::ToString;
 use alloc::{boxed::Box, string::String, vec::Vec};
+
+mod proxy_msg;
+use proxy_msg::*;
 
 #[global_allocator]
 pub static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -99,31 +102,14 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-    // let esp_now = mk_static!(esp_wifi::esp_now::EspNow<'static>, esp_now);
-
-    #[cfg(feature = "esp32")]
-    {
-        let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
-        esp_hal_embassy::init(
-            &clocks,
-            mk_static!(
-                [OneShotTimer<ErasedTimer>; 1],
-                [OneShotTimer::new(timg1.timer0.into())]
-            ),
-        );
-    }
-
-    #[cfg(not(feature = "esp32"))]
-    {
-        let systimer = esp_hal::timer::systimer::SystemTimer::new(peripherals.SYSTIMER);
-        esp_hal_embassy::init(
-            &clocks,
-            mk_static!(
-                [OneShotTimer<ErasedTimer>; 1],
-                [OneShotTimer::new(systimer.alarm0.into())]
-            ),
-        );
-    }
+    let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
+    esp_hal_embassy::init(
+        &clocks,
+        mk_static!(
+            [OneShotTimer<ErasedTimer>; 1],
+            [OneShotTimer::new(timg1.timer0.into())]
+        ),
+    );
 
     let wifi = peripherals.WIFI;
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
@@ -159,7 +145,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut uart_actor = UartActor::new(uart0);
 
-    esp_now_actor.map_to(espnow_rxd_to_pulse, led_actor.handler());
+    esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 
@@ -173,11 +159,45 @@ async fn main(_spawner: Spawner) -> ! {
      */
 
     esp_now_actor.for_all(|ev| {
-        let (peer, data) = match ev {
-            EspNowEvent::Rxd { peer, data } => (peer, data),
-            EspNowEvent::Broadcast { peer, rssi, data } => (peer, data),
+        match ev {
+            EspNowEvent::Rxd {
+                peer,
+                rssi: _,
+                channel: _,
+                data,
+            } => {
+                match event_to_proxy_msg(ev) {
+                    Some(msg) => {
+                        let buffer = Vec::new();
+                        let mut encoder = minicbor::Encoder::new(buffer);
+                        let v = msg.encode(&mut encoder, &mut ());
+                        let frame = encoder.into_writer();
+                        // info!("{}",minicbor::display(frame.as_slice()));
+                        uart_handler.handle(&UartCmd::Txd(cobs_crc_frame(&frame).unwrap()));
+                    },
+                    None => {}
+                }
+            }
+            EspNowEvent::Broadcast {
+                peer,
+                rssi: _,
+                channel: _,
+                data,
+            } => {
+                match event_to_proxy_msg(ev) {
+                    Some(msg) => {
+                        let buffer = Vec::new();
+                        let mut encoder = minicbor::Encoder::new(buffer);
+                        let v = msg.encode(&mut encoder, &mut ());
+                        let frame = encoder.into_writer();
+                        // info!("{}",minicbor::display(frame.as_slice()));
+                        uart_handler.handle(&UartCmd::Txd(cobs_crc_frame(&frame).unwrap()));
+                    },
+                    None => {}
+                }
+            }
         };
-        uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
+        //        uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
     });
 
     loop {
@@ -187,36 +207,54 @@ async fn main(_spawner: Spawner) -> ! {
         )
         .await;
     }
-
-    /*
-    {
-        let transport_handler = mk_static!(Endpoint<EspNowCmd>,esp_now_actor.handler());
-        let transport_function = |cmd: &ProxyMessage|  {
-            let v = Cbor::encode(cmd);
-            let v = serdes::cobs_crc_frame(&v).unwrap();
-            transport_handler.handle(&EspNowCmd::Txd {
-                peer: BROADCAST_ADDRESS,
-                data: v,
-            });
-        };
-        let hf = Box::new(HandlerFunction::new(transport_function));
-        let mut pubsub_actor = PubSubActor::new(hf);
-        pubsub_actor.handler().handle(&PubSubCmd::Connect {
-            client_id: "esp-now".to_string(),
-        });
-        loop {
-            select(pubsub_actor.run(), esp_now_actor.run()).await;
-        }
-    }*/
 }
 
-fn espnow_rxd_to_pulse(ev: &EspNowEvent) -> Option<LedCmd> {
+fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
-        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
+        EspNowEvent::Rxd {
+            peer: _,
+            rssi: _,
+            channel: _,
+            data: _,
+        } => Some(LedCmd::Pulse { duration: 50 }),
         EspNowEvent::Broadcast {
             peer: _,
             rssi: _,
+            channel: _,
             data: _,
-        } => Some(LedCmd::Pulse { duration: 100 }),
+        } => Some(LedCmd::Pulse { duration: 50 }),
+    }
+}
+
+fn event_to_proxy_msg(ev: &EspNowEvent) -> Option<ProxyMessage> {
+    match ev {
+        EspNowEvent::Rxd {
+            peer,
+            rssi,
+            channel,
+            data,
+        } => Some(ProxyMessage::RecvEvent(RecvEvent {
+            header: EspNowHeader {
+                dst: None,
+                src: Some(peer.clone()),
+                channel: *channel,
+                rssi: *rssi,
+            },
+            payload: data.to_vec(),
+        })),
+        EspNowEvent::Broadcast {
+            peer,
+            rssi,
+            channel,
+            data,
+        } => Some(ProxyMessage::RecvEvent(RecvEvent {
+            header: EspNowHeader {
+                dst: None,
+                src: Some(peer.clone()),
+                channel: *channel,
+                rssi: *rssi,
+            },
+            payload: data.to_vec(),
+        })),
     }
 }

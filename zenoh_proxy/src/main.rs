@@ -10,18 +10,13 @@ use tokio::sync::Mutex;
 #[allow(unused_imports)]
 use tokio_serial::*;
 
-mod logger;
 use log::{debug, info};
 
-mod protocol;
-use protocol::msg::ProxyMessage;
-use protocol::*;
 
 mod proxy_server;
 use proxy_server::*;
 
 
-mod limero;
 use limero::*;
 
 mod port_scanner;
@@ -32,29 +27,27 @@ mod transport;
 use core::result::Result;
 use transport::*;
 
-mod ping_pong;
-use ping_pong::*;
 
 mod pubsub;
 use pubsub::*;
 use pubsub::PubSubCmd;
 use pubsub::PubSubEvent;
 
-fn start_proxy(event: PortScannerEvent)  {
+fn start_proxy(event: &PortScannerEvent)  {
     match event {
         PortScannerEvent::PortAdded { port } => {
             info!("Port added : {:?}", port.port_name);
             let mut transport = Transport::new(port.clone());
             let mut pubsub_actor = ZenohPubSubActor::new();
-            let mut proxy_server = ProxySession::new(pubsub_actor.sink_ref(), transport.sink_ref());
-            transport.map_to(
+            let mut proxy_server = ProxySession::new(pubsub_actor.handler(), transport.handler());
+            /*transport.map_to(
                 |ev| Some(ProxyServerCmd::TransportEvent(ev)),
                 proxy_server.sink_ref(),
             );
             pubsub_actor.map_to(
                 |ev| Some(ProxyServerCmd::PubSubEvent(ev)),
                 proxy_server.sink_ref(),
-            );
+            );*/
             tokio::spawn(async move {
                 transport.run().await;
             });
@@ -75,7 +68,6 @@ fn start_proxy(event: PortScannerEvent)  {
 async fn main() -> Result<(), Error> {
     logger::init();
     info!("Starting Serial Proxy");
- //   ping_pong::do_test().await;
 
     let port_patterns = vec![PortPattern {
         name_regexp: "/dev/tty.*".to_string(),

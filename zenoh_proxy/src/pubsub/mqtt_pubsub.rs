@@ -1,6 +1,8 @@
 extern crate log;
+use fred::tracing::Event;
 use log::{debug, error, info, trace, warn};
 use minicbor::decode::info;
+use zenoh::config::EndPoint;
 
 use std::collections::BTreeMap;
 use std::fmt::Error;
@@ -26,19 +28,15 @@ use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
 
-use crate::limero::ActorTrait;
-use crate::limero::Sink;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
-use crate::limero::Source;
-use crate::limero::SourceTrait;
+use limero::{Actor, CmdQueue, EventHandlers};
+use limero::Handler;
 
 use crate::pubsub::payload_display;
 use minicbor::display;
 
 pub struct MqttPubSubActor {
-    cmds: Sink<PubSubCmd>,
-    events: Source<PubSubEvent>,
+    cmds: CmdQueue<PubSubCmd>,
+    events: EventHandlers<PubSubEvent>,
     url: String,
 }
 
@@ -48,14 +46,14 @@ impl MqttPubSubActor {
         let url = format!("mqtt://{}:{}/", "pcthink.local", "1883");
         //       let url = format!("mqtt://{}:{}/", "test.mosquitto.org", "1883");
         MqttPubSubActor {
-            cmds: Sink::new(100),
-            events: Source::new(),
+            cmds: CmdQueue::new(2),
+            events: EventHandlers::new(),
             url,
         }
     }
 }
 
-impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
+impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
     async fn run(&mut self) {
         let mut client = Client::builder()
             .set_url_string(&self.url)
@@ -87,11 +85,11 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                     match cmd {
                         Some(PubSubCmd::Connect) => {
                             info!("Connecting to MQTT");
-                            self.events.emit(PubSubEvent::Connected);
+                            self.events.handle(&PubSubEvent::Connected);
                         }
                         Some(PubSubCmd::Disconnect) => {
                             info!("Disconnecting from zenoh");
-                            self.events.emit(PubSubEvent::Disconnected);
+                            self.events.handle(&PubSubEvent::Disconnected);
                             break;
                         }
                         Some(PubSubCmd::Publish { topic, payload}) => {
@@ -119,7 +117,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                                 }
                             };
                         }
-                        Some(PubSubCmd::Unsubscribe { topic }) => {
+                        Some(PubSubCmd::Unsubscribe { topic:_ }) => {
                             info!("Unsubscribing from zenoh");
 
                            // let _res = static_session.remove_subscriber(&topic).res().await;
@@ -139,7 +137,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                                 topic,
                                 payload_display(&payload)
                             );
-                            self.events.emit(PubSubEvent::Publish {topic,payload,}) ;
+                            self.events.handle(&PubSubEvent::Publish {topic,payload,}) ;
                         }
                         Err(e) => {
                             error!("PubSubActor::run() error {:?} ",e);
@@ -151,13 +149,14 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
         error!("Exiting mqtt loop.")
     }
 
-    fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        self.cmds.sink_ref()
+    fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {
+        self.cmds.handler()
     }
+
+    fn add_listener(&mut self, handler: Box<dyn Handler<PubSubEvent>>) {
+        self.events.add_listener(handler);
+    }
+    
 }
 
-impl SourceTrait<PubSubEvent> for MqttPubSubActor {
-    fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
-        self.events.add_listener(sink);
-    }
-}
+

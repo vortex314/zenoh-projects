@@ -2,7 +2,7 @@ use anyhow::Result;
 use decode::Error;
 use minicbor::data::Token;
 use minicbor::*;
-use minicbor_ser::*;
+// use minicbor_ser::*;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use alloc::format;
@@ -12,6 +12,7 @@ use minicbor::Decoder;
 pub struct Cbor {
 }
 use super::PayloadCodec;
+
 impl PayloadCodec for Cbor {
     fn as_f64(payload:&Vec<u8>) -> Result<f64> {
         let mut decoder = Decoder::new(payload);
@@ -48,14 +49,20 @@ impl PayloadCodec for Cbor {
     }
     fn decode<T>(payload:&Vec<u8>) -> Result<T>
     where
-        T: DeserializeOwned,
+        T: DeserializeOwned + Decode ,
     {
-        minicbor_ser::from_slice(payload).map_err(anyhow::Error::msg)
+     //   ciborium::from_reader(reader::SliceReader::new(payload)).map_err(anyhow::Error::msg)
+        // minicbor_ser::from_slice(payload).map_err(anyhow::Error::msg)
+        Err(anyhow::Error::msg("not implemented"))
     }
     fn encode<T>(value: &T) -> Vec<u8>
     where
-        T: Serialize,
+        T: Serialize + minicbor::Encode<()>,
     {
-         minicbor_ser::to_vec(value).unwrap()
+        let mut encoder = Encoder::new(Vec::new());
+        encoder.encode(value).unwrap();
+        encoder.into_writer()
     }
 }
+
+    

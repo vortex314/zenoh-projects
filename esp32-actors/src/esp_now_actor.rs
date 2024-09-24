@@ -24,11 +24,14 @@ use minicbor::Encoder;
 pub enum EspNowEvent {
     Rxd {
         peer: [u8; 6],
+        rssi: u8,
+        channel:u8,
         data: Vec<u8>,
     },
     Broadcast {
         peer: [u8; 6],
         rssi: u8,
+        channel : u8,
         data: Vec<u8>,
     },
 }
@@ -166,7 +169,7 @@ async fn listener(
                 .add_peer(PeerInfo {
                     peer_address: r.info.src_address,
                     lmk: None,
-                    channel: None,
+                    channel: Some(r.info.rx_control.channel as u8),
                     encrypt: false,
                 })
                 .unwrap();
@@ -175,11 +178,14 @@ async fn listener(
         EspNowEvent::Broadcast {
             peer: r.info.src_address,
             rssi: r.info.rx_control.rssi as u8,
+            channel: r.info.rx_control.channel as u8,
             data: r.data[..r.len as usize].to_vec(),
         }
     } else {
         EspNowEvent::Rxd {
             peer: r.info.src_address,
+            rssi: r.info.rx_control.rssi as u8,
+            channel: r.info.rx_control.channel as u8,
             data: r.data[..r.len as usize].to_vec(),
         }
     }

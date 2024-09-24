@@ -1,11 +1,9 @@
-use crate::limero::Sink;
-use crate::limero::SinkTrait;
-use crate::limero::Source;
-use crate::limero::SourceTrait;
-use crate::protocol::msg::*;
-use crate::protocol::MessageDecoder;
-use crate::protocol::MTU_SIZE;
-use crate::SinkRef;
+
+
+use limero::Actor;
+use limero::CmdQueue;
+use limero::EventHandlers;
+use limero::Handler;
 use log::*;
 use minicbor::decode::info;
 use tokio_serial::available_ports;
@@ -25,8 +23,8 @@ pub enum PortScannerCmd {
 
 // this function will scan for available ports and add them to the shared list
 pub struct PortScanner {
-    events: Source<PortScannerEvent>,
-    commands: Sink<PortScannerCmd>,
+    events: EventHandlers<PortScannerEvent>,
+    commands: CmdQueue<PortScannerCmd>,
     active_ports: Vec<SerialPortInfo>,
     port_patterns: Vec<PortPattern>,
 }
@@ -34,14 +32,23 @@ pub struct PortScanner {
 impl PortScanner {
     pub fn new(port_patterns: Vec<PortPattern>) -> Self {
         PortScanner {
-            events: Source::new(),
-            commands: Sink::new(10),
+            events: EventHandlers::new(),
+            commands: CmdQueue::new(2),
             active_ports: Vec::new(),
             port_patterns,
         }
     }
 
-    pub async fn run(&mut self) {
+    fn matches(&self, port_info: &SerialPortInfo) -> bool {
+        self.port_patterns
+            .iter()
+            .any(|pattern| pattern.matches(port_info))
+    }
+}
+
+impl Actor<PortScannerCmd,PortScannerEvent> for PortScanner {
+
+     async fn run(&mut self) {
         info!("Port scanner started ");
         loop {
             info!("Scanning for new ports {} ", self.active_ports.len());
@@ -59,7 +66,7 @@ impl PortScanner {
                     } else {
                         info!("Port : {:?} added ", port_info.port_name);
                         self.active_ports.push(port_info.clone());
-                        self.events.emit(PortScannerEvent::PortAdded {
+                        self.events.handle(&PortScannerEvent::PortAdded {
                             port: port_info.clone(),
                         });
                     }
@@ -70,7 +77,7 @@ impl PortScanner {
                     return true;
                 } else {
                     info!("Port : {:?} removed ", port_info.port_name);
-                    self.events.emit(PortScannerEvent::PortRemoved {
+                    self.events.handle(&PortScannerEvent::PortRemoved {
                         port: port_info.clone(),
                     });
                     return false;
@@ -80,18 +87,18 @@ impl PortScanner {
         }
     }
 
-    fn matches(&self, port_info: &SerialPortInfo) -> bool {
-        self.port_patterns
-            .iter()
-            .any(|pattern| pattern.matches(port_info))
+    fn handler(&self) -> Box<dyn limero::Handler<PortScannerCmd>> {
+        self.commands.handler()
     }
+
+    fn add_listener(&mut self, handler: Box<dyn limero::Handler<PortScannerEvent>>) {
+        self.events.add_listener(handler);
+    }
+
+
 }
 
-impl SourceTrait<PortScannerEvent> for PortScanner {
-    fn add_listener(&mut self, sink: SinkRef<PortScannerEvent>) {
-        self.events.add_listener(sink);
-    }
-}
+
 pub struct PortPattern {
     pub name_regexp: String,
     pub vid: Option<u16>,

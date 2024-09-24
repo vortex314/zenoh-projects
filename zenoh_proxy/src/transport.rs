@@ -1,8 +1,15 @@
 use byte::TryWrite;
-use cobs::CobsDecoder;
-use log::info;
 use log::debug;
+use log::info;
 use minicbor::decode::info;
+use minicbor::Decoder;
+use minicbor::Encoder;
+use minicbor::decode::Decode;
+use minicbor::encode::Encode;
+use msg::encode_frame;
+use msg::esp_now::SendCmd;
+use msg::EspNowMessage;
+use msg::FrameExtractor;
 use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
@@ -10,69 +17,58 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Mutex;
 use tokio_serial::*;
-use tokio_util::codec::{Decoder, Encoder};
 
 use std::io::Write;
 
-use crate::limero::Sink;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
-use crate::limero::Source;
-use crate::limero::SourceTrait;
-
-use crate::encode_frame;
-use crate::decode_frame;
-use crate::protocol::msg::*;
-use crate::protocol::MessageDecoder;
-use byte::TryRead;
+use limero::Actor;
+use limero::CmdQueue;
+use limero::EventHandlers;
+use limero::Handler;
 
 const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage { message: ProxyMessage },
+    SendMessage(EspNowMessage),
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage { message: ProxyMessage },
+    RecvMessage(EspNowMessage),
     ConnectionLost {},
 }
 
 pub struct Transport {
-    events: Source<TransportEvent>,
-    commands: Sink<TransportCmd>,
+    events: EventHandlers<TransportEvent>,
+    commands: CmdQueue<TransportCmd>,
     port_info: SerialPortInfo,
-    message_decoder: MessageDecoder,
+    frame_extractor: FrameExtractor,
 }
 
 impl Transport {
     pub fn new(port_info: SerialPortInfo) -> Self {
-        let commands = Sink::new(100);
-        let events = Source::new();
+        let commands = CmdQueue::new(2);
+        let events = EventHandlers::new();
         Transport {
             events,
             commands,
             port_info,
-            message_decoder: MessageDecoder::new(),
+            frame_extractor: FrameExtractor::new(),
         }
     }
+}
 
-    pub fn sink_ref(&self) -> SinkRef<TransportCmd> {
-        self.commands.sink_ref()
-    }
-
-    pub async fn run(&mut self) {
+impl Actor<TransportCmd, TransportEvent> for Transport {
+    async fn run(&mut self) {
         const GREEN: &str = "\x1b[0;32m";
         const RESET: &str = "\x1b[m";
-        self.test();
         loop {
             let mut buf = [0; MTU_SIZE];
             let serial_stream =
                 tokio_serial::new(self.port_info.port_name.clone(), 921600).open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
-                self.events.emit(TransportEvent::ConnectionLost {});
+                self.events.handle(&TransportEvent::ConnectionLost {});
                 return;
             }
             let mut serial_stream = serial_stream.unwrap();
@@ -80,46 +76,47 @@ impl Transport {
 
             loop {
                 select! {
-                    cmd = self.commands.next() => {
-                        match cmd.unwrap() {
-                            TransportCmd::SendMessage { message } => {
-                                debug!("TXD: {:?}", message);
-                                let x = encode_frame(message);
-                                let line : String = x.clone().unwrap().as_slice().iter().map(|b| format!("{:02X} ", b)).collect();
-                                debug!("TXD : {}", line);
-                                let _res = serial_stream.try_write(&x.unwrap().as_slice());
+                cmd = self.commands.next() => {
+                    match cmd.unwrap() {
+                        TransportCmd::SendMessage ( message ) => {
+                            encode_frame(&message).map(|frame| {
+                                let _res = serial_stream.try_write(&frame);
                                 let _r = serial_stream.flush();
                                 if _res.is_err()  || _r.is_err() {
                                     info!("Error writing to serial port");
                                 }
+                            });
+                        }
+                    }
+                }
+                count = serial_stream.read(&mut buf) => {
+                    if count.is_err() {
+                        info!("Port {} closed", self.port_info.port_name);
+                        break;
+                    } else {
+                    let n = count.unwrap();
+                    if n == 0 {
+                        info!("Port {} closed", self.port_info.port_name);
+                        break;
+                    } else {
+                        let _res = self.frame_extractor.decode(&buf[0..n]);
+                        if _res.is_empty() {
+                            let line = String::from_utf8(buf[0..n].to_vec()).ok();
+                            if line.is_some() {
+                                print!("{}{}{}", GREEN, line.unwrap(), RESET);
+                                std::io::stdout().flush().unwrap();
+                            };
+                        } else {
+                            for frame in _res {
+
+                                let mut decoder = minicbor::Decoder::new(frame.as_slice());
+                                let r = EspNowMessage::decode(&mut decoder,&mut ());
+                                let r = decoder.decode::<EspNowMessage>();
+                              //  self.events.handle(&TransportEvent::RecvMessage ( esp_now_message ));
+                                };
                             }
                         }
                     }
-                    count = serial_stream.read(&mut buf) => {
-                        if count.is_err() {
-                            info!("Port {} closed", self.port_info.port_name);
-                            break;
-                        } else {
-                        let n = count.unwrap();
-                        if n == 0 {
-                            info!("Port {} closed", self.port_info.port_name);
-                            break;
-                        } else {
-                            let _res = self.message_decoder.decode(&buf[0..n]);
-                            if _res.is_empty() {
-                                let line = String::from_utf8(buf[0..n].to_vec()).ok();
-                                if line.is_some() {
-                                    print!("{}{}{}", GREEN, line.unwrap(), RESET);
-                                    std::io::stdout().flush().unwrap();
-                                };
-                            } else {
-                                for message in _res {
-                                    debug!("RXD: {:?}", message);
-                                    self.events.emit(TransportEvent::RecvMessage { message: message });
-                                }
-                            }
-                        }
-                        }
                     }
                 }
             }
@@ -128,25 +125,12 @@ impl Transport {
         }
     }
 
-
-
-    fn test(&mut self) {
-        let mut buffer = VecWriter::new();
-        let mut encoder = minicbor::Encoder::new(&mut buffer);
-        let _ = encoder.begin_array();
-        let _x = encoder.u8(0x01);
-        let _ = encoder.u64(33);
-        let _ = encoder.str("Hello");
-        let _ = encoder.end();
-        let line = bytes_to_string(&buffer.to_inner());
-        info!("CBOR : {}", line);
-        
+    fn handler(&self) -> Box<dyn Handler<TransportCmd>> {
+        self.commands.handler()
     }
-}
 
-impl SourceTrait<TransportEvent> for Transport {
-    fn add_listener(&mut self, sink: SinkRef<TransportEvent>) {
-        self.events.add_listener(sink);
+    fn add_listener(&mut self, handler: Box<dyn Handler<TransportEvent>>) {
+        self.events.add_listener(handler);
     }
 }
 

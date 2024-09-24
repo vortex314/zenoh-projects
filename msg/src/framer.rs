@@ -1,20 +1,21 @@
-use core::cell::RefCell;
-use core::ops::Shr;
 
-use alloc::collections::VecDeque;
-use alloc::fmt::format;
-use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::string::ToString;
 use cobs::CobsDecoder;
 use crc::Crc;
 use crc::CRC_16_IBM_SDLC;
-use log::{debug, info};
+use log::debug;
 
 extern crate alloc;
 use alloc::format;
-use alloc::vec;
 use alloc::vec::Vec;
+
+use minicbor::encode::Encoder;
+use minicbor::Encode;
+
+// use mqtt_sn::defs::Message as ProxyMessage;
+use anyhow::Error;
+use anyhow::Result;
 
 pub const MTU_SIZE: usize = 1023;
 /*
@@ -60,19 +61,7 @@ Server
 
 
 */
-use minicbor::bytes::ByteVec;
-use minicbor::decode::Decode;
-use minicbor::encode::Encode;
-use minicbor::encode::Encoder;
-use minicbor::encode::Write;
 
-use byte::TryRead;
-use byte::TryWrite;
-// use mqtt_sn::defs::Message as ProxyMessage;
-use anyhow::Error;
-use anyhow::Result;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 
 pub struct FrameExtractor {
     buffer: Vec<u8>,
@@ -110,7 +99,7 @@ impl FrameExtractor {
 
 pub fn encode_frame<T>(msg: &T) -> Result<Vec<u8>>
 where
-    T: Serialize,
+    T: Encode<()>,
 {
     let  bytes = Vec::new();
 
@@ -119,8 +108,8 @@ where
         .encode(msg)
         .map_err(|_| Error::msg("CBOR encode failed "))?;
 
-    debug!("Encoded MQTT-SN : {:02X?}", bytes);
-    cobs_crc_frame(&bytes)
+    debug!("Encoded MQTT-SN : {:02X?}", encoder.writer());
+    cobs_crc_frame(encoder.writer())
 }
 
 pub fn cobs_crc_frame(input: &Vec<u8>) -> Result<Vec<u8>>
