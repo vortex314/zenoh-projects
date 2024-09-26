@@ -1901,7 +1901,6 @@ dependencies = [
  "anyhow",
  "log",
  "minicbor 0.24.2",
- "minicbor-ser",
  "serde",
  "serde-json-core",
 ]

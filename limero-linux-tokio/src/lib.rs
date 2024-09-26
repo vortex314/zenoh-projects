@@ -14,13 +14,14 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
 
-pub trait Handler<T>: Send {
+pub trait Handler<T>: Send  {
     fn handle(&mut self, item: &T);
 }
 
 pub type Endpoint<T> = Box<dyn Handler<T>>;
 
-pub struct HandlerFunction<C,F> where F: FnMut(&C) -> (),C:Send {
+#[derive(Clone)]
+pub struct HandlerFunction<C,F>  where F: FnMut(&C) -> (),C:Send   {
     func: F,
     v: core::marker::PhantomData<C>,
 }
@@ -83,16 +84,38 @@ pub trait Actor<CMD, EVENT> {
 
         self.add_listener(Box::new(handler));
     }
-}
-
-pub trait ActorExt<CMD, EVENT> {
-    fn for_each_event(&mut self, func: fn(&EVENT) -> ())
+    fn for_each_event<F>(&mut self, func: Box<F>)
     where
         EVENT: 'static,
         Self: Actor<CMD, EVENT>,
+        F: FnMut(&EVENT) -> () + Send + 'static,
     {
-        struct EventHandlerImpl<E> {
-            func: fn(&E) -> (),
+        struct EventHandlerImpl<E>  {
+            func: Box<dyn FnMut(&E) -> () + Send + 'static>,
+        }
+
+        impl<E> Handler<E> for EventHandlerImpl<E> {
+            fn handle(&mut self, event: &E) {
+                (self.func)(event);
+            }
+        }
+
+        let handler = EventHandlerImpl::<EVENT> { func };
+
+        self.add_listener(Box::new(handler));
+    }
+
+}
+
+pub trait ActorExt<CMD, EVENT,F> {
+    fn for_each_event(&mut self, func: Box<F>)
+    where
+        EVENT: 'static,
+        Self: Actor<CMD, EVENT>,
+        F: FnMut(&EVENT) -> () + Send + 'static,
+    {
+        struct EventHandlerImpl<E>  {
+            func: Box<dyn FnMut(&E) -> () + Send + 'static>,
         }
 
         impl<E> Handler<E> for EventHandlerImpl<E> {
@@ -157,6 +180,10 @@ where
         };
 
         Box::new(handler)
+    }
+
+    pub fn sender(&self) -> Sender<T> {
+        self.sender.clone()
     }
 }
 

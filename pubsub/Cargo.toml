@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 log = { version = "0.4",  default-features = false, features = [] }
 minicbor = { version = "*", default-features = false, features=["derive","alloc","half"] }
-minicbor-ser = { version = "*", default-features = false,  features=["alloc"]}
+# minicbor-ser = { version = "*", default-features = false,  features=["alloc"]}
 serde-json-core="*"
 serde = { version = "1.0", default-features = false } # disable std
 anyhow = { version = "1.0", default-features = false }
