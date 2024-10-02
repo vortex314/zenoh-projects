@@ -97,8 +97,8 @@ bitfield = "0.17.0"
 anyhow = { version = "1.0.87", default-features = false }
 
 limero = { path = "../esp32-limero-embassy" }
-pubsub = { path = "../pubsub" }
-serdes = { path = "../serdes" }
+# pubsub = { path = "../pubsub" }
+# serdes = { path = "../serdes" }
 actors = { path = "../esp32-actors" }
 serde = { version = "1.0.210", default-features = false }
 

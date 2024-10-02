@@ -1,4 +1,6 @@
 use minicbor::{Decode, Encode};
+use alloc::vec::Vec;
+use alloc::string::String;
 
 
 #[derive(Encode, Decode,Clone)]
@@ -13,6 +15,9 @@ pub struct EspNowHeader {
     #[n(3)]
     pub rssi: Option<u8>,
 }
+
+
+
 
 #[derive(Encode, Decode)]
 #[cbor(index_only)]

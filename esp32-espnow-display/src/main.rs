@@ -105,7 +105,6 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-
     let timg1 = esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG1, &clocks, None);
     esp_hal_embassy::init(
         &clocks,
@@ -128,7 +127,12 @@ async fn main(_spawner: Spawner) -> ! {
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
     esp_now_actor.for_each(|ev| match ev {
-        EspNowEvent::Rxd { peer, data } => {
+        EspNowEvent::Rxd {
+            peer,
+            rssi: _,
+            data,
+            channel: _,
+        } => {
             info!(
                 "Rxd: {:?} {:?}",
                 mac_to_string(peer),
@@ -139,6 +143,7 @@ async fn main(_spawner: Spawner) -> ! {
             peer,
             rssi: _,
             data,
+            channel: _,
         } => {
             let s = match String::from_utf8(data.clone()) {
                 Ok(string) => string,
@@ -160,11 +165,17 @@ async fn main(_spawner: Spawner) -> ! {
 
 fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
-        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 50 }),
+        EspNowEvent::Rxd {
+            peer: _,
+            data: _,
+            rssi: _,
+            channel: _,
+        } => Some(LedCmd::Pulse { duration: 50 }),
         EspNowEvent::Broadcast {
             peer: _,
-            rssi: _,
             data: _,
+            rssi: _,
+            channel: _,
         } => Some(LedCmd::Pulse { duration: 50 }),
     }
 }

@@ -7,8 +7,10 @@ use limero::Endpoint;
 use limero::CmdQueue;
 use limero::EventHandlers;
 
-use pubsub::PubSubCmd;
-use pubsub::PubSubEvent;
+use minicbor::Decode;
+use minicbor::Encode;
+use msg::PubSubCmd;
+use msg::PubSubEvent;
 
 use alloc::string::String;
 use alloc::string::ToString;
@@ -20,8 +22,6 @@ use log::info;
 use serde::Serialize;
 use serde::Deserialize;
 
-use serdes::Cbor;
-use serdes::PayloadCodec;
 
 
 #[derive(Clone)]
@@ -33,10 +33,11 @@ pub enum SysEvent {
     PubSubCmd(PubSubCmd),
 }
 
-#[derive(Clone,Deserialize,Serialize)]
-
+#[derive(Clone,Deserialize,Serialize,Decode,Encode)]
 struct EchoReq {
+    #[n(0)]
     timestamp: u64,
+    #[n(1)]
     reply_to: String,
 }
 
@@ -66,10 +67,11 @@ impl SysActor {
         match event {
             PubSubEvent::Publish { topic, payload } => {
                 if topic == "sys/echo" {
-                    if let Ok(echo_req) = Cbor::decode::<EchoReq>(&payload) {
+                    let v = msg::cbor::decode::<EchoReq>(&payload);
+                    if let Ok(echo_req) = msg::cbor::decode::<EchoReq>(&payload) {
                         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
                             topic: echo_req.reply_to,
-                            payload: Cbor::encode(&echo_req.timestamp),
+                            payload: msg::cbor::encode(&echo_req.timestamp),
                         }))
                     } else {
                         info!("Failed to decode echo request");
@@ -84,7 +86,7 @@ impl SysActor {
     async fn on_timer(&mut self, _timer_id: u32) {
         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/uptime".to_string(),
-            payload: Cbor::encode(&(Instant::now().as_millis() as u64)),
+            payload: msg::cbor::encode(&(Instant::now().as_millis() as u64)),
         }));
         /*self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
             topic: "sys/heap_free".to_string(),

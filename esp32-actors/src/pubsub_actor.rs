@@ -15,10 +15,8 @@ use log::{debug, info};
 use crate::proxy_message::{Flags, ProxyMessage, ReturnCode};
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use pubsub::Cbor;
-use pubsub::PayloadCodec;
-use pubsub::PubSubCmd;
-use pubsub::PubSubEvent;
+use msg::pubsub::PubSubCmd;
+use msg::pubsub::PubSubEvent;
 
 #[derive(PartialEq)]
 
@@ -158,7 +156,7 @@ impl PubSubActor {
                     topic_id, // 1 is the topic id for the ping response
                     msg_id: self.msg_id,
                     flags: Flags(0),
-                    data: Cbor::encode::<u64>(&diff),
+                    data: msg::cbor::encode::<u64>(&diff),
                 });
             }
             ProxyMessage::Disconnect { duration: _ } => {

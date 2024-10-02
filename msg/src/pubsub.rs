@@ -1,3 +1,6 @@
+use alloc::string::String;
+use alloc::vec::Vec;
+
 #[derive(Clone, Debug)]
 pub enum PubSubCmd {
     Publish { topic: String, payload : Vec<u8> },

@@ -1,7 +1,10 @@
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
 use anyhow::Result;
 use minicbor::{data::Token, Decode, Decoder, Encode, Encoder};
 
-pub fn as_f64(payload:&Vec<u8>) -> Result<f64> {
+pub fn as_f64(payload: &Vec<u8>) -> Result<f64> {
     let mut decoder = Decoder::new(payload);
     let v = decoder
         .tokens()
@@ -24,8 +27,7 @@ pub fn as_f64(payload:&Vec<u8>) -> Result<f64> {
     }
 }
 
-
-pub fn to_string(payload:&Vec<u8>) -> String {
+pub fn to_string(payload: &Vec<u8>) -> String {
     let line: String = payload.iter().map(|b| format!("{:02X} ", b)).collect();
     let s = format!("{}", minicbor::display(payload.as_slice()));
     if s.len() == 0 {
@@ -34,19 +36,21 @@ pub fn to_string(payload:&Vec<u8>) -> String {
         s
     }
 }
-pub fn decode<'a,T>(payload:&'a Vec<u8>) -> Result<T>
+
+pub fn decode<'a, T>(payload: &'a Vec<u8>) -> Result<T>
 where
-    T:  Decode<'a,()>, 
+    T: Decode<'a, ()>,
 {
-    let mut decoder = Decoder::new(payload);
-    decoder.decode().map_err(anyhow::Error::msg)
-   // Err(anyhow::Error::msg("not implemented"))
+    Decoder::new(payload).decode().map_err(anyhow::Error::msg)
 }
+
 pub fn encode<T>(value: &T) -> Vec<u8>
 where
     T: Encode<()>,
 {
     let mut encoder = Encoder::new(Vec::new());
-    encoder.encode(value).unwrap();
-    encoder.into_writer()
+    match encoder.encode(value) {
+        Ok(_) => encoder.into_writer(),
+        Err(_) => return Vec::new(),
+    }
 }

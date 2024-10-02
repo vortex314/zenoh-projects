@@ -17,8 +17,8 @@ use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use serdes::{EspNowHeader, MsgType, request,fnv};
-use minicbor::Encoder;
+use msg::{ MsgType, request,fnv};
+use msg::MsgHeader;
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
@@ -113,16 +113,14 @@ impl EspNowActor {
 
     async fn broadcast(&mut self) {
         let mut sender = self.sender.lock().await;
-        let header = EspNowHeader {
+        let header = MsgHeader {
             dst: None,
             src: Some(fnv("lm/motor")),
             msg_type: request(MsgType::Alive),
             msg_id: None,
         };
-        let mut encoder = Encoder::new(Vec::new());
-        let _ = header.encode(&mut encoder);
-        let _ = encoder.end();
-        let status = sender.send_async(&BROADCAST_ADDRESS, &encoder.into_writer()).await;
+        let v  = msg::cbor::encode(&header);
+        let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
         if status.is_err() { error!("Send broadcast status: {:?}", status); };
     }
 

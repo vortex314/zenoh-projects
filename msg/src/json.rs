@@ -1,31 +1,37 @@
-
-use log::info;
-use serde::{de::DeserializeOwned, Serialize};
+use alloc::string::String;
+use alloc::vec::Vec;
 use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
+use serde_json_core::de::from_slice;
+use serde_json_core::ser::to_vec;
 
-pub fn decode<T>(data: &Vec<u8>) -> Result<T>
+pub fn decode<'a, T>(data: &'a Vec<u8>) -> Result<T>
 where
-    T: DeserializeOwned,
+    T: Deserialize<'a>,
 {
-    serde_json::from_slice(data).map_err(anyhow::Error::msg)
+    let r = from_slice::<T>(data);
+    let r = r.map_err(anyhow::Error::msg)?;
+    Ok(r.0)
 }
 
-pub fn encode<T>(data: &T) -> Vec<u8>
+pub fn encode<T>(value: &T) -> Vec<u8>
 where
-    T: Serialize,
+    T: Serialize + ?Sized,
 {
-    serde_json::to_vec(data).map_err(anyhow::Error::msg).unwrap()
+    let r = to_vec::<T,256>(value);
+    match r {
+        Ok(r) => r.to_vec(),
+        Err(_e) => Vec::new(),
+    }
 }
 
-pub fn to_string(data: &Vec<u8>) -> String
-{
+pub fn to_string(data: &Vec<u8>) -> String {
     String::from_utf8_lossy(data).into_owned()
     //serde_json::to_string(data).map_err(anyhow::Error::msg).unwrap()
 }
 
-pub fn as_f64(data: &Vec<u8>) -> Result<f64>
-{
-    let json = String::from_utf8_lossy(data).into_owned();
-    let value :f64= serde_json::from_str(json.as_str()).map_err(anyhow::Error::msg)?;
-    Ok(value)
+pub fn as_f64<'a>(data:&'a Vec<u8>) -> Result<f64> {
+    let r = from_slice::<f64>(data).map_err(anyhow::Error::msg)?;
+    Ok(r.0)
 }

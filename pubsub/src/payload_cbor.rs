@@ -2,7 +2,6 @@ use anyhow::Result;
 use decode::Error;
 use minicbor::data::Token;
 use minicbor::*;
-use minicbor_ser::*;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use alloc::format;
