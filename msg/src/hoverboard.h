@@ -1,7 +1,3 @@
-struct HbCmd {
-    speed:i16,
-    steer:i16,
-}
 
 /*
 Type	Name	Description	Can be Set	Can be saved to EEPROM
@@ -40,31 +36,8 @@ Variable	STR_COEF	Steer Coefficient *10	No	No
 Variable	BATV	Calibrated Battery Voltage *100	No	No
 Variable	TEMP	Calibrated Temperature °C *10	No	No
 */
-
-/*
-Field	Ouput
-in1	Input1
-in2	Input2
-cmdR	Right Wheel Speed Command (not the measured speed)
-cmdL	Left Wheel Speed Command (not the measured speed)
-BatADC	Battery adc-value measured by mainboard
-BatV	Battery calibrated voltage multiplied by 100 for verifying battery voltage calibration
-TempADC	For board temperature calibration
-Temp	Temperature in celcius for verifying board temperature calibration
-*/
-
-struct HbEvent {
-    cmd1:i16,
-    cmd2:i16,
-    cmdR:i16,
-    cmdL:i16,
-    battery_ADC:i16,
-    battery_voltage:i16,
-    temperature_ADC:i16,
-    temperature:i16,
-}
-
-enum VariableIndex {
+#include <stdint.h>
+typedef enum {
     CTRL_MOD = 0,
     CTRL_TYP,
     I_MOT_MAX,
@@ -99,66 +72,47 @@ enum VariableIndex {
     STR_COEF,
     BATV,
     TEMP,
-    CMD1,
-    CMD2,
-    CMDR,
-    CMDL,
-    BAT_ADC,
-    BATV,
-    TEMP_ADC,
-    TEMP,
-}
+} HoverboardProperty;
 
-struct HbVariable {
-    ctrl_mod:u8,
-    ctrl_typ:u8,
-    i_mot_max:u16,
-    n_mot_max:u16,
-    fi_weak_ena:u8,
-    fi_weak_hi:u16,
-    fi_weak_lo:u16,
-    fi_weak_max:u16,
-    pha_adv_max:u16,
-    in1_raw:u16,
-    in1_typ:u8,
-    in1_min:u16,
-    in1_mid:u16,
-    in1_max:u16,
-    in1_cmd:u16,
-    in2_raw:u16,
-    in2_typ:u8,
-    in2_min:u16,
-    in2_mid:u16,
-    in2_max:u16,
-    in2_cmd:u16,
-    dc_curr:u16,
-    ldc_curr:u16,
-    rdc_curr:u16,
-    cmdl:u16,
-    cmdr:u16,
-    spd_avg:u16,
-    spdl:u16,
-    spdr:u16,
-    rate:u16,
-    spd_coef:u16,
-    str_coef:u16,
-    batv:u16,
-    temp:u16,
-}
+const uint32_t LM1_DRIVE = FNV("lm1/drive");
+const uint32_t LM1_CUTTER = FNV("lm1/cutter");
+const uint32_t LM1_NAVI = FNV("lm1/compass");
+const uint32_t LM1_LIGHT = FNV("lm1/light");
+const uint32_t LM1_HORN = FNV("lm1/horn");
+const uint32_t LM1_POWER = FNV("lm1/brake");
 
-struct Serialized {
-    vars : BtreeMap<u8,i32> ,
-}
+enum InfoProperty {
+    NAME = 0,
+    DESCRIPTION,
+    MODE,
+    TYPE,
+    IDX,
+    MAX,
+    MIN,
+};
 
-impl Serialized {
-    fn new() -> Serialized {
-        Serialized {
-            vars: BTreeMap::new(),
-        }
-    }
+typedef struct {
+    uint8_t idx;
+    uint8_t type;
+    uint8_t mode;
+    uint8_t max;
+    uint8_t min;
+    const char* name;
+    const char* description;
+} Info;
 
-    fn push(idx:u8,value:i32){
-        
+void func(obj_id : uint32_t, prop : uint8_t, value : uint32_t) {
+    Info info;
+    switch (prop) {
+        case LM1_DRIVE:
+            info = {0, 0, 0, 100, 0, "Drive", "Drive the robot"};
+            break;
+        case LM1_CUTTER:
+            info = {1, 0, 0, 100, 0, "Cutter", "Cut the grass"};
+            break;
+        case LM1_NAVI:
+            info = {2, 0, 0, 100, 0, "Compass", "Navigate"};
+            break;
     }
 }
 

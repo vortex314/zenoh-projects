@@ -512,7 +512,7 @@ Result<Void> FrameDecoder::decode(std::string &str)
     {
         return Result<Void>::Err(EINVAL, "Not a CBOR string");
     }
-    size_t len = read_next().unwrap() & 0x1F;
+    size_t len = read_next().unwrap() & 0x1F; // TDOO : longer strings not supported
     str = "";
     for (size_t i = 0; i < len; i++)
     {
