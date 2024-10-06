@@ -68,7 +68,7 @@ macro_rules! mk_static {
         x
     }};
 }
-use pubsub::PubSubCmd;
+use msg::PubSubCmd;
 
 use actors::esp_now_actor::*;
 use actors::led_actor::*;
@@ -76,7 +76,6 @@ use actors::pubsub_actor::*;
 use actors::sys_actor::*;
 use actors::uart_actor::*;
 
-use serdes::*;
 
 #[main]
 async fn main(_spawner: Spawner) -> ! {
@@ -136,7 +135,7 @@ async fn main(_spawner: Spawner) -> ! {
             info!(
                 "Rxd: {:?} {:?}",
                 mac_to_string(peer),
-                serdes::Cbor::to_string(data)
+                msg::cbor::to_string(&data)
             );
         }
         EspNowEvent::Broadcast {
@@ -145,15 +144,14 @@ async fn main(_spawner: Spawner) -> ! {
             data,
             channel: _,
         } => {
-            let s = match String::from_utf8(data.clone()) {
+            /* let s = match String::from_utf8(data.clone()) {
                 Ok(string) => string,
                 Err(_) => data.iter().map(|b| format!("{:02X} ", b)).collect(),
-            };
+            };*/
             info!(
-                "Broadcast: {:?} {:?} {:?}",
+                "Broadcast: {:?} {:?} ",
                 mac_to_string(peer),
-                serdes::Cbor::to_string(data),
-                s,
+                msg::cbor::to_string(data),
             );
         }
     });

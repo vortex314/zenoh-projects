@@ -40,14 +40,14 @@ fn start_proxy(event: &PortScannerEvent)  {
             let mut transport = Transport::new(port.clone());
             let mut pubsub_actor = ZenohPubSubActor::new();
             let mut proxy_server = ProxySession::new(pubsub_actor.handler(), transport.handler());
-            /*transport.map_to(
-                |ev| Some(ProxyServerCmd::TransportEvent(ev)),
-                proxy_server.sink_ref(),
+            transport.map_to(
+                |ev| Some(ProxyServerCmd::TransportEvent(ev.clone())),
+                proxy_server.handler(),
             );
             pubsub_actor.map_to(
-                |ev| Some(ProxyServerCmd::PubSubEvent(ev)),
-                proxy_server.sink_ref(),
-            );*/
+                |ev| Some(ProxyServerCmd::PubSubEvent(ev.clone())),
+                proxy_server.handler(),
+            );
             tokio::spawn(async move {
                 transport.run().await;
             });
@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
     info!("Starting Serial Proxy");
 
     let port_patterns = vec![PortPattern {
-        name_regexp: "/dev/tty.*".to_string(),
+        name_regexp: "/dev/ttyUSB2".to_string(),
         vid: None, // Some(4292),
         pid: None,
         serial_number: None,

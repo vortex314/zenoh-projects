@@ -1,5 +1,5 @@
 [connection]
-serial = "/dev/ttyUSB1"
+serial = "/dev/ttyUSB2"
 baudrate = 921600
 
 [flash]

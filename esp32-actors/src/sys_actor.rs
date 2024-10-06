@@ -19,10 +19,6 @@ use embassy_futures::select::Either::{First, Second};
 use embassy_time::Duration;
 use embassy_time::Instant;
 use log::info;
-use serde::Serialize;
-use serde::Deserialize;
-
-
 
 #[derive(Clone)]
 pub enum SysCmd {
@@ -33,7 +29,7 @@ pub enum SysEvent {
     PubSubCmd(PubSubCmd),
 }
 
-#[derive(Clone,Deserialize,Serialize,Decode,Encode)]
+#[derive(Decode,Encode)]
 struct EchoReq {
     #[n(0)]
     timestamp: u64,
@@ -67,8 +63,8 @@ impl SysActor {
         match event {
             PubSubEvent::Publish { topic, payload } => {
                 if topic == "sys/echo" {
-                    let v = msg::cbor::decode::<EchoReq>(&payload);
-                    if let Ok(echo_req) = msg::cbor::decode::<EchoReq>(&payload) {
+                    let mut decoder = minicbor::Decoder::new(&payload);
+                    if let Ok(echo_req) = decoder.decode::<EchoReq>() {
                         self.events.handle(&SysEvent::PubSubCmd(PubSubCmd::Publish {
                             topic: echo_req.reply_to,
                             payload: msg::cbor::encode(&echo_req.timestamp),

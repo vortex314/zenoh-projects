@@ -101,6 +101,7 @@ limero = { path = "../esp32-limero-embassy" }
 # serdes = { path = "../serdes" }
 actors = { path = "../esp32-actors" }
 serde = { version = "1.0.210", default-features = false }
+msg = { path = "../msg" }
 
 [features]
 default = ["esp32"]

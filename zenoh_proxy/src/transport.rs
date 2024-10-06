@@ -2,10 +2,10 @@ use byte::TryWrite;
 use log::debug;
 use log::info;
 use minicbor::decode::info;
-use minicbor::Decoder;
-use minicbor::Encoder;
 use minicbor::decode::Decode;
 use minicbor::encode::Encode;
+use minicbor::Decoder;
+use minicbor::Encoder;
 use msg::encode_frame;
 use msg::esp_now::SendCmd;
 use msg::EspNowMessage;
@@ -29,17 +29,17 @@ const MTU_SIZE: usize = 1023;
 
 #[derive(Clone)]
 pub enum TransportCmd {
-    SendMessage(EspNowMessage),
+    SendMessage(Vec<u8>),
 }
 
 #[derive(Clone)]
 pub enum TransportEvent {
-    RecvMessage(EspNowMessage),
+    RecvMessage(Vec<u8>),
     ConnectionLost {},
 }
 
 pub struct Transport {
-    events: EventHandlers<TransportEvent>,
+    event_handlers: EventHandlers<TransportEvent>,
     commands: CmdQueue<TransportCmd>,
     port_info: SerialPortInfo,
     frame_extractor: FrameExtractor,
@@ -47,11 +47,9 @@ pub struct Transport {
 
 impl Transport {
     pub fn new(port_info: SerialPortInfo) -> Self {
-        let commands = CmdQueue::new(2);
-        let events = EventHandlers::new();
         Transport {
-            events,
-            commands,
+            event_handlers: EventHandlers::new(),
+            commands: CmdQueue::new(2),
             port_info,
             frame_extractor: FrameExtractor::new(),
         }
@@ -60,15 +58,17 @@ impl Transport {
 
 impl Actor<TransportCmd, TransportEvent> for Transport {
     async fn run(&mut self) {
+        info!("Transport started on port {}", self.port_info.port_name);
         const GREEN: &str = "\x1b[0;32m";
         const RESET: &str = "\x1b[m";
         loop {
             let mut buf = [0; MTU_SIZE];
             let serial_stream =
-                tokio_serial::new(self.port_info.port_name.clone(), 921600).open_native_async();
+                tokio_serial::new(self.port_info.port_name.clone(), 115200).open_native_async();
             if serial_stream.is_err() {
                 info!("Error opening port {}", self.port_info.port_name.clone());
-                self.events.handle(&TransportEvent::ConnectionLost {});
+                self.event_handlers
+                    .handle(&TransportEvent::ConnectionLost {});
                 return;
             }
             let mut serial_stream = serial_stream.unwrap();
@@ -79,7 +79,7 @@ impl Actor<TransportCmd, TransportEvent> for Transport {
                 cmd = self.commands.next() => {
                     match cmd.unwrap() {
                         TransportCmd::SendMessage ( message ) => {
-                            encode_frame(&message).map(|frame| {
+                            let _ = encode_frame(&message).map(|frame| {
                                 let _res = serial_stream.try_write(&frame);
                                 let _r = serial_stream.flush();
                                 if _res.is_err()  || _r.is_err() {
@@ -95,23 +95,28 @@ impl Actor<TransportCmd, TransportEvent> for Transport {
                         break;
                     } else {
                     let n = count.unwrap();
+
                     if n == 0 {
                         info!("Port {} closed", self.port_info.port_name);
                         break;
                     } else {
                         let _res = self.frame_extractor.decode(&buf[0..n]);
                         if _res.is_empty() {
-                            let line = String::from_utf8(buf[0..n].to_vec()).ok();
+
+                            /*let line = String::from_utf8(buf[0..n].to_vec()).ok();
                             if line.is_some() {
                                 print!("{}{}{}", GREEN, line.unwrap(), RESET);
                                 std::io::stdout().flush().unwrap();
-                            };
+                            } else { // show in hex
+                                for b in &buf[0..n] {
+                                    print!("{:02X} ", b);
+                                }
+                                println!();
+                            }*/
                         } else {
                             for frame in _res {
-
-                                let mut decoder = minicbor::Decoder::new(frame.as_slice());
-                                let r = decoder.decode::<EspNowMessage>();
-                              //  self.events.handle(&TransportEvent::RecvMessage ( esp_now_message ));
+                                debug!("Frame : {}", bytes_to_string(&frame));
+                                self.event_handlers.handle(&TransportEvent::RecvMessage(frame.clone()));
                                 };
                             }
                         }
@@ -129,11 +134,11 @@ impl Actor<TransportCmd, TransportEvent> for Transport {
     }
 
     fn add_listener(&mut self, handler: Box<dyn Handler<TransportEvent>>) {
-        self.events.add_listener(handler);
+        self.event_handlers.add_listener(handler);
     }
 }
 
-fn bytes_to_string(bytes: &[u8]) -> String {
+pub fn bytes_to_string(bytes: &[u8]) -> String {
     let mut s = String::new();
     for b in bytes {
         s.push_str(&format!("{:02X} ", b));

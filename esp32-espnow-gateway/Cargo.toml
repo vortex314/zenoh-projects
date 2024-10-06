@@ -47,11 +47,11 @@ esp-backtrace = { version = "*", features = [
     "panic-handler",
     "println",
 ] }
-esp-hal = { version = "*", features = ["esp32", "log"] }
+esp-hal = { version = "0.19.0", features = ["esp32", "log"] }
 esp-hal-embassy = { version = "*", features = ["esp32"] }
 esp-ieee802154 = { version = "*", optional = true }
 esp-println = { version = "*", features = ["esp32", "log"] }
-esp-storage = { version = "*", optional = true }
+esp-storage = { version = "0.3.0", optional = true }
 esp-wifi = { version = "*", features = [
     "esp32",
     "esp-now",
@@ -64,7 +64,7 @@ fugit = "0.3.7"
 heapless = "0.8.0"
 hex-literal = "0.4.1"
 hmac = { version = "0.12.1", default-features = false }
-ieee80211 = { version = "0.4.0", default-features = false }
+ieee80211 = { version = "0.5.0", default-features = false }
 ieee802154 = "0.6.1"
 lis3dh-async = "0.9.3"
 log = "0.4.22"
@@ -77,26 +77,31 @@ p256 = { version = "0.13.2", default-features = false, features = [
 ] }
 portable-atomic = { version = "1.6.0", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
+# smart-leds          = "0.4.0"
+# smoltcp             = { version = "0.11.0", default-features = false, features = [ "medium-ethernet", "socket-raw"] }
+# ssd1306             = "0.8.4"
 static_cell = { version = "2.1.0", features = ["nightly"] }
+# usb-device          = "0.3.2"
+# usbd-serial         = "0.2.2"
 
-minicbor = { version = "*", default-features = false, features = [
+minicbor = { version = "0.24.4", default-features = false, features = [
     "derive",
     "alloc",
     "half",
 ] }
-minicbor-ser = { version = "*", default-features = false, features = ["alloc"] }
-minicbor-derive = { version = "*", default-features = false }
+minicbor-ser = { version = "*", default-features = false, features = ["alloc","alloc"] }
 cobs = { version = "0.2.3", default-features = false, features = [] }
 crc = { version = "3.0.1", features = [] }
 byte = { version = "0.2.7" }
-bitfield = "0.16.1"
-anyhow = { version = "1.0", default-features = false }
+bitfield = "0.17.0"
+anyhow = { version = "1.0.87", default-features = false }
 
 limero = { path = "../esp32-limero-embassy" }
-pubsub = { path = "../pubsub" }
-serdes = { path = "../serdes" }
+# pubsub = { path = "../pubsub" }
+# serdes = { path = "../serdes" }
 actors = { path = "../esp32-actors" }
-serde = { version = "1.0", default-features = false }
+serde = { version = "1.0.210", default-features = false }
+msg = { path = "../msg" }
 
 [features]
 default = ["esp32"]

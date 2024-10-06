@@ -48,12 +48,12 @@ dependencies = [
  "heapless 0.8.0",
  "hex-literal",
  "hmac",
- "ieee80211",
+ "ieee80211 0.4.0",
  "ieee802154",
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.18.0",
+ "minicbor 0.25.1",
  "msg",
  "nb 1.1.0",
  "p192",
@@ -104,9 +104,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.86"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
+checksum = "86fdf8605db99b54d3cd748a44c6d04df638eb5dafb219b135d0149bd0db01f6"
 
 [[package]]
 name = "as-slice"
@@ -203,6 +203,17 @@ name = "bitfield-struct"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adc0846593a56638b74e136a45610f9934c052e14761bebca6b092d5522599e3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
+]
+
+[[package]]
+name = "bitfield-struct"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de05f8756f1c68937349406d4632ae96ae35901019b5e59c508d9c38c64715fb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -330,7 +341,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
 dependencies = [
  "ciborium-io",
- "half 2.4.1",
+ "half",
 ]
 
 [[package]]
@@ -529,6 +540,38 @@ name = "defile-proc_macros"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87c5c1460bfb0f719e899feab6ae532e5e0f059cdc85913bab8e6a0d7980245e"
+
+[[package]]
+name = "defmt"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a99dd22262668b887121d4672af5a64b238f026099f1a2a1b322066c9ecfe9e0"
+dependencies = [
+ "bitflags 1.3.2",
+ "defmt-macros",
+]
+
+[[package]]
+name = "defmt-macros"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3a9f309eff1f79b3ebdf252954d90ae440599c26c2c553fe87a2d17195f2dcb"
+dependencies = [
+ "defmt-parser",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
+]
+
+[[package]]
+name = "defmt-parser"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff4a5fefe330e8d7f31b16a318f9ce81000d8e35e69b93eae154d16d2278f70f"
+dependencies = [
+ "thiserror",
+]
 
 [[package]]
 name = "delegate"
@@ -1052,7 +1095,7 @@ dependencies = [
  "aes",
  "aligned",
  "anyhow",
- "bitfield 0.16.1",
+ "bitfield 0.17.0",
  "bleps",
  "byte",
  "cfg-if",
@@ -1085,21 +1128,19 @@ dependencies = [
  "heapless 0.8.0",
  "hex-literal",
  "hmac",
- "ieee80211",
+ "ieee80211 0.5.0",
  "ieee802154",
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.24.2",
- "minicbor-derive 0.15.3",
+ "minicbor 0.24.4",
  "minicbor-ser",
+ "msg",
  "nb 1.1.0",
  "p192",
  "p256",
  "portable-atomic",
- "pubsub",
  "serde",
- "serdes",
  "sha2",
  "static_cell",
 ]
@@ -1146,12 +1187,12 @@ dependencies = [
  "heapless 0.8.0",
  "hex-literal",
  "hmac",
- "ieee80211",
+ "ieee80211 0.4.0",
  "ieee802154",
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.24.2",
+ "minicbor 0.25.1",
  "minicbor-ser",
  "nb 1.1.0",
  "p192",
@@ -1303,12 +1344,6 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "1.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
-
-[[package]]
-name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
@@ -1416,7 +1451,23 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d22cc6f84b6150f18096770f82099f5090ec4fa4312629dde6f4be9df41fd6f6"
 dependencies = [
- "bitfield-struct",
+ "bitfield-struct 0.6.2",
+ "const_soft_float",
+ "crc32fast",
+ "mac-parser",
+ "macro-bits",
+ "num",
+ "scroll",
+ "tlv-rs",
+]
+
+[[package]]
+name = "ieee80211"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bce1456454cb6abc844a3bb21461c1488df17f93f0dfa46a3509895d1d4b6f59"
+dependencies = [
+ "bitfield-struct 0.8.0",
  "const_soft_float",
  "crc32fast",
  "mac-parser",
@@ -1544,6 +1595,7 @@ version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0232db59d79d889d40df09c8d66cc39f594c05ad2e06da8cf70c1be21c4c82f7"
 dependencies = [
+ "defmt",
  "scroll",
 ]
 
@@ -1583,17 +1635,16 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a20020e8e2d1881d8736f64011bb5ff99f1db9947ce3089706945c8915695cb"
 dependencies = [
- "half 1.8.3",
  "minicbor-derive 0.12.0",
 ]
 
 [[package]]
 name = "minicbor"
-version = "0.24.2"
+version = "0.24.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f8e213c36148d828083ae01948eed271d03f95f7e72571fa242d78184029af2"
+checksum = "29be4f60e41fde478b36998b88821946aafac540e53591e76db53921a0cc225b"
 dependencies = [
- "half 2.4.1",
+ "half",
  "minicbor-derive 0.15.3",
 ]
 
@@ -1603,7 +1654,7 @@ version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
 dependencies = [
- "half 2.4.1",
+ "half",
  "minicbor-derive 0.15.3",
 ]
 
@@ -1918,7 +1969,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "log",
- "minicbor 0.24.2",
+ "minicbor 0.25.1",
  "serde",
  "serde-json-core",
 ]
@@ -2026,6 +2077,20 @@ name = "scroll"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ab8598aa408498679922eff7fa985c25d58a90771bd6be794434c5277eab1a6"
+dependencies = [
+ "scroll_derive",
+]
+
+[[package]]
+name = "scroll_derive"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f81c2fde025af7e69b1d1420531c8a8811ca898919db177141a85313b1cb932"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
+]
 
 [[package]]
 name = "sec1"
@@ -2105,7 +2170,7 @@ dependencies = [
  "const-fnv1a-hash",
  "crc",
  "log",
- "minicbor 0.24.2",
+ "minicbor 0.24.4",
  "serde",
  "serde-json-core",
 ]
@@ -2240,6 +2305,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.64"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d50af8abc119fb8bb6dbabcfa89656f46f84aa0ac7688088608076ad2b459a84"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.64"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08904e7672f5eb876eaaf87e0ce17857500934f4981c4a0ab2b4aa98baac7fc3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.76",
 ]
 
 [[package]]
