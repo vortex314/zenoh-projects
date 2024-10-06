@@ -3,10 +3,10 @@ extern crate alloc;
 
 use alloc::string::String;
 use alloc::vec::Vec;
+use anyhow::Result;
 use const_fnv1a_hash::fnv1a_hash_32;
 use minicbor::data::Type;
 use minicbor::{Decode, Encode};
-use anyhow::Result;
 
 pub mod framer;
 pub use framer::encode_frame;
@@ -42,8 +42,6 @@ pub use json::encode as payload_encode;
 pub use json::to_string as payload_display;
 
 pub mod hb;
-pub use hb as msg;
-
 pub mod ps4;
 
 pub const fn fnv(s: &str) -> u32 {
@@ -86,8 +84,6 @@ pub enum MsgType {
     Info,
 }
 
-
-
 /*#[derive(Encode, Decode, Clone)]
 #[cbor(array)]
 struct PubMsg {
@@ -105,7 +101,6 @@ pub fn request(msg_type: MsgType) -> u8 {
     msg_type as u8
 }
 
-
 pub type PropertyId = i8;
 
 #[repr(i8)]
@@ -113,7 +108,7 @@ pub enum MetaPropertyId {
     RetCode = -1,
     Qos = -2,
     MsgId = -3,
-} 
+}
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
 #[repr(i8)]
@@ -128,7 +123,7 @@ pub enum InfoPropertyId {
     Type,
     #[n(4)]
     Mode,
-} 
+}
 
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
@@ -144,7 +139,7 @@ pub enum PropType {
     BYTES = 3,
     #[n(4)]
     FLOAT = 4,
-} 
+}
 
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
@@ -153,7 +148,7 @@ pub enum PropMode {
     Read = 0,
     #[n(1)]
     Write = 1,
-} 
+}
 
 #[derive(Encode, Decode, Clone)]
 #[cbor(map)]
@@ -170,13 +165,12 @@ pub struct InfoMsg {
     pub prop_mode: Option<PropMode>,
 }
 
-
 pub struct MsgDecoder<'a> {
-    decoder : minicbor::Decoder<'a>,
+    decoder: minicbor::Decoder<'a>,
 }
 
 impl<'a> MsgDecoder<'a> {
-    pub fn new(data : &'a Vec<u8>) -> Self {
+    pub fn new(data: &'a Vec<u8>) -> Self {
         MsgDecoder {
             decoder: minicbor::Decoder::new(data),
         }
@@ -190,7 +184,11 @@ impl<'a> MsgDecoder<'a> {
     }
 
     pub fn decode_header(&mut self) -> Result<MsgHeader> {
-        self.decode()
+        let _x = self.begin_array()?;
+        let dst = self.decode::<Option<ObjectId>>()?;
+        let src = self.decode::<Option<ObjectId>>()?;
+        let msg_type = self.decode::<MsgType>()?;
+        Ok(MsgHeader { dst, src, msg_type })
     }
 
     pub fn begin_map(&mut self) -> Result<Option<u64>> {
@@ -213,8 +211,29 @@ impl<'a> MsgDecoder<'a> {
         self.decoder.position()
     }
 
+    pub fn set_position(&mut self, pos: usize) {
+        self.decoder.set_position(pos);
+    }
+
+    pub fn rewind(&mut self) {
+        self.decoder.set_position(0);
+    }
+
     pub fn skip_next(&mut self) -> Result<()> {
         self.decoder.skip().map_err(anyhow::Error::msg)
     }
-}
 
+    pub fn find_in_map(&mut self,search_key : i8) -> Result<()>{
+        let _ = self.decoder.set_position(0);
+        let _ = self.decode_header()?;
+        let _ = self.begin_map()?;
+        loop {
+            let key = self.decode::<i8>()?;
+            if key == search_key  {
+                break;
+            }
+            self.skip_next()?;
+        }
+        Ok(())
+    }
+}

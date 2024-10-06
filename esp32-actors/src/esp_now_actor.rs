@@ -17,7 +17,7 @@ use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use msg::{ MsgType, request,fnv};
+use msg::{ MsgType, fnv};
 use msg::MsgHeader;
 
 #[derive(Clone, Debug)]
@@ -116,8 +116,7 @@ impl EspNowActor {
         let header = MsgHeader {
             dst: None,
             src: Some(fnv("lm/motor")),
-            msg_type: request(MsgType::Alive),
-            msg_id: None,
+            msg_type: MsgType::Alive,
         };
         let v  = msg::cbor::encode(&header);
         let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;

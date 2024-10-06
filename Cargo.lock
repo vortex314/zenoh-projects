@@ -318,33 +318,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "ciborium"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42e69ffd6f0917f5c029256a24d0161db17cea3997d185db0d35926308770f0e"
-dependencies = [
- "ciborium-io",
- "ciborium-ll",
- "serde",
-]
-
-[[package]]
-name = "ciborium-io"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05afea1e0a06c9be33d539b876f1ce3692f4afea2cb41f740e7743225ed1c757"
-
-[[package]]
-name = "ciborium-ll"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57663b653d948a338bfb3eeba9bb2fd5fcfaecb9e199e87e1eda4d9e8b240fd9"
-dependencies = [
- "ciborium-io",
- "half",
-]
-
-[[package]]
 name = "cipher"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1194,13 +1167,12 @@ dependencies = [
  "log",
  "minicbor 0.25.1",
  "minicbor-ser",
+ "msg",
  "nb 1.1.0",
  "p192",
  "p256",
  "portable-atomic",
- "pubsub",
  "serde",
- "serdes",
  "sha2",
  "static_cell",
 ]
@@ -1964,17 +1936,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pubsub"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "minicbor 0.25.1",
- "serde",
- "serde-json-core",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2155,24 +2116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb5b1b31579f3811bf615c144393417496f152e12ac8b7663bf664f4a815306d"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "serdes"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bitfield 0.16.1",
- "byte",
- "ciborium",
- "ciborium-io",
- "cobs",
- "const-fnv1a-hash",
- "crc",
- "log",
- "minicbor 0.24.4",
- "serde",
- "serde-json-core",
 ]
 
 [[package]]
