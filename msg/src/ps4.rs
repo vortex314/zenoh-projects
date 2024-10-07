@@ -5,7 +5,7 @@ use crate::fnv;
 
 #[derive(Debug, Clone)]
 #[repr(i8)]
-pub enum Ps4PropIdx {
+pub enum Ps4 {
     Dpad=0,
 
     ButtonSquare,

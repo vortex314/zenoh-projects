@@ -32,15 +32,14 @@ use esp_hal::{
 };
 use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
-use log::{warn};
-use msg::{
-    framer::{cobs_crc_deframe},
-    FrameExtractor,
-};
+use log::warn;
+use log::info;
+use msg::{framer::cobs_crc_deframe, FrameExtractor};
 use serde::{Deserialize, Serialize};
 
 extern crate alloc;
-use alloc::{collections::vec_deque::VecDeque, vec::Vec};
+use alloc::vec::Vec;
+use anyhow::Result;
 
 use actors::esp_now_actor::*;
 use actors::led_actor::*;
@@ -167,29 +166,13 @@ async fn main(_spawner: Spawner) -> ! {
             } => data,
         };
 
-        let msg_decoder = msg::MsgDecoder::new(&data);
-
-        let msg_header = msg_decoder.decode_header().unwrap();
-        if msg_header.src.is_some()
-            && msg_header.src.unwrap() == msg::ps4::PS4_ID
-            && msg_header.msg_type == msg::MsgType::Pub
-        {
-            msg_decoder
-                .find_in_map(msg::ps4::Ps4PropIdx::StickLeftX)
-                .map(|_| {
-                    let left_axis_x = msg_decoder.decode::<i16>()?;
-                    controller.on_x_axis(left_axis_x);
-                });
-            msg_decoder
-                .find_in_map(msg::ps4::Ps4PropIdx::StickRightY)
-                .map(|_| {
-                    let right_axis_y = msg_decoder.decode::<i16>()?;
-                    controller.on_x_axis(right_axis_y);
-                });
-
+        let r = event_to_motor(&mut controller, &data).map(|_| {
             let motor_cmd = controller.motor_cmd();
+            info!("MotorCmd: {:?}", motor_cmd);
             uart_handler.handle(&UartCmd::Txd(motor_cmd.encode()));
-        }
+        }).map_err(|e| {
+            warn!("Error: {:?}", e);
+        });
     });
 
     let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
@@ -198,7 +181,7 @@ async fn main(_spawner: Spawner) -> ! {
         UartEvent::Rxd(data) => {
             let v = motor_deframer.decode(data);
             for data in v {
-                cobs_crc_deframe(&data).try_for_each(|data| {
+                let _ = cobs_crc_deframe(&data).map(|data| {
                     espnow_handler.handle(&EspNowCmd::Broadcast { data });
                 });
             }
@@ -231,6 +214,34 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     }
 }
 
+fn event_to_motor(controller: &mut Controller, data: &Vec<u8>) -> Result<()> {
+    let mut msg_decoder = msg::MsgDecoder::new(&data);
+    let msg_header = msg_decoder.decode_header()?;
+    if msg_header.src.is_some()
+        && msg_header.src.unwrap() == msg::ps4::PS4_ID
+        && msg_header.msg_type as u8 == msg::MsgType::Pub as u8
+    {
+        let _ = msg_decoder
+            .find_in_map(msg::ps4::Ps4::StickLeftX as i8)
+            .map(|_| {
+                if let Ok(left_axis_x) = msg_decoder.decode::<i16>() {
+                    controller.on_x_axis(left_axis_x);
+                }
+            });
+        let _ = msg_decoder
+            .find_in_map(msg::ps4::Ps4::StickRightY as i8)
+            .map(|_| {
+                if let Ok(right_axis_y) = msg_decoder.decode::<i16>() {
+                    controller.on_y_axis(right_axis_y);
+                }
+            });
+
+        Ok(())
+    } else {
+        Err(anyhow::Error::msg("Invalid message"))
+    }
+}
+
 struct Controller {
     motor_speed: i16,
     motor_steer: i16,
@@ -245,7 +256,7 @@ impl Controller {
             changed: false,
         }
     }
-    fn on_x_axis(&self, left_axis_x: i16) {
+    fn on_x_axis(&mut self, left_axis_x: i16) {
         if left_axis_x > 100 {
             self.motor_steer += 5;
             self.changed = true;

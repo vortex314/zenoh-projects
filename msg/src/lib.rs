@@ -70,7 +70,7 @@ impl Default for MsgHeader {
         }
     }
 }
-
+#[derive(PartialEq)]
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
 pub enum MsgType {
