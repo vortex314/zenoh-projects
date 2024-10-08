@@ -121,12 +121,11 @@ async fn main(_spawner: Spawner) -> ! {
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
     let mut motor_deframer = FrameExtractor::new();
+
+    // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
     #[derive(Debug, Serialize, Deserialize)]
-    struct UartMsg([u8; 6], Vec<u8>);
-
-    // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
 
     let uart = Uart::new_async_with_config(
         peripherals.UART2,
@@ -146,10 +145,11 @@ async fn main(_spawner: Spawner) -> ! {
     .unwrap();
 
     let mut uart_actor = UartActor::<UART2>::new(uart);
-
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
-    let mut controller = Controller::new();
 
+    // controller that translates PS4 messages to motor commands
+    let mut controller = Controller::new();
+// esp_now_acor >> motor_cmd >> uart_actor
     esp_now_actor.for_all(move |ev| {
         let data = match ev {
             EspNowEvent::Rxd {
@@ -177,6 +177,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
 
+    // uart_actor >> motor_deframer >> espnow_actor;
     uart_actor.for_all(move |msg: &UartEvent| match msg {
         UartEvent::Rxd(data) => {
             let v = motor_deframer.decode(data);
@@ -218,24 +219,16 @@ fn event_to_motor(controller: &mut Controller, data: &Vec<u8>) -> Result<()> {
     let mut msg_decoder = msg::MsgDecoder::new(&data);
     let msg_header = msg_decoder.decode_header()?;
     if msg_header.src.is_some()
-        && msg_header.src.unwrap() == msg::ps4::PS4_ID
-        && msg_header.msg_type as u8 == msg::MsgType::Pub as u8
+        && msg_header.src.unwrap() == msg::ps4::PS4_ID   // mesage from PS4 controller 
+        && msg_header.msg_type as u8 == msg::MsgType::Pub as u8 // message type is Pub
     {
-        let _ = msg_decoder
-            .find_in_map(msg::ps4::Ps4::StickLeftX as i8)
-            .map(|_| {
-                if let Ok(left_axis_x) = msg_decoder.decode::<i16>() {
-                    controller.on_x_axis(left_axis_x);
-                }
-            });
-        let _ = msg_decoder
-            .find_in_map(msg::ps4::Ps4::StickRightY as i8)
-            .map(|_| {
-                if let Ok(right_axis_y) = msg_decoder.decode::<i16>() {
-                    controller.on_y_axis(right_axis_y);
-                }
-            });
-
+        let ps4_event = msg_decoder.decode::<Ps4Event>()?;
+        ps4_event.left_axis_x.filter(_ > 100).map(|_| controller.change_steer(-5));
+        ps4_event.left_axis_x.filter(_ < -100).map(|_| controller.change_steer(5));
+        ps4_event.right_axis_y.filter(_ > 100).map(|_| controller.change_speed(-5));
+        ps4_event.right_axis_y.filter(_ < -100).map(|_| controller.change_speed(5));
+        ps4_event.left_axis_y.filter(_ > 100).map(|_| controller.straight());
+        ps4_event.right_axis_x.filter(_ > 100).map(|_| controller.stop());
         Ok(())
     } else {
         Err(anyhow::Error::msg("Invalid message"))
@@ -274,11 +267,32 @@ impl Controller {
             self.changed = true;
         }
     }
+    fn change_speed(&mut self, delta: i16) {
+        self.motor_speed += delta;
+        self.changed = true;
+    }
+
+    fn change_steer(&mut self, delta: i16) {
+        self.motor_steer += delta;
+        self.changed = true;
+    }
+
+
     fn motor_cmd(&self) -> MotorCmd {
         MotorCmd {
             speed: self.motor_speed,
             steer: self.motor_steer,
         }
+    }
+
+    fn straight(&mut self) {
+        self.motor_steer = 0;
+        self.changed = true;
+    }
+
+    fn stop(&mut self) {
+        self.motor_speed = 0;
+        self.changed = true;
     }
 
     fn reset(&mut self) {

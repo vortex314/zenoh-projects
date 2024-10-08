@@ -72,7 +72,11 @@ typedef enum {
     STR_COEF,
     BATV,
     TEMP,
-} HoverboardProperty;
+} HoverBoard;
+
+struct HoverboardFields {
+    
+}
 
 const uint32_t LM1_DRIVE = FNV("lm1/drive");
 const uint32_t LM1_CUTTER = FNV("lm1/cutter");

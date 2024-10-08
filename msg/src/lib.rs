@@ -50,7 +50,7 @@ pub const fn fnv(s: &str) -> u32 {
 
 pub type ObjectId = u32;
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Default,Clone,Debug )]
 #[cbor(array)]
 pub struct MsgHeader {
     #[n(0)]
@@ -61,20 +61,11 @@ pub struct MsgHeader {
     pub msg_type: MsgType,
 }
 
-impl Default for MsgHeader {
-    fn default() -> Self {
-        MsgHeader {
-            dst: None,
-            src: None,
-            msg_type: MsgType::Alive,
-        }
-    }
-}
 #[derive(PartialEq)]
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone,Default,Debug)]
 #[cbor(index_only)]
 pub enum MsgType {
-    #[n(0)]
+    #[n(0)] #[default]
     Alive,
     #[n(1)]
     Pub,
@@ -183,25 +174,7 @@ impl<'a> MsgDecoder<'a> {
         self.decoder.decode().map_err(anyhow::Error::msg)
     }
 
-    pub fn decode_header(&mut self) -> Result<MsgHeader> {
-        let _x = self.begin_array()?;
-        let dst = self.decode::<Option<ObjectId>>()?;
-        let src = self.decode::<Option<ObjectId>>()?;
-        let msg_type = self.decode::<MsgType>()?;
-        Ok(MsgHeader { dst, src, msg_type })
-    }
-
-    pub fn begin_map(&mut self) -> Result<Option<u64>> {
-        self.decoder.map().map_err(anyhow::Error::msg)
-    }
-
-    pub fn begin_array(&mut self) -> Result<Option<u64>> {
-        self.decoder.array().map_err(anyhow::Error::msg)
-    }
-
-    pub fn decode_end(&mut self) -> Result<()> {
-        Ok(())
-    }
+    
 
     pub fn peek_next_type(&mut self) -> Result<Type> {
         self.decoder.datatype().map_err(anyhow::Error::msg)
@@ -223,17 +196,4 @@ impl<'a> MsgDecoder<'a> {
         self.decoder.skip().map_err(anyhow::Error::msg)
     }
 
-    pub fn find_in_map(&mut self,search_key : i8) -> Result<()>{
-        let _ = self.decoder.set_position(0);
-        let _ = self.decode_header()?;
-        let _ = self.begin_map()?;
-        loop {
-            let key = self.decode::<i8>()?;
-            if key == search_key  {
-                break;
-            }
-            self.skip_next()?;
-        }
-        Ok(())
-    }
 }
