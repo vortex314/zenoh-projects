@@ -164,7 +164,7 @@ async fn main(_spawner: Spawner) -> ! {
             } => data,
         };
 
-        ps4_to_controller(&mut controller, &data).map(|_| {
+        let _ = ps4_to_controller(&mut controller, &data).map(|_| {
             let motor_cmd = controller.motor_cmd();
             info!("MotorCmd: {:?}", motor_cmd);
             uart_handler.handle(&UartCmd::Txd(motor_cmd.encode()));
@@ -177,11 +177,11 @@ async fn main(_spawner: Spawner) -> ! {
 
     // uart_actor >> motor_deframer >> espnow_actor;
     uart_actor.for_all(move |msg: &UartEvent| match msg {
-        UartEvent::Rxd(data) => {
-            info!("UartEvent: {:?}", msg);
-            let v = motor_deframer.decode(data);
-            for data in v {
-                let _ = cobs_crc_deframe(&data).map(|data| {
+        UartEvent::Rxd(raw) => {
+            let vecs = motor_deframer.decode(raw);
+            for vec in vecs {
+                cobs_crc_deframe(&vec).map(|data| {
+                    info!("UartEvent: {:?}", data);
                     espnow_handler.handle(&EspNowCmd::Broadcast { data });
                 });
             }
