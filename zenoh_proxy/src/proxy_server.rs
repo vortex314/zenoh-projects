@@ -10,6 +10,7 @@ use minicbor::decode::info;
 use minicbor::encode;
 use msg::EspNowMessage;
 use msg::InfoMsg;
+use msg::MetaPropertyId;
 use msg::MsgHeader;
 use msg::MsgType;
 use msg::ObjectId;
@@ -208,6 +209,10 @@ impl ProxySession {
                     prop_id, object_info.name
                 )))
             }
+        } else if prop_id == MetaPropertyId::RetCode as i8 {
+            Ok("retcode".to_string())
+        } else if prop_id == MetaPropertyId::MsgId as i8 {
+            Ok("msg_id".to_string())
         } else {
             Err(anyhow::Error::msg(format!(
                 "Object {} not found",
@@ -217,76 +222,64 @@ impl ProxySession {
     }
 
     async fn on_transport_rxd(&mut self, payload: Vec<u8>) -> Result<()> {
-        debug!(" CBOR : {:?}", msg::cbor::to_string(&payload));
-        let mut msg_decoder = msg::MsgDecoder::new(&payload);
-        //     let msg_header = msg_decoder.decode::<MsgHeader>()?;
-        let _x = msg_decoder.begin_array()?;
-        let dst = msg_decoder.decode::<Option<ObjectId>>()?;
-        let src = msg_decoder.decode::<Option<ObjectId>>()?;
-        let msg_type = msg_decoder.decode::<MsgType>()?;
-        let msg_header = MsgHeader { dst, src, msg_type };
+        debug!(" CBOR : {}", minicbor::display(&payload));
+        let mut decoder = minicbor::Decoder::new(&payload);
+        let msg_header = decoder.decode::<MsgHeader>()?;
+        let object_id = msg_header.src.unwrap();
+
         match msg_header.msg_type {
             MsgType::Pub => {
                 debug!("Publish message");
-                let obj_id = msg_header.src.unwrap();
-                let t = msg_decoder.peek_next_type()?;
-                match t {
-                    Type::MapIndef => {
-                        let _map_size = msg_decoder.begin_map()?;
-                        loop {
-                            if msg_decoder.peek_next_type()? == Type::Break {
-                                break;
-                            }
-                            let prop_id: i8 = msg_decoder.decode()?;
-                            let topic = format!("src/{}", self.id_to_topic(obj_id, prop_id)?);
-                            debug!("Topic {}", topic);
-                            let t = msg_decoder.peek_next_type()?;
+                let _ = decoder.map()?;
+                loop {
+                    let dt = decoder.datatype()?;
+                    if dt == Type::Break {
+                        break;
+                    }
+                    let key: i8 = decoder.decode()?;
+                    match self.id_to_topic(object_id, key) {
+                        Ok(topic) => {
+                            let t = decoder.datatype()?;
                             let message: Option<Vec<u8>> = match t {
                                 Type::I32 => {
-                                    let value = msg_decoder.decode::<i32>()?;
+                                    let value = decoder.decode::<i32>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 Type::U32 => {
-                                    let value = msg_decoder.decode::<u32>()?;
+                                    let value = decoder.decode::<u32>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 Type::U16 => {
-                                    let value = msg_decoder.decode::<u16>()?;
+                                    let value = decoder.decode::<u16>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 Type::I16 => {
-                                    let value = msg_decoder.decode::<i16>()?;
+                                    let value = decoder.decode::<i16>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 Type::U8 => {
-                                    let value = msg_decoder.decode::<u8>()?;
+                                    let value = decoder.decode::<u8>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 Type::I8 => {
-                                    let value = msg_decoder.decode::<i8>()?;
+                                    let value = decoder.decode::<i8>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
                                 _ => {
-                                    msg_decoder.skip_next()?;
+                                    decoder.skip()?;
                                     error!("Unexpected type {:?} for {}", t, topic);
                                     None
                                 }
                             };
-                            //                           info!("Message {} {:?}", topic, bytes_to_string(&message.clone().unwrap()));
                             self.pubsub_cmd.handle(&PubSubCmd::Publish {
-                                topic: topic.clone(),
+                                topic: format!("src/{}",topic.clone()),
                                 payload: message.clone().unwrap(),
                             });
-                            /*message.map(|m| {
-                                self.event_handlers.handle(&ProxyServerEvent::Publish {
-                                    topic: topic.clone(),
-                                    message: m,
-                                });
-                            });*/
                         }
-                    }
-                    _ => {
-                        error!("Unexpected type {:?}", t);
+                        Err(e) => {
+                            error!("Uknown topic id  {} {}", e, key);
+                            decoder.skip()?;
+                        }
                     }
                 }
             }
@@ -297,7 +290,7 @@ impl ProxySession {
                 debug!("Alive message");
             }
             MsgType::Info => {
-                let msg_info = msg_decoder.decode::<InfoMsg>()?;
+                let msg_info = decoder.decode::<InfoMsg>()?;
 
                 let obj_id = msg_header.src.unwrap();
 

@@ -70,7 +70,7 @@ async fn main() -> Result<(), Error> {
     info!("Starting Serial Proxy");
 
     let port_patterns = vec![PortPattern {
-        name_regexp: "/dev/ttyUSB2".to_string(),
+        name_regexp: "/dev/ttyUSB1".to_string(),
         vid: None, // Some(4292),
         pid: None,
         serial_number: None,

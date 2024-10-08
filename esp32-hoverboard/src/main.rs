@@ -34,8 +34,7 @@ use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::warn;
 use log::info;
-use msg::{framer::cobs_crc_deframe, FrameExtractor};
-use serde::{Deserialize, Serialize};
+use msg::{framer::cobs_crc_deframe, FrameExtractor, MsgHeader};
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -125,7 +124,6 @@ async fn main(_spawner: Spawner) -> ! {
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
-    #[derive(Debug, Serialize, Deserialize)]
 
     let uart = Uart::new_async_with_config(
         peripherals.UART2,
@@ -166,7 +164,7 @@ async fn main(_spawner: Spawner) -> ! {
             } => data,
         };
 
-        let r = event_to_motor(&mut controller, &data).map(|_| {
+        ps4_to_controller(&mut controller, &data).map(|_| {
             let motor_cmd = controller.motor_cmd();
             info!("MotorCmd: {:?}", motor_cmd);
             uart_handler.handle(&UartCmd::Txd(motor_cmd.encode()));
@@ -180,6 +178,7 @@ async fn main(_spawner: Spawner) -> ! {
     // uart_actor >> motor_deframer >> espnow_actor;
     uart_actor.for_all(move |msg: &UartEvent| match msg {
         UartEvent::Rxd(data) => {
+            info!("UartEvent: {:?}", msg);
             let v = motor_deframer.decode(data);
             for data in v {
                 let _ = cobs_crc_deframe(&data).map(|data| {
@@ -215,20 +214,23 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     }
 }
 
-fn event_to_motor(controller: &mut Controller, data: &Vec<u8>) -> Result<()> {
-    let mut msg_decoder = msg::MsgDecoder::new(&data);
-    let msg_header = msg_decoder.decode_header()?;
+fn ps4_to_controller(controller: &mut Controller, data: &Vec<u8>) -> Result<()> {
+    let mut decoder = minicbor::Decoder::new(&data);
+    let msg_header = decoder.decode::<MsgHeader>()?;
     if msg_header.src.is_some()
         && msg_header.src.unwrap() == msg::ps4::PS4_ID   // mesage from PS4 controller 
         && msg_header.msg_type as u8 == msg::MsgType::Pub as u8 // message type is Pub
     {
-        let ps4_event = msg_decoder.decode::<Ps4Event>()?;
-        ps4_event.left_axis_x.filter(_ > 100).map(|_| controller.change_steer(-5));
-        ps4_event.left_axis_x.filter(_ < -100).map(|_| controller.change_steer(5));
-        ps4_event.right_axis_y.filter(_ > 100).map(|_| controller.change_speed(-5));
-        ps4_event.right_axis_y.filter(_ < -100).map(|_| controller.change_speed(5));
-        ps4_event.left_axis_y.filter(_ > 100).map(|_| controller.straight());
-        ps4_event.right_axis_x.filter(_ > 100).map(|_| controller.stop());
+        let ev = decoder.decode::<msg::ps4::Ps4Map>()?;
+
+        ev.stick_left_x.filter(|x| *x > 100).map(|_| controller.change_steer(-5));
+        ev.stick_left_x.filter(|x| *x < -100).map(|_| controller.change_steer(5));
+        ev.stick_left_y.filter(|x| *x > 50 || *x < -50).map(|_| controller.straight());
+
+        ev.stick_right_y.filter(|x| *x > 100).map(|_| controller.change_speed(-5));
+        ev.stick_right_y.filter(|x| *x < -100).map(|_| controller.change_speed(5));
+        ev.stick_right_x.filter(|x| *x > 50 || *x < -50).map(|_| controller.stop());
+
         Ok(())
     } else {
         Err(anyhow::Error::msg("Invalid message"))
@@ -249,24 +251,7 @@ impl Controller {
             changed: false,
         }
     }
-    fn on_x_axis(&mut self, left_axis_x: i16) {
-        if left_axis_x > 100 {
-            self.motor_steer += 5;
-            self.changed = true;
-        } else if left_axis_x < -100 {
-            self.motor_steer -= 5;
-            self.changed = true;
-        }
-    }
-    fn on_y_axis(&mut self, right_axis_y: i16) {
-        if right_axis_y > 100 {
-            self.motor_speed -= 5;
-            self.changed = true;
-        } else if right_axis_y < -100 {
-            self.motor_speed += 5;
-            self.changed = true;
-        }
-    }
+
     fn change_speed(&mut self, delta: i16) {
         self.motor_speed += delta;
         self.changed = true;
