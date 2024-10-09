@@ -35,6 +35,10 @@ use limero::*;
 use log::warn;
 use log::info;
 use msg::{framer::cobs_crc_deframe, FrameExtractor, MsgHeader};
+use msg::MsgType;
+use msg::ps4;
+use msg::hb;
+
 
 extern crate alloc;
 use alloc::vec::Vec;
@@ -164,8 +168,7 @@ async fn main(_spawner: Spawner) -> ! {
             } => data,
         };
 
-        let _ = ps4_to_controller(&mut controller, &data).map(|_| {
-            let motor_cmd = controller.motor_cmd();
+        let _ = esp_now_to_controller(&mut controller, &data).map(|motor_cmd| {
             info!("MotorCmd: {:?}", motor_cmd);
             uart_handler.handle(&UartCmd::Txd(motor_cmd.encode()));
         }).map_err(|e| {
@@ -175,7 +178,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
 
-    // uart_actor >> motor_deframer >> espnow_actor;
+    // uart_actor >> motor_deframer >> espnow_actor; send uart data to espnow raw data
     uart_actor.for_all(move |msg: &UartEvent| match msg {
         UartEvent::Rxd(raw) => {
             let vecs = motor_deframer.decode(raw);
@@ -214,14 +217,12 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     }
 }
 
-fn ps4_to_controller(controller: &mut Controller, data: &Vec<u8>) -> Result<()> {
+fn esp_now_to_controller(controller: &mut Controller, data: &Vec<u8>) -> Result<MotorCmd> {
     let mut decoder = minicbor::Decoder::new(&data);
     let msg_header = decoder.decode::<MsgHeader>()?;
-    if msg_header.src.is_some()
-        && msg_header.src.unwrap() == msg::ps4::PS4_ID   // mesage from PS4 controller 
-        && msg_header.msg_type as u8 == msg::MsgType::Pub as u8 // message type is Pub
+    if msg_header.is_msg(MsgType::Pub,None, Some(PS4_ID)) // PUB from PS4
     {
-        let ev = decoder.decode::<msg::ps4::Ps4Map>()?;
+        let ev = decoder.decode::<Ps4Map>()?;
 
         ev.stick_left_x.filter(|x| *x > 100).map(|_| controller.change_steer(-5));
         ev.stick_left_x.filter(|x| *x < -100).map(|_| controller.change_steer(5));
@@ -231,13 +232,18 @@ fn ps4_to_controller(controller: &mut Controller, data: &Vec<u8>) -> Result<()> 
         ev.stick_right_y.filter(|x| *x < -100).map(|_| controller.change_speed(5));
         ev.stick_right_x.filter(|x| *x > 50 || *x < -50).map(|_| controller.stop());
 
-        Ok(())
+        Ok(controller.motor_cmd())
+    } else if msg_header.is_msg(MsgType::Pub, Some(HB_ID),None) {// PUB to HB 
+        let ev = decoder.decode::<HbMap>()?;
+        ev.speed.map(|speed| controller.speed(speed));
+        ev.steer.map(|steer| controller.steer(steer));
+        Ok(controller.motor_cmd())
     } else {
         Err(anyhow::Error::msg("Invalid message"))
     }
 }
 
-struct Controller {
+struct HbController {
     motor_speed: i16,
     motor_steer: i16,
     changed: bool,
@@ -250,6 +256,14 @@ impl Controller {
             motor_steer: 0,
             changed: false,
         }
+    }
+
+    fn speed(&mut self,speed:i16) -> i16 {
+        self.motor_speed=speed;
+    }
+
+    fn steer(&mut self,steer:i16) -> i16 {
+        self.motor_steer=steer;
     }
 
     fn change_speed(&mut self, delta: i16) {
@@ -277,6 +291,7 @@ impl Controller {
 
     fn stop(&mut self) {
         self.motor_speed = 0;
+        self.motor_steer = 0;
         self.changed = true;
     }
 
@@ -286,3 +301,5 @@ impl Controller {
         self.changed = false;
     }
 }
+
+

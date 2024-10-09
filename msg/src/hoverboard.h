@@ -72,6 +72,8 @@ typedef enum {
     STR_COEF,
     BATV,
     TEMP,
+    SPEED,
+    STEER,
 } HoverBoard;
 
 struct HoverboardFields {

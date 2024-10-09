@@ -2,10 +2,7 @@
 extern crate alloc;
 
 use alloc::string::String;
-use alloc::vec::Vec;
-use anyhow::Result;
 use const_fnv1a_hash::fnv1a_hash_32;
-use minicbor::data::Type;
 use minicbor::{Decode, Encode};
 
 pub mod framer;
@@ -61,8 +58,18 @@ pub struct MsgHeader {
     pub msg_type: MsgType,
 }
 
+impl MsgHeader {
+    fn is_msg(&self,msg_type:MsgType,dst:Option<u32>,src:Option<u32>) -> bool {
+        let mut matches = false;
+        matches = msg_type as u8 == self.msg_type as u8;
+        dst.map(|dst| matches = matches && dst == self.dst.unwrap());
+        src.map(|src| matches = matches && src == self.src.unwrap());
+        matches
+    }
+}
+
 #[derive(PartialEq)]
-#[derive(Encode, Decode, Clone,Default,Debug)]
+#[derive(Encode, Decode, Clone,Default,Debug,Copy)]
 #[cbor(index_only)]
 pub enum MsgType {
     #[n(0)] #[default]
@@ -155,7 +162,7 @@ pub struct InfoMsg {
     #[n(4)]
     pub prop_mode: Option<PropMode>,
 }
-
+/* 
 pub struct MsgDecoder<'a> {
     decoder: minicbor::Decoder<'a>,
 }
@@ -196,4 +203,4 @@ impl<'a> MsgDecoder<'a> {
         self.decoder.skip().map_err(anyhow::Error::msg)
     }
 
-}
+}*/

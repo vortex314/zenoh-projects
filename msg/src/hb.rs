@@ -57,6 +57,8 @@ pub enum HbProp {
     SteerCoef,
     BatVoltage,
     Temp=45,
+    Speed,
+    Steer,
 }
 
 #[derive(Encode,Decode,Default,Debug,Clone)]
@@ -71,42 +73,50 @@ struct HbMap {
 #[n(6)] pub fi_weak_lo: Option<u16>,
 #[n(7)] pub fi_weak_max: Option<u16>,
 #[n(8)] pub phase_adv_max_deg: Option<u16>,
+
 #[n(9)] pub in1_raw: Option<u16>,
 #[n(10)] pub in1_typ: Option<u8>,
 #[n(11)] pub in1_min: Option<u16>,
 #[n(12)] pub in1_mid: Option<u16>,
 #[n(13)] pub in1_max: Option<u16>,
 #[n(14)] pub in1_cmd: Option<u16>,
+
 #[n(15)] pub in2_raw: Option<u16>,
 #[n(16)] pub in2_typ: Option<u8>,
 #[n(17)] pub in2_min: Option<u16>,
 #[n(18)] pub in2_mid: Option<u16>,
 #[n(19)] pub in2_max: Option<u16>,
 #[n(20)] pub in2_cmd: Option<u16>,
+
 #[n(21)] pub aux_in1_raw: Option<u16>,
 #[n(22)] pub aux_in1_typ: Option<u8>,
 #[n(23)] pub aux_in1_min: Option<u16>,
 #[n(24)] pub aux_in1_mid: Option<u16>,
-#[n(25)] pub aux_in1_cmd: Option<u16>,
-#[n(26)] pub aux_in2_raw: Option<u16>,
-#[n(27)] pub aux_in2_typ: Option<u8>,
-#[n(28)] pub aux_in2_min: Option<u16>,
-#[n(29)] pub aux_in2_mid: Option<u16>,
-#[n(30)] pub aux_in2_max: Option<u16>,
-#[n(31)] pub aux_in2_cmd: Option<u16>,
-#[n(32)] pub dc_curr: Option<u16>,
-#[n(33)] pub rdc_curr: Option<u16>,
-#[n(34)] pub ldc_curr: Option<u16>,
-#[n(35)] pub cmd_l: Option<u16>,
-#[n(36)] pub cmd_r: Option<u16>,
-#[n(37)] pub spd_avg: Option<u16>,
-#[n(38)] pub spdl: Option<u16>,
-#[n(39)] pub spdr: Option<u16>,
-#[n(40)] pub filter_rate: Option<u16>,
-#[n(41)] pub speed_coef: Option<u16>,
-#[n(42)] pub steer_coef: Option<u16>,
-#[n(43)] pub bat_voltage: Option<u16>,
-#[n(44)] pub temp: Option<u16>,
+#[n(25)] pub aux_in1_max: Option<u16>,
+#[n(26)] pub aux_in1_cmd: Option<u16>,
+
+#[n(27)] pub aux_in2_raw: Option<u16>,
+#[n(28)] pub aux_in2_typ: Option<u8>,
+#[n(29)] pub aux_in2_min: Option<u16>,
+#[n(30)] pub aux_in2_mid: Option<u16>,
+#[n(31)] pub aux_in2_max: Option<u16>,
+#[n(32)] pub aux_in2_cmd: Option<u16>,
+
+#[n(33)] pub dc_curr: Option<u16>,
+#[n(34)] pub rdc_curr: Option<u16>,
+#[n(35)] pub ldc_curr: Option<u16>,
+#[n(36)] pub cmd_l: Option<u16>,
+#[n(37)] pub cmd_r: Option<u16>,
+#[n(38)] pub spd_avg: Option<u16>,
+#[n(39)] pub spdl: Option<u16>,
+#[n(40)] pub spdr: Option<u16>,
+#[n(41)] pub filter_rate: Option<u16>,
+#[n(42)] pub speed_coef: Option<u16>,
+#[n(43)] pub steer_coef: Option<u16>,
+#[n(44)] pub bat_voltage: Option<u16>,
+#[n(45)] pub temp: Option<u16>,
+#[n(46)] pub speed: Option<i16>,
+#[n(47)] pub steer: Option<i16>,
 }
 
 pub const START_FRAME: u16 = 0xABCD;
@@ -149,7 +159,7 @@ Variable	STR_COEF	Steer Coefficient *10	No	No
 Variable	BATV	Calibrated Battery Voltage *100	No	No
 Variable	TEMP	Calibrated Temperature °C *10	No	No
 */
-
+/* 
 
 #[derive(Debug, Clone)]
 pub struct EspNowHeader {
@@ -192,7 +202,7 @@ impl EspNowHeader {
         encoder.encode(&self.msg_id).map_err(anyhow::Error::msg)?;
         Ok(())
     }
-}
+}*/
 
 #[derive(Debug, Clone)]
 pub struct MotorCmd {
@@ -227,7 +237,7 @@ impl MotorCmd {
         vec.push((crc >> 8) as u8);
     }
 }
-
+/* 
 #[derive(Debug, Clone,PartialEq)]
 pub struct MotorEvent {
     frame: u16,
@@ -296,4 +306,4 @@ impl MotorEvent {
         encoder.end().map_err(anyhow::Error::msg)?;
         Ok(())
     }
-}
+}*/

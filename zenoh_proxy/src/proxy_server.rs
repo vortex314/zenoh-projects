@@ -230,7 +230,11 @@ impl ProxySession {
         match msg_header.msg_type {
             MsgType::Pub => {
                 debug!("Publish message");
+                let tokens = decoder.tokens().collect();
+                
                 let _ = decoder.map()?;
+                let mut unknown=0;
+                let mut known=0;
                 loop {
                     let dt = decoder.datatype()?;
                     if dt == Type::Break {
@@ -239,6 +243,7 @@ impl ProxySession {
                     let key: i8 = decoder.decode()?;
                     match self.id_to_topic(object_id, key) {
                         Ok(topic) => {
+                            known+=1;
                             let t = decoder.datatype()?;
                             let message: Option<Vec<u8>> = match t {
                                 Type::I32 => {
@@ -265,6 +270,10 @@ impl ProxySession {
                                     let value = decoder.decode::<i8>()?;
                                     Some(minicbor::to_vec(&value)?)
                                 }
+                                Type::String => {
+                                    let value = decoder.decode::<String>()?;
+                                    Some(minicbor::to_vec(&value)?)
+                                }
                                 _ => {
                                     decoder.skip()?;
                                     error!("Unexpected type {:?} for {}", t, topic);
@@ -277,11 +286,13 @@ impl ProxySession {
                             });
                         }
                         Err(e) => {
-                            error!("Uknown topic id  {} {}", e, key);
+                            unknown+=1;
+                            debug!("Uknown topic id  {} {}", e, key);
                             decoder.skip()?;
                         }
                     }
                 }
+                debug!("Known {} Unknown {}", known, unknown);
             }
             MsgType::Sub => {
                 info!("Subscribe message");
