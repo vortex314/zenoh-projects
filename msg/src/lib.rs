@@ -47,7 +47,7 @@ pub const fn fnv(s: &str) -> u32 {
 
 pub type ObjectId = u32;
 
-#[derive(Encode, Decode, Default,Clone,Debug )]
+#[derive(Encode, Decode, Default, Clone, Debug)]
 #[cbor(array)]
 pub struct MsgHeader {
     #[n(0)]
@@ -59,20 +59,19 @@ pub struct MsgHeader {
 }
 
 impl MsgHeader {
-    fn is_msg(&self,msg_type:MsgType,dst:Option<u32>,src:Option<u32>) -> bool {
-        let mut matches = false;
-        matches = msg_type as u8 == self.msg_type as u8;
+    pub fn is_msg(&self, msg_type: MsgType, dst: Option<u32>, src: Option<u32>) -> bool {
+        let mut matches = msg_type as u8 == self.msg_type as u8;
         dst.map(|dst| matches = matches && dst == self.dst.unwrap());
         src.map(|src| matches = matches && src == self.src.unwrap());
         matches
     }
 }
 
-#[derive(PartialEq)]
-#[derive(Encode, Decode, Clone,Default,Debug,Copy)]
+#[derive(PartialEq, Encode, Decode, Clone, Default, Debug, Copy)]
 #[cbor(index_only)]
 pub enum MsgType {
-    #[n(0)] #[default]
+    #[n(0)]
+    #[default]
     Alive,
     #[n(1)]
     Pub,
@@ -162,7 +161,7 @@ pub struct InfoMsg {
     #[n(4)]
     pub prop_mode: Option<PropMode>,
 }
-/* 
+/*
 pub struct MsgDecoder<'a> {
     decoder: minicbor::Decoder<'a>,
 }
@@ -181,7 +180,7 @@ impl<'a> MsgDecoder<'a> {
         self.decoder.decode().map_err(anyhow::Error::msg)
     }
 
-    
+
 
     pub fn peek_next_type(&mut self) -> Result<Type> {
         self.decoder.datatype().map_err(anyhow::Error::msg)

@@ -4,11 +4,8 @@
 // allow unusde variables
 #![allow(unused_variables)]
 
-use minicbor::{Decode, Decoder, Encode};
-use anyhow::Result;
-use minicbor::Encoder;
+use minicbor::{Decode, Encode};
 use alloc::vec::Vec;
-use alloc::collections::VecDeque;
 
 pub enum HbProp {
     CtrlMod = 0,
@@ -63,7 +60,7 @@ pub enum HbProp {
 
 #[derive(Encode,Decode,Default,Debug,Clone)]
 #[cbor(map)]
-struct HbMap {
+pub struct HbMap {
 #[n(0)] pub ctrl_mod: Option<u8>,
 #[n(1)] pub ctrl_typ: Option<u8>,
 #[n(2)] pub cur_mot_max: Option<u16>,

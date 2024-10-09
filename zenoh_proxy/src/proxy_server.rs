@@ -230,8 +230,7 @@ impl ProxySession {
         match msg_header.msg_type {
             MsgType::Pub => {
                 debug!("Publish message");
-                let tokens = decoder.tokens().collect();
-                
+               
                 let _ = decoder.map()?;
                 let mut unknown=0;
                 let mut known=0;
