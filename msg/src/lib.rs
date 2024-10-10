@@ -48,7 +48,7 @@ pub const fn fnv(s: &str) -> u32 {
 pub type ObjectId = u32;
 
 #[derive(Encode, Decode, Default, Clone, Debug)]
-#[cbor(array)]
+#[cbor(map)]
 pub struct MsgHeader {
     #[n(0)]
     pub dst: Option<ObjectId>,
@@ -56,7 +56,25 @@ pub struct MsgHeader {
     pub src: Option<ObjectId>,
     #[n(2)]
     pub msg_type: MsgType,
+    #[n(3)]
+    pub return_code : Option<u32>,
+    #[n(4)]
+    pub msg_id : Option<u16>,
+    #[n(5)]
+    pub qos : Option<u8>,
 }
+
+/*
+
+MsgType         Dst     Src    Payload     PubSUb
+Publish         -       Id1     (payload)   src/topic1 (header)(payload)
+Subscribe    Id1     -       src/topic1
+Request             Id1     Id2                 dst/topic1 (header)(payload)
+Reply
+Info            -     Id1     (propId)    info/topic1
+Info(req)       Id1   xxx    (propId)    info/topic1
+Info(reply)     xxx   Id1    (propId)    dst/topic2
+*/
 
 impl MsgHeader {
     pub fn is_msg(&self, msg_type: MsgType, dst: Option<u32>, src: Option<u32>) -> bool {
@@ -106,6 +124,21 @@ pub enum MetaPropertyId {
     Qos = -2,
     MsgId = -3,
 }
+#[derive(Encode, Decode, Clone)]
+#[cbor(map)]
+struct InfoMap {
+    #[n(0)]
+    pub id: PropertyId,
+    #[n(1)]
+    pub name: Option<String>,
+    #[n(2)]
+    pub desc: Option<String>,
+    #[n(3)]
+    pub prop_type: Option<PropType>,
+    #[n(4)]
+    pub prop_mode: Option<PropMode>,
+}
+
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
 #[repr(i8)]

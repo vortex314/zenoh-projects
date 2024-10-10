@@ -1,11 +1,13 @@
-//! Embassy ESP-NOW Example (Duplex)
-//!
-//! Asynchronously broadcasts, receives and sends messages via esp-now in multiple embassy tasks
-//!
-//! Because of the huge task-arena size configured this won't work on ESP32-S2
+/*
 
-//% FEATURES: async embassy embassy-generic-timers esp-wifi esp-wifi/async esp-wifi/embassy-net esp-wifi/wifi-default esp-wifi/wifi esp-wifi/utils esp-wifi/esp-now
-//% CHIPS: esp32 esp32s3 esp32c2 esp32c3 esp32c6
+Serves as a gateway between ESP-NOW WiFi and UART
+
+Any data received from ESP-NOW is sent to UART
+Any data received from UART is sent to ESP-NOW
+
+To avoid data corruption, the data is framed using COBS and CRC8
+
+*/
 
 #![no_std]
 #![no_main]
@@ -122,6 +124,8 @@ async fn main(_spawner: Spawner) -> ! {
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
+
+    let esp_now_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
     let uart0 = Uart::new_async_with_config(
@@ -144,55 +148,15 @@ async fn main(_spawner: Spawner) -> ! {
     let mut uart_actor = UartActor::new(uart0);
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 
-    esp_now_actor.map_to(event_to_blink, led_actor.handler());
-    esp_now_actor.for_all(|ev| {
-        let data = match ev {
-            EspNowEvent::Rxd {
-                peer: _,
-                rssi: _,
-                channel: _,
-                data,
-            } => data,
-            EspNowEvent::Broadcast {
-                peer: _,
-                rssi: _,
-                channel: _,
-                data,
-            } => data,
-        };
-        uart_handler.handle(&UartCmd::Txd(cobs_crc_frame(data).unwrap()));
-        //        uart_handler.handle(&UartCmd::Txd(Cbor::encode(&UartMsg(*peer, data.to_vec()))));
-    });
-    /*     esp_now_actor.for_each(|ev| match ev {
-        EspNowEvent::Rxd {
-            peer,
-            rssi: _,
-            data,
-            channel: _,
-        } => {
-            info!(
-                "Rxd: {:?} {:?}",
-                mac_to_string(peer),
-                msg::cbor::to_string(&data)
-            );
-        }
-        EspNowEvent::Broadcast {
-            peer,
-            rssi: _,
-            data,
-            channel: _,
-        } => {
-            /* let s = match String::from_utf8(data.clone()) {
-                Ok(string) => string,
-                Err(_) => data.iter().map(|b| format!("{:02X} ", b)).collect(),
-            };*/
-            info!(
-                "Broadcast: {:?} {:?} ",
-                mac_to_string(peer),
-                msg::cbor::to_string(data),
-            );
-        }
-    });*/
+    let mut framer_actor = FramerActor::new();
+    let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
+
+    esp_now_actor.map_to(event_to_blink, led_actor.handler()); // ESP-NOW -> LED
+
+    esp_now_actor.map_to(esp_now_to_uart, uart_handler); // ESP-NOW -> UART ( stateless ) 
+
+    uart_actor.map_to(rxd_to_framer,framer_handler); // UART -> deframer -> ESP-NOW
+    framer_actor.map_to(framer_to_esp_now,esp_now_handler); // deframer -> ESP-NOW  
 
     loop {
         select(
@@ -219,3 +183,37 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
         } => Some(LedCmd::Pulse { duration: 50 }),
     }
 }
+
+fn esp_now_to_uart(ev: &EspNowEvent)-> Option<UartCmd> {
+        let data = match ev {
+            EspNowEvent::Rxd {
+                peer: _,
+                rssi: _,
+                channel: _,
+                data,
+            } => data,
+            EspNowEvent::Broadcast {
+                peer: _,
+                rssi: _,
+                channel: _,
+                data,
+            } => data,
+        };
+        Some(&UartCmd::Txd(cobs_crc_frame(data).unwrap()));
+}
+
+fn rxd_to_framer(ev: &UartEvent) -> Option<FramerCmd> {
+    match ev {
+        UartEvent::Rxd(data) => Some(FramerCmd::Deframe(data.clone())),
+        _ => None,
+    }
+}
+
+fn framer_to_esp_now(ev: &FramerEvent) -> Option<EspNowCmd> {
+    match ev {
+        FramerEvent::Deframed(data) => Some(EspNowCmd::Broadcast(data.clone())),
+        _ => None,
+    }
+}
+
+

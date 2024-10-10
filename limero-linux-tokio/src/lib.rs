@@ -107,6 +107,9 @@ pub trait Actor<CMD, EVENT> {
 
 }
 
+
+
+
 pub trait ActorExt<CMD, EVENT,F> {
     fn for_each_event(&mut self, func: Box<F>)
     where
