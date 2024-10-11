@@ -39,9 +39,7 @@ pub enum Ps4 {
     AccelZ ,
 
     Rumble,
-    LedGreen,
-    LedRed,
-    LedBlue,
+    LightbarRgb,
 }
 
 #[derive(Encode,Decode,Default,Debug,Clone)]
@@ -69,10 +67,9 @@ pub struct Ps4Map {
     #[n(19)] pub accel_x: Option<i32>,
     #[n(20)] pub accel_y: Option<i32>,
     #[n(21)] pub accel_z: Option<i32>,
-    #[n(22)] pub rumble: Option<i8>,
-    #[n(23)] pub led_green: Option<i8>,
-    #[n(24)] pub led_red: Option<i8>,
-    #[n(25)] pub led_blue: Option<i8>,
+    #[n(22)] pub rumble: Option<u32>,
+    #[n(23)] pub lightbar_rgb: Option<u32>,
+    #[n(24)] pub connected: Option<bool>,
 }
  
 pub const PS4_ID: u32 = fnv("ps4");
