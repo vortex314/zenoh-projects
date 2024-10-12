@@ -8,7 +8,8 @@ use esp_hal::{
 };
 
 use alloc::vec::Vec;
-use log:: info;
+use log::info;
+use log::debug;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -31,7 +32,7 @@ where
     UART: 'static,
 {
     cmds: CmdQueue<UartCmd>,
-    events: EventHandlers<UartEvent>,
+    event_handlers: EventHandlers<UartEvent>,
     tx: UartTx<'static, UART, Async>,
     rx: UartRx<'static, UART, Async>,
 }
@@ -40,20 +41,20 @@ impl<UART> UartActor<UART>
 where
     UART: _esp_hal_uart_Instance,
 {
-    pub fn new(mut uart: Uart<'static, UART, Async>) -> Self {
+    pub fn new(mut uart: Uart<'static, UART, Async>, sep : u8 ) -> Self {
         // Split UART to create seperate Tx and Rx handles
         uart.set_at_cmd(AtCmdConfig {
             // catch sentinel char 0x00
             pre_idle_count: Some(1),
             post_idle_count: Some(1),
             gap_timeout: Some(1),
-            cmd_char: 0xABu8,
+            cmd_char: sep,
             char_num: Some(1),
         });
         let (tx, rx) = uart.split();
         Self {
             cmds: CmdQueue::new(5),
-            events: EventHandlers::new(),
+            event_handlers: EventHandlers::new(),
             tx,
             rx,
         }
@@ -65,16 +66,16 @@ where
     UART: _esp_hal_uart_Instance,
 {
     async fn run(&mut self) {
-        let mut small_buf = [0u8; 100];
+        let mut small_buf = [0u8; 256];
         info!("UART running");
         // Spawn Tx and Rx tasks
         loop {
             match select(self.rx.read_async(&mut small_buf), self.cmds.next()).await {
                 First(r) => match r {
-                    Ok(r) => {
-                      //  info!("Rx {:?}", r);
-                        self.events
-                            .handle(&UartEvent::Rxd(small_buf[0..r].to_vec()));
+                    Ok(n) => {
+                        debug!("Rx {:?}", n);
+                        self.event_handlers
+                            .handle(&UartEvent::Rxd(small_buf[0..n].to_vec()));
                     }
                     Err(e) => {
                         info!("Rx error {:?}", e);
@@ -90,7 +91,7 @@ where
     }
 
     fn add_listener(&mut self, listener: Endpoint<UartEvent>) {
-        self.events.add_listener(listener);
+        self.event_handlers.add_listener(listener);
     }
 
     fn handler(&self) -> Endpoint<UartCmd> {

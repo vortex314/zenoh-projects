@@ -113,11 +113,16 @@ impl EspNowActor {
 
     async fn broadcast(&mut self) {
         let mut sender = self.sender.lock().await;
-        let header = MsgHeader {
+        let mut header = MsgHeader::default();/*  {
             dst: None,
             src: Some(fnv("lm/motor")),
             msg_type: MsgType::Alive,
-        };
+            msg_id: None,
+            qos:None,
+            return_code: None,
+        };*/
+        header.msg_type = MsgType::Alive;
+        header.src = Some(fnv("lm/motor"));
         let v  = msg::cbor::encode(&header);
         let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
         if status.is_err() { error!("Send broadcast status: {:?}", status); };

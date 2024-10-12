@@ -186,7 +186,7 @@ impl ProxySession {
             TransportEvent::RecvMessage(message) => {
                 let r = self.on_transport_rxd(message).await;
                 if r.is_err() {
-                    debug!("Error handling message {:?}", r.err().unwrap().to_string());
+                    info!("Error handling message {:?}", r.err().unwrap().to_string());
                 }
             }
             TransportEvent::ConnectionLost {} => {
@@ -222,8 +222,9 @@ impl ProxySession {
     }
 
     async fn on_transport_rxd(&mut self, payload: Vec<u8>) -> Result<()> {
-        debug!(" CBOR : {}", minicbor::display(&payload));
+        info!(" CBOR : {}", minicbor::display(&payload));
         let mut decoder = minicbor::Decoder::new(&payload);
+
         let msg_header = decoder.decode::<MsgHeader>()?;
         let object_id = msg_header.src.unwrap();
 

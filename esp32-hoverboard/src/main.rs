@@ -34,7 +34,8 @@ use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::warn;
 use log::info;
-use msg::{framer::cobs_crc_deframe, FrameExtractor, MsgHeader};
+use log::debug;
+use msg::{FrameExtractor, MsgHeader};
 use msg::MsgType;
 
 
@@ -123,7 +124,7 @@ async fn main(_spawner: Spawner) -> ! {
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
-    let mut motor_deframer = FrameExtractor::new();
+    let mut frame_extractor = FrameExtractor::new();
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
@@ -146,7 +147,7 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-    let mut uart_actor = UartActor::<UART2>::new(uart);
+    let mut uart_actor = UartActor::<UART2>::new(uart,0x00);
     let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 
     // controller that translates PS4 messages to motor commands
@@ -181,12 +182,11 @@ async fn main(_spawner: Spawner) -> ! {
     // uart_actor >> motor_deframer >> espnow_actor; send uart data to espnow raw data
     uart_actor.for_all(move |msg: &UartEvent| match msg {
         UartEvent::Rxd(raw) => {
-            let vecs = motor_deframer.decode(raw);
-            for vec in vecs {
-                let _ = cobs_crc_deframe(&vec).map(|data| {
-                    info!("UartEvent: {:?}", data);
+            debug!("Raw data received: {:X?}", raw);
+            let vecs = frame_extractor.decode(raw);
+            for data in vecs {
+                    debug!("UartEvent: {:?}", data);
                     espnow_handler.handle(&EspNowCmd::Broadcast { data });
-                });
             }
         }
     });

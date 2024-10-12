@@ -3,13 +3,14 @@ use alloc::string::String;
 use alloc::string::ToString;
 use cobs::CobsDecoder;
 use crc::Crc;
-use crc::CRC_16_IBM_SDLC;
+use crc::CRC_16_IBM_3740;
 use log::debug;
 
 extern crate alloc;
 use alloc::format;
 use alloc::vec::Vec;
 
+use log::info;
 use minicbor::encode::Encoder;
 use minicbor::Encode;
 
@@ -17,7 +18,7 @@ use minicbor::Encode;
 use anyhow::Error;
 use anyhow::Result;
 
-pub const MTU_SIZE: usize = 1023;
+pub const MTU_SIZE: usize = 256;
 /*
 https://github.com/ty4tw/MQTT-SN
 
@@ -79,10 +80,19 @@ impl FrameExtractor {
             self.buffer.push(*byte);
             if *byte == 0 {
                 // decode cobs from frame
-                let msg = cobs_crc_deframe(&self.buffer);
-                msg.into_iter().for_each(|m| {
-                    messages_found.push(m);
-                });
+                let res = cobs_crc_deframe(&self.buffer);
+                match res {
+                    Ok(decoded) => {
+                        messages_found.push(decoded);
+                    }
+                    Err(e) => {
+                        info!("Error decoding frame : {}", e);
+                    }
+                }
+                self.buffer.clear();
+            }
+            if  self.buffer.len() > MTU_SIZE {
+                info!("Buffer overflow");
                 self.buffer.clear();
             }
         }
@@ -116,11 +126,11 @@ pub fn cobs_crc_frame(input: &Vec<u8>) -> Result<Vec<u8>>
 {
     let mut bytes = Vec::new();
     bytes.extend_from_slice(input);
-    let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+    let crc16 = Crc::<u16>::new(&CRC_16_IBM_3740);
     let crc = crc16.checksum(&bytes);
     debug!("CRC : {:04X}", crc);
-    bytes.push((crc & 0xFF) as u8);
     bytes.push(((crc >> 8) & 0xFF) as u8);
+    bytes.push((crc & 0xFF) as u8);
     let mut cobs_buffer = [0; MTU_SIZE];
     let mut cobs_encoder = cobs::CobsEncoder::new(&mut cobs_buffer);
     cobs_encoder
@@ -144,7 +154,11 @@ pub fn cobs_crc_deframe(queue: &Vec<u8>) -> Result<Vec<u8>> {
     let mut decoder = CobsDecoder::new(&mut output);
     let res = decoder.push(&queue).map_err(|e| Error::msg(e))?;
 
+    let count = res.unwrap().0;
+
     drop(decoder);
+
+    debug!("COBS decoded : {:02X?}", &output[0..count]);
 
     match res {
         None => {
@@ -154,10 +168,10 @@ pub fn cobs_crc_deframe(queue: &Vec<u8>) -> Result<Vec<u8>> {
             if output_size < 2 {
                 return Err(Error::msg("no correct COBS found".to_string()));
             }
-            let crc16 = Crc::<u16>::new(&CRC_16_IBM_SDLC);
+            let crc16 = Crc::<u16>::new(&CRC_16_IBM_3740);
             let crc = crc16.checksum(&output[0..(output_size - 2)]);
             let crc_received =
-                (output[output_size - 1] as u16) << 8 | output[output_size - 2] as u16;
+                (output[output_size - 2] as u16) << 8 | output[output_size - 1] as u16;
             if crc != crc_received {
                 return Err(Error::msg(format!(
                     "CRC error : {:04X} != {:04X}",
