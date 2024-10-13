@@ -85,8 +85,8 @@ impl FrameExtractor {
                     Ok(decoded) => {
                         messages_found.push(decoded);
                     }
-                    Err(e) => {
-                        info!("Error decoding frame : {}", e);
+                    Err(_e) => {
+                        info!("Error decoding frame  : {:02X?}", self.buffer);
                     }
                 }
                 self.buffer.clear();
@@ -141,18 +141,22 @@ pub fn cobs_crc_frame(input: &Vec<u8>) -> Result<Vec<u8>>
         .map_err(|_| Error::msg("cobs finalize"))?;
     // prefix with delimiter
     let mut res_vec = Vec::new();
-    res_vec.push(0x00 as u8);
+    // res_vec.push(0x00 as u8);
     res_vec.extend_from_slice(&cobs_buffer[0..size + 1]);
     //    res_vec.push(0x00 as u8);
-    res_vec.push('\r' as u8);
-    res_vec.push('\n' as u8);
+    // res_vec.push('\r' as u8);
+    // res_vec.push('\n' as u8);
     Ok(res_vec)
 }
 
 pub fn cobs_crc_deframe(queue: &Vec<u8>) -> Result<Vec<u8>> {
     let mut output = [0; MTU_SIZE + 2];
     let mut decoder = CobsDecoder::new(&mut output);
-    let res = decoder.push(&queue).map_err(|e| Error::msg(e))?;
+    let res = decoder.push(&queue).map_err(|_| Error::msg("COBS decoding error".to_string()))?;
+
+    if res.is_none() {
+        return Err(Error::msg("no correct COBS found".to_string()));
+    }
 
     let count = res.unwrap().0;
 

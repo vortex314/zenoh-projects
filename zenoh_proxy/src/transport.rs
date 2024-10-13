@@ -115,7 +115,7 @@ impl Actor<TransportCmd, TransportEvent> for Transport {
                             }*/
                         } else {
                             for frame in _res {
-                                info!("Frame : {}", bytes_to_string(&frame));
+                                debug!("Frame : {}", bytes_to_string(&frame));
                                 self.event_handlers.handle(&TransportEvent::RecvMessage(frame.clone()));
                                 };
                             }

@@ -49,6 +49,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use alloc::vec;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -78,6 +79,7 @@ use actors::led_actor::*;
 use actors::pubsub_actor::*;
 use actors::sys_actor::*;
 use actors::uart_actor::*;
+use actors::framer_actor::*;
 use msg::framer::cobs_crc_frame;
 
 #[main]
@@ -125,7 +127,7 @@ async fn main(_spawner: Spawner) -> ! {
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
 
-    let esp_now_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
+  //  let esp_now_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
     let uart0 = Uart::new_async_with_config(
@@ -145,18 +147,18 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
-    let mut uart_actor = UartActor::new(uart0);
-    let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
+    let mut uart_actor = UartActor::new(uart0,0x00); // COBS separator == 0x00
+  //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 
-    let mut framer_actor = FramerActor::new();
-    let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
+    let mut framer_actor = FramerActor::new(vec![]);
+   // let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
 
     esp_now_actor.map_to(event_to_blink, led_actor.handler()); // ESP-NOW -> LED
 
-    esp_now_actor.map_to(esp_now_to_uart, uart_handler); // ESP-NOW -> UART ( stateless ) 
+    esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless ) 
 
-    uart_actor.map_to(rxd_to_framer,framer_handler); // UART -> deframer -> ESP-NOW
-    framer_actor.map_to(framer_to_esp_now,esp_now_handler); // deframer -> ESP-NOW  
+    uart_actor.map_to(rxd_to_framer,framer_actor.handler()); // UART -> deframer -> ESP-NOW
+    framer_actor.map_to(framer_to_esp_now,esp_now_actor.handler()); // deframer -> ESP-NOW  
 
     loop {
         select(
@@ -199,19 +201,18 @@ fn esp_now_to_uart(ev: &EspNowEvent)-> Option<UartCmd> {
                 data,
             } => data,
         };
-        Some(&UartCmd::Txd(cobs_crc_frame(data).unwrap()));
+        Some(UartCmd::Txd(cobs_crc_frame(data).unwrap()))
 }
 
 fn rxd_to_framer(ev: &UartEvent) -> Option<FramerCmd> {
     match ev {
         UartEvent::Rxd(data) => Some(FramerCmd::Deframe(data.clone())),
-        _ => None,
     }
 }
 
 fn framer_to_esp_now(ev: &FramerEvent) -> Option<EspNowCmd> {
     match ev {
-        FramerEvent::Deframed(data) => Some(EspNowCmd::Broadcast(data.clone())),
+        FramerEvent::Deframed(data) => Some(EspNowCmd::Broadcast { data:data.clone()}),
         _ => None,
     }
 }

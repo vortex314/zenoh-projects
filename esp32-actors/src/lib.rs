@@ -9,3 +9,4 @@ pub mod pubsub_actor;
 pub mod sys_actor;
 pub mod proxy_message;
 pub mod uart_actor;
+pub mod framer_actor;
