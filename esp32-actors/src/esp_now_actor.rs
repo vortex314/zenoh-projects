@@ -17,21 +17,21 @@ use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use msg::{ MsgType, fnv};
 use msg::MsgHeader;
+use msg::{fnv, MsgType};
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
     Rxd {
         peer: [u8; 6],
         rssi: u8,
-        channel:u8,
+        channel: u8,
         data: Vec<u8>,
     },
     Broadcast {
         peer: [u8; 6],
         rssi: u8,
-        channel : u8,
+        channel: u8,
         data: Vec<u8>,
     },
 }
@@ -101,6 +101,8 @@ impl EspNowActor {
 
         let manager = Box::leak(Box::new(manager));
         let sender = Box::leak(Box::new(Mutex::<NoopRawMutex, _>::new(sender)));
+
+  //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
         EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
@@ -113,19 +115,21 @@ impl EspNowActor {
 
     async fn broadcast(&mut self) {
         let mut sender = self.sender.lock().await;
-        let mut header = MsgHeader::default();/*  {
-            dst: None,
-            src: Some(fnv("lm/motor")),
-            msg_type: MsgType::Alive,
-            msg_id: None,
-            qos:None,
-            return_code: None,
-        };*/
+        let mut header = MsgHeader::default(); /*  {
+                                                   dst: None,
+                                                   src: Some(fnv("lm/motor")),
+                                                   msg_type: MsgType::Alive,
+                                                   msg_id: None,
+                                                   qos:None,
+                                                   return_code: None,
+                                               };*/
         header.msg_type = MsgType::Alive;
         header.src = Some(fnv("lm/motor"));
-        let v  = msg::cbor::encode(&header);
+        let v = msg::cbor::encode(&header);
         let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
-        if status.is_err() { error!("Send broadcast status: {:?}", status); };
+        if status.is_err() {
+            error!("Send broadcast status: {:?}", status);
+        };
     }
 
     async fn on_timeout(&mut self, _id: u32) {
@@ -158,7 +162,7 @@ impl EspNowActor {
 }
 
 async fn listener(
-    manager: &EspNowManager<'static>,
+    _manager: &EspNowManager<'static>,
     receiver: &mut EspNowReceiver<'static>,
 ) -> EspNowEvent {
     let r = receiver.receive_async().await;
@@ -166,7 +170,7 @@ async fn listener(
     debug!("rx_control {:?}", r.info.rx_control);
     debug!("Received {:?}", r.get_data());
     if r.info.dst_address == BROADCAST_ADDRESS {
-        if !manager.peer_exists(&r.info.src_address) {
+        /*if !manager.peer_exists(&r.info.src_address) {
             manager
                 .add_peer(PeerInfo {
                     peer_address: r.info.src_address,
@@ -176,7 +180,7 @@ async fn listener(
                 })
                 .unwrap();
             info!("Added peer {:?}", mac_to_string(&r.info.src_address));
-        }
+        }*/
         EspNowEvent::Broadcast {
             peer: r.info.src_address,
             rssi: r.info.rx_control.rssi as u8,

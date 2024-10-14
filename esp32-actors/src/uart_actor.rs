@@ -3,9 +3,9 @@ use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
 use esp_hal::prelude::_esp_hal_uart_Instance;
 use esp_hal::Async;
-use esp_hal::{
-    uart::{config::AtCmdConfig, Uart, UartRx, UartTx},
-};
+use esp_hal::
+    uart::{config::AtCmdConfig, Uart, UartRx, UartTx}
+;
 
 use alloc::vec::Vec;
 use log::info;
