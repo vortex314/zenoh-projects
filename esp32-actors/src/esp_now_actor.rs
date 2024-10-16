@@ -7,7 +7,7 @@ use embassy_futures::select::select3;
 use embassy_futures::select::Either3::{First, Second, Third};
 
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
-use embassy_time::Duration;
+use embassy_time::{Duration, Instant};
 use esp_backtrace as _;
 use esp_wifi::esp_now::EspNow;
 use esp_wifi::esp_now::{EspNowManager, EspNowReceiver, EspNowSender, PeerInfo, BROADCAST_ADDRESS};
@@ -139,6 +139,7 @@ impl EspNowActor {
     }
 
     async fn on_cmd_message(&mut self, msg: EspNowCmd) -> Result<()> {
+        let now = Instant::now();
         match msg {
             EspNowCmd::Txd { peer, data } => {
                 let mut sender = self.sender.lock().await;
@@ -157,6 +158,8 @@ impl EspNowActor {
                     .map_err(|e| Error::msg(format!("Failed to send data: {:?}", e)))?;
             }
         }
+        let elapsed = now.elapsed();
+        debug!("Elapsed: {:?}", elapsed);
         Ok(())
     }
 }

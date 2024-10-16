@@ -15,6 +15,7 @@
 use core::mem::MaybeUninit;
 use embassy_executor::Spawner;
 use embassy_futures::select::select3;
+use embassy_time::Instant;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -117,7 +118,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     let led_pin = io.pins.gpio2;
     let led_pin: AnyOutput = AnyOutput::new(led_pin, Level::Low);
-    let (tx_pin, rx_pin) = (io.pins.gpio17, io.pins.gpio16);
+    let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
@@ -135,8 +136,8 @@ async fn main(_spawner: Spawner) -> ! {
             parity: Parity::ParityNone,
             stop_bits: StopBits::STOP1,
             clock_source: ClockSource::Apb,
-            rx_fifo_full_threshold: 127,
-            rx_timeout: None,
+            rx_fifo_full_threshold: 64,
+            rx_timeout: Some(10),
         },
         &clocks,
         rx_pin, // RXD
@@ -181,11 +182,10 @@ async fn main(_spawner: Spawner) -> ! {
     // uart_actor >> motor_deframer >> espnow_actor; send uart data to espnow raw data
     uart_actor.for_all(move |msg: &UartEvent| match msg {
         UartEvent::Rxd(raw) => {
-            debug!("Raw data received: {:X?}", raw);
+            debug!("Raw data received: {}", raw.len());
             let vecs = frame_extractor.decode(raw);
             for data in vecs {
                 debug!("UartEvent: {:?}", data);
-                //                   info!("{}",minicbor::display(&data));
                 espnow_handler.handle(&EspNowCmd::Broadcast { data });
             }
         }

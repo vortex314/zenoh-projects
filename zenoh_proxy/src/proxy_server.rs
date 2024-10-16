@@ -198,6 +198,7 @@ impl ProxySession {
     }
 
     fn id_to_topic(&self, object_id: ObjectId, prop_id: PropertyId) -> Result<String> {
+
         if self.objects.contains_key(&object_id) {
             let object_info = self.objects.get(&object_id).unwrap();
             if object_info.prop.contains_key(&prop_id) {
