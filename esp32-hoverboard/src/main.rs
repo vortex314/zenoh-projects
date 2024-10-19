@@ -15,7 +15,6 @@
 use core::mem::MaybeUninit;
 use embassy_executor::Spawner;
 use embassy_futures::select::select3;
-use embassy_time::Instant;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
@@ -82,7 +81,7 @@ async fn main(_spawner: Spawner) -> ! {
     //esp_info::logger::init_logger_from_env();
     init_heap();
     let _ = limero::init_logger();
-    log::info!("Hello, world!");
+    log::info!("ESP32-HOVERBOARD bridge starting...");
 
     let peripherals = Peripherals::take();
 
@@ -220,7 +219,7 @@ fn esp_now_to_controller(controller: &mut HbController, data: &Vec<u8>) -> Resul
     // PUB from PS4
     {
         let ev = decoder.decode::<msg::ps4::Ps4Map>()?;
-
+/* 
         ev.stick_left_x
             .filter(|x| *x > 100)
             .map(|_| controller.change_steer(-5));
@@ -240,6 +239,11 @@ fn esp_now_to_controller(controller: &mut HbController, data: &Vec<u8>) -> Resul
         ev.stick_right_x
             .filter(|x| *x > 50 || *x < -50)
             .map(|_| controller.stop());
+        */
+        ev.stick_right_x
+            .map(|x| controller.steer((x*2) as i16));
+        ev.stick_right_y
+            .map(|y| controller.speed((y*2) as i16));
 
         Ok(controller.motor_cmd())
     } else if msg_header.is_msg(MsgType::Pub, Some(HB_ID), None) {

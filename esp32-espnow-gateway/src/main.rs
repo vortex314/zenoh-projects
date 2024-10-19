@@ -147,6 +147,7 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
 
+
     let mut uart_actor = UartActor::new(uart0,0x00); // COBS separator == 0x00
   //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
 

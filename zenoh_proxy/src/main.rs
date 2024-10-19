@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 use std::sync::Arc;
+use std::env;
 
 use chrono::offset;
 
@@ -66,11 +67,17 @@ fn start_proxy(event: &PortScannerEvent)  {
 
 #[tokio::main(worker_threads = 1)]
 async fn main() -> Result<(), Error> {
+    let args: Vec<String> = env::args().collect();
+
     logger::init();
+    info!("args: {:?}", args);
+    let default_pattern = "/dev/ttyUSB0".to_string();
+    let port_pattern = args.get(1).unwrap_or(&default_pattern);
+
     info!("Starting Serial Proxy");
 
     let port_patterns = vec![PortPattern {
-        name_regexp: "/dev/ttyUSB1".to_string(),
+        name_regexp: port_pattern.clone(),
         vid: None, // Some(4292),
         pid: None,
         serial_number: None,
