@@ -1,0 +1,17 @@
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor"
+#runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
+
+
+[env]
+ESP_LOGLEVEL="INFO"
+
+[build]
+rustflags = [
+  "-C", "link-arg=-nostartfiles",
+]
+
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["core","alloc"]

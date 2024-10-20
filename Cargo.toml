@@ -26,6 +26,7 @@ exclude = [
 members = [
   "esp32-espnow-gateway",
   "esp32-hoverboard",
+  "esp32-dc-motor",
   "msg",
 ]
 

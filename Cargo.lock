@@ -1061,6 +1061,65 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp32-dc-motor"
+version = "0.0.0"
+dependencies = [
+ "actors",
+ "aes",
+ "aligned",
+ "anyhow",
+ "bitfield 0.16.1",
+ "bleps",
+ "byte",
+ "cfg-if",
+ "cobs",
+ "const-fnv1a-hash",
+ "crc",
+ "critical-section",
+ "crypto-bigint",
+ "elliptic-curve",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-sync 0.6.0",
+ "embassy-time",
+ "embassy-time-driver",
+ "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-storage",
+ "esp-alloc",
+ "esp-backtrace",
+ "esp-hal",
+ "esp-hal-embassy",
+ "esp-ieee802154",
+ "esp-println",
+ "esp-storage",
+ "esp-wifi",
+ "fugit",
+ "heapless 0.8.0",
+ "hex-literal",
+ "hmac",
+ "ieee80211 0.4.0",
+ "ieee802154",
+ "limero",
+ "lis3dh-async",
+ "log",
+ "minicbor 0.18.0",
+ "minicbor-ser",
+ "msg",
+ "nb 1.1.0",
+ "p192",
+ "p256",
+ "portable-atomic",
+ "serde",
+ "sha2",
+ "static_cell",
+]
+
+[[package]]
 name = "esp32-espnow-gateway"
 version = "0.0.0"
 dependencies = [
@@ -1313,6 +1372,12 @@ dependencies = [
  "rand_core",
  "subtle",
 ]
+
+[[package]]
+name = "half"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
 
 [[package]]
 name = "half"
@@ -1607,6 +1672,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a20020e8e2d1881d8736f64011bb5ff99f1db9947ce3089706945c8915695cb"
 dependencies = [
+ "half 1.8.3",
  "minicbor-derive 0.12.0",
 ]
 
@@ -1616,7 +1682,7 @@ version = "0.24.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29be4f60e41fde478b36998b88821946aafac540e53591e76db53921a0cc225b"
 dependencies = [
- "half",
+ "half 2.4.1",
  "minicbor-derive 0.15.3",
 ]
 
@@ -1626,7 +1692,7 @@ version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
 dependencies = [
- "half",
+ "half 2.4.1",
  "minicbor-derive 0.15.3",
 ]
 
