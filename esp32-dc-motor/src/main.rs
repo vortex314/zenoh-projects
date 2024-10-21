@@ -18,22 +18,27 @@ use embassy_futures::select::select3;
 use esp_backtrace as _;
 use esp_hal::{
     clock::ClockControl,
-    gpio::{AnyOutput, Io, Level},
+    gpio::{AnyOutput,  Io, Level},
     peripherals::Peripherals,
     prelude::*,
     rng::Rng,
     system::SystemControl,
     timer::{ErasedTimer, OneShotTimer, PeriodicTimer},
 };
+use esp_hal::mcpwm::PeripheralClockConfig;
+use esp_hal::mcpwm::McPwm;
+// use esp_hal::gpio::any_pin::AnyPin;
 
 use esp_wifi::{initialize, EspWifiInitFor};
 use limero::*;
 use log::warn;
 use minicbor::Decoder;
-use msg::dc_motor::DC_MOTOR_ID;
-use msg::{FrameExtractor, MsgHeader};
+// use minicbor_ser::de;
+use msg:: MsgHeader;
 
 extern crate alloc;
+
+use alloc::vec::Vec;
 
 use actors::esp_now_actor::*;
 use actors::led_actor::*;
@@ -68,6 +73,8 @@ macro_rules! mk_static {
 }*/
 
 const HB_ID: u32 = msg::fnv("lm1/hb");
+const DC_MOTOR: &str = "lm1/cutter";
+const DC_MOTOR_ID: u32 = msg::fnv(DC_MOTOR);
 
 #[main]
 async fn main(_spawner: Spawner) -> ! {
@@ -80,8 +87,6 @@ async fn main(_spawner: Spawner) -> ! {
 
     let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::max(system.clock_control).freeze();
-
-    let mut motor_actor = DcMotorActor::new(&clocks, &peripherals);
 
     let timer = PeriodicTimer::new(
         esp_hal::timer::timg::TimerGroup::new(peripherals.TIMG0, &clocks, None)
@@ -112,49 +117,51 @@ async fn main(_spawner: Spawner) -> ! {
 
     let led_pin = io.pins.gpio2;
     let led_pin: AnyOutput = AnyOutput::new(led_pin, Level::Low);
-    let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
+
+    let clock_cfg = PeripheralClockConfig::with_frequency(&clocks, 40u32.MHz()).unwrap();
+    let  mcpwm = McPwm::new(peripherals.MCPWM0, clock_cfg);
+
+   // let left_pwm_pin = GpioPin::new(io.pins.gpio19);
+  //  let right_pwm_pin = AnyPin::new(io.pins.gpio17);
+    let  left_enable_pin = AnyOutput::new(io.pins.gpio23, Level::Low);
+    let  right_enable_pin = AnyOutput::new(io.pins.gpio32, Level::Low);
+
+    let mut motor_actor = DcMotorActor::new(
+        mcpwm,
+        clock_cfg,
+        DC_MOTOR,
+        left_enable_pin,
+        right_enable_pin,
+        io.pins.gpio19,
+    );
+    // let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, wifi).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
-    let mut frame_extractor = FrameExtractor::new();
+    let motor_handler = mk_static!(Endpoint<DcMotorCmd>, motor_actor.handler());
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
 
     // esp_now_acor >> motor_cmd >> uart_actor
     esp_now_actor.for_all(move |ev| {
-        let data = match ev {
-            EspNowEvent::Rxd {
-                peer: _,
-                rssi: _,
-                channel: _,
-                data,
-            } => data,
-            EspNowEvent::Broadcast {
-                peer: _,
-                rssi: _,
-                channel: _,
-                data,
-            } => data,
-        };
-        let mut decoder = Decoder::new(data);
+        let data = data_from_event(&ev);
+        let mut decoder = Decoder::new(&data);
+        // let msg_header = decoder.decode::<MsgHeader>().unwrap();
         decoder.decode::<MsgHeader>().map(|msg_header| {
-            msg_header.dst.map(|dst| {
-                if dst == DC_MOTOR_ID {
-                    motor_actor.handle(&DcMotorCmd::Request {
-                        msg_header,
-                        data,
-                    });
-                }
+            msg_header.dst.filter(|dst| *dst == DC_MOTOR_ID).map(|_| {
+                decoder.decode::<DcMotorMsg>().map(|msg| {
+                    motor_handler.handle(&DcMotorCmd::Request { msg_header, msg });
+                });
             });
         });
     });
 
-    let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
+ //   let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
 
     loop {
-        select3( motor_actor.run(),esp_now_actor.run(), led_actor.run()).await;
+        select3(motor_actor.run(), esp_now_actor.run(), led_actor.run()).await;
     }
 }
 
@@ -172,5 +179,22 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
             rssi: _,
             data: _,
         } => Some(LedCmd::Pulse { duration: 10 }),
+    }
+}
+
+fn data_from_event(ev: &EspNowEvent) -> &Vec<u8> {
+    match ev {
+        EspNowEvent::Rxd {
+            peer: _,
+            channel: _,
+            rssi: _,
+            data,
+        } => data,
+        EspNowEvent::Broadcast {
+            peer: _,
+            channel: _,
+            rssi: _,
+            data,
+        } => data,
     }
 }

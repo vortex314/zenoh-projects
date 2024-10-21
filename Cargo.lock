@@ -1107,7 +1107,7 @@ dependencies = [
  "limero",
  "lis3dh-async",
  "log",
- "minicbor 0.18.0",
+ "minicbor 0.25.1",
  "minicbor-ser",
  "msg",
  "nb 1.1.0",
@@ -1372,12 +1372,6 @@ dependencies = [
  "rand_core",
  "subtle",
 ]
-
-[[package]]
-name = "half"
-version = "1.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
 
 [[package]]
 name = "half"
@@ -1672,7 +1666,6 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a20020e8e2d1881d8736f64011bb5ff99f1db9947ce3089706945c8915695cb"
 dependencies = [
- "half 1.8.3",
  "minicbor-derive 0.12.0",
 ]
 
@@ -1682,7 +1675,7 @@ version = "0.24.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29be4f60e41fde478b36998b88821946aafac540e53591e76db53921a0cc225b"
 dependencies = [
- "half 2.4.1",
+ "half",
  "minicbor-derive 0.15.3",
 ]
 
@@ -1692,7 +1685,7 @@ version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
 dependencies = [
- "half 2.4.1",
+ "half",
  "minicbor-derive 0.15.3",
 ]
 

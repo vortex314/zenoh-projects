@@ -40,7 +40,6 @@ pub use json::to_string as payload_display;
 
 pub mod hb;
 pub mod ps4;
-pub mod dc_motor;
 
 pub const fn fnv(s: &str) -> u32 {
     fnv1a_hash_32(s.as_bytes(), None)

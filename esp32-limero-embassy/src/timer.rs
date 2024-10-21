@@ -116,6 +116,11 @@ impl Timers {
             timer.stop();
         }
     }
+    pub fn start(&mut self, id: u32) {
+        if let Some(timer) = self.timers.get_mut(&id) {
+            timer.start();
+        }
+    }
     pub async fn alarm(&mut self) -> u32 {
         let mut lowest_timer: Option<&mut Timer> = None;
         for (_id, timer) in self.timers.iter_mut() {
