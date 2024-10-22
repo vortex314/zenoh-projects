@@ -6,9 +6,8 @@ use esp_hal::mcpwm::McPwm;
 use esp_hal::mcpwm::PeripheralClockConfig;
 use esp_hal::mcpwm::PwmPeripheral;
 // use esp_hal::peripherals::MCPWM0;
-use esp_hal::prelude::_fugit_RateExtU32;
 // use esp_hal::gpio::Level;
-use esp_hal::gpio::AnyOutput;
+use esp_hal::gpio::Output;
 use esp_hal::gpio::GpioPin;
 // use esp_hal::gpio::Pin;
 // use esp_hal::gpio::any_pin::AnyPin;
@@ -69,8 +68,8 @@ pub struct DcMotorActor<PWM> where PWM: PwmPeripheral + 'static {
     str_id: String,
     pwm_a: PwmPin<'static, GpioPin<19>, PWM, 0, true>,
  //   pwm_pin_right: McPwm<'static, MCPWM0>,
-    left_enable_pin: AnyOutput<'static>,
-    right_enable_pin: AnyOutput<'static>,
+    left_enable_pin: Output<'static>,
+    right_enable_pin: Output<'static>,
 }
 
 impl<PWM> DcMotorActor<PWM> where PWM: PwmPeripheral + 'static {
@@ -78,8 +77,8 @@ impl<PWM> DcMotorActor<PWM> where PWM: PwmPeripheral + 'static {
         mut mcpwm : McPwm<'static,PWM>,
         clock_cfg: PeripheralClockConfig<'static>,
         str_id: &str,
-        left_enable_pin: AnyOutput<'static>,
-        right_enable_pin: AnyOutput<'static>,
+        left_enable_pin: Output<'static>,
+        right_enable_pin: Output<'static>,
         pwm_pin_left : GpioPin<19>,
     ) -> DcMotorActor<PWM> {
        

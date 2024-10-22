@@ -17,7 +17,6 @@ exclude = [
   "pubsub",
   "zenoh_proxy",
   "serdes",
-  "esp32-actors",
   "esp32-espnow-client",
   "zenoh_proxy",
   "esp_no_std",
@@ -27,14 +26,65 @@ members = [
   "esp32-espnow-gateway",
   "esp32-hoverboard",
   "esp32-dc-motor",
+  "esp32-actors",
   "msg",
 ]
 
 resolver = "2"
+
 [workspace.dependencies]
-esp-hal = {version = "0.19.0", features = ["esp32", "log"]}
-esp-hal-embassy = {version = "0.3.0", features = ["esp32"]}
-esp-ieee802154 = {version = "0.2.0"}
+embassy-executor = {version = "0.6.1", features = [
+  "task-arena-size-32768",
+  "integrated-timers",
+]}
+embassy-futures = "0.1.1"
+# embassy-net = { version = "0.4.0", features = [ "tcp", "udp", "dhcpv4", "medium-ethernet"] }
+embassy-sync = "0.6.0"
+embassy-time = "0.3.1"
+embassy-time-driver = {version = "0.1.0"}
+# embassy-usb         = { version = "0.2.0", default-features = false, optional = true }
+# embedded-can        = "0.4.1"
+# embedded-graphics   = "0.8.1"
+embedded-hal = "1.0.0"
+embedded-hal-02 = {version = "0.2.7", package = "embedded-hal", features = [
+  "unproven",
+]}
+embedded-hal-async = "1.0.0"
+embedded-hal-bus = "0.2.0"
+embedded-io = {version = "0.6.1", default-features = false}
+embedded-io-async = "0.6.1"
+embedded-storage = "0.3.1"
+
+esp-alloc = {version = "*"}
+esp-backtrace = {version = "*", features = [
+  "esp32",
+  "exception-handler",
+  "panic-handler",
+  "println",
+]}
+esp-hal = {version = "0.21.1", features = ["esp32", "log"]}
+esp-hal-embassy = {version = "0.4.0", features = ["esp32"]}
+esp-ieee802154 = {version = "0.3.1"}
+esp-println = {version = "*", features = ["esp32", "log"]}
+esp-storage = {version = "*"}
+esp-wifi = {version = "*", features = [
+  "esp32",
+  "esp-now",
+  "async",
+  "wifi",
+  "utils",
+  "wifi-default",
+]}
+
+minicbor = { version = "0.24.4", default-features = false, features = [
+    "derive",
+    "alloc",
+    "half",
+] }
+minicbor-ser = { version = "*", default-features = false, features = ["alloc","alloc"] }
+cobs = { version = "0.2.3", default-features = false, features = [] }
+crc = { version = "3.0.1", features = [] }
+log = { version = "0.4.22" }
 
 [profile.release]
 codegen-units = 1

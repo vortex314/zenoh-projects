@@ -9,13 +9,12 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "RUST_BACKTRACE": "1",
-                    "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG":"true"
+                    "RUST_BACKTRACE": "1"
                 }
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
             "args": [
-                "run",
+                "build",
                 "--release",
             ],
             "group": {

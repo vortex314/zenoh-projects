@@ -1,4 +1,4 @@
-use esp_hal::gpio::AnyOutput;
+use esp_hal::gpio::Output;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers,Endpoint};
 use embassy_time::Duration;
@@ -27,12 +27,12 @@ pub struct LedActor {
     events: EventHandlers<LedEvent>,
     timers: Timers,
     state: LedState,
-    pin: AnyOutput<'static>,
+    pin: Output<'static>,
     pin_level_high: bool,
 }
 
 impl LedActor {
-    pub fn new(pin: AnyOutput<'static>) -> Self {
+    pub fn new(pin: Output<'static>) -> Self {
         Self {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),

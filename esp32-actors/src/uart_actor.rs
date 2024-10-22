@@ -51,7 +51,7 @@ where
             cmd_char: sep,
             char_num: Some(1),
         });
-        let (tx, rx) = uart.split();
+        let (rx, tx) = uart.split();
         Self {
             cmds: CmdQueue::new(5),
             event_handlers: EventHandlers::new(),

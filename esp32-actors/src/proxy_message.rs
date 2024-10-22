@@ -1,11 +1,8 @@
-#[cfg(feature = "esp32")]
 use alloc::{ string::String, string::ToString, vec::Vec,format};
 use core::result::Result::Err;
 use core::option::Option::Some;
 use minicbor::decode::Error as DecodeError;
 
-#[cfg(feature = "linux")]
-use std::{collections::VecDeque, fmt::format, string::String, vec::Vec};
 
 use core::result::Result;
 use core::result::Result::Ok;
