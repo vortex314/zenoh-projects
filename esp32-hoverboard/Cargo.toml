@@ -1,66 +1,33 @@
 [package]
-name = "esp32-hoverboard"
-version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+name = "esp32-hoverboard"
 publish = false
-
+version = "0.0.0"
 
 [dependencies]
-aes = "0.8.4"
-aligned = { version = "0.4.2" }
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
-    "macros",
-    "async",
-] }
-cfg-if = "1.0.0"
-critical-section = "1.1.2"
-crypto-bigint = { version = "0.5.5", default-features = false }
-elliptic-curve = { version = "0.13.8", default-features = false, features = [
-    "sec1",
-] }
 
-
-fugit = "0.3.7"
-heapless = "0.8.0"
-hex-literal = "0.4.1"
-hmac = { version = "0.12.1", default-features = false }
-ieee80211 = { version = "0.4.0", default-features = false }
-ieee802154 = "0.6.1"
-lis3dh-async = "0.9.3"
-log = "0.4.22"
-nb = "1.1.0"
-p192 = { version = "0.13.0", default-features = false, features = [
-    "arithmetic",
-] }
-p256 = { version = "0.13.2", default-features = false, features = [
-    "arithmetic",
-] }
-portable-atomic = { version = "1.6.0", default-features = false }
-sha2 = { version = "0.10.8", default-features = false }
-static_cell = { version = "2.1.0", features = ["nightly"] }
-
-minicbor = { version = "0.25.1", default-features = false, features = [
+embassy-executor = {workspace = true}
+embassy-futures = {workspace = true}
+embassy-sync = {workspace = true}
+embassy-time = {workspace = true}
+embedded-io-async = {workspace = true}
+esp-alloc = {workspace = true}
+esp-backtrace = {workspace = true}
+esp-hal = {workspace = true}
+esp-hal-embassy = {workspace = true}
+esp-wifi = {workspace = true}
+log = {workspace = true}
+minicbor = {workspace = true, default-features = false, features = [
     "derive",
     "alloc",
     "half",
 ] }
-minicbor-ser = { version = "*", default-features = false, features = ["alloc"] }
-cobs = { version = "0.2.3", default-features = false, features = [] }
-crc = { version = "3.0.1", features = [] }
-byte = { version = "0.2.7" }
-bitfield = "0.16.1"
-anyhow = { version = "1.0", default-features = false }
+anyhow = {workspace = true}
 
-limero = { path = "../esp32-limero-embassy" }
-actors = { path = "../esp32-actors" }
-serde = { version = "1.0", default-features = false }
-const-fnv1a-hash = "1.1.0"
-msg = { path = "../msg" }
-esp-hal = { workspace = true} 
+actors = {path = "../esp32-actors"}
+limero = {path = "../esp32-limero-embassy"}
+msg = {path = "../msg"}
 
 [features]
 default = []
-
-
-

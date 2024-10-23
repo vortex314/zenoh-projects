@@ -24,12 +24,10 @@ use esp_backtrace as _;
 use esp_hal::timer::timg::TimerGroup;
 use esp_hal::uart;
 use esp_hal::{
-    //  clock::ClockControl,
     gpio::{GpioPin, Io, Level, Output},
     peripherals::Peripherals,
     prelude::*,
     rng::Rng,
-    //    system::SystemControl,
     timer::{OneShotTimer, PeriodicTimer},
     uart::{
         config::{AtCmdConfig, Config, DataBits, Parity, StopBits},

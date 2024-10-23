@@ -76,7 +76,7 @@ esp-wifi = {version = "*", features = [
   "wifi-default",
 ]}
 
-minicbor = { version = "0.24.4", default-features = false, features = [
+minicbor = { version = "0.25.1", default-features = false, features = [
     "derive",
     "alloc",
     "half",
@@ -85,6 +85,17 @@ minicbor-ser = { version = "*", default-features = false, features = ["alloc","a
 cobs = { version = "0.2.3", default-features = false, features = [] }
 crc = { version = "3.0.1", features = [] }
 log = { version = "0.4.22" }
+
+byte = { version = "0.2.7" }
+bitfield = "0.17.0"
+anyhow = { version = "1.0.87", default-features = false }
+
+limero_esp32 = { path = "esp32-limero-embassy" }
+# pubsub = { path = "../pubsub" }
+# serdes = { path = "../serdes" }
+actors = { path = "esp32-actors" }
+serde = { version = "1.0.210", default-features = false }
+msg = { path = "msg" }
 
 [profile.release]
 codegen-units = 1
