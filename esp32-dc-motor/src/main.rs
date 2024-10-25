@@ -98,11 +98,12 @@ async fn main(_spawner: Spawner) -> ! {
         io.pins.gpio19,
     );
     // let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
+    let motor_handler = motor_actor.handler();
+
 
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
     let mut esp_now_actor = EspNowActor::new(esp_now);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
-    let motor_handler = motor_actor.handler();
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
