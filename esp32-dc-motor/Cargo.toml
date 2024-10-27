@@ -6,6 +6,8 @@ publish = false
 version = "0.0.0"
 
 [dependencies]
+actors = {path = "../esp32-actors"}
+const-fnv1a-hash = "1.1.0"
 embassy-executor = {workspace = true}
 embassy-futures = {workspace = true}
 embassy-sync = {workspace = true}
@@ -16,13 +18,11 @@ esp-backtrace = {workspace = true}
 esp-hal = {workspace = true}
 esp-hal-embassy = {workspace = true}
 esp-wifi = {workspace = true}
+limero = {path = "../esp32-limero-embassy"}
 log = {workspace = true}
 minicbor = {workspace = true}
-
-actors = {path = "../esp32-actors"}
-const-fnv1a-hash = "1.1.0"
-limero = {path = "../esp32-limero-embassy"}
 msg = {path = "../msg"}
+portable-atomic = {version = "1.9.0", default-features = false}
 
 [features]
 default = []

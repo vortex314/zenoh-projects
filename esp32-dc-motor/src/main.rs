@@ -15,28 +15,33 @@
 use embassy_executor::Spawner;
 use embassy_futures::select::select3;
 use esp_backtrace as _;
+use esp_hal::gpio::Input;
+use esp_hal::mcpwm::McPwm;
+use esp_hal::mcpwm::PeripheralClockConfig;
+use esp_hal::pcnt::Pcnt;
+use esp_hal::timer::timg::TimerGroup;
 use esp_hal::{
-    gpio::{Output,  Io, Level},
+    gpio::{Io, Level, Output},
     prelude::*,
     rng::Rng,
 };
-use esp_hal::mcpwm::PeripheralClockConfig;
-use esp_hal::mcpwm::McPwm;
-use esp_hal::timer::timg::TimerGroup;
+use esp_hal::gpio::Pull;
 // use esp_hal::gpio::any_pin::AnyPin;
 
-use esp_wifi:: EspWifiInitFor;
+use esp_wifi::EspWifiInitFor;
 use limero::*;
 use log::warn;
 use minicbor::Decoder;
 // use minicbor_ser::de;
-use msg:: MsgHeader;
 use log::info;
+use msg::{
+    ps4::{Ps4Map, PS4_ID},
+    MsgHeader,
+};
 
 extern crate alloc;
 
 use alloc::vec::Vec;
-use alloc::boxed::Box;
 
 use actors::esp_now_actor::*;
 use actors::led_actor::*;
@@ -44,11 +49,6 @@ use actors::led_actor::*;
 mod motor_actor;
 use motor_actor::*;
 
-fn mk_static<T>(val: T) -> &'static T {
-    Box::leak(Box::new(val))
-}
-
-const HB_ID: u32 = msg::fnv("lm1/hb");
 const DC_MOTOR: &str = "lm1/cutter";
 const DC_MOTOR_ID: u32 = msg::fnv(DC_MOTOR);
 
@@ -73,7 +73,7 @@ async fn main(_spawner: Spawner) -> ! {
     esp_hal_embassy::init(timg1.timer0);
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
-    let  esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
+    let esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
     info!("esp-now version {}", esp_now.get_version().unwrap());
     let mut esp_now_actor = EspNowActor::new(esp_now);
 
@@ -82,28 +82,28 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
     let clock_cfg = PeripheralClockConfig::with_frequency(40u32.MHz()).unwrap();
 
-    let  mcpwm = McPwm::new(peripherals.MCPWM0, clock_cfg);
+    let mcpwm = McPwm::new(peripherals.MCPWM0, clock_cfg);
+    let  pcnt = Pcnt::new(peripherals.PCNT);
 
-   // let left_pwm_pin = GpioPin::new(io.pins.gpio19);
-  //  let right_pwm_pin = AnyPin::new(io.pins.gpio17);
-    let  left_enable_pin = Output::new(io.pins.gpio23, Level::Low);
-    let  right_enable_pin = Output::new(io.pins.gpio32, Level::Low);
+    // let left_pwm_pin = GpioPin::new(io.pins.gpio19);
+    //  let right_pwm_pin = AnyPin::new(io.pins.gpio17);
+    let left_enable_pin = Output::new(io.pins.gpio23, Level::Low);
+    let right_enable_pin = Output::new(io.pins.gpio32, Level::Low);
+    let pin_cnt_a = Input::new(io.pins.gpio4, Pull::Up);
+    let pin_cnt_b = Input::new(io.pins.gpio5, Pull::Up);
 
     let mut motor_actor = DcMotorActor::new(
         mcpwm,
         clock_cfg,
-        DC_MOTOR,
         left_enable_pin,
         right_enable_pin,
         io.pins.gpio19,
+        pcnt,
+        pin_cnt_a,
+        pin_cnt_b,
     );
     // let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
-    let motor_handler = motor_actor.handler();
-
-
-    let esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
-    let mut esp_now_actor = EspNowActor::new(esp_now);
-    let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
+    let mut motor_handler = motor_actor.handler();
 
     // esp_now_actor >> espnow_rxd_to_pulse >> led_actor;
     esp_now_actor.map_to(event_to_blink, led_actor.handler());
@@ -113,16 +113,32 @@ async fn main(_spawner: Spawner) -> ! {
         let data = data_from_event(&ev);
         let mut decoder = Decoder::new(&data);
         // let msg_header = decoder.decode::<MsgHeader>().unwrap();
-        decoder.decode::<MsgHeader>().map(|msg_header| {
+        let _ = decoder.decode::<MsgHeader>().map(|msg_header| {
             msg_header.dst.filter(|dst| *dst == DC_MOTOR_ID).map(|_| {
-                decoder.decode::<DcMotorMsg>().map(|msg| {
-                    motor_handler.handle(&DcMotorCmd::Request { msg_header, msg });
+                let _ = decoder.decode::<DcMotorMsg>().map(|msg| {
+                    motor_handler.handle(&DcMotorCmd::Request {
+                        msg_header: msg_header.clone(),
+                        msg,
+                    });
+                });
+            });
+
+            msg_header.src.filter(|src| *src == PS4_ID).map(|_| {
+                let _ = decoder.decode::<Ps4Map>().map(|msg| {
+                    msg.stick_right_y.filter(|x| *x > 5).map(|y| {
+                        let mut msg = DcMotorMsg::default();
+                        msg.pwm_percent = Some(((y * 100) / 130) as i16);
+                        motor_handler.handle(&DcMotorCmd::Request {
+                            msg_header: msg_header.clone(),
+                            msg,
+                        });
+                    });
                 });
             });
         });
     });
 
- //   let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
+    //   let espnow_handler = mk_static!(Endpoint<EspNowCmd>, esp_now_actor.handler());
 
     loop {
         select3(motor_actor.run(), esp_now_actor.run(), led_actor.run()).await;

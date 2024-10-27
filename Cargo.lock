@@ -810,6 +810,7 @@ dependencies = [
  "log",
  "minicbor",
  "msg",
+ "portable-atomic",
 ]
 
 [[package]]
