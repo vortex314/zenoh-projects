@@ -44,8 +44,10 @@ use esp_hal::pcnt::channel;
 use portable_atomic::AtomicI32;
 use portable_atomic::Ordering;
 
-static UNIT0: Mutex<NoopRawMutex,RefCell<Option<unit::Unit<'static, 1>>>> = Mutex::new(RefCell::new(None));
+//static UNIT0: Mutex<NoopRawMutex,RefCell<Option<unit::Unit<'static, 1>>>> = Mutex::new(RefCell::new(None));
 static VALUE: AtomicI32 = AtomicI32::new(0);
+
+
 
 #[derive(Encode, Decode, Default, Debug, Clone)]
 #[cbor(map)]
@@ -111,7 +113,9 @@ where
         /*  let left_current_sense_pin = io.pins.gpio36;
         let right_current_sense_pin = io.pins.gpio34;*/
 
-        mcpwm.operator0.set_timer(&mcpwm.timer0);
+        let heap_size = unsafe { esp_get_free_heap_size() };
+
+         mcpwm.operator0.set_timer(&mcpwm.timer0);
         let mut pwm_a = mcpwm
             .operator0
             .with_pin_a(pwm_pin_left, PwmPinConfig::UP_ACTIVE_HIGH);
@@ -119,7 +123,7 @@ where
         /*      mcpwm.operator1.set_timer(&mcpwm.timer0);
         let mut pwm_pin_right = mcpwm
             .operator1
-            .with_pin_a(right_pwm_pin, PwmPinConfig::UP_ACTIVE_HIGH);*/
+            .with_pin_a(right_pwm_pin, PwmPinConfig::UP_ACTIVE_HIGH);
 
         let timer_clock_cfg = clock_cfg
             .timer_clock_with_frequency(99, PwmWorkingMode::Increase, 20u32.kHz())
@@ -167,7 +171,7 @@ where
                 info!("value: {value}");
                 last_value = value;
             }
-        }
+        }*/
 
         DcMotorActor {
             cmds: CmdQueue::new(3),
@@ -243,7 +247,7 @@ where
 #[handler(priority = Priority::Priority2)]
 fn interrupt_handler() {
     critical_section::with(|cs| {
-        let mut u0 = UNIT0.borrow_ref_mut(cs);
+     /*   let mut u0 = UNIT0.borrow_ref_mut(cs);
         let u0 = u0.as_mut().unwrap();
         if u0.interrupt_is_set() {
             let events = u0.get_events();
@@ -253,6 +257,6 @@ fn interrupt_handler() {
                 VALUE.fetch_add(-100, Ordering::SeqCst);
             }
             u0.reset_interrupt();
-        }
+        }*/
     });
 }

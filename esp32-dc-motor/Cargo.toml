@@ -23,6 +23,7 @@ log = {workspace = true}
 minicbor = {workspace = true}
 msg = {path = "../msg"}
 portable-atomic = {version = "1.9.0", default-features = false}
+critical-section = {version = "1.2.0", default-features = false}
 
 [features]
 default = []
