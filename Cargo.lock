@@ -689,6 +689,7 @@ dependencies = [
  "embassy-executor-macros",
  "embassy-time-driver",
  "embassy-time-queue-driver",
+ "log",
 ]
 
 [[package]]
@@ -1057,7 +1058,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa893ab84c4a7db5ca42ab45e2e09942412976fe3100a9dd72e56ba0a9a58b4"
 dependencies = [
  "atomic-waker",
- "critical-section",
  "embassy-sync 0.6.0",
  "embedded-can",
  "embedded-hal 0.2.7",
@@ -1284,6 +1284,7 @@ dependencies = [
  "esp-idf-hal",
  "esp-idf-svc",
  "log",
+ "static_cell",
 ]
 
 [[package]]

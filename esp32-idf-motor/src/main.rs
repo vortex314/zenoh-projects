@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use anyhow::Result;
 use embassy_futures::select::select; // Import the select! macro
 use embassy_futures::select::Either::First;
@@ -6,27 +5,29 @@ use embassy_futures::select::Either::Second;
 use esp_idf_hal::peripherals::*;
 use esp_idf_hal::task::*;
 use esp_idf_hal::timer::*;
-use esp_idf_svc::timer::Task;
-
-use embassy_executor::raw::Executor;
-use embassy_time as _;
+use esp_idf_hal::gpio::PinDriver;
 
 fn main() -> Result<()> {
-    // It is necessary to call this function once. Otherwise some patches to the runtime
-    // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_hal::sys::link_patches();
 
-    let peripherals = Peripherals::take() ? ;
-    let system = peripherals.SYSTEM;
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let peripherals = Peripherals::take()?;
 
-    let timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks);
-    embassy::init(&clocks, timer_group0.timer0);
-
-    let mut _timer = TimerDriver::new(peripherals.timer00, &TimerConfig::new())?;
+    let mut led = PinDriver::output(peripherals.pins.gpio2)?;
+    let mut timer = TimerDriver::new(peripherals.timer00, &TimerConfig::new())?;
 
     block_on(run());
-    Ok(())
+
+    block_on(async {
+        loop {
+            led.set_high()?;
+
+            timer.delay(timer.tick_hz()).await?;
+
+            led.set_low()?;
+
+            timer.delay(timer.tick_hz()).await?;
+        }
+    })
 }
 
 async fn run() {
