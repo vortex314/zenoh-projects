@@ -194,6 +194,37 @@ pub struct InfoMsg {
     #[n(4)]
     pub prop_mode: Option<PropMode>,
 }
+
+#[repr(u8)]
+pub enum LogLevel {
+    TRACE = 0,
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4,
+    FATAL = 5,
+}
+
+#[derive(Encode, Decode, Clone)]
+#[cbor(map)]
+pub struct LogMsg {
+    #[n(0)]
+    pub timestamp: Option<u64>, // timestamp
+    #[n(1)]
+    pub messqge: Option<String>,
+    #[n(2)]
+    pub object_id: Option<ObjectId>,
+    #[n(3)]
+    pub level: Option<LogLevel>,
+    #[n(4)]
+    pub component: Option<String>,
+    #[n(5)]
+    pub file: Option<String>,
+    #[n(6)]
+    pub line: Option<u32>,
+    #[n(7)]
+    pub device: Option<String>,
+}
 /*
 pub struct MsgDecoder<'a> {
     decoder: minicbor::Decoder<'a>,
