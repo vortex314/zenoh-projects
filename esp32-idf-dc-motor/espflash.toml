@@ -1,0 +1,9 @@
+[connection]
+serial = "/dev/ttyUSB2"
+baudrate = 921600
+
+[flash]
+mode = "dio"
+size = "4MB"
+frequency = "40MHz"
+

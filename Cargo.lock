@@ -125,10 +125,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-task"
+version = "4.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
+dependencies = [
+ "portable-atomic",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "autocfg"
@@ -505,6 +517,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-queue"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df0346b5d5e76ac2fe4e327c5fd1118d6be7c51dfb18f9b7922923f287471e35"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -653,6 +674,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb6969eaabd2421f8a2775cfd2471a2b634372b4a25d41e3bd647b79912850a0"
 dependencies = [
  "litrs",
+]
+
+[[package]]
+name = "edge-executor"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d3b954195d71ebc4eb6e7a2059c9037ace9a0ea3b2942d3ca808caa84ddc0b"
+dependencies = [
+ "async-task",
+ "atomic-waker",
+ "crossbeam-queue",
+ "futures-lite",
+ "heapless",
+ "once_cell",
+ "portable-atomic",
+ "portable-atomic-util",
 ]
 
 [[package]]
@@ -1058,6 +1095,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfa893ab84c4a7db5ca42ab45e2e09942412976fe3100a9dd72e56ba0a9a58b4"
 dependencies = [
  "atomic-waker",
+ "critical-section",
  "embassy-sync 0.6.0",
  "embedded-can",
  "embedded-hal 0.2.7",
@@ -1271,6 +1309,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "esp32-idf-dc-motor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "edge-executor",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-sync 0.6.0",
+ "embassy-time",
+ "embuild",
+ "esp-idf-svc",
+ "log",
+]
+
+[[package]]
 name = "esp32-idf-motor"
 version = "0.1.0"
 dependencies = [
@@ -1397,6 +1450,16 @@ checksum = "1d930c203dd0b6ff06e0201a4a2fe9149b43c684fd4420555b26d21b1a02956f"
 dependencies = [
  "futures-core",
  "lock_api",
+]
+
+[[package]]
+name = "futures-lite"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49a9d51ce47660b1e808d3c990b4709f2f415d928835a17dfd16991515c46bce"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -1948,6 +2011,10 @@ name = "once_cell"
 version = "1.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
+dependencies = [
+ "critical-section",
+ "portable-atomic",
+]
 
 [[package]]
 name = "p192"
@@ -1999,6 +2066,18 @@ name = "portable-atomic"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc9c68a3f6da06753e9335d63e27f6b9754dd1920d941135b7ea8224f141adb2"
+dependencies = [
+ "critical-section",
+]
+
+[[package]]
+name = "portable-atomic-util"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1a7411625b38d51b41421c6333976adffd4674a925a978856734a2dc853449b"
+dependencies = [
+ "portable-atomic",
+]
 
 [[package]]
 name = "portable_atomic_enum"

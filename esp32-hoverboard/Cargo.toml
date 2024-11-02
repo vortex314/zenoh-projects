@@ -7,7 +7,7 @@ version = "0.0.0"
 
 [dependencies]
 
-embassy-executor = {workspace = true}
+embassy-executor = {workspace = true }
 embassy-futures = {workspace = true}
 embassy-sync = {workspace = true}
 embassy-time = {workspace = true}
