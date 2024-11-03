@@ -180,7 +180,8 @@ impl<T> Handler<T> for EventHandlers<T> {
 }
 
 pub async fn async_wait_millis(millis: u32) -> () {
-    embassy_time::Timer::after_millis(millis as u64).await;
+    smol::Timer::after(std::time::Duration::from_millis(millis as u64)).await;
+   // embassy_time::Timer::after_millis(millis as u64).await;
 }
 
 

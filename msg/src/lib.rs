@@ -57,11 +57,11 @@ pub struct MsgHeader {
     #[n(2)]
     pub msg_type: MsgType,
     #[n(3)]
-    pub return_code : Option<u32>,
+    pub return_code: Option<u32>,
     #[n(4)]
-    pub msg_id : Option<u16>,
+    pub msg_id: Option<u16>,
     #[n(5)]
-    pub qos : Option<u8>,
+    pub qos: Option<u8>,
 }
 
 /*
@@ -181,7 +181,6 @@ pub enum PropMode {
 }
 
 #[derive(Encode, Decode, Clone)]
-#[cbor(map)]
 pub struct InfoMsg {
     #[n(0)]
     pub id: PropertyId,
@@ -195,13 +194,20 @@ pub struct InfoMsg {
     pub prop_mode: Option<PropMode>,
 }
 
+#[derive(Encode, Decode, Clone)]
 #[repr(u8)]
-pub enum LogLevel {
+pub enum LogLvl {
+    #[n(0)]
     TRACE = 0,
+    #[n(1)]
     DEBUG = 1,
+    #[n(2)]
     INFO = 2,
+    #[n(3)]
     WARN = 3,
+    #[n(4)]
     ERROR = 4,
+    #[n(5)]
     FATAL = 5,
 }
 
@@ -211,11 +217,11 @@ pub struct LogMsg {
     #[n(0)]
     pub timestamp: Option<u64>, // timestamp
     #[n(1)]
-    pub messqge: Option<String>,
+    pub message: String,
     #[n(2)]
     pub object_id: Option<ObjectId>,
     #[n(3)]
-    pub level: Option<LogLevel>,
+    pub level: Option<LogLvl>,
     #[n(4)]
     pub component: Option<String>,
     #[n(5)]
@@ -224,6 +230,21 @@ pub struct LogMsg {
     pub line: Option<u32>,
     #[n(7)]
     pub device: Option<String>,
+}
+
+impl Default for LogMsg {
+    fn default() -> Self {
+        LogMsg {
+            timestamp: None,
+            message: String::new(),
+            object_id: None,
+            level: None,
+            component: None,
+            file: None,
+            line: None,
+            device: None,
+        }
+    }
 }
 /*
 pub struct MsgDecoder<'a> {

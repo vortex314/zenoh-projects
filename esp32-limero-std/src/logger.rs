@@ -5,6 +5,7 @@ SemiHosting logger to debug port of probe
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 use esp_println::println;
 use crate::alloc::string::ToString;
+use std::time::Instant;
 pub struct SemiLogger;
 
 pub static SEMI_LOGGER: SemiLogger = SemiLogger;
@@ -22,7 +23,7 @@ impl log::Log for SemiLogger {
     }
 
     fn log(&self, record: &Record<'_>) {
-        let ts = Instant::now().as_millis();
+        let ts = Instant::now().elapsed().as_millis();
         if self.enabled(record.metadata()) {
             let s = record.args().to_string();
          let (_,file) = record.file().unwrap_or("/").rsplit_once("/").unwrap_or(("/","/"));

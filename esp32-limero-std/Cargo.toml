@@ -1,11 +1,37 @@
 [package]
-name = "limero"
+name = "esp32-limero-std"
 version = "0.1.0"
+authors = ["lieven <lieven.merckx@gmail.com>"]
 edition = "2021"
+resolver = "2"
+rust-version = "1.77"
+
+
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true    # Symbols are nice and they don't increase the size on Flash
+opt-level = "z"
+
+[features]
+default = ["std", "embassy", "esp-idf-svc/native"]
+
+pio = ["esp-idf-svc/pio"]
+std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
+alloc = ["esp-idf-svc/alloc"]
+nightly = ["esp-idf-svc/nightly"]
+experimental = ["esp-idf-svc/experimental"]
+embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-svc/embassy-time-driver"]
 
 [dependencies]
-log = { version = "0.4", features = [] }
-esp-println = { version = "*", features = ["esp32", "log"] }
-async-channel ={ version = "2.3.1", features = [], default-features = false }
-edge-executor = { version = "*", features = [] }
-# anyhow = { version = "*", features = [], default-features = false }
+log = { version = "0.4", default-features = false }
+esp-idf-svc = { version = "0.49", default-features = false }
+esp-println = { version = "0.12.0", default-features = false, features = ["uart","esp32"] }
+smol = { version = "2.0.2", default-features = false }
+async-channel = { version = "1.6.1", default-features = false }
+
+
+[build-dependencies]
+embuild = "0.32.0"
