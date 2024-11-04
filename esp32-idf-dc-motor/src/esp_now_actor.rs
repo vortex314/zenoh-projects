@@ -2,15 +2,12 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::vec::Vec;
 
-use alloc::string::String;
-use embassy_futures::select::select3;
-use embassy_futures::select::Either3::{First, Second, Third};
+use std::time::Duration;
+use std::time::Instant;
 
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
-use embassy_time::{Duration, Instant};
+use alloc::string::String;
 use log::{debug, error, info};
 
-use anyhow::Error;
 use anyhow::Result;
 use esp32_limero_std as limero;
 use limero::{timer::Timer, timer::Timers};
@@ -19,9 +16,13 @@ use msg::MsgHeader;
 use msg::{fnv, MsgType};
 
 use esp_idf_svc::espnow::EspNow;
-
+use esp_idf_svc::hal::prelude::Peripherals;
+use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::wifi::BlockingWifi;
+use esp_idf_svc::wifi::EspWifi;
+use futures::*;
 const BROADCAST_ADDRESS: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
-
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
@@ -55,7 +56,8 @@ pub struct EspNowActor {
     cmds: CmdQueue<EspNowCmd>,
     events: EventHandlers<EspNowEvent>,
     timers: Timers,
-    esp_now : EspNow<'static>,
+    esp_now: EspNow<'static>,
+    data_receiver: async_channel::Receiver<EspNowEvent>,
 }
 
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
@@ -65,23 +67,18 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
             Duration::from_millis(1_000),
         ));
         loop {
-            match select3(
-                self.cmds.next(),
-                self.timers.alarm(),
-                listener(&self.manager, &mut self.receiver),
-            )
-            .await
-            {
-                First(msg) => {
-                    if let Err(x) = self.on_cmd_message(msg.unwrap()).await {
+            select! {
+                msg = self.data_receiver.recv().fuse() => {
+                    info!("Received {:?}", msg);
+                    self.events.handle(&msg.unwrap());
+                }
+                cmd = self.cmds.next().fuse() => {
+                    if let Err(x) = self.on_cmd_message(cmd.unwrap()).await {
                         error!("Error: {:?}", x);
                     }
                 }
-                Second(idx) => {
-                    self.on_timeout(idx).await;
-                }
-                Third(msg) => {
-                    self.events.handle(&msg);
+                _ = self.timers.alarm().fuse() => {
+                    self.on_timeout(TimerId::BroadcastTimer as u32).await;
                 }
             }
         }
@@ -96,20 +93,31 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
 }
 
 impl EspNowActor {
-    pub fn new(esp_now: EspNow<'static>) -> EspNowActor {
-        let esp_now = EspNow::take();
+    pub fn new() -> Result<EspNowActor> {
 
-  //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
-        EspNowActor {
+        let (data_sender, data_receiver) = async_channel::unbounded();
+        let esp_now = EspNow::take().unwrap();
+        esp_now.register_recv_cb(|peer, data| {
+            info!("Received from {:?} {:?}", peer, data);
+            let peer: [u8; 6] = peer[0..6].try_into().unwrap();
+            data_sender.send(EspNowEvent::Rxd {
+                peer,
+                rssi: 0,
+                channel: 0,
+                data: data.to_vec(),
+            });
+        });
+        //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
+        Ok(EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
             timers: Timers::new(),
             esp_now,
-        }
+            data_receiver,
+        })
     }
 
     async fn broadcast(&mut self) {
-        let mut sender = self.sender.lock().await;
         let mut header = MsgHeader::default(); /*  {
                                                    dst: None,
                                                    src: Some(fnv("lm/motor")),
@@ -121,7 +129,7 @@ impl EspNowActor {
         header.msg_type = MsgType::Alive;
         header.src = Some(fnv("lm/motor"));
         let v = msg::cbor::encode(&header);
-        self.esp_now.send(BROADCAST_ADDRESS, &v).await;
+        self.esp_now.send(BROADCAST_ADDRESS, &v);
     }
 
     async fn on_timeout(&mut self, _id: u32) {
@@ -145,42 +153,6 @@ impl EspNowActor {
         let elapsed = now.elapsed();
         debug!("Elapsed: {:?}", elapsed);
         Ok(())
-    }
-}
-
-async fn listener(
-    _manager: &EspNowManager<'static>,
-    receiver: &mut EspNowReceiver<'static>,
-) -> EspNowEvent {
-    let r = receiver.receive_async().await;
-    debug!("source {:?}", mac_to_string(&r.info.src_address));
-    debug!("rx_control {:?}", r.info.rx_control);
-    debug!("Received {:?}", r.get_data());
-    if r.info.dst_address == BROADCAST_ADDRESS {
-        /*if !manager.peer_exists(&r.info.src_address) {
-            manager
-                .add_peer(PeerInfo {
-                    peer_address: r.info.src_address,
-                    lmk: None,
-                    channel: Some(r.info.rx_control.channel as u8),
-                    encrypt: false,
-                })
-                .unwrap();
-            info!("Added peer {:?}", mac_to_string(&r.info.src_address));
-        }*/
-        EspNowEvent::Broadcast {
-            peer: r.info.src_address,
-            rssi: r.info.rx_control.rssi as u8,
-            channel: r.info.rx_control.channel as u8,
-            data: r.data[..r.len as usize].to_vec(),
-        }
-    } else {
-        EspNowEvent::Rxd {
-            peer: r.info.src_address,
-            rssi: r.info.rx_control.rssi as u8,
-            channel: r.info.rx_control.channel as u8,
-            data: r.data[..r.len as usize].to_vec(),
-        }
     }
 }
 

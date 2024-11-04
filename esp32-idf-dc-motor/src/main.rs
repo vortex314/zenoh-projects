@@ -1,15 +1,8 @@
 extern crate alloc;
 use core::time::Duration;
-use std::f128::consts::E;
 
 use anyhow::Error;
 use anyhow::Result;
-
-use esp_idf_svc::hal::prelude::Peripherals;
-use esp_idf_svc::hal::task::block_on;
-use esp_idf_svc::hal::timer::TimerConfig;
-use esp_idf_svc::hal::timer::TimerDriver;
-use esp_idf_svc::timer::EspTimerService;
 
 use log::error;
 use log::info;
@@ -18,9 +11,18 @@ use smol::channel::unbounded;
 use smol::Executor;
 
 use msg::LogMsg;
+use esp32_limero_std::Actor;
 
 mod esp_now_actor;
-
+use crate::esp_now_actor::EspNowActor;
+use esp_idf_svc::timer::EspTimerService;
+use futures::executor::block_on;
+use esp_idf_svc::espnow::EspNow;
+use esp_idf_svc::hal::prelude::Peripherals;
+use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::wifi::BlockingWifi;
+use esp_idf_svc::wifi::EspWifi;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
@@ -33,6 +35,15 @@ fn main() -> anyhow::Result<()> {
     let _ = exec.spawn(task1());
 
     info!("Starting the 2nd main task");
+    let peripherals = Peripherals::take()?;
+    let sys_loop = EspSystemEventLoop::take()?;
+    let nvs = EspDefaultNvsPartition::take()?;
+
+    let mut wifi = BlockingWifi::wrap(
+        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
+        sys_loop,
+    )?;
+
 
     error!("{:?}", block_on(task1()));
 
@@ -43,7 +54,7 @@ async fn task1() -> Result<()> {
     let mut timer_async = ts.timer_async().map_err(Error::msg)?;
     let (sender, receiver) = unbounded();
 
-    let esp_now_actor = EspNowActor::new();
+    let mut _esp_now_actor = EspNowActor::new()?;
 
     let mut log_msg = LogMsg::default();
     log_msg.message = "Hello from task1".to_string();
@@ -56,5 +67,6 @@ async fn task1() -> Result<()> {
         let heap_size = unsafe { esp_idf_svc::sys::heap_caps_get_free_size(0) };
         log::info!("heap_size = {} bytes", heap_size);
         timer_async.after(Duration::from_secs(1)).await;
+        _esp_now_actor.run().await;
     }
 }
