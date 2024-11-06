@@ -4,49 +4,54 @@ use core::time::Duration;
 use anyhow::Error;
 use anyhow::Result;
 
-use log::error;
 use log::info;
 
 use smol::channel::unbounded;
-use smol::Executor;
+// use smol::Executor;
 
-use msg::LogMsg;
 use esp32_limero_std::Actor;
+use msg::LogMsg;
 
 mod esp_now_actor;
 use crate::esp_now_actor::EspNowActor;
-use esp_idf_svc::timer::EspTimerService;
-use futures::executor::block_on;
-use esp_idf_svc::espnow::EspNow;
-use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::hal::prelude::Peripherals;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::timer::EspTimerService;
 use esp_idf_svc::wifi::BlockingWifi;
 use esp_idf_svc::wifi::EspWifi;
+use futures::executor::block_on;
+use async_executor::Executor;
+
+mod logger;
+use logger::semi_logger_init;
 
 fn main() -> anyhow::Result<()> {
     esp_idf_svc::sys::link_patches();
-    esp_idf_svc::log::EspLogger::initialize_default();
+    semi_logger_init()?;
+    //   esp_idf_svc::log::EspLogger::initialize_default();
 
     let exec = Executor::new();
 
     info!("Starting the main task");
 
-    let _ = exec.spawn(task1());
+    let task = exec.spawn(task1());
+
+    // Run the executor until the task completes.
 
     info!("Starting the 2nd main task");
     let peripherals = Peripherals::take()?;
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
-    let mut wifi = BlockingWifi::wrap(
-        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
-        sys_loop,
-    )?;
-
-
-    error!("{:?}", block_on(task1()));
-
+    let _wifi = Box::new(
+        BlockingWifi::wrap(
+            EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
+            sys_loop,
+        )
+        .unwrap(),
+    );
+    block_on(exec.run(task));
     Ok(())
 }
 async fn task1() -> Result<()> {

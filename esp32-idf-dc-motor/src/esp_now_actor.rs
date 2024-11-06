@@ -16,11 +16,6 @@ use msg::MsgHeader;
 use msg::{fnv, MsgType};
 
 use esp_idf_svc::espnow::EspNow;
-use esp_idf_svc::hal::prelude::Peripherals;
-use esp_idf_svc::eventloop::EspSystemEventLoop;
-use esp_idf_svc::nvs::EspDefaultNvsPartition;
-use esp_idf_svc::wifi::BlockingWifi;
-use esp_idf_svc::wifi::EspWifi;
 use futures::*;
 const BROADCAST_ADDRESS: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
@@ -60,12 +55,11 @@ pub struct EspNowActor {
     data_receiver: async_channel::Receiver<EspNowEvent>,
 }
 
+
+
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
     async fn run(&mut self) {
-        self.timers.add_timer(Timer::new_repeater(
-            TimerId::BroadcastTimer as u32,
-            Duration::from_millis(1_000),
-        ));
+
         loop {
             select! {
                 msg = self.data_receiver.recv().fuse() => {
@@ -107,17 +101,22 @@ impl EspNowActor {
                 data: data.to_vec(),
             });
         });
+        let mut timers = Timers::new();
+        timers.add_timer(Timer::new_repeater(
+            TimerId::BroadcastTimer as u32,
+            Duration::from_millis(1_000),
+        ));
         //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
         Ok(EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
-            timers: Timers::new(),
+            timers,
             esp_now,
             data_receiver,
         })
     }
 
-    async fn broadcast(&mut self) {
+    async fn broadcast_alive(&mut self) -> Result<()> {
         let mut header = MsgHeader::default(); /*  {
                                                    dst: None,
                                                    src: Some(fnv("lm/motor")),
@@ -129,12 +128,13 @@ impl EspNowActor {
         header.msg_type = MsgType::Alive;
         header.src = Some(fnv("lm/motor"));
         let v = msg::cbor::encode(&header);
-        self.esp_now.send(BROADCAST_ADDRESS, &v);
+        self.esp_now.send(BROADCAST_ADDRESS, &v)?;
+        Ok(())
     }
 
     async fn on_timeout(&mut self, _id: u32) {
         if _id == TimerId::BroadcastTimer as u32 {
-            self.broadcast().await;
+            let _ = self.broadcast_alive().await.map_err(|e| error!("Error: {:?}", e));
         }
     }
 

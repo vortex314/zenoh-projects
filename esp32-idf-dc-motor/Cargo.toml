@@ -37,10 +37,19 @@ log = {version = "0.4.22", default-features = false}
 smol = {version = "2.0.2", default-features = false}
 futures = {version = "0.3.31"}
 async-channel = {version = "2.3.1"}
+async-executor = {version = "1.13.1"}
+async-io = {version = "2.3.4"}
 
-
+esp-println = {version = "0.12.0", default-features = false,features = ["uart"]}
 msg = {path = "../msg"}
 esp32-limero-std = { path="../esp32-limero-std"}
 
 [build-dependencies]
 embuild = "0.32.0"
+
+[package.metadata.esp-idf-sys]
+esp_idf_tools_install_dir = "global"
+esp_idf_sdkconfig = "sdkconfig"
+esp_idf_sdkconfig_defaults = ["sdkconfig.defaults", "sdkconfig.defaults.ble"]
+esp_idf_components = ["pthread"]
+

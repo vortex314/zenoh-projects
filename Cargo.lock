@@ -1409,8 +1409,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel 2.3.1",
+ "async-executor",
+ "async-io",
  "embuild",
  "esp-idf-svc",
+ "esp-println",
  "esp32-limero-std",
  "futures",
  "log",
@@ -1440,6 +1443,7 @@ name = "esp32-limero-std"
 version = "0.1.0"
 dependencies = [
  "async-channel 1.9.0",
+ "async-io",
  "embuild",
  "esp-idf-svc",
  "esp-println",
