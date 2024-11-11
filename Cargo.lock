@@ -1350,6 +1350,7 @@ dependencies = [
  "esp-backtrace",
  "esp-hal",
  "esp-hal-embassy",
+ "esp-idf-sys",
  "esp-wifi",
  "limero",
  "log",

@@ -24,6 +24,15 @@ minicbor = {workspace = true}
 msg = {path = "../msg"}
 portable-atomic = {version = "1.9.0", default-features = false}
 critical-section = {version = "1.2.0", default-features = false}
+esp-idf-sys ={ version="*", default-features = false, features = ["binstart"] }
+
+[package.metadata.esp-idf-sys]
+esp_idf_tools_install_dir = "global"
+esp_idf_sdkconfig = "sdkconfig"
+esp_idf_sdkconfig_defaults = ["sdkconfig.defaults", "sdkconfig.defaults.ble"]
+# native builder only
+esp_idf_version = "branch:release/v4.4"
+esp_idf_components = ["pthread"]
 
 [features]
 default = []

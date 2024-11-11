@@ -1,0 +1,20 @@
+runner = "espflash flash --monitor"
+#runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
+
+
+[env]
+ESP_LOG="INFO"
+ESP_IDF_SYS_ROOT_CRATE="esp-idf-sys"
+ESP_IDF_PATH="/home/lieven/esp/esp-idf"
+
+[build]
+rustflags = [
+  "-C", "link-arg=-nostartfiles",
+#  "-C", "link-arg=-Tlinkall.x",
+  "-C", "link-arg=-Tesp32_rom_functions.x",
+]
+
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["core","alloc"]
