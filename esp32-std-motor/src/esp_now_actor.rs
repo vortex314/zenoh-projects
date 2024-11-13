@@ -163,7 +163,7 @@ impl EspNowActor {
         let esp_now = unsafe { EspNow::take_nonstatic() }?;
         info!("EspNow taken");
         match esp_now.register_recv_cb(|peer, data| {
-            info!("Received from {:?} {:?}", peer, data);
+            info!("Received from {:?} {}", peer, minicbor::display(data));
             let peer: [u8; 6] = peer[0..6].try_into().unwrap();
             let _ = sender.send(EspNowEvent::Rxd {
                 peer,
