@@ -52,7 +52,7 @@ enum TimerId {
 
 pub struct EspNowActor {
     cmds: CmdQueue<EspNowCmd>,
-    events: EventHandlers<EspNowEvent>,
+    event_handlers: EventHandlers<EspNowEvent>,
     timers: Timers,
     esp_now: EspNow<'static>,
     data_receiver: async_channel::Receiver<EspNowEvent>,
@@ -88,7 +88,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
                             );
                             let header: MsgHeader = msg::cbor::decode(&data).unwrap();
                             info!("Header: {:?}", header);
-                            self.events.handle(&EspNowEvent::Rxd {
+                            self.event_handlers.handle(&EspNowEvent::Rxd {
                                 peer,
                                 rssi,
                                 channel,
@@ -110,7 +110,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
                             );
                             let header: MsgHeader = msg::cbor::decode(&data).unwrap();
                             info!("Header: {:?}", header);
-                            self.events.handle(&EspNowEvent::Broadcast {
+                            self.event_handlers.handle(&EspNowEvent::Broadcast {
                                 peer,
                                 rssi,
                                 channel,
@@ -125,7 +125,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
                     embassy_time::Timer::after(embassy_time::Duration::from_secs(1)).await;
                     /*  let _ = msg.map(|msg| {
                         info!("Received {:?}", msg);
-                        self.events.handle(&msg);
+                        self.event_handlers.handle(&msg);
                     })
                     .map_err(|e| error!("Error: {:?}", e));*/
                 }
@@ -148,7 +148,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
         }
     }
     fn add_listener(&mut self, listener: Box<dyn Handler<EspNowEvent>>) {
-        self.events.add_listener(listener);
+        self.event_handlers.add_listener(listener);
     }
 
     fn handler(&self) -> Box<dyn Handler<EspNowCmd>> {
@@ -165,12 +165,12 @@ impl EspNowActor {
         match esp_now.register_recv_cb(|peer, data| {
             info!("Received from {:?} {}", peer, minicbor::display(data));
             let peer: [u8; 6] = peer[0..6].try_into().unwrap();
-            let _ = sender.send(EspNowEvent::Rxd {
+            sender.send(EspNowEvent::Rxd {
                 peer,
                 rssi: 0,
                 channel: 0,
                 data: data.to_vec(),
-            });
+            }).map_err(|e| error!(" send failed : {:?}",e));
         }) {
             Ok(_) => {
                 info!("Registered recv_cb");
@@ -187,7 +187,7 @@ impl EspNowActor {
         //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
         Ok(EspNowActor {
             cmds: CmdQueue::new(5),
-            events: EventHandlers::new(),
+            event_handlers: EventHandlers::new(),
             timers,
             esp_now,
             data_receiver,
