@@ -25,15 +25,16 @@ exclude = [
   "esp-idf-test",
   "esp32-std-motor",
   "esp-idf-sys",
-]
-members = [
-  "esp32-espnow-gateway",
+    "esp32-espnow-gateway",
   "esp32-hoverboard",
   "esp32-actors",
   "esp32-idf-motor",
   "msg",
   "esp32-idf-dc-motor",
   "esp32-limero-std",
+]
+members = [
+
 ]
 
 resolver = "2"
