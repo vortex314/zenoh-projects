@@ -5,10 +5,10 @@ runner = "espflash flash --monitor"
 [env]
 CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG = "true"
 CRATE_CC_NO_DEFAULTS = "1"
-ESP_IDF_SYS_ROOT_CRATE = "esp-idf-sys"
 ESP_IDF_VERSION = "v5.2.2"
 ESP_LOG = "INFO"
 MCU = "esp32"
+ESP_IDF_SYS_ROOT_CRATE="esp32-dc-motor"
 
 [build]
 rustflags = [
@@ -25,4 +25,4 @@ rustflags = [
 target = "xtensa-esp32-none-elf"
 
 [unstable]
-build-std = ["core", "alloc","std", "panic_abort"]
+build-std = ["std","core", "alloc", "panic_abort"]

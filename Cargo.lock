@@ -1335,31 +1335,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "esp32-dc-motor"
-version = "0.0.0"
-dependencies = [
- "actors",
- "const-fnv1a-hash",
- "critical-section",
- "embassy-executor",
- "embassy-futures",
- "embassy-sync 0.6.0",
- "embassy-time",
- "embedded-io-async",
- "esp-alloc",
- "esp-backtrace",
- "esp-hal",
- "esp-hal-embassy",
- "esp-idf-sys",
- "esp-wifi",
- "limero",
- "log",
- "minicbor",
- "msg",
- "portable-atomic",
-]
-
-[[package]]
 name = "esp32-espnow-gateway"
 version = "0.0.0"
 dependencies = [

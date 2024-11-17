@@ -24,17 +24,16 @@ exclude = [
   "limero-linux-tokio",
   "esp-idf-test",
   "esp32-std-motor",
+  "esp-idf-sys",
 ]
 members = [
   "esp32-espnow-gateway",
   "esp32-hoverboard",
-  "esp32-dc-motor",
   "esp32-actors",
   "esp32-idf-motor",
   "msg",
   "esp32-idf-dc-motor",
   "esp32-limero-std",
-  
 ]
 
 resolver = "2"
@@ -115,9 +114,9 @@ opt-level = 3
 overflow-checks = false
 
 [metadata.esp-idf-sys]
-esp_idf_tools_install_dir = "global"
 esp_idf_sdkconfig = "sdkconfig"
 esp_idf_sdkconfig_defaults = ["sdkconfig.defaults", "sdkconfig.defaults.ble"]
+esp_idf_tools_install_dir = "global"
 # native builder only
 # esp_idf_version = "branch:release/v4.4"
 esp_idf_components = ["pthread"]

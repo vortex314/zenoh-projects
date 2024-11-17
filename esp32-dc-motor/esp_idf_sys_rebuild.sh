@@ -1,0 +1,1 @@
+cargo clean -p esp-idf-sys --release

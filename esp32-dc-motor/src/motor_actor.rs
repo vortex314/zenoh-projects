@@ -246,7 +246,7 @@ where
 
 #[handler(priority = Priority::Priority2)]
 fn interrupt_handler() {
-    critical_section::with(|cs| {
+    critical_section::with(|_cs| {
      /*   let mut u0 = UNIT0.borrow_ref_mut(cs);
         let u0 = u0.as_mut().unwrap();
         if u0.interrupt_is_set() {

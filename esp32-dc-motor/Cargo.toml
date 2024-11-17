@@ -5,26 +5,67 @@ name = "esp32-dc-motor"
 publish = false
 version = "0.0.0"
 
+[build-dependencies]
+embuild = "0.31"
+
+[profile.release]
+opt-level = "s"
+
+[profile.dev]
+debug = true
+opt-level = "z"
+
 [dependencies]
-actors = {path = "../esp32-actors"}
 const-fnv1a-hash = "1.1.0"
-embassy-executor = {workspace = true}
-embassy-futures = {workspace = true}
-embassy-sync = {workspace = true}
-embassy-time = {workspace = true}
-embedded-io-async = {workspace = true}
-esp-alloc = {workspace = true}
-esp-backtrace = {workspace = true}
-esp-hal = {workspace = true}
-esp-hal-embassy = {workspace = true}
-esp-wifi = {workspace = true}
-limero = {path = "../esp32-limero-embassy"}
-log = {workspace = true}
-minicbor = {workspace = true}
-msg = {path = "../msg"}
+
+embassy-executor = {version = "0.6.1", features = [
+  "task-arena-size-32768",
+  "integrated-timers",
+  "executor-thread",
+]}
+embassy-futures = "0.1.1"
+# embassy-net = { version = "0.4.0", features = [ "tcp", "udp", "dhcpv4", "medium-ethernet"] }
+# embassy-sync = "0.6.0"
+embassy-time = "0.3.1"
+
+esp-alloc = {version = "*"}
+esp-backtrace = {version = "*", features = [
+  "esp32",
+  "exception-handler",
+  "panic-handler",
+  "println",
+]}
+esp-hal = {version = "0.21.1", features = ["esp32", "log"]}
+esp-hal-embassy = {version = "0.4.0", features = ["esp32"]}
+
+esp-wifi = {version = "*", features = [
+  "esp32",
+  "esp-now",
+  "async",
+  "wifi",
+  "utils",
+  "wifi-default",
+]}
+
+log = {version = "0.4.22"}
+minicbor = {version = "0.25.1", default-features = false, features = [
+  "derive",
+  "alloc",
+  "half",
+]}
+msg = {path = "../zenoh-projects/msg"}
+actors = {path = "../zenoh-projects/esp32-actors"}
+limero = {path = "../zenoh-projects/esp32-limero-embassy"}
+
 portable-atomic = {version = "1.9.0", default-features = false}
 critical-section = {version = "1.2.0", default-features = false}
-esp-idf-sys ={ version="*", default-features = false, features = ["binstart"] }
+# esp-idf-svc =  { version="0.49.1", default-features = false ,features = ["embassy-time-driver"] }
+esp-idf-sys ={ version="0.35.0", default-features = false, features = [
+  "binstart",
+  "native"
+  ] }
+esp-idf-svc = "0.49.1"
+
 
 [package.metadata.esp-idf-sys]
 esp_idf_tools_install_dir = "global"
@@ -33,6 +74,7 @@ esp_idf_sdkconfig_defaults = ["sdkconfig.defaults", "sdkconfig.defaults.ble"]
 # native builder only
 esp_idf_version = "branch:release/v4.4"
 esp_idf_components = ["pthread"]
+
 
 [features]
 default = []

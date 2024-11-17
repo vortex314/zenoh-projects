@@ -1,0 +1,605 @@
+esp32-dc-motor v0.0.0 (/home/lieven/workspace/esp32-dc-motor)
+├── actors v0.1.0 (/home/lieven/workspace/zenoh-projects/esp32-actors)
+│   ├── aes v0.8.4
+│   │   ├── cfg-if v1.0.0
+│   │   └── cipher v0.4.4
+│   │       ├── crypto-common v0.1.6
+│   │       │   ├── generic-array v0.14.7
+│   │       │   │   ├── typenum v1.17.0
+│   │       │   │   └── zeroize v1.8.1
+│   │       │   │   [build-dependencies]
+│   │       │   │   └── version_check v0.9.5
+│   │       │   └── typenum v1.17.0
+│   │       └── inout v0.1.3
+│   │           └── generic-array v0.14.7 (*)
+│   ├── anyhow v1.0.91
+│   ├── bitfield v0.16.1
+│   ├── byte v0.2.7
+│   ├── cobs v0.2.3
+│   ├── crc v3.2.1
+│   │   └── crc-catalog v2.4.0
+│   ├── embassy-futures v0.1.1
+│   ├── embassy-sync v0.6.0
+│   │   ├── cfg-if v1.0.0
+│   │   ├── critical-section v1.2.0
+│   │   ├── embedded-io-async v0.6.1
+│   │   │   └── embedded-io v0.6.1
+│   │   ├── futures-util v0.3.30
+│   │   │   ├── futures-core v0.3.30
+│   │   │   ├── futures-task v0.3.30
+│   │   │   ├── pin-project-lite v0.2.14
+│   │   │   └── pin-utils v0.1.0
+│   │   └── heapless v0.8.0
+│   │       ├── hash32 v0.3.1
+│   │       │   └── byteorder v1.5.0
+│   │       ├── portable-atomic v1.9.0
+│   │       ├── serde v1.0.212
+│   │       │   └── serde_derive v1.0.212 (proc-macro)
+│   │       │       ├── proc-macro2 v1.0.89
+│   │       │       │   └── unicode-ident v1.0.12
+│   │       │       ├── quote v1.0.37
+│   │       │       │   └── proc-macro2 v1.0.89 (*)
+│   │       │       └── syn v2.0.82
+│   │       │           ├── proc-macro2 v1.0.89 (*)
+│   │       │           ├── quote v1.0.37 (*)
+│   │       │           └── unicode-ident v1.0.12
+│   │       └── stable_deref_trait v1.2.0
+│   ├── embassy-time v0.3.2
+│   │   ├── cfg-if v1.0.0
+│   │   ├── critical-section v1.2.0
+│   │   ├── document-features v0.2.10 (proc-macro)
+│   │   │   └── litrs v0.4.1
+│   │   │       └── proc-macro2 v1.0.89 (*)
+│   │   ├── embassy-time-driver v0.1.0
+│   │   │   └── document-features v0.2.10 (proc-macro) (*)
+│   │   ├── embassy-time-queue-driver v0.1.0
+│   │   ├── embedded-hal v0.2.7
+│   │   │   ├── nb v0.1.3
+│   │   │   │   └── nb v1.1.0
+│   │   │   └── void v1.0.2
+│   │   ├── embedded-hal v1.0.0
+│   │   ├── embedded-hal-async v1.0.0
+│   │   │   └── embedded-hal v1.0.0
+│   │   ├── futures-util v0.3.30 (*)
+│   │   └── heapless v0.8.0 (*)
+│   ├── embedded-io-async v0.6.1 (*)
+│   ├── esp-backtrace v0.14.1
+│   │   └── esp-println v0.11.0
+│   │       ├── critical-section v1.2.0
+│   │       ├── log v0.4.22
+│   │       └── portable-atomic v1.9.0
+│   │       [build-dependencies]
+│   │       └── esp-build v0.1.0 (proc-macro)
+│   │           ├── quote v1.0.37 (*)
+│   │           ├── syn v2.0.82 (*)
+│   │           └── termcolor v1.4.1
+│   │   [build-dependencies]
+│   │   └── esp-build v0.1.0 (proc-macro) (*)
+│   ├── esp-hal v0.21.1
+│   │   ├── bitfield v0.16.1
+│   │   ├── bitflags v2.6.0
+│   │   ├── bytemuck v1.19.0
+│   │   ├── cfg-if v1.0.0
+│   │   ├── chrono v0.4.38
+│   │   │   └── num-traits v0.2.19
+│   │   │       [build-dependencies]
+│   │   │       └── autocfg v1.3.0
+│   │   ├── critical-section v1.2.0
+│   │   ├── delegate v0.12.0 (proc-macro)
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   └── syn v2.0.82 (*)
+│   │   ├── document-features v0.2.10 (proc-macro) (*)
+│   │   ├── embassy-futures v0.1.1
+│   │   ├── embassy-sync v0.6.0 (*)
+│   │   ├── embedded-can v0.4.1
+│   │   │   └── nb v1.1.0
+│   │   ├── embedded-hal v0.2.7 (*)
+│   │   ├── embedded-hal v1.0.0
+│   │   ├── embedded-hal-async v1.0.0 (*)
+│   │   ├── embedded-hal-nb v1.0.0
+│   │   │   ├── embedded-hal v1.0.0
+│   │   │   └── nb v1.1.0
+│   │   ├── embedded-io v0.6.1
+│   │   ├── embedded-io-async v0.6.1 (*)
+│   │   ├── enumset v1.1.5
+│   │   │   └── enumset_derive v0.10.0 (proc-macro)
+│   │   │       ├── darling v0.20.10
+│   │   │       │   ├── darling_core v0.20.10
+│   │   │       │   │   ├── fnv v1.0.7
+│   │   │       │   │   ├── ident_case v1.0.1
+│   │   │       │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │       │   │   ├── quote v1.0.37 (*)
+│   │   │       │   │   ├── strsim v0.11.1
+│   │   │       │   │   └── syn v2.0.82 (*)
+│   │   │       │   └── darling_macro v0.20.10 (proc-macro)
+│   │   │       │       ├── darling_core v0.20.10 (*)
+│   │   │       │       ├── quote v1.0.37 (*)
+│   │   │       │       └── syn v2.0.82 (*)
+│   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │       ├── quote v1.0.37 (*)
+│   │   │       └── syn v2.0.82 (*)
+│   │   ├── esp-hal-procmacros v0.14.0 (proc-macro)
+│   │   │   ├── darling v0.20.10 (*)
+│   │   │   ├── document-features v0.2.10 (proc-macro) (*)
+│   │   │   ├── litrs v0.4.1 (*)
+│   │   │   ├── proc-macro-crate v3.2.0
+│   │   │   │   └── toml_edit v0.22.20
+│   │   │   │       ├── indexmap v2.5.0
+│   │   │   │       │   ├── equivalent v1.0.1
+│   │   │   │       │   └── hashbrown v0.14.5
+│   │   │   │       ├── serde v1.0.212
+│   │   │   │       │   └── serde_derive v1.0.212 (proc-macro) (*)
+│   │   │   │       ├── serde_spanned v0.6.7
+│   │   │   │       │   └── serde v1.0.212 (*)
+│   │   │   │       ├── toml_datetime v0.6.8
+│   │   │   │       │   └── serde v1.0.212 (*)
+│   │   │   │       └── winnow v0.6.18
+│   │   │   ├── proc-macro-error2 v2.0.1
+│   │   │   │   ├── proc-macro-error-attr2 v2.0.0 (proc-macro)
+│   │   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   │   └── quote v1.0.37 (*)
+│   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   ├── quote v1.0.37 (*)
+│   │   │   │   └── syn v2.0.82 (*)
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   └── syn v2.0.82 (*)
+│   │   ├── esp32 v0.33.0
+│   │   │   ├── critical-section v1.2.0
+│   │   │   ├── vcell v0.1.3
+│   │   │   └── xtensa-lx v0.9.0
+│   │   │       ├── bare-metal v1.0.0
+│   │   │       ├── mutex-trait v0.2.0
+│   │   │       └── spin v0.9.8
+│   │   │           └── lock_api v0.4.12
+│   │   │               └── scopeguard v1.2.0
+│   │   │               [build-dependencies]
+│   │   │               └── autocfg v1.3.0
+│   │   ├── fugit v0.3.7
+│   │   │   └── gcd v2.3.0
+│   │   ├── log v0.4.22
+│   │   ├── nb v1.1.0
+│   │   ├── paste v1.0.15 (proc-macro)
+│   │   ├── portable-atomic v1.9.0
+│   │   ├── rand_core v0.6.4
+│   │   ├── strum v0.26.3
+│   │   │   └── strum_macros v0.26.4 (proc-macro)
+│   │   │       ├── heck v0.5.0
+│   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │       ├── quote v1.0.37 (*)
+│   │   │       ├── rustversion v1.0.17 (proc-macro)
+│   │   │       └── syn v2.0.82 (*)
+│   │   ├── ufmt-write v0.1.0
+│   │   ├── void v1.0.2
+│   │   ├── xtensa-lx v0.9.0 (*)
+│   │   └── xtensa-lx-rt v0.17.1
+│   │       ├── bare-metal v1.0.0
+│   │       ├── document-features v0.2.10 (proc-macro) (*)
+│   │       ├── r0 v1.0.0
+│   │       ├── xtensa-lx v0.9.0 (*)
+│   │       └── xtensa-lx-rt-proc-macros v0.2.2 (proc-macro)
+│   │           ├── darling v0.20.10 (*)
+│   │           ├── proc-macro2 v1.0.89 (*)
+│   │           ├── quote v1.0.37 (*)
+│   │           └── syn v2.0.82 (*)
+│   │       [build-dependencies]
+│   │       ├── anyhow v1.0.91
+│   │       ├── enum-as-inner v0.6.1 (proc-macro)
+│   │       │   ├── heck v0.5.0
+│   │       │   ├── proc-macro2 v1.0.89 (*)
+│   │       │   ├── quote v1.0.37 (*)
+│   │       │   └── syn v2.0.82 (*)
+│   │       ├── minijinja v2.3.1
+│   │       │   └── serde v1.0.212 (*)
+│   │       ├── serde v1.0.212 (*)
+│   │       ├── strum v0.26.3
+│   │       │   └── strum_macros v0.26.4 (proc-macro) (*)
+│   │       └── toml v0.8.19
+│   │           ├── serde v1.0.212 (*)
+│   │           ├── serde_spanned v0.6.7 (*)
+│   │           ├── toml_datetime v0.6.8 (*)
+│   │           └── toml_edit v0.22.20 (*)
+│   │   [build-dependencies]
+│   │   ├── basic-toml v0.1.9
+│   │   │   └── serde v1.0.212 (*)
+│   │   ├── cfg-if v1.0.0
+│   │   ├── esp-build v0.1.0 (proc-macro) (*)
+│   │   ├── esp-config v0.1.0
+│   │   │   └── document-features v0.2.10 (proc-macro) (*)
+│   │   ├── esp-metadata v0.4.0
+│   │   │   ├── anyhow v1.0.91
+│   │   │   ├── basic-toml v0.1.9 (*)
+│   │   │   ├── serde v1.0.212 (*)
+│   │   │   └── strum v0.26.3 (*)
+│   │   └── serde v1.0.212 (*)
+│   ├── esp-wifi v0.10.1
+│   │   ├── bt-hci v0.1.1
+│   │   │   ├── embassy-sync v0.6.0 (*)
+│   │   │   ├── embedded-io v0.6.1
+│   │   │   ├── embedded-io-async v0.6.1 (*)
+│   │   │   ├── futures-intrusive v0.5.0
+│   │   │   │   ├── futures-core v0.3.30
+│   │   │   │   └── lock_api v0.4.12 (*)
+│   │   │   └── heapless v0.8.0 (*)
+│   │   ├── cfg-if v1.0.0
+│   │   ├── critical-section v1.2.0
+│   │   ├── document-features v0.2.10 (proc-macro) (*)
+│   │   ├── embassy-sync v0.6.0 (*)
+│   │   ├── embedded-io v0.6.1
+│   │   ├── embedded-io-async v0.6.1 (*)
+│   │   ├── enumset v1.1.5 (*)
+│   │   ├── esp-alloc v0.5.0
+│   │   │   ├── critical-section v1.2.0
+│   │   │   ├── enumset v1.1.5 (*)
+│   │   │   └── linked_list_allocator v0.10.5
+│   │   ├── esp-config v0.1.0
+│   │   │   └── document-features v0.2.10 (proc-macro) (*)
+│   │   ├── esp-hal v0.21.1 (*)
+│   │   ├── esp-wifi-sys v0.6.0
+│   │   │   [build-dependencies]
+│   │   │   └── anyhow v1.0.91
+│   │   ├── fugit v0.3.7 (*)
+│   │   ├── heapless v0.8.0 (*)
+│   │   ├── libm v0.2.8
+│   │   ├── no-std-net v0.6.0
+│   │   ├── num-derive v0.4.2 (proc-macro)
+│   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   ├── quote v1.0.37 (*)
+│   │   │   └── syn v2.0.82 (*)
+│   │   ├── num-traits v0.2.19 (*)
+│   │   ├── portable-atomic v1.9.0
+│   │   ├── portable_atomic_enum v0.3.1
+│   │   │   ├── portable-atomic v1.9.0
+│   │   │   └── portable_atomic_enum_macros v0.2.1 (proc-macro)
+│   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │       ├── quote v1.0.37 (*)
+│   │   │       └── syn v2.0.82 (*)
+│   │   ├── smoltcp v0.11.0
+│   │   │   ├── bitflags v1.3.2
+│   │   │   ├── byteorder v1.5.0
+│   │   │   ├── cfg-if v1.0.0
+│   │   │   ├── heapless v0.8.0 (*)
+│   │   │   └── managed v0.8.0
+│   │   └── xtensa-lx-rt v0.17.1 (*)
+│   │   [build-dependencies]
+│   │   ├── esp-build v0.1.0 (proc-macro) (*)
+│   │   ├── esp-config v0.1.0 (*)
+│   │   └── esp-metadata v0.4.0 (*)
+│   ├── fugit v0.3.7 (*)
+│   ├── heapless v0.8.0 (*)
+│   ├── hex-literal v0.4.1
+│   ├── hmac v0.12.1
+│   │   └── digest v0.10.7
+│   │       ├── block-buffer v0.10.4
+│   │       │   └── generic-array v0.14.7 (*)
+│   │       ├── crypto-common v0.1.6 (*)
+│   │       └── subtle v2.6.1
+│   ├── limero v0.1.0 (/home/lieven/workspace/zenoh-projects/esp32-limero-embassy)
+│   │   ├── async-channel v2.3.1
+│   │   │   ├── concurrent-queue v2.5.0
+│   │   │   │   └── crossbeam-utils v0.8.20
+│   │   │   ├── event-listener-strategy v0.5.2
+│   │   │   │   ├── event-listener v5.3.1
+│   │   │   │   │   ├── concurrent-queue v2.5.0 (*)
+│   │   │   │   │   └── pin-project-lite v0.2.14
+│   │   │   │   └── pin-project-lite v0.2.14
+│   │   │   ├── futures-core v0.3.30
+│   │   │   └── pin-project-lite v0.2.14
+│   │   ├── embassy-sync v0.5.0
+│   │   │   ├── cfg-if v1.0.0
+│   │   │   ├── critical-section v1.2.0
+│   │   │   ├── embedded-io-async v0.6.1 (*)
+│   │   │   ├── futures-util v0.3.30 (*)
+│   │   │   └── heapless v0.8.0 (*)
+│   │   ├── embassy-time v0.3.2 (*)
+│   │   ├── esp-println v0.11.0 (*)
+│   │   └── log v0.4.22
+│   ├── lis3dh-async v0.9.3
+│   │   ├── accelerometer v0.12.0
+│   │   │   └── micromath v1.1.1
+│   │   │       └── generic-array v0.14.7 (*)
+│   │   ├── embedded-hal-async v1.0.0 (*)
+│   │   └── num_enum v0.7.3
+│   │       └── num_enum_derive v0.7.3 (proc-macro)
+│   │           ├── proc-macro2 v1.0.89 (*)
+│   │           ├── quote v1.0.37 (*)
+│   │           └── syn v2.0.82 (*)
+│   ├── log v0.4.22
+│   ├── minicbor v0.25.1
+│   │   ├── half v2.4.1
+│   │   │   └── cfg-if v1.0.0
+│   │   └── minicbor-derive v0.15.3 (proc-macro)
+│   │       ├── proc-macro2 v1.0.89 (*)
+│   │       ├── quote v1.0.37 (*)
+│   │       └── syn v2.0.82 (*)
+│   ├── msg v0.1.0 (/home/lieven/workspace/zenoh-projects/msg)
+│   │   ├── anyhow v1.0.91
+│   │   ├── bitfield v0.17.0
+│   │   ├── byte v0.2.7
+│   │   ├── cobs v0.2.3
+│   │   ├── const-fnv1a-hash v1.1.0
+│   │   ├── crc v3.2.1 (*)
+│   │   ├── log v0.4.22
+│   │   ├── minicbor v0.25.1 (*)
+│   │   ├── minicbor-derive v0.15.3 (proc-macro) (*)
+│   │   ├── serde v1.0.212 (*)
+│   │   └── serde-json-core v0.6.0
+│   │       ├── heapless v0.8.0 (*)
+│   │       ├── ryu v1.0.18
+│   │       └── serde v1.0.212 (*)
+│   ├── nb v1.1.0
+│   ├── p192 v0.13.0
+│   │   ├── elliptic-curve v0.13.8
+│   │   │   ├── base16ct v0.2.0
+│   │   │   ├── crypto-bigint v0.5.5
+│   │   │   │   ├── generic-array v0.14.7 (*)
+│   │   │   │   ├── rand_core v0.6.4
+│   │   │   │   ├── subtle v2.6.1
+│   │   │   │   └── zeroize v1.8.1
+│   │   │   ├── ff v0.13.0
+│   │   │   │   ├── rand_core v0.6.4
+│   │   │   │   └── subtle v2.6.1
+│   │   │   ├── generic-array v0.14.7 (*)
+│   │   │   ├── group v0.13.0
+│   │   │   │   ├── ff v0.13.0 (*)
+│   │   │   │   ├── rand_core v0.6.4
+│   │   │   │   └── subtle v2.6.1
+│   │   │   ├── rand_core v0.6.4
+│   │   │   ├── sec1 v0.7.3
+│   │   │   │   ├── base16ct v0.2.0
+│   │   │   │   ├── der v0.7.9
+│   │   │   │   │   ├── const-oid v0.9.6
+│   │   │   │   │   └── zeroize v1.8.1
+│   │   │   │   ├── generic-array v0.14.7 (*)
+│   │   │   │   ├── subtle v2.6.1
+│   │   │   │   └── zeroize v1.8.1
+│   │   │   ├── subtle v2.6.1
+│   │   │   └── zeroize v1.8.1
+│   │   ├── primeorder v0.13.6
+│   │   │   └── elliptic-curve v0.13.8 (*)
+│   │   └── sec1 v0.7.3 (*)
+│   ├── p256 v0.13.2
+│   │   ├── elliptic-curve v0.13.8 (*)
+│   │   └── primeorder v0.13.6 (*)
+│   ├── portable-atomic v1.9.0
+│   ├── serde v1.0.212 (*)
+│   ├── sha2 v0.10.8
+│   │   ├── cfg-if v1.0.0
+│   │   └── digest v0.10.7 (*)
+│   └── static_cell v2.1.0
+│       └── portable-atomic v1.9.0
+├── const-fnv1a-hash v1.1.0
+├── critical-section v1.2.0
+├── embassy-executor v0.6.1
+│   ├── critical-section v1.2.0
+│   ├── document-features v0.2.10 (proc-macro) (*)
+│   ├── embassy-executor-macros v0.6.1 (proc-macro)
+│   │   ├── darling v0.20.10 (*)
+│   │   ├── proc-macro2 v1.0.89 (*)
+│   │   ├── quote v1.0.37 (*)
+│   │   └── syn v2.0.82 (*)
+│   ├── embassy-time-driver v0.1.0 (*)
+│   └── embassy-time-queue-driver v0.1.0
+├── embassy-futures v0.1.1
+├── embassy-sync v0.6.0 (*)
+├── embassy-time v0.3.2 (*)
+├── esp-alloc v0.5.0 (*)
+├── esp-backtrace v0.14.1 (*)
+├── esp-hal v0.21.1 (*)
+├── esp-hal-embassy v0.4.0
+│   ├── critical-section v1.2.0
+│   ├── document-features v0.2.10 (proc-macro) (*)
+│   ├── embassy-executor v0.6.1 (*)
+│   ├── embassy-time-driver v0.1.0 (*)
+│   ├── esp-hal v0.21.1 (*)
+│   ├── esp-hal-procmacros v0.14.0 (proc-macro) (*)
+│   ├── portable-atomic v1.9.0
+│   └── static_cell v2.1.0 (*)
+│   [build-dependencies]
+│   ├── esp-build v0.1.0 (proc-macro) (*)
+│   └── esp-metadata v0.4.0 (*)
+├── esp-idf-svc v0.49.1
+│   ├── embassy-futures v0.1.1
+│   ├── embedded-hal-async v1.0.0 (*)
+│   ├── embedded-svc v0.28.0
+│   │   ├── embedded-io v0.6.1
+│   │   ├── embedded-io-async v0.6.1 (*)
+│   │   ├── enumset v1.1.5 (*)
+│   │   ├── heapless v0.8.0 (*)
+│   │   └── serde v1.0.212 (*)
+│   ├── enumset v1.1.5 (*)
+│   ├── esp-idf-hal v0.44.1
+│   │   ├── atomic-waker v1.1.2
+│   │   ├── embassy-sync v0.6.0 (*)
+│   │   ├── embedded-can v0.4.1 (*)
+│   │   ├── embedded-hal v0.2.7 (*)
+│   │   ├── embedded-hal v1.0.0
+│   │   ├── embedded-hal-async v1.0.0 (*)
+│   │   ├── embedded-hal-nb v1.0.0 (*)
+│   │   ├── embedded-io v0.6.1
+│   │   ├── embedded-io-async v0.6.1 (*)
+│   │   ├── enumset v1.1.5 (*)
+│   │   ├── esp-idf-sys v0.35.0
+│   │   │   ├── build-time v0.1.3 (proc-macro)
+│   │   │   │   ├── chrono v0.4.38
+│   │   │   │   │   ├── iana-time-zone v0.1.61
+│   │   │   │   │   └── num-traits v0.2.19
+│   │   │   │   │       [build-dependencies]
+│   │   │   │   │       └── autocfg v1.3.0
+│   │   │   │   ├── once_cell v1.20.2
+│   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   ├── quote v1.0.37 (*)
+│   │   │   │   └── syn v2.0.82 (*)
+│   │   │   ├── const_format v0.2.33
+│   │   │   │   └── const_format_proc_macros v0.2.33 (proc-macro)
+│   │   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │   │       ├── quote v1.0.37 (*)
+│   │   │   │       └── unicode-xid v0.2.6
+│   │   │   └── libc v0.2.158
+│   │   │   [build-dependencies]
+│   │   │   ├── anyhow v1.0.91
+│   │   │   ├── bindgen v0.69.5
+│   │   │   │   ├── bitflags v2.6.0
+│   │   │   │   ├── cexpr v0.6.0
+│   │   │   │   │   └── nom v7.1.3
+│   │   │   │   │       ├── memchr v2.7.4
+│   │   │   │   │       └── minimal-lexical v0.2.1
+│   │   │   │   ├── clang-sys v1.8.1
+│   │   │   │   │   ├── glob v0.3.1
+│   │   │   │   │   ├── libc v0.2.158
+│   │   │   │   │   └── libloading v0.8.5
+│   │   │   │   │       └── cfg-if v1.0.0
+│   │   │   │   │   [build-dependencies]
+│   │   │   │   │   └── glob v0.3.1
+│   │   │   │   ├── itertools v0.12.1
+│   │   │   │   │   └── either v1.13.0
+│   │   │   │   ├── lazy_static v1.5.0
+│   │   │   │   ├── lazycell v1.3.0
+│   │   │   │   ├── log v0.4.22
+│   │   │   │   ├── prettyplease v0.2.25
+│   │   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   │   └── syn v2.0.82 (*)
+│   │   │   │   ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   ├── quote v1.0.37 (*)
+│   │   │   │   ├── regex v1.11.1
+│   │   │   │   │   ├── aho-corasick v1.1.3
+│   │   │   │   │   │   └── memchr v2.7.4
+│   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   ├── regex-automata v0.4.9
+│   │   │   │   │   │   ├── aho-corasick v1.1.3 (*)
+│   │   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   │   └── regex-syntax v0.8.5
+│   │   │   │   │   └── regex-syntax v0.8.5
+│   │   │   │   ├── rustc-hash v1.1.0
+│   │   │   │   ├── shlex v1.3.0
+│   │   │   │   ├── syn v2.0.82 (*)
+│   │   │   │   └── which v4.4.2
+│   │   │   │       ├── either v1.13.0
+│   │   │   │       ├── home v0.5.9
+│   │   │   │       └── rustix v0.38.37
+│   │   │   │           ├── bitflags v2.6.0
+│   │   │   │           └── linux-raw-sys v0.4.14
+│   │   │   ├── cargo_metadata v0.18.1
+│   │   │   │   ├── camino v1.1.9
+│   │   │   │   │   └── serde v1.0.212 (*)
+│   │   │   │   ├── cargo-platform v0.1.8
+│   │   │   │   │   └── serde v1.0.212 (*)
+│   │   │   │   ├── semver v1.0.23
+│   │   │   │   │   └── serde v1.0.212 (*)
+│   │   │   │   ├── serde v1.0.212 (*)
+│   │   │   │   ├── serde_json v1.0.133
+│   │   │   │   │   ├── itoa v1.0.11
+│   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   ├── ryu v1.0.18
+│   │   │   │   │   └── serde v1.0.212 (*)
+│   │   │   │   └── thiserror v1.0.65
+│   │   │   │       └── thiserror-impl v1.0.65 (proc-macro)
+│   │   │   │           ├── proc-macro2 v1.0.89 (*)
+│   │   │   │           ├── quote v1.0.37 (*)
+│   │   │   │           └── syn v2.0.82 (*)
+│   │   │   ├── embuild v0.32.0
+│   │   │   │   ├── anyhow v1.0.91
+│   │   │   │   ├── bindgen v0.69.5 (*)
+│   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   ├── cmake v0.1.51
+│   │   │   │   │   └── cc v1.2.1
+│   │   │   │   │       └── shlex v1.3.0
+│   │   │   │   ├── filetime v0.2.25
+│   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   └── libc v0.2.158
+│   │   │   │   ├── globwalk v0.8.1
+│   │   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   │   ├── ignore v0.4.23
+│   │   │   │   │   │   ├── crossbeam-deque v0.8.5
+│   │   │   │   │   │   │   ├── crossbeam-epoch v0.9.18
+│   │   │   │   │   │   │   │   └── crossbeam-utils v0.8.20
+│   │   │   │   │   │   │   └── crossbeam-utils v0.8.20
+│   │   │   │   │   │   ├── globset v0.4.15
+│   │   │   │   │   │   │   ├── aho-corasick v1.1.3 (*)
+│   │   │   │   │   │   │   ├── bstr v1.11.0
+│   │   │   │   │   │   │   │   └── memchr v2.7.4
+│   │   │   │   │   │   │   ├── log v0.4.22
+│   │   │   │   │   │   │   ├── regex-automata v0.4.9 (*)
+│   │   │   │   │   │   │   └── regex-syntax v0.8.5
+│   │   │   │   │   │   ├── log v0.4.22
+│   │   │   │   │   │   ├── memchr v2.7.4
+│   │   │   │   │   │   ├── regex-automata v0.4.9 (*)
+│   │   │   │   │   │   ├── same-file v1.0.6
+│   │   │   │   │   │   └── walkdir v2.5.0
+│   │   │   │   │   │       └── same-file v1.0.6
+│   │   │   │   │   └── walkdir v2.5.0 (*)
+│   │   │   │   ├── home v0.5.9
+│   │   │   │   ├── log v0.4.22
+│   │   │   │   ├── regex v1.11.1 (*)
+│   │   │   │   ├── remove_dir_all v0.8.4
+│   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   ├── cvt v0.1.2
+│   │   │   │   │   │   └── cfg-if v1.0.0
+│   │   │   │   │   ├── fs_at v0.2.1
+│   │   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   │   ├── cvt v0.1.2 (*)
+│   │   │   │   │   │   ├── libc v0.2.158
+│   │   │   │   │   │   └── nix v0.29.0
+│   │   │   │   │   │       ├── bitflags v2.6.0
+│   │   │   │   │   │       ├── cfg-if v1.0.0
+│   │   │   │   │   │       └── libc v0.2.158
+│   │   │   │   │   │       [build-dependencies]
+│   │   │   │   │   │       └── cfg_aliases v0.2.1
+│   │   │   │   │   ├── libc v0.2.158
+│   │   │   │   │   └── normpath v1.3.0
+│   │   │   │   ├── serde v1.0.212 (*)
+│   │   │   │   ├── serde_json v1.0.133 (*)
+│   │   │   │   ├── shlex v1.3.0
+│   │   │   │   ├── strum v0.24.1
+│   │   │   │   │   └── strum_macros v0.24.3 (proc-macro)
+│   │   │   │   │       ├── heck v0.4.1
+│   │   │   │   │       ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   │       ├── quote v1.0.37 (*)
+│   │   │   │   │       ├── rustversion v1.0.17 (proc-macro)
+│   │   │   │   │       └── syn v1.0.109
+│   │   │   │   │           ├── proc-macro2 v1.0.89 (*)
+│   │   │   │   │           ├── quote v1.0.37 (*)
+│   │   │   │   │           └── unicode-ident v1.0.12
+│   │   │   │   ├── tempfile v3.13.0
+│   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   ├── fastrand v2.2.0
+│   │   │   │   │   ├── once_cell v1.20.2
+│   │   │   │   │   └── rustix v0.38.37 (*)
+│   │   │   │   ├── thiserror v1.0.65 (*)
+│   │   │   │   └── which v4.4.2 (*)
+│   │   │   ├── envy v0.4.2
+│   │   │   │   └── serde v1.0.212 (*)
+│   │   │   ├── regex v1.11.1 (*)
+│   │   │   ├── serde v1.0.212 (*)
+│   │   │   ├── strum v0.24.1 (*)
+│   │   │   └── which v4.4.2 (*)
+│   │   ├── heapless v0.8.0 (*)
+│   │   ├── log v0.4.22
+│   │   ├── nb v1.1.0
+│   │   └── num_enum v0.7.3 (*)
+│   │   [build-dependencies]
+│   │   └── embuild v0.32.0 (*)
+│   ├── heapless v0.8.0 (*)
+│   ├── log v0.4.22
+│   ├── num_enum v0.7.3 (*)
+│   └── uncased v0.9.10
+│       [build-dependencies]
+│       └── version_check v0.9.5
+│   [build-dependencies]
+│   └── embuild v0.32.0 (*)
+├── esp-idf-sys v0.35.0 (*)
+├── esp-wifi v0.10.1 (*)
+├── limero v0.1.0 (/home/lieven/workspace/zenoh-projects/esp32-limero-embassy) (*)
+├── log v0.4.22
+├── minicbor v0.25.1 (*)
+├── msg v0.1.0 (/home/lieven/workspace/zenoh-projects/msg) (*)
+└── portable-atomic v1.9.0
+[build-dependencies]
+└── embuild v0.31.4
+    ├── anyhow v1.0.91
+    ├── bitflags v1.3.2
+    ├── filetime v0.2.25 (*)
+    ├── log v0.4.22
+    ├── shlex v1.3.0
+    └── thiserror v1.0.65 (*)
