@@ -3,26 +3,16 @@ runner = "espflash flash --monitor"
 #runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB0" # Select this runner for espflash v2.x.x
 
 [env]
-CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG = "true"
-CRATE_CC_NO_DEFAULTS = "1"
-ESP_IDF_VERSION = "v5.2.2"
 ESP_LOG = "INFO"
-MCU = "esp32"
-ESP_IDF_SYS_ROOT_CRATE="esp32-dc-motor"
+
 
 [build]
 rustflags = [
   "-C",
   "link-arg=-nostartfiles", #  "-C", "link-arg=-Tlinkall.x",
-  "-C",
-  "link-arg=-Tesp32_rom_functions.x",
-  "--cfg",
-  "espidf_time64",
-  "--cfg",
-  "esp_idf_comp_mdns_enabled",
 ]
 
 target = "xtensa-esp32-none-elf"
 
 [unstable]
-build-std = ["std","core", "alloc", "panic_abort"]
+build-std = ["core", "alloc"]

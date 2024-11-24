@@ -11,7 +11,7 @@ embassy-time = { workspace = true }
 embassy-sync = { workspace = true }
 esp-wifi = { workspace = true }
 esp-hal = { workspace = true }
-esp-backtrace = { workspace = true }
+# esp-backtrace = { workspace = true }
 embedded-io-async = { workspace = true }
 
 

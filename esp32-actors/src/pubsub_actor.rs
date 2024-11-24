@@ -9,7 +9,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 
 use embassy_time::{Duration, Instant};
-use esp_backtrace as _;
+// use esp_backtrace as _;
 use log::{debug, info};
 
 use crate::proxy_message::{Flags, ProxyMessage, ReturnCode};

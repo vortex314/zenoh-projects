@@ -8,7 +8,7 @@ use embassy_futures::select::Either3::{First, Second, Third};
 
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Instant};
-use esp_backtrace as _;
+// use esp_backtrace as _;
 use esp_wifi::esp_now::EspNow;
 use esp_wifi::esp_now::{EspNowManager, EspNowReceiver, EspNowSender, BROADCAST_ADDRESS};
 use log::{debug, error, info};

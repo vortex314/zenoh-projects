@@ -83,14 +83,12 @@ async fn main(_spawner: Spawner) -> ! {
     let clock_cfg = PeripheralClockConfig::with_frequency(40u32.MHz()).unwrap();
 
     let mcpwm = McPwm::new(peripherals.MCPWM0, clock_cfg);
-    let  pcnt = Pcnt::new(peripherals.PCNT);
 
     // let left_pwm_pin = GpioPin::new(io.pins.gpio19);
     //  let right_pwm_pin = AnyPin::new(io.pins.gpio17);
     let left_enable_pin = Output::new(io.pins.gpio23, Level::Low);
     let right_enable_pin = Output::new(io.pins.gpio32, Level::Low);
-    let pin_cnt_a = Input::new(io.pins.gpio4, Pull::Up);
-    let pin_cnt_b = Input::new(io.pins.gpio5, Pull::Up);
+
 
     let mut motor_actor = DcMotorActor::new(
         mcpwm,
@@ -98,9 +96,6 @@ async fn main(_spawner: Spawner) -> ! {
         left_enable_pin,
         right_enable_pin,
         io.pins.gpio19,
-        pcnt,
-        pin_cnt_a,
-        pin_cnt_b,
     );
     // let (tx_pin, rx_pin) = (io.pins.gpio16, io.pins.gpio17); // was 17,16
     let mut motor_handler = motor_actor.handler();
