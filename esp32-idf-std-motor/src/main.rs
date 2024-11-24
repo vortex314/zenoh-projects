@@ -25,6 +25,11 @@ use limero_logger::*;
 mod led_actor;
 use led_actor::LedActor;
 use led_actor::LedCmd;
+
+mod esp_now_actor;
+use esp_now_actor::EspNowEvent;
+use esp_now_actor::EspNowCmd;
+use esp_now_actor::EspNowActor;
 use log::*;
 
 const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
