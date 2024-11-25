@@ -24,14 +24,6 @@ use msg::{fnv, MsgType};
 pub enum EspNowEvent {
     Rxd {
         peer: [u8; 6],
-        rssi: u8,
-        channel: u8,
-        data: Vec<u8>,
-    },
-    Broadcast {
-        peer: [u8; 6],
-        rssi: u8,
-        channel: u8,
         data: Vec<u8>,
     },
 }
@@ -39,7 +31,6 @@ pub enum EspNowEvent {
 #[derive(Clone)]
 pub enum EspNowCmd {
     Txd { peer: [u8; 6], data: Vec<u8> },
-    Broadcast { data: Vec<u8> },
     Connect { peer: [u8; 6] },
     Disconnect,
 }
@@ -52,9 +43,8 @@ pub struct EspNowActor {
     cmds: CmdQueue<EspNowCmd>,
     events: EventHandlers<EspNowEvent>,
     timers: Timers,
-    manager: &'static mut EspNowManager<'static>,
-    sender: &'static mut Mutex<NoopRawMutex, EspNowSender<'static>>,
-    receiver: EspNowReceiver<'static>,
+    esp_now: EspNow,
+    receiver : async_channel::Receiver<EspNowEvent>,
 }
 
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
@@ -67,7 +57,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
             match select3(
                 self.cmds.next(),
                 self.timers.alarm(),
-                listener(&self.manager, &mut self.receiver),
+                self.receiver.recv(),
             )
             .await
             {
@@ -95,20 +85,53 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
 }
 
 impl EspNowActor {
-    pub fn new(esp_now: EspNow<'static>) -> EspNowActor {
-        info!("esp-now version {}", esp_now.get_version().unwrap());
-        let (manager, sender, receiver) = esp_now.split();
+    pub fn new(modem:Modem) -> Result<EspNowActor> {
+        let nvs = EspDefaultNvsPartition::take()?;
+        let sys_loop = EspSystemEventLoop::take()?;
+        let mut wifi_driver = esp_idf_svc::wifi::WifiDriver::new(peripherals.modem, sys_loop.clone(), Some(nvs))?;
+    info!("Wifi driver created");
 
-        let manager = Box::leak(Box::new(manager));
-        let sender = Box::leak(Box::new(Mutex::<NoopRawMutex, _>::new(sender)));
+    wifi_driver.start()?;
+    info!("Wifi driver started");
+
+    let _sub = {
+        sys_loop
+            .subscribe::<WifiEvent, _>(move |event| {
+                info!("Wifi event ===> {:?}", event);
+            })
+            .unwrap()
+    };
+
+    let esp_now = esp_idf_svc::espnow::EspNow::take()?;
+
+    let (sender,receiver) = async_channel::bounded(capacity);
+
+    esp_now.register_recv_cb(|mac, data| {
+        info!("Received {:?}: {}", mac, minicbor::display(data));
+        sender.send(EspNowEvent::Rxd {
+            peer: mac,
+            data: data.to_vec(),
+    });
+    })?;
+    esp_now.register_send_cb(|_data, status| {
+        debug!("Send status: {:?}", status);
+    })?;
+    // add broadcast peer
+    esp_now.add_peer(PeerInfo {
+        peer_addr: MAC_BROADCAST,
+        lmk: [0; 16],
+        channel: 1,
+        ifidx: 0,
+        encrypt: false,
+        priv_: std::ptr::null_mut(),
+    })?;
 
   //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
         EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
             timers: Timers::new(),
-            manager,
-            sender,
+            esp_now,
             receiver,
         }
     }
@@ -124,7 +147,7 @@ impl EspNowActor {
                                                    return_code: None,
                                                };*/
         header.msg_type = MsgType::Alive;
-        header.src = Some(fnv("lm/motor"));
+        header.src = Some(fnv("lm1/motor"));
         let v = msg::cbor::encode(&header);
         let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
         if status.is_err() {
@@ -142,11 +165,7 @@ impl EspNowActor {
         let now = Instant::now();
         match msg {
             EspNowCmd::Txd { peer, data } => {
-                let mut sender = self.sender.lock().await;
-                sender
-                    .send_async(&peer, &data)
-                    .await
-                    .map_err(|e| Error::msg(format!("Failed to send data: {:?}", e)))?;
+                self.esp_now.send(peer,data)
             }
             EspNowCmd::Connect { peer: _ } => {}
             EspNowCmd::Disconnect => {}
@@ -164,41 +183,6 @@ impl EspNowActor {
     }
 }
 
-async fn listener(
-    _manager: &EspNowManager<'static>,
-    receiver: &mut EspNowReceiver<'static>,
-) -> EspNowEvent {
-    let r = receiver.receive_async().await;
-    debug!("source {:?}", mac_to_string(&r.info.src_address));
-    debug!("rx_control {:?}", r.info.rx_control);
-    debug!("Received {:?}", r.get_data());
-    if r.info.dst_address == BROADCAST_ADDRESS {
-        /*if !manager.peer_exists(&r.info.src_address) {
-            manager
-                .add_peer(PeerInfo {
-                    peer_address: r.info.src_address,
-                    lmk: None,
-                    channel: Some(r.info.rx_control.channel as u8),
-                    encrypt: false,
-                })
-                .unwrap();
-            info!("Added peer {:?}", mac_to_string(&r.info.src_address));
-        }*/
-        EspNowEvent::Broadcast {
-            peer: r.info.src_address,
-            rssi: r.info.rx_control.rssi as u8,
-            channel: r.info.rx_control.channel as u8,
-            data: r.data[..r.len as usize].to_vec(),
-        }
-    } else {
-        EspNowEvent::Rxd {
-            peer: r.info.src_address,
-            rssi: r.info.rx_control.rssi as u8,
-            channel: r.info.rx_control.channel as u8,
-            data: r.data[..r.len as usize].to_vec(),
-        }
-    }
-}
 
 pub fn mac_to_string(mac: &[u8; 6]) -> String {
     mac.iter()
@@ -207,30 +191,4 @@ pub fn mac_to_string(mac: &[u8; 6]) -> String {
         .join(":")
 }
 
-/*
-let mut ticker = Ticker::every(Duration::from_millis(500));
-    loop {
-        match embassy_futures::select::select(ticker.next(), pubsub_actor.run()).await {
-            embassy_futures::select::Either::First(_) => {
-                let peer = match manager.fetch_peer(false) {
-                    Ok(peer) => peer,
-                    Err(_) => {
-                        if let Ok(peer) = manager.fetch_peer(true) {
-                            peer
-                        } else {
-                            continue;
-                        }
-                    }
-                };
 
-                info!("Send hello to peer {:?}", peer.peer_address);
-                let mut sender = sender.lock().await;
-                let status = sender.send_async(&peer.peer_address, b"Hello Peer.").await;
-                info!("Send hello status: {:?}", status);
-            }
-            embassy_futures::select::Either::Second(_) => {
-                info!("pubsub_actor");
-            }
-        }
-        ticker.next().await;
-    } */
