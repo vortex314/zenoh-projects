@@ -38,6 +38,8 @@ minicbor = { version = "0.25.1", default-features = false, features = [
 ] }
 limero  = { path="../esp32-limero-embassy"}
 msg = { path="../msg"}
+async-channel ={ version = "2.3.1", features = [], default-features = false }
+
 
 [build-dependencies]
 embuild = "0.32.0"

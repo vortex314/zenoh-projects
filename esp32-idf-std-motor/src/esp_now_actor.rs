@@ -1,3 +1,7 @@
+extern crate alloc;
+
+use std::mem::transmute;
+
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::vec::Vec;
@@ -6,26 +10,30 @@ use alloc::string::String;
 use embassy_futures::select::select3;
 use embassy_futures::select::Either3::{First, Second, Third};
 
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Instant};
 // use esp_backtrace as _;
-use esp_wifi::esp_now::EspNow;
-use esp_wifi::esp_now::{EspNowManager, EspNowReceiver, EspNowSender, BROADCAST_ADDRESS};
+
+use esp_idf_svc::espnow::{EspNow, PeerInfo};
+use esp_idf_svc::eventloop::EspSystemEventLoop;
+use esp_idf_svc::hal::modem::Modem;
+use esp_idf_svc::hal::task::block_on;
+use esp_idf_svc::nvs::EspDefaultNvsPartition;
+use esp_idf_svc::sys::{esp_now_recv_info, esp_now_recv_info_t, wifi_pkt_rx_ctrl_t};
+use esp_idf_svc::wifi::*;
+
 use log::{debug, error, info};
 
-use anyhow::Error;
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
+use msg::fnv;
 use msg::MsgHeader;
-use msg::{fnv, MsgType};
+
+pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
-    Rxd {
-        peer: [u8; 6],
-        data: Vec<u8>,
-    },
+    Rxd { peer: [u8; 6], data: Vec<u8> },
 }
 
 #[derive(Clone)]
@@ -43,24 +51,22 @@ pub struct EspNowActor {
     cmds: CmdQueue<EspNowCmd>,
     events: EventHandlers<EspNowEvent>,
     timers: Timers,
-    esp_now: EspNow,
-    receiver : async_channel::Receiver<EspNowEvent>,
+    esp_now: EspNow<'static>,
+    sender : async_channel::Sender<EspNowEvent>,
+    receiver: async_channel::Receiver<EspNowEvent>,
+    eventloop : EspSystemEventLoop,
+    wifi_driver : esp_idf_svc::wifi::WifiDriver<'static>,
 }
 
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
     async fn run(&mut self) {
+        info!("EspNowActor started");
         self.timers.add_timer(Timer::new_repeater(
             TimerId::BroadcastTimer as u32,
             Duration::from_millis(1_000),
         ));
         loop {
-            match select3(
-                self.cmds.next(),
-                self.timers.alarm(),
-                self.receiver.recv(),
-            )
-            .await
-            {
+            match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {
                 First(msg) => {
                     if let Err(x) = self.on_cmd_message(msg.unwrap()).await {
                         error!("Error: {:?}", x);
@@ -70,7 +76,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
                     self.on_timeout(idx).await;
                 }
                 Third(msg) => {
-                    self.events.handle(&msg);
+                    self.events.handle(&msg.unwrap());
                 }
             }
         }
@@ -85,77 +91,72 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
 }
 
 impl EspNowActor {
-    pub fn new(modem:Modem) -> Result<EspNowActor> {
+    pub fn new(modem: Modem) -> Result<EspNowActor> {
         let nvs = EspDefaultNvsPartition::take()?;
-        let sys_loop = EspSystemEventLoop::take()?;
-        let mut wifi_driver = esp_idf_svc::wifi::WifiDriver::new(peripherals.modem, sys_loop.clone(), Some(nvs))?;
-    info!("Wifi driver created");
+        let eventloop = EspSystemEventLoop::take()?;
+        let mut wifi_driver =
+            esp_idf_svc::wifi::WifiDriver::new(modem, eventloop.clone(), Some(nvs))?;
+        info!("Wifi driver created");
 
-    wifi_driver.start()?;
-    info!("Wifi driver started");
+        wifi_driver.start()?;
+        info!("Wifi driver started");
 
-    let _sub = {
-        sys_loop
-            .subscribe::<WifiEvent, _>(move |event| {
-                info!("Wifi event ===> {:?}", event);
-            })
-            .unwrap()
-    };
+        let _sub = {
+            eventloop
+                .subscribe::<WifiEvent, _>(move |event| {
+                    info!("Wifi event ===> {:?}", event);
+                })
+                .unwrap()
+        };
 
-    let esp_now = esp_idf_svc::espnow::EspNow::take()?;
+        let esp_now = esp_idf_svc::espnow::EspNow::take()?;
 
-    let (sender,receiver) = async_channel::bounded(capacity);
+        let (sender, receiver) = async_channel::bounded(5);
+        let mut sender_clone = sender.clone();
 
-    esp_now.register_recv_cb(|mac, data| {
-        info!("Received {:?}: {}", mac, minicbor::display(data));
-        sender.send(EspNowEvent::Rxd {
-            peer: mac,
-            data: data.to_vec(),
-    });
-    })?;
-    esp_now.register_send_cb(|_data, status| {
-        debug!("Send status: {:?}", status);
-    })?;
-    // add broadcast peer
-    esp_now.add_peer(PeerInfo {
-        peer_addr: MAC_BROADCAST,
-        lmk: [0; 16],
-        channel: 1,
-        ifidx: 0,
-        encrypt: false,
-        priv_: std::ptr::null_mut(),
-    })?;
+        esp_now.register_recv_cb(move |mac, data| {
+            let _ = sender_clone.try_send(EspNowEvent::Rxd {
+                peer: MAC_BROADCAST,
+                data: data.to_vec(),
+            });
+        })?;
+        esp_now.register_send_cb(|_data, status| {
+            info!("Send status: {:?}", status);
+        })?;
+        // add broadcast peer
+        esp_now.add_peer(PeerInfo {
+            peer_addr: MAC_BROADCAST,
+            lmk: [0; 16],
+            channel: 1,
+            ifidx: 0,
+            encrypt: false,
+            priv_: std::ptr::null_mut(),
+        })?;
 
-  //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
-        EspNowActor {
+        //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
+        Ok(EspNowActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
             timers: Timers::new(),
             esp_now,
+            sender,
             receiver,
-        }
+            eventloop,
+            wifi_driver,
+        })
     }
 
     async fn broadcast(&mut self) {
-        let mut sender = self.sender.lock().await;
-        let mut header = MsgHeader::default(); /*  {
-                                                   dst: None,
-                                                   src: Some(fnv("lm/motor")),
-                                                   msg_type: MsgType::Alive,
-                                                   msg_id: None,
-                                                   qos:None,
-                                                   return_code: None,
-                                               };*/
-        header.msg_type = MsgType::Alive;
+        info!("Broadcasting");
+        let mut header = MsgHeader::default();
         header.src = Some(fnv("lm1/motor"));
         let v = msg::cbor::encode(&header);
-        let status = sender.send_async(&BROADCAST_ADDRESS, &v).await;
-        if status.is_err() {
-            error!("Send broadcast status: {:?}", status);
-        };
+
+        self.esp_now.send(MAC_BROADCAST, &v).unwrap();
     }
 
     async fn on_timeout(&mut self, _id: u32) {
+        info!("Timeout");
         if _id == TimerId::BroadcastTimer as u32 {
             self.broadcast().await;
         }
@@ -164,18 +165,9 @@ impl EspNowActor {
     async fn on_cmd_message(&mut self, msg: EspNowCmd) -> Result<()> {
         let now = Instant::now();
         match msg {
-            EspNowCmd::Txd { peer, data } => {
-                self.esp_now.send(peer,data)
-            }
+            EspNowCmd::Txd { peer, data } => self.esp_now.send(peer, &data)?,
             EspNowCmd::Connect { peer: _ } => {}
             EspNowCmd::Disconnect => {}
-            EspNowCmd::Broadcast { data } => {
-                let mut sender = self.sender.lock().await;
-                sender
-                    .send_async(&BROADCAST_ADDRESS, &data)
-                    .await
-                    .map_err(|e| Error::msg(format!("Failed to send data: {:?}", e)))?;
-            }
         }
         let elapsed = now.elapsed();
         debug!("Elapsed: {:?}", elapsed);
@@ -183,12 +175,9 @@ impl EspNowActor {
     }
 }
 
-
 pub fn mac_to_string(mac: &[u8; 6]) -> String {
     mac.iter()
         .map(|b| format!("{:02X}", b))
         .collect::<Vec<_>>()
         .join(":")
 }
-
-

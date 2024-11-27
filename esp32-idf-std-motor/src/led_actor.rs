@@ -4,7 +4,7 @@ use limero::{Actor, CmdQueue, EventHandlers,Endpoint};
 use embassy_time::Duration;
 use embassy_futures::select::select;
 use embassy_futures::select::Either::{First, Second};
-use esp_idf_svc::hal::gpio::{AnyOutputPin, Output, OutputPin, PinDriver};
+use esp_idf_svc::hal::gpio::{AnyOutputPin, Output, PinDriver};
 
 #[derive(Clone)]
 pub enum LedCmd {
