@@ -1,7 +1,9 @@
 #![no_std]
 extern crate alloc;
 
+
 use alloc::string::String;
+use alloc::vec::Vec;
 use const_fnv1a_hash::fnv1a_hash_32;
 use minicbor::{Decode, Encode};
 
@@ -64,6 +66,49 @@ pub struct MsgHeader {
     pub qos: Option<u8>,
 }
 
+#[derive(Encode, Decode, Default, Clone, Debug,)]
+#[cbor(map)]
+pub struct Msg {
+    #[n(0)]
+    pub dst: Option<ObjectId>,
+    #[n(1)]
+    pub src: Option<ObjectId>,
+    #[n(2)]
+    pub msg_id: Option<u16>,
+    #[n(3)]
+    pub return_code: Option<u32>,
+    #[n(4)]
+    pub pub_req: Option<Vec<u8>>,
+    #[n(5)]
+    pub info_req: Option<Vec<u8>>,
+    #[n(6)]
+    pub info_reply: Option<InfoMap>,
+
+}
+
+ impl Msg {
+    pub fn new() -> Self {
+        Msg {
+            dst: None,
+            src: None,
+            msg_id: None,
+            return_code: None,
+            pub_req: None,
+            info_req: None,
+            info_reply: None,
+        }
+    }
+    pub fn reply(&self) -> Self {
+        let mut reply = Self::new();
+        reply.dst = self.src;
+        reply.src = self.dst;
+        self.msg_id.map(|msg_id| reply.msg_id = Some(msg_id));
+        reply
+    }
+}
+
+
+
 /*
 
 MsgType         Dst     Src    Payload     PubSUb
@@ -124,9 +169,9 @@ pub enum MetaPropertyId {
     Qos = -2,
     MsgId = -3,
 }
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone,Debug)]
 #[cbor(map)]
-struct InfoMap {
+pub struct InfoMap {
     #[n(0)]
     pub id: PropertyId,
     #[n(1)]
@@ -155,7 +200,7 @@ pub enum InfoPropertyId {
     Mode,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone,Debug)]
 #[cbor(index_only)]
 #[repr(i8)]
 pub enum PropType {
@@ -171,7 +216,7 @@ pub enum PropType {
     FLOAT = 4,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone,Debug)]
 #[cbor(index_only)]
 pub enum PropMode {
     #[n(0)]

@@ -1,7 +1,5 @@
 extern crate alloc;
 
-use std::mem::transmute;
-
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::vec::Vec;
@@ -16,9 +14,7 @@ use embassy_time::{Duration, Instant};
 use esp_idf_svc::espnow::{EspNow, PeerInfo};
 use esp_idf_svc::eventloop::EspSystemEventLoop;
 use esp_idf_svc::hal::modem::Modem;
-use esp_idf_svc::hal::task::block_on;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
-use esp_idf_svc::sys::{esp_now_recv_info, esp_now_recv_info_t, wifi_pkt_rx_ctrl_t};
 use esp_idf_svc::wifi::*;
 
 use log::{debug, error, info};
@@ -26,10 +22,18 @@ use log::{debug, error, info};
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
+use minicbor::{Decode, Encode};
 use msg::fnv;
 use msg::MsgHeader;
 
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+
+#[derive(Encode, Decode, Clone,Debug,Default)]
+#[cbor(map)]
+ struct EspNowProps {
+    #[n(0)]
+    pub name: Option<String>,
+}
 
 #[derive(Clone, Debug)]
 pub enum EspNowEvent {
@@ -112,9 +116,9 @@ impl EspNowActor {
         let esp_now = esp_idf_svc::espnow::EspNow::take()?;
 
         let (sender, receiver) = async_channel::bounded(5);
-        let mut sender_clone = sender.clone();
+        let  sender_clone = sender.clone();
 
-        esp_now.register_recv_cb(move |mac, data| {
+        esp_now.register_recv_cb(move |_mac, data| {
             let _ = sender_clone.try_send(EspNowEvent::Rxd {
                 peer: MAC_BROADCAST,
                 data: data.to_vec(),
@@ -146,11 +150,46 @@ impl EspNowActor {
         })
     }
 
+
+
     async fn broadcast(&mut self) {
         info!("Broadcasting");
-        let mut header = MsgHeader::default();
-        header.src = Some(fnv("lm1/motor"));
-        let v = msg::cbor::encode(&header);
+        let mut msg = msg::Msg::default();
+        let mut pub_msg = EspNowProps::default();
+        pub_msg.name = Some("esp_now_actor".to_string());
+        msg.src = Some(fnv("lm1/motor"));
+        msg.pub_req = Some( minicbor::to_vec(pub_msg).unwrap());
+        
+        let v = msg::cbor::encode(&msg);
+
+        self.esp_now.send(MAC_BROADCAST, &v).unwrap();
+    }
+
+    /*
+        pub id: PropertyId,
+    #[n(1)]
+    pub name: Option<String>,
+    #[n(2)]
+    pub desc: Option<String>,
+    #[n(3)]
+    pub prop_type: Option<PropType>,
+    #[n(4)]
+    pub prop_mode: Option<PropMode>,
+} */
+
+    async fn send_info(&mut self) {
+        let mut msg = msg::Msg::default();
+        let mut info_map = msg::InfoMap::default();
+        info_map.id = 0;
+        info_map.name = Some("esp_now_actor".to_string());
+        info_map.desc = Some("esp_now_actor as Actor".to_string());
+        info_map.prop_type = Some(msg::PropType::STR);
+        info_map.prop_mode = Some(msg::PropMode::Read);
+
+        msg.src = Some(fnv("lm1/motor"));
+        msg.info_reply = Some( info_map);
+        
+        let v = msg::cbor::encode(&msg);
 
         self.esp_now.send(MAC_BROADCAST, &v).unwrap();
     }
