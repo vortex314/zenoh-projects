@@ -169,7 +169,7 @@ pub enum MetaPropertyId {
     Qos = -2,
     MsgId = -3,
 }
-#[derive(Encode, Decode, Clone,Debug)]
+#[derive(Encode, Decode, Clone,Debug,Default)]
 #[cbor(map)]
 pub struct InfoMap {
     #[n(0)]

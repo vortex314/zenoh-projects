@@ -198,6 +198,7 @@ impl EspNowActor {
         info!("Timeout");
         if _id == TimerId::BroadcastTimer as u32 {
             self.broadcast().await;
+            self.send_info().await;
         }
     }
 
