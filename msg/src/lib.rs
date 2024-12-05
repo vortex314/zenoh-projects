@@ -214,6 +214,10 @@ pub enum PropType {
     BYTES = 3,
     #[n(4)]
     FLOAT = 4,
+    #[n(5)]
+    OBJECT,
+    #[n(6)]
+    ARRAY,
 }
 
 #[derive(Encode, Decode, Clone,Debug)]
