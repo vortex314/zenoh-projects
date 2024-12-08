@@ -26,6 +26,10 @@ mod esp_now_actor;
 use esp_now_actor::EspNowActor;
 use esp_now_actor::EspNowCmd;
 use esp_now_actor::EspNowEvent;
+
+mod motor_actor;
+use motor_actor::MotorActor;
+
 use log::*;
 use msg::Msg;
 

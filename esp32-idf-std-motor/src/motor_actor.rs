@@ -6,29 +6,8 @@ use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use msg::fnv;
 use msg::MsgHeader;
 
-use esp_idf_svc::sys::mcpwm_timer_handle_t;
-use esp_idf_svc::sys::mcpwm_timer_config_t;
-use esp_idf_svc::sys::mcpwm_new_timer;
-use esp_idf_svc::sys::mcpwm_timer_enable;
-use esp_idf_svc::sys::mcpwm_timer_start_stop;
-use esp_idf_svc::sys::mcpwm_timer_stop;
-use esp_idf_svc::sys::mcpwm_timer_start;
-use esp_idf_svc::sys::mcpwm_timer_pause;
-use esp_idf_svc::sys::mcpwm_timer_resume;
-use esp_idf_svc::sys::mcpwm_timer_get_counter_value;
-use esp_idf_svc::sys::mcpwm_timer_set_counter_value;
-use esp_idf_svc::sys::mcpwm_timer_set_period_value;
-use esp_idf_svc::sys::mcpwm_timer_get_period_value;
-use esp_idf_svc::sys::mcpwm_timer_set_duty;
-use esp_idf_svc::sys::mcpwm_timer_get_duty;
-use esp_idf_svc::sys::mcpwm_timer_set_deadtime;
-use esp_idf_svc::sys::mcpwm_timer_get_deadtime;
-use esp_idf_svc::sys::mcpwm_timer_set_cmpr_value;
-use esp_idf_svc::sys::mcpwm_timer_get_cmpr_value;
-use esp_idf_svc::hal::sys::soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
-use esp_idf_svc::hal::sys::mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP
-use esp_idf_svc::sys::mcpwm_timer_clk_src_t_SOC_MOD_CLK_PLL_F160M;
-use esp_idf_svc::sys::mcpwm_timer_config_t;
+use esp_idf_svc::sys::{esp, mcpwm_cap_channel_handle_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_start, mcpwm_new_capture_timer, mcpwm_timer_handle_t, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M};
+
 
 
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
@@ -36,6 +15,9 @@ pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 const MCPWM_TIMER_CLK_SRC_DEFAULT:u32=soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ:u32=10000000; // 10MHz, 1 tick = 0.1us
 const BLDC_MCPWM_PERIOD :u32 =             500;      // 50us, 20KHz
+const HALL_CAP_U_GPIO:u32    =       4;
+const HALL_CAP_V_GPIO:u32   =        5;
+const  HALL_CAP_W_GPIO:u32   =        6;
 /* 
 typedef enum {
     MCPWM_TIMER_CLK_SRC_PLL160M = SOC_MOD_CLK_PLL_F160M, /*!< Select PLL_F160M as the source clock */
@@ -45,39 +27,43 @@ typedef enum {
  impl MotorActor {
     fn init_capture(&mut self) -> Result<()> {
         unsafe {
-            mcpwm_cap_timer_handle_t cap_timer = NULL;
-            mcpwm_capture_timer_config_t cap_timer_config = mcpwm_capture_timer_config_t {
-                group_id : 0,
-                clk_src : MCPWM_CAPTURE_CLK_SRC_DEFAULT,
-                };
-                esp(mcpwm_new_capture_timer(&cap_timer_config, &cap_timer));
-                mcpwm_cap_channel_handle_t cap_channels[3];
-                mcpwm_capture_channel_config_t cap_channel_config = mcpwm_capture_channel_config_t {
+            let cap_timer: mcpwm_cap_timer_handle_t  = 0;
+            let mut cap_timer_config : mcpwm_capture_timer_config_t  = mcpwm_capture_timer_config_t::default();
+             
+                cap_timer_config.group_id = 0;
+                cap_timer_config.clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT;
+                
+                esp!(mcpwm_new_capture_timer(&cap_timer_config, &cap_timer));
+                let mut  cap_channels:Vec<mcpwm_cap_channel_handle_t> =Vec::new();
+                let cap_channel_config: mcpwm_capture_channel_config_t  = mcpwm_capture_channel_config_t {
                     prescale : 1,
                     flags : mcpwm_capture_channel_flags_t {
                         pull_up : true,
                         neg_edge : true,
                         pos_edge : true,
                     },
+                    gpio_num : 0,
+                    intr_priority : 1,
                 };
-                const int cap_chan_gpios[3] = {HALL_CAP_U_GPIO, HALL_CAP_V_GPIO, HALL_CAP_W_GPIO};
-                for (int i = 0; i < 3; i++) {
+                let  cap_chan_gpios = vec![HALL_CAP_U_GPIO, HALL_CAP_V_GPIO, HALL_CAP_W_GPIO];
+                for i in 0..2 {
                     cap_channel_config.gpio_num = cap_chan_gpios[i];
                     esp(mcpwm_new_capture_channel(cap_timer, &cap_channel_config, &cap_channels[i]));
                 }
-                TaskHandle_t task_to_notify = xTaskGetCurrentTaskHandle();
-                for (int i = 0; i < 3; i++) {
-                    mcpwm_capture_event_callbacks_t cbs = {
-                        .on_cap = bldc_hall_updated,
+               // TaskHandle_t task_to_notify = xTaskGetCurrentTaskHandle();
+                for  i in 0..2  {
+                    let cbs: mcpwm_capture_event_callbacks_t  = mcpwm_capture_event_callbacks_t {
+                    on_cap : bldc_hall_updated,
                     };
                     esp(mcpwm_capture_channel_register_event_callbacks(cap_channels[i], &cbs, task_to_notify));
                 }
-                for (int i = 0; i < 3; i++) {
-                    esp(mcpwm_capture_channel_enable(cap_channels[i]));
+                for  i in 0..2 {
+                    esp!(mcpwm_capture_channel_enable(cap_channels[i]));
                 }
-                esp(mcpwm_capture_timer_enable(cap_timer));
-                esp(mcpwm_capture_timer_start(cap_timer));
+                esp!(mcpwm_capture_timer_enable(cap_timer));
+                esp!(mcpwm_capture_timer_start(cap_timer));
         }
+        Ok(());
     }
  }
 
@@ -110,12 +96,8 @@ struct MotorMsg {
     #[n(4)]
     pub prop_mode: Option<PropMode>, */
 
-struct Info {
-    actor_info : ActorInfo { name : "Motor", id : fnv("Motor")}, },
-    props_info : Vec<InfoMap>,
-}
 
-const  motor_interface = vec![
+const  motor_interface:Vec<InfoMap> = vec![
     InfoMap { id:0 , name :"target_rpm",desc="target desired RPM ", prop_type: PropType::U32, prop_mode: PropMode::ReadWrite },
     InfoMap { id:1 , name :"measured_rpm",desc="measured RPM ", prop_type: PropType::U32, prop_mode: PropMode::ReadOnly },
     InfoMap { id:2 , name :"target_current",desc="target desired current ", prop_type: PropType::U32, prop_mode: PropMode::ReadWrite },
@@ -136,7 +118,7 @@ pub enum MotorEvent {
 
 #[derive(Clone)]
 pub enum MotorCmd {
-    Msg ( msg : MotorMsg),
+    Msg { msg : MotorMsg,},
     Stop,
 }
 
@@ -162,13 +144,13 @@ pub struct MotorActor {
 impl MotorActor {
     fn send_msg(&self) -> MotorMsg {
         MotorMsg {
-            target_rpm : self.target_rpm,
-            measured_rpm : self.measured_rpm,
-            target_current : self.target_current,
-            measured_current : self.measured_current,
-            rpm_kp : self.rpm_kp,
-            rpm_ki : self.rpm_ki,
-            rpm_kd : self.rpm_kd,
+            target_rpm : Some(self.target_rpm),
+            measured_rpm : Some(self.measured_rpm),
+            target_current : Some(self.target_current),
+            measured_current : Some(self.measured_current),
+            rpm_kp : Some(self.rpm_kp),
+            rpm_ki : Some(self.rpm_ki),
+            rpm_kd : Some(self.rpm_kd),
         }
     }
     fn recv_msg(&mut self, msg : MotorMsg) {
@@ -230,6 +212,30 @@ impl MotorActor {
 
 
 impl Actor<MotorCmd, MotorEvent> for MotorActor {
+    async fn run(&mut self) {
+        self.timers.add_timer(Timer::new_repeater(TimerId::WatchdogTimer as u32, Duration::from_secs(1)));
+        loop {
+            match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {
+                First(cmd) => {
+                    self.on_cmd(cmd.unwrap());
+                }
+                Second(id) => {
+                    self.on_timer(id);
+                }
+                Third(event) => {
+                    self.on_event(event.unwrap());
+                }
+            }
+        }
+    }
+
+    fn add_listener(&mut self, listener: Handler<MotorEvent>) {
+        self.events.add_listener(listener);
+    }
+
+    fn handler(&self) -> Box<dyn Handler<MotorCmd>> {
+        self.cmds.handler()
+    }
 }
 
 /*
