@@ -200,7 +200,7 @@ pub enum InfoPropertyId {
     Mode,
 }
 
-#[derive(Encode, Decode, Clone,Debug)]
+#[derive(Encode, Decode, Clone,Debug,Copy)]
 #[cbor(index_only)]
 #[repr(i8)]
 pub enum PropType {
@@ -220,13 +220,19 @@ pub enum PropType {
     ARRAY,
 }
 
-#[derive(Encode, Decode, Clone,Debug)]
+#[derive(Encode, Decode, Clone,Debug,Copy)]
 #[cbor(index_only)]
+#[repr(i8)]
 pub enum PropMode {
     #[n(0)]
     Read = 0,
     #[n(1)]
     Write = 1,
+    #[n(2)]
+    ReadWrite = 2,
+    #[n(3)]
+    Notify = 3,
+    
 }
 
 #[derive(Encode, Decode, Clone)]

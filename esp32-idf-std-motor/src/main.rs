@@ -37,9 +37,12 @@ fn main() {
     esp_idf_svc::sys::link_patches();
     //   esp_idf_svc::log::EspLogger::initialize_default();
     limero_logger_init().unwrap();
-    main_task()
-        .map_err(|err| error!("Error: {:?}", err))
-        .unwrap();
+    let result = main_task();
+    match result {
+        Result::Ok(_) => info!("Main task finished"),
+        Err(err) => error!("Main task failed: {:?}", err),
+    }
+       
 }
 
 fn main_task() -> anyhow::Result<()> {
@@ -60,6 +63,8 @@ fn main_task() -> anyhow::Result<()> {
     let mut counter = 0;
 
     let mut timer = timer_service.timer_async().unwrap();
+    let mut motor_actor = MotorActor::new();
+    motor_actor.init()?;
     info!("Starting main task");
 
     esp_idf_svc::hal::task::block_on(async {
@@ -113,7 +118,11 @@ fn event_display(ev: &EspNowEvent) {
                     );
                 });
             } else {
-                info!("Invalid EspNow Msg {:?} from {} ", data, mac_to_string(peer));
+                info!(
+                    "Invalid EspNow Msg {:?} from {} ",
+                    data,
+                    mac_to_string(peer)
+                );
             }
         }
         _ => {}
