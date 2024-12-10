@@ -24,7 +24,6 @@ use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use minicbor::{Decode, Encode};
 use msg::fnv;
-use msg::MsgHeader;
 
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
