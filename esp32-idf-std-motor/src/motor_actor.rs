@@ -1,3 +1,11 @@
+/* 
+
+mcpwm and capture actor 
+based on 
+- https://github.com/espressif/esp-idf/blob/master/examples/peripherals/mcpwm/mcpwm_bldc_hall_control/main/mcpwm_bldc_hall_control_example_main.c
+- https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/mcpwm.html
+*/
+
 use std::ffi::c_void;
 
 use embassy_futures::select::{select3, Either3};
@@ -22,12 +30,11 @@ use esp_idf_svc::sys::{
     soc_module_clk_t_SOC_MOD_CLK_PLL_F160M,
 };
 
-pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
-
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
 const BLDC_MCPWM_PERIOD: u32 = 500; // 50us, 20KHz
 const GPIO_CAPTURE: i32 = 4; // gpio4
+pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 
 #[derive(Encode, Decode, Default, Clone, Debug)]
@@ -57,6 +64,18 @@ struct InfoStruct {
     prop_mode: PropMode,
 }
 
+impl InfoStruct {
+    fn new(id: u32, name: &'static str, desc: &'static str, prop_type: PropType, prop_mode: PropMode) -> Self {
+        InfoStruct {
+            id,
+            name,
+            desc,
+            prop_type,
+            prop_mode,
+        }
+    }
+}
+
 static MOTOR_INTERFACE: &[InfoStruct] = &[
     InfoStruct {
         id: 0,
@@ -75,14 +94,14 @@ static MOTOR_INTERFACE: &[InfoStruct] = &[
     InfoStruct {
         id: 2,
         name: "target_current",
-        desc: "target desired current ",
+        desc: "target current mA",
         prop_type: PropType::UINT,
         prop_mode: PropMode::ReadWrite,
     },
     InfoStruct {
         id: 3,
         name: "measured_current",
-        desc: "measured current ",
+        desc: "measured current mA",
         prop_type: PropType::UINT,
         prop_mode: PropMode::Read,
     },
@@ -108,24 +127,20 @@ static MOTOR_INTERFACE: &[InfoStruct] = &[
         prop_mode: PropMode::ReadWrite,
     },
 ];
-
-const PWM_HZ: u32 = 10000;
-
 #[derive(Clone, Debug)]
 pub enum MotorEvent {
     Rxd { peer: [u8; 6], data: Vec<u8> },
+    Msg { msg: Msg },
+    Isr { cap_value : u32, pos_edge : bool },
 }
-
 #[derive(Clone)]
 pub enum MotorCmd {
-    Msg { msg: MotorMsg },
+    Msg { msg: Vec<u8> },
     Stop,
 }
-
 enum TimerId {
     WatchdogTimer = 1,
 }
-
 pub struct MotorActor {
     cmds: CmdQueue<MotorCmd>,
     events: EventHandlers<MotorEvent>,
@@ -136,9 +151,17 @@ pub struct MotorActor {
     measured_rpm: u32,
     target_current: u32,
     measured_current: u32,
+    last_measured_time : u64,
+    prev_measured_time : u64,
     rpm_kp: f32,
     rpm_ki: f32,
     rpm_kd: f32,
+}
+
+unsafe extern "C" fn capture_callback (cap_channel : *mut mcpwm_cap_channel_t, capture_event: *const mcpwm_capture_event_data_t, user_data : *mut c_void) -> bool {
+    let sender = user_data as Sender<MotorEvent>;
+    sender.send(MotorEvent::Isr { cap_value : capture_event.cap_value , pos_edge : capture_event.cap_edge > 1 }).unwrap();
+    true
 }
 
 impl MotorActor {
@@ -153,25 +176,15 @@ impl MotorActor {
             rpm_kd: Some(self.rpm_kd),
         }
     }
-    fn recv_msg(&mut self, msg: MotorMsg) {
-        if let Some(target_rpm) = msg.target_rpm {
-            self.target_rpm = target_rpm;
-        }
-        if let Some(target_current) = msg.target_current {
-            self.target_current = target_current;
-        }
-        if let Some(rpm_kp) = msg.rpm_kp {
-            self.rpm_kp = rpm_kp;
-        }
-        if let Some(rpm_ki) = msg.rpm_ki {
-            self.rpm_ki = rpm_ki;
-        }
-        if let Some(rpm_kd) = msg.rpm_kd {
-            self.rpm_kd = rpm_kd;
-        }
+    fn recv_msg(&mut self, msg: &MotorMsg) {
+        msg.target_rpm.map( |_| self.target_rpm = _);
+        msg.target_current.map( |current| self.target_current = current);
+        msg.rpm_kp.map( |kp| self.rpm_kp = kp);
+        msg.rpm_ki.map( |ki| self.rpm_ki = ki);
+        msg.rpm_kd.map( |kd| self.rpm_kd = kd);
     }
     pub fn new() -> Self {
-        let (sender, receiver) = async_channel::unbounded();
+        let (sender, receiver) = async_channel::bounded(5);
         MotorActor {
             cmds: CmdQueue::new(5),
             events: EventHandlers::new(),
@@ -187,7 +200,6 @@ impl MotorActor {
             rpm_kd: 0.0,
         }
     }
-
     fn get_info(&self, prop: u32) -> Result<InfoMap> {
         let str = &MOTOR_INTERFACE[prop as usize];
         Ok(InfoMap {
@@ -198,10 +210,13 @@ impl MotorActor {
             prop_mode: Some(str.prop_mode),
         })
     }
-
     pub fn init(&mut self) -> Result<()> {
         info!("MotorActor init");
         self.init_capture()?;
+        self.init_pwm()?;
+        Ok(())
+    }
+    fn init_pwm(&mut self) -> Result<()> {
         unsafe {
             let mut timer_handle: mcpwm_timer_handle_t = std::ptr::null_mut();
             let mut flags = mcpwm_timer_config_t__bindgen_ty_1::default();
@@ -222,21 +237,33 @@ impl MotorActor {
         }
         Ok(())
     }
-
+    fn pid_update(&mut self ) -> Result<u32>  {
+        let error = self.target_rpm - self.measured_rpm;
+        let delta_t = self.last_measured_time - self.prev_measured_time;
+        let p = self.rpm_kp * error;
+        let i = self.rpm_ki * error * delta_t;
+        let d = self.rpm_kd * error / delta_t;
+        let output = p + i + d;
+        Ok(())
+    }
+    fn pwm_stop(&mut self) -> Result<()> {
+        self.target_rpm = 0;
+        Ok(())
+    }
     fn init_capture(&mut self) -> Result<()> {
         unsafe {
-            let mut cap_timer: mcpwm_cap_timer_handle_t = std::ptr::null_mut();
+            let mut cap_timer_handle: mcpwm_cap_timer_handle_t = std::ptr::null_mut(); // the handle is a pointer to mcpwm_cap_timer_t
+// initialize timer 
             let mut cap_timer_config: mcpwm_capture_timer_config_t =
                 mcpwm_capture_timer_config_t::default();
-
             cap_timer_config.group_id = 0;
             cap_timer_config.clk_src = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
-
-            esp!(mcpwm_new_capture_timer(&cap_timer_config, &mut cap_timer))?;
+            esp!(mcpwm_new_capture_timer(&cap_timer_config, &mut cap_timer_handle))?;
+// initialize capture channel
             let mut flags = mcpwm_capture_channel_config_t__bindgen_ty_1::default();
-            flags.pos_edge();
-            flags.neg_edge();
-            let mut cap_channel: mcpwm_cap_channel_handle_t = std::ptr::null_mut();
+            flags.pos_edge();   // capture on positive edge
+            flags.neg_edge();   // capture on negative edge
+            let mut cap_channel: mcpwm_cap_channel_handle_t = std::ptr::null_mut(); // the handle is a pointer to mcpwm_cap_channel_t
             let mut cap_channel_config: mcpwm_capture_channel_config_t =
                 mcpwm_capture_channel_config_t {
                     prescale: 1,
@@ -247,21 +274,22 @@ impl MotorActor {
             let cap_chan_gpio: i32 = GPIO_CAPTURE;
             cap_channel_config.gpio_num = cap_chan_gpio;
             esp!(mcpwm_new_capture_channel(
-                cap_timer,
+                cap_timer_handle,
                 &cap_channel_config,
                 &mut cap_channel
             ))?;
-
-            let mut user_data = 1u32;
+// set capture callback
+            let mut user_data = self.sender.clone() as *mut Sender<MotorEvent> as *mut c_void;
 
             // TaskHandle_t task_to_notify = xTaskGetCurrentTaskHandle();
-            let cbs: mcpwm_capture_event_callbacks_t =
-                mcpwm_capture_event_callbacks_t { on_cap: None };
+            let cbs = mcpwm_capture_event_callbacks_t { on_cap: Some(capture_callback) };
+
             esp!(mcpwm_capture_channel_register_event_callbacks(
                 cap_channel,
                 &cbs,
-                &mut user_data as *mut _ as *mut c_void
+                &mut user_data as *mut c_void
             ))?;
+// activate capture channel
             esp!(mcpwm_capture_channel_enable(cap_channel))?;
             esp!(mcpwm_capture_timer_enable(cap_timer))?;
             esp!(mcpwm_capture_timer_start(cap_timer))?;
@@ -333,16 +361,6 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
 
 /*
 
-https://github.com/espressif/esp-idf/blob/master/examples/peripherals/mcpwm/mcpwm_bldc_hall_control/main/mcpwm_bldc_hall_control_example_main.c
-
-https://github.com/espressif/esp-idf/blob/master/examples/peripherals/mcpwm/mcpwm_bldc_hall_control/main/mcpwm_bldc_hall_control_example_main.c
-
-
-/*
- * SPDX-FileCopyrightText: 2021-2023 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Unlicense OR CC0-1.0
- */
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"

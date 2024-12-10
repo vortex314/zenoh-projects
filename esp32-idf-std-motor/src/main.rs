@@ -42,6 +42,7 @@ fn main() {
         Result::Ok(_) => info!("Main task finished"),
         Err(err) => error!("Main task failed: {:?}", err),
     }
+    loop {}
        
 }
 
