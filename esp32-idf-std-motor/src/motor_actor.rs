@@ -294,11 +294,11 @@ impl MotorActor {
                 }
             ))?;
 
-            esp!(mcpwm_timer_enable(timer_handle));
+            esp!(mcpwm_timer_enable(timer_handle))?;
             esp!(mcpwm_timer_start_stop(
                 timer_handle,
                 mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP
-            ));
+            ))?;
         }
         Ok(())
     }
