@@ -4,7 +4,7 @@ mcpwm and capture actor
 
 - drives a motor DC via PWM at 10kHz
 - measures the motor speed via a hall sensor or tacho-meter
-- PID control of the motor speed 
+- PID control of the motor speed
 
 MotorActor
 - recv Msg => SetReq(src,dst), InfoReq(dst) ,PublishBroadcast(src)
@@ -19,26 +19,44 @@ based on
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/mcpwm.html
 */
 
-use std::ffi::c_void;
+use anyhow::Result;
 use async_channel::Sender;
 use embassy_futures::select::{select3, Either3};
 use embassy_time::Duration;
-use log::{debug, error, info};
-use anyhow::Result;
+use esp_idf_svc::sys::{
+    esp, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t,
+    mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1,
+    mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks,
+    mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t,
+    mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start,
+    mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1,
+    mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t,
+    mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
+    mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t,
+    mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event,
+    mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer,
+    mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer,
+    mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1,
+    mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1,
+    mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP,
+    mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable,
+    mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop,
+    mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB,
+    soc_module_clk_t_SOC_MOD_CLK_PLL_F160M,
+};
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
+use log::{debug, error, info};
 use minicbor::{Decode, Encode};
 use msg::{InfoMap, Msg};
 use msg::{PropMode, PropType};
-use esp_idf_svc::sys::{
-    esp, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1, mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks, mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start, mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1, mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t, mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH, mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t, mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event, mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer, mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1, mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1, mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP, mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable, mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop, mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M
-};
+use std::ffi::c_void;
 
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
 const TICKS_PER_PERIOD: u32 = 500; // 50us, 20KHz
 const GPIO_CAPTURE: i32 = 4; // gpio4
-const GPIO_PWM :i32 = 5; // gpio5
+const GPIO_PWM: i32 = 5; // gpio5
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 #[derive(Encode, Decode, Default, Clone, Debug)]
@@ -158,7 +176,7 @@ pub struct MotorActor {
     timers: Timers,
     sender: async_channel::Sender<MotorEvent>,
     receiver: async_channel::Receiver<MotorEvent>,
-    // props 
+    // props
     target_rpm: u32,
     measured_rpm: u32,
     target_current: u32,
@@ -170,13 +188,13 @@ pub struct MotorActor {
     rpm_ki: f32,
     rpm_kd: f32,
     // Device driver info
-    pwm_value : u32, // from 0 to TICKS_PER_PERIOD
-    timer_handle : mcpwm_timer_handle_t,
-    operator_handle : mcpwm_gen_handle_t,
-    comparator_handle : mcpwm_cmpr_handle_t,
-    generator_handle : mcpwm_gen_handle_t,
-    cap_timer_handle : mcpwm_cap_timer_handle_t,
-    cap_channel_handle : mcpwm_cap_channel_handle_t,
+    pwm_value: u32, // from 0 to TICKS_PER_PERIOD
+    timer_handle: mcpwm_timer_handle_t,
+    operator_handle: mcpwm_oper_handle_t,
+    comparator_handle: mcpwm_cmpr_handle_t,
+    generator_handle: mcpwm_gen_handle_t,
+    cap_timer_handle: mcpwm_cap_timer_handle_t,
+    cap_channel_handle: mcpwm_cap_channel_handle_t,
 }
 
 unsafe extern "C" fn capture_callback(
@@ -261,9 +279,9 @@ impl MotorActor {
     | clock |--->| timer |---->| operator |---->| comparator |---->| generator |---->| GPIO |
     - timer counts to 500 , at 10 Mhz, resets at peak
     - comparator generates event when compare value with timer is reached
-    
+
      */
-    
+
     fn init_pwm(&mut self) -> Result<()> {
         unsafe {
             // create timer from group 0 at 50us period
@@ -276,27 +294,40 @@ impl MotorActor {
                 clk_src: MCPWM_TIMER_CLK_SRC_DEFAULT, // 160MHz
                 resolution_hz: BLDC_MCPWM_TIMER_RESOLUTION_HZ, // 10MHz, 1 tick = 0.1us
                 count_mode: mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP,
-                period_ticks: TICKS_PER_PERIOD, // 50us, 20KHz 
-                flags, // when to change the value
+                period_ticks: TICKS_PER_PERIOD, // 50us, 20KHz
+                flags,                          // when to change the value
                 intr_priority: 1,
             };
             esp!(mcpwm_new_timer(&timer_config, &mut self.timer_handle))?;
             esp!(mcpwm_timer_enable(self.timer_handle))?;
 
-            // define operator 
+            // define operator
             let flags = mcpwm_operator_config_t__bindgen_ty_1::default();
-            let operator_config = mcpwm_operator_config_t { group_id: 0 , intr_priority: 1, flags };
-            esp!(mcpwm_new_operator(&operator_config, &mut self.operator_handle))?;
-            esp!(mcpwm_operator_connect_timer(oper, self.timer_handle))?;
+            let operator_config = mcpwm_operator_config_t {
+                group_id: 0,
+                intr_priority: 1,
+                flags,
+            };
+            esp!(mcpwm_new_operator(
+                &operator_config,
+                &mut self.operator_handle
+            ))?;
+            esp!(mcpwm_operator_connect_timer(
+                self.operator_handle,
+                self.timer_handle
+            ))?;
 
-            let flags = mcpwm_comparator_config_t__bindgen_ty_1::default();
+            let mut flags = mcpwm_comparator_config_t__bindgen_ty_1::default();
             flags.set_update_cmp_on_tez(1); // update compare value on timer event zero
-            self.comparator_handle: mcpwm_cmpr_handle_t = std::ptr::null_mut();
             let comparator_config = mcpwm_comparator_config_t {
                 flags,
                 intr_priority: 1,
             };
-            esp!(mcpwm_new_comparator(self.operator_handle, &comparator_config, &mut self.comparator_handle))?;
+            esp!(mcpwm_new_comparator(
+                self.operator_handle,
+                &comparator_config,
+                &mut self.comparator_handle
+            ))?;
 
             let flags = mcpwm_generator_config_t__bindgen_ty_1::default();
             flags.pull_up(); // pull up the GPIO
@@ -304,7 +335,11 @@ impl MotorActor {
                 gen_gpio_num: GPIO_PWM,
                 flags,
             };
-            esp!(mcpwm_new_generator(oper, &generator_config, &mut self.generator_handle))?;
+            esp!(mcpwm_new_generator(
+                self.operator_handle,
+                &generator_config,
+                &mut self.generator_handle
+            ))?;
 
             esp!(mcpwm_comparator_set_compare_value(
                 self.comparator_handle,
@@ -321,17 +356,17 @@ impl MotorActor {
             ))?;
             // go low on GPIO on compare threshold
             esp!(mcpwm_generator_set_action_on_compare_event(
-                generaself.generator_handletor,
+                self.generator_handle,
                 mcpwm_gen_compare_event_action_t {
                     direction: mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP,
-                    self.comparator_handle,
+                    comparator: self.comparator_handle,
                     action: mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW
                 }
             ))?;
 
-            esp!(mcpwm_timer_enable(self.timer_handle))?;
+            //   esp!(mcpwm_timer_enable(self.timer_handle))?;
             esp!(mcpwm_timer_start_stop(
-                timer_handle,
+                self.timer_handle,
                 mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP
             ))?;
         }
@@ -373,7 +408,7 @@ impl MotorActor {
             let cap_chan_gpio: i32 = GPIO_CAPTURE;
             cap_channel_config.gpio_num = cap_chan_gpio;
             esp!(mcpwm_new_capture_channel(
-                cap_timer_handle,
+                self.cap_timer_handle,
                 &cap_channel_config,
                 &mut self.cap_channel_handle
             ))?;
@@ -400,8 +435,13 @@ impl MotorActor {
     fn on_cmd(&mut self, cmd: MotorCmd) {
         match cmd {
             MotorCmd::Msg { msg } => {
-                let decoded_msg = minicbor::decode::<MotorMsg>(&msg).unwrap();
-                self.recv_msg(&decoded_msg);
+                minicbor::decode::<Msg>(&msg).ok().map(|decoded_msg| {
+                    decoded_msg.pub_req.map(|pub_vec| {
+                        minicbor::decode::<MotorMsg>(&pub_vec)
+                            .ok()
+                            .map(|motor_msg| self.recv_msg(&motor_msg))
+                    });
+                });
             }
             MotorCmd::Stop => {
                 self.timers.remove_timer(TimerId::WatchdogTimer as u32);
@@ -463,4 +503,3 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
         self.cmds.handler()
     }
 }
-
