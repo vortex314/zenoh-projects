@@ -177,6 +177,8 @@ pub struct MotorActor {
     sender: async_channel::Sender<MotorEvent>,
     receiver: async_channel::Receiver<MotorEvent>,
     // props
+    topic_name : String,
+    topic_id : u32,
     target_rpm: u32,
     measured_rpm: u32,
     target_current: u32,
@@ -230,7 +232,7 @@ impl MotorActor {
         msg.rpm_ki.map(|ki| self.rpm_ki = ki);
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
     }
-    pub fn new() -> Self {
+    pub fn new(topic_name:String) -> Self {
         let (sender, receiver) = async_channel::bounded(5);
         MotorActor {
             cmds: CmdQueue::new(5),
@@ -238,6 +240,8 @@ impl MotorActor {
             timers: Timers::new(),
             sender,
             receiver,
+            topic_name,
+            topic_id: fnv(topic_name),
             target_rpm: 0,
             measured_rpm: 0,
             target_current: 0,
@@ -435,14 +439,15 @@ impl MotorActor {
     fn on_cmd(&mut self, cmd: MotorCmd) {
         match cmd {
             MotorCmd::Msg { msg } => {
-                minicbor::decode::<Msg>(&msg).ok().map(|decoded_msg| {
-                    decoded_msg.pub_req.map(|pub_vec| {
-                        minicbor::decode::<MotorMsg>(&pub_vec)
-                            .ok()
-                            .map(|motor_msg| self.recv_msg(&motor_msg))
-                    });
-                });
-            }
+                if msg.dst.is_some_and(|dst| dst==self.topic_id ){
+                        msg.pub_req.map(|pub_vec| {
+                            minicbor::decode::<MotorMsg>(&pub_vec)
+                                .ok()
+                                .map(|motor_msg| self.recv_msg(&motor_msg))
+                        });
+                    };
+                }
+                
             MotorCmd::Stop => {
                 self.timers.remove_timer(TimerId::WatchdogTimer as u32);
             }

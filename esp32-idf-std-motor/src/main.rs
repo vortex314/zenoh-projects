@@ -47,7 +47,6 @@ fn main() {
 }
 
 fn main_task() -> anyhow::Result<()> {
-    let timer_service = EspTimerService::new()?;
     let peripherals = Peripherals::take()?;
     let led_gpio = PinDriver::output(peripherals.pins.gpio2.downgrade_output())?;
 
@@ -55,37 +54,23 @@ fn main_task() -> anyhow::Result<()> {
     let led_handler = led_actor.handler();
 
     let mut esp_now_actor = EspNowActor::new(peripherals.modem)?;
-    let mut esp_now_handler = esp_now_actor.handler();
+    let esp_now_handler = esp_now_actor.handler();
 
-    let mut motor_actor = MotorActor::new();
+    let mut motor_actor = MotorActor::new("lm1/motor");
     let motor_handler = motor_actor.handler();
 
     esp_now_actor.map_to(event_to_blink, led_handler);
-
+    esp_now_actor.map_to(event_to_motor, motor_handler);
     esp_now_actor.for_each(event_display);
 
-    esp_now_actor.map_to(event_to_motor_msg, motor_handler);
-
-    let mut counter = 0;
-
-    let mut timer = timer_service.timer_async().unwrap();
-
     motor_actor.init()?;
-    info!("Starting main task");
 
     esp_idf_svc::hal::task::block_on(async {
         loop {
             info!("Main loop");
             match select3(led_actor.run(), motor_actor.run(), esp_now_actor.run()).await {
                 Either3::First(_) => {}
-                Either3::Second(_) => {
-                    /*let data = minicbor::to_vec(counter).unwrap();
-                    esp_now_handler.handle(&EspNowCmd::Txd {
-                        peer: MAC_BROADCAST,
-                        data,
-                    });
-                    counter += 1;*/
-                }
+                Either3::Second(_) => {}
                 Either3::Third(_) => {}
             }
         }
@@ -99,13 +84,8 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     }
 }
 
-fn event_to_motor_msg(ev: &EspNowEvent) -> Option<MotorCmd> {
-    match ev {
-        EspNowEvent::Rxd { peer: _, data } => minicbor::decode::<Msg>(data)
-            .ok()
-            .map(|msg| MotorCmd::Msg { msg: data.clone() }),
-        _ => None,
-    }
+fn event_to_motor(data: &Vec<u8>) -> Option<MotorCmd> {
+    minicbor::decode::<Msg>(data).ok().map(|msg| { Some(MotorCmd::Rxd {msg: msg,})})
 }
 
 fn event_display(ev: &EspNowEvent) {
