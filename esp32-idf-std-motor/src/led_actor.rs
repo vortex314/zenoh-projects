@@ -52,7 +52,7 @@ impl Actor<LedCmd, LedEvent> for LedActor {
         loop {
             match select(self.cmds.next(), self.timers.alarm()).await {
                 First(msg) => {
-                    self.on_cmd(msg.unwrap());
+                    msg.map(|msg| self.on_cmd(msg));
                 }
                 Second(id) => {
                     self.on_timer(id);
@@ -108,9 +108,9 @@ impl LedActor {
 
     fn set_led_high(&mut self, high: bool) {
         if high {
-            self.pin.set_high().unwrap()
+            self.pin.set_high().expect("pin set_high failed")
         } else {
-            self.pin.set_low().unwrap()
+            self.pin.set_low().expect("pin set_low failed");
         }
     }
 

@@ -11,7 +11,7 @@ use embassy_futures::select::Either3::{First, Second, Third};
 use embassy_time::{Duration, Instant};
 // use esp_backtrace as _;
 
-use esp_idf_svc::espnow::{EspNow, PeerInfo};
+use esp_idf_svc::espnow::{EspNow, PeerInfo, SendStatus};
 use esp_idf_svc::eventloop::EspSystemEventLoop;
 use esp_idf_svc::hal::modem::Modem;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
@@ -27,9 +27,9 @@ use msg::fnv;
 
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
-#[derive(Encode, Decode, Clone,Debug,Default)]
+#[derive(Encode, Decode, Clone, Debug, Default)]
 #[cbor(map)]
- struct EspNowProps {
+struct EspNowProps {
     #[n(0)]
     pub name: Option<String>,
 }
@@ -42,8 +42,6 @@ pub enum EspNowEvent {
 #[derive(Clone)]
 pub enum EspNowCmd {
     Txd { peer: [u8; 6], data: Vec<u8> },
-    Connect { peer: [u8; 6] },
-    Disconnect,
 }
 
 enum TimerId {
@@ -55,10 +53,10 @@ pub struct EspNowActor {
     events: EventHandlers<EspNowEvent>,
     timers: Timers,
     esp_now: EspNow<'static>,
-    sender : async_channel::Sender<EspNowEvent>,
+    sender: async_channel::Sender<EspNowEvent>,
     receiver: async_channel::Receiver<EspNowEvent>,
-    eventloop : EspSystemEventLoop,
-    wifi_driver : esp_idf_svc::wifi::WifiDriver<'static>,
+    eventloop: EspSystemEventLoop,
+    wifi_driver: esp_idf_svc::wifi::WifiDriver<'static>,
 }
 
 impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
@@ -66,20 +64,20 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
         info!("EspNowActor started");
         self.timers.add_timer(Timer::new_repeater(
             TimerId::BroadcastTimer as u32,
-            Duration::from_millis(1_000),
+            Duration::from_millis(10000),
         ));
         loop {
             match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {
                 First(msg) => {
-                    if let Err(x) = self.on_cmd_message(msg.unwrap()).await {
-                        error!("Error: {:?}", x);
+                    if let Some(msg) = msg {
+                        let _ = self.on_cmd_message(msg).await;
                     }
                 }
                 Second(idx) => {
                     self.on_timeout(idx).await;
                 }
                 Third(msg) => {
-                    self.events.handle(&msg.unwrap());
+                    msg.map(|msg| self.events.handle(&msg));
                 }
             }
         }
@@ -107,24 +105,27 @@ impl EspNowActor {
         let _sub = {
             eventloop
                 .subscribe::<WifiEvent, _>(move |event| {
-                    info!("Wifi event ===> {:?}", event);
+              //      info!("Wifi event ===> {:?}", event);
                 })
-                .unwrap()
+                .expect("Failed to subscribe to wifi events")
         };
 
         let esp_now = esp_idf_svc::espnow::EspNow::take()?;
 
         let (sender, receiver) = async_channel::bounded(5);
-        let  sender_clone = sender.clone();
+        let sender_clone = Box::leak(Box::new(sender.clone()));
 
-        esp_now.register_recv_cb(move |_mac, data| {
+        esp_now.register_recv_cb(move |mac, data| {
             let _ = sender_clone.try_send(EspNowEvent::Rxd {
-                peer: MAC_BROADCAST,
+                peer: <&[u8; 6]>::try_from(mac).unwrap().clone(),
                 data: data.to_vec(),
             });
         })?;
-        esp_now.register_send_cb(|_data, status| {
-            info!("Send status: {:?}", status);
+        esp_now.register_send_cb(|_data, status| match status {
+            SendStatus::SUCCESS => {}
+            _ => {
+                info!("Send status: {:?}", status);
+            }
         })?;
         // add broadcast peer
         esp_now.add_peer(PeerInfo {
@@ -149,32 +150,18 @@ impl EspNowActor {
         })
     }
 
-
-
     async fn broadcast(&mut self) {
-        info!("Broadcasting");
         let mut msg = msg::Msg::default();
         let mut pub_msg = EspNowProps::default();
         pub_msg.name = Some("esp_now_actor".to_string());
-        msg.src = Some(fnv("lm1/motor"));
-        msg.pub_req = Some( minicbor::to_vec(pub_msg).unwrap());
-        
+        msg.src = Some(fnv("lm1/esp_now"));
+        msg.pub_req = Some(minicbor::to_vec(pub_msg).expect("Encode failed"));
+
         let v = msg::cbor::encode(&msg);
+        info!("Broadcast : {}", msg);
 
-        self.esp_now.send(MAC_BROADCAST, &v).unwrap();
+        self.esp_now.send(MAC_BROADCAST, &v).expect("Send failed");
     }
-
-    /*
-        pub id: PropertyId,
-    #[n(1)]
-    pub name: Option<String>,
-    #[n(2)]
-    pub desc: Option<String>,
-    #[n(3)]
-    pub prop_type: Option<PropType>,
-    #[n(4)]
-    pub prop_mode: Option<PropMode>,
-} */
 
     async fn send_info(&mut self) {
         let mut msg = msg::Msg::default();
@@ -185,18 +172,17 @@ impl EspNowActor {
         info_map.prop_type = Some(msg::PropType::STR);
         info_map.prop_mode = Some(msg::PropMode::Read);
 
-        msg.src = Some(fnv("lm1/motor"));
-        msg.info_reply = Some( info_map);
-        
-        let v = msg::cbor::encode(&msg);
+        msg.src = Some(fnv("lm1/esp_now"));
+        msg.info_reply = Some(info_map);
 
-        self.esp_now.send(MAC_BROADCAST, &v).unwrap();
+        let v = msg::cbor::encode(&msg);
+        info!("Sending : {}", msg);
+
+        self.esp_now.send(MAC_BROADCAST, &v).expect("Send failed");
     }
 
     async fn on_timeout(&mut self, _id: u32) {
-        info!("Timeout");
         if _id == TimerId::BroadcastTimer as u32 {
-            self.broadcast().await;
             self.send_info().await;
         }
     }
@@ -205,8 +191,6 @@ impl EspNowActor {
         let now = Instant::now();
         match msg {
             EspNowCmd::Txd { peer, data } => self.esp_now.send(peer, &data)?,
-            EspNowCmd::Connect { peer: _ } => {}
-            EspNowCmd::Disconnect => {}
         }
         let elapsed = now.elapsed();
         debug!("Elapsed: {:?}", elapsed);

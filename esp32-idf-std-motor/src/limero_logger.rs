@@ -23,15 +23,15 @@ impl log::Log for LimeroLogger {
     fn log(&self, record: &Record<'_>) {
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or(std::time::Duration::from_secs(0))
             .as_millis();
         if self.enabled(record.metadata()) {
             let s = record.args().to_string();
-            let (_, file) = record
+            let file = record
                 .file()
-                .unwrap_or("/")
-                .rsplit_once("/")
-                .unwrap_or(("/", "/"));
+                .and_then(|file| file.rsplit_once("/"))
+                .map(|(_, b)| b)
+                .unwrap_or("");
             println!(
                 "[{:1.1}] {:6.6}|{:15.15}:{:4.4}|{}",
                 record.level().as_str(),

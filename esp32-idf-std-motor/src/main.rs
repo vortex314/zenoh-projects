@@ -32,12 +32,13 @@ use motor_actor::MotorActor;
 use motor_actor::MotorCmd;
 
 use log::*;
+use motor_actor::MotorEvent;
 use msg::Msg;
 
 fn main() {
     esp_idf_svc::sys::link_patches();
     //   esp_idf_svc::log::EspLogger::initialize_default();
-    limero_logger_init().unwrap();
+    let _ = limero_logger_init();
     let result = main_task();
     match result {
         Result::Ok(_) => info!("Main task finished"),
@@ -54,13 +55,14 @@ fn main_task() -> anyhow::Result<()> {
     let led_handler = led_actor.handler();
 
     let mut esp_now_actor = EspNowActor::new(peripherals.modem)?;
-    let esp_now_handler = esp_now_actor.handler();
+    let espnow_handler = esp_now_actor.handler();
 
-    let mut motor_actor = MotorActor::new("lm1/motor");
+    let mut motor_actor = MotorActor::new("lm1/motor".to_string());
     let motor_handler = motor_actor.handler();
 
     esp_now_actor.map_to(event_to_blink, led_handler);
     esp_now_actor.map_to(event_to_motor, motor_handler);
+    motor_actor.map_to(motor_to_espnow, espnow_handler);
     esp_now_actor.for_each(event_display);
 
     motor_actor.init()?;
@@ -84,28 +86,35 @@ fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     }
 }
 
-fn event_to_motor(data: &Vec<u8>) -> Option<MotorCmd> {
-    minicbor::decode::<Msg>(data).ok().map(|msg| { Some(MotorCmd::Rxd {msg: msg,})})
+fn event_to_motor(ev: &EspNowEvent) -> Option<MotorCmd> {
+    match ev {
+        EspNowEvent::Rxd { peer: _, data } => minicbor::decode::<Msg>(data)
+            .ok()
+            .map(|msg| MotorCmd::Msg { msg: msg }),
+    }
+}
+
+fn motor_to_espnow(cmd: &MotorEvent) -> Option<EspNowCmd> {
+    match cmd {
+        MotorEvent::Msg { msg } => minicbor::to_vec(msg)
+            .map(|data| EspNowCmd::Txd {
+                peer: MAC_BROADCAST,
+                data,
+            })
+            .ok(),
+        _ => None,
+    }
 }
 
 fn event_display(ev: &EspNowEvent) {
     match ev {
         EspNowEvent::Rxd { peer, data } => {
-            if let Result::Ok(mut msg) = minicbor::decode::<Msg>(data) {
-                msg.pub_req.map(|bytes| {
-                    info!(
-                        "Pub_req from {:x?} : {}",
-                        msg.src.get_or_insert(0),
-                        minicbor::display(&bytes)
-                    );
-                });
-                msg.info_reply.map(|info_map| {
-                    info!(
-                        "info_reply from {:x?} : {:?}",
-                        msg.src.get_or_insert(0),
-                        info_map
-                    );
-                });
+            if let Result::Ok(msg) = minicbor::decode::<Msg>(data) {
+                info!(
+                    "{:?} => {}",
+                    mac_to_string(peer),
+                    msg,
+                );
             } else {
                 info!(
                     "Invalid EspNow Msg {:?} from {} ",
@@ -114,6 +123,5 @@ fn event_display(ev: &EspNowEvent) {
                 );
             }
         }
-        _ => {}
     }
 }

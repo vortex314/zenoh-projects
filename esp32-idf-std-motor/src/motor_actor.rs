@@ -48,15 +48,15 @@ use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use log::{debug, error, info};
 use minicbor::{Decode, Encode};
-use msg::{InfoMap, Msg};
+use msg::{fnv, InfoMap, Msg};
 use msg::{PropMode, PropType};
 use std::ffi::c_void;
 
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
 const TICKS_PER_PERIOD: u32 = 500; // 50us, 20KHz
-const GPIO_CAPTURE: i32 = 4; // gpio4
-const GPIO_PWM: i32 = 5; // gpio5
+const GPIO_CAPTURE: i32 = 12; // gpio12
+const GPIO_PWM: i32 = 13; // gpio13
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 #[derive(Encode, Decode, Default, Clone, Debug)]
@@ -157,13 +157,12 @@ static MOTOR_INTERFACE: &[InfoStruct] = &[
 ];
 #[derive(Clone, Debug)]
 pub enum MotorEvent {
-    Rxd { peer: [u8; 6], data: Vec<u8> },
     Msg { msg: Msg },
     Isr { cap_value: u32, pos_edge: bool },
 }
 #[derive(Clone)]
 pub enum MotorCmd {
-    Msg { msg: Vec<u8> },
+    Msg { msg: Msg },
     Stop,
 }
 enum TimerId {
@@ -172,13 +171,14 @@ enum TimerId {
 pub struct MotorActor {
     // actor info
     cmds: CmdQueue<MotorCmd>,
-    events: EventHandlers<MotorEvent>,
+    eventhandlers: EventHandlers<MotorEvent>,
     timers: Timers,
     sender: async_channel::Sender<MotorEvent>,
     receiver: async_channel::Receiver<MotorEvent>,
     // props
-    topic_name : String,
-    topic_id : u32,
+    topic_name: String,
+    topic_id: u32,
+    prop_counter: u32,
     target_rpm: u32,
     measured_rpm: u32,
     target_current: u32,
@@ -200,7 +200,7 @@ pub struct MotorActor {
 }
 
 unsafe extern "C" fn capture_callback(
-    cap_channel: *mut mcpwm_cap_channel_t,
+    _cap_channel: *mut mcpwm_cap_channel_t,
     capture_event: *const mcpwm_capture_event_data_t,
     user_data: *mut c_void,
 ) -> bool {
@@ -209,11 +209,12 @@ unsafe extern "C" fn capture_callback(
         cap_value: (*capture_event).cap_value,
         pos_edge: (*capture_event).cap_edge > 1,
     });
+    info!("Capture callback *****************");
     true
 }
 
 impl MotorActor {
-    fn send_msg(&self) -> MotorMsg {
+    fn get_prop_values(&self) -> MotorMsg {
         MotorMsg {
             target_rpm: Some(self.target_rpm),
             measured_rpm: Some(self.measured_rpm),
@@ -224,7 +225,7 @@ impl MotorActor {
             rpm_kd: Some(self.rpm_kd),
         }
     }
-    fn recv_msg(&mut self, msg: &MotorMsg) {
+    fn set_prop_values(&mut self, msg: &MotorMsg) {
         msg.target_rpm.map(|rpm| self.target_rpm = rpm);
         msg.target_current
             .map(|current| self.target_current = current);
@@ -232,25 +233,26 @@ impl MotorActor {
         msg.rpm_ki.map(|ki| self.rpm_ki = ki);
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
     }
-    pub fn new(topic_name:String) -> Self {
+    pub fn new(topic_name: String) -> Self {
         let (sender, receiver) = async_channel::bounded(5);
         MotorActor {
             cmds: CmdQueue::new(5),
-            events: EventHandlers::new(),
+            eventhandlers: EventHandlers::new(),
             timers: Timers::new(),
             sender,
             receiver,
-            topic_name,
-            topic_id: fnv(topic_name),
+            topic_name: topic_name.clone(),
+            topic_id: fnv(topic_name.as_str()),
+            prop_counter: 0,
             target_rpm: 0,
             measured_rpm: 0,
             target_current: 0,
             measured_current: 0,
             last_measured_time: 0,
             prev_measured_time: 0,
-            rpm_kp: 0.0,
-            rpm_ki: 0.0,
-            rpm_kd: 0.0,
+            rpm_kp: 1.0001,
+            rpm_ki: 0.0001,
+            rpm_kd: -0.0001,
             pwm_value: 250, // 50% duty cycle to test
             timer_handle: std::ptr::null_mut(),
             operator_handle: std::ptr::null_mut(),
@@ -260,7 +262,16 @@ impl MotorActor {
             cap_channel_handle: std::ptr::null_mut(),
         }
     }
-    fn get_info(&self, prop: u32) -> Result<InfoMap> {
+    fn get_dev_info(&self) -> Result<InfoMap> {
+        Ok(InfoMap {
+            id: -1,
+            name: Some("MotorActor".to_string()),
+            desc: Some("MotorActor as Actor".to_string()),
+            prop_type: Some(PropType::OBJECT),
+            prop_mode: Some(PropMode::Read),
+        })
+    }
+    fn get_prop_info(&self, prop: u32) -> Result<InfoMap> {
         let str = &MOTOR_INTERFACE[prop as usize];
         Ok(InfoMap {
             id: prop as i8,
@@ -439,39 +450,60 @@ impl MotorActor {
     fn on_cmd(&mut self, cmd: MotorCmd) {
         match cmd {
             MotorCmd::Msg { msg } => {
-                if msg.dst.is_some_and(|dst| dst==self.topic_id ){
-                        msg.pub_req.map(|pub_vec| {
-                            minicbor::decode::<MotorMsg>(&pub_vec)
-                                .ok()
-                                .map(|motor_msg| self.recv_msg(&motor_msg))
-                        });
-                    };
-                }
-                
+                if msg.dst.is_some_and(|dst| dst == self.topic_id) {
+                    msg.pub_req.map(|pub_vec| {
+                        minicbor::decode::<MotorMsg>(&pub_vec)
+                            .ok()
+                            .map(|motor_msg| self.set_prop_values(&motor_msg))
+                    });
+                };
+            }
+
             MotorCmd::Stop => {
                 self.timers.remove_timer(TimerId::WatchdogTimer as u32);
             }
         }
     }
-    fn on_timer(&mut self, id: u32) {
+    fn on_timer(&mut self, id: u32) -> Result<()> {
         match id {
             id if id == TimerId::WatchdogTimer as u32 => {
-                self.timers.add_timer(Timer::new_repeater(
-                    TimerId::WatchdogTimer as u32,
-                    Duration::from_secs(1),
-                ));
+                let data = minicbor::to_vec(&self.get_prop_values())?;
+                let pub_msg = Msg {
+                    src: Some(self.topic_id),
+                    dst: None,
+                    pub_req: Some(data),
+                    ..Default::default()
+                };
+                self.eventhandlers.handle(&MotorEvent::Msg { msg: pub_msg });
+
+                if self.prop_counter >= MOTOR_INTERFACE.len() as u32 {
+                    self.prop_counter = 0;
+                    let dev_info_msg = Msg {
+                        src: Some(self.topic_id),
+                        dst: None,
+                        info_reply: Some(self.get_dev_info()?),
+                        ..Default::default()
+                    };
+                    self.eventhandlers
+                        .handle(&MotorEvent::Msg { msg: dev_info_msg });
+                } else {
+                    let prop_info_msg = Msg {
+                        src: Some(self.topic_id),
+                        dst: None,
+                        info_reply: Some(self.get_prop_info(self.prop_counter)?),
+                        ..Default::default()
+                    };
+                    self.prop_counter += 1u32;
+                    self.eventhandlers
+                        .handle(&MotorEvent::Msg { msg: prop_info_msg });
+                }
+                Ok(())
             }
-            _ => {
-                error!("Unknown timer id: {}", id);
-            }
+            _ => Err(anyhow::anyhow!("Unknown timer id: {}", id)),
         }
     }
     fn on_event(&mut self, event: MotorEvent) {
         match event {
-            MotorEvent::Rxd { peer, data } => {
-                let msg = minicbor::decode::<MotorMsg>(&data).unwrap();
-                self.recv_msg(&msg);
-            }
             _ => {
                 error!("Unknown event: {:?}", event);
             }
@@ -483,25 +515,27 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
     async fn run(&mut self) {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::WatchdogTimer as u32,
-            Duration::from_secs(1),
+            Duration::from_millis(1000),
         ));
         loop {
             match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {
                 Either3::First(cmd) => {
-                    self.on_cmd(cmd.unwrap());
+                    cmd.map(|cmd| self.on_cmd(cmd));
                 }
                 Either3::Second(id) => {
-                    self.on_timer(id);
+                    let _ = self.on_timer(id).map_err(|err| error!("Error: {:?}", err));
                 }
                 Either3::Third(event) => {
-                    self.on_event(event.unwrap());
+                    let _ = event
+                        .map(|event| self.on_event(event))
+                        .map_err(|err| error!("Error: {:?}", err));
                 }
             }
         }
     }
 
     fn add_listener(&mut self, listener: Box<dyn Handler<MotorEvent>>) {
-        self.events.add_listener(listener);
+        self.eventhandlers.add_listener(listener);
     }
 
     fn handler(&self) -> Box<dyn Handler<MotorCmd>> {

@@ -1,7 +1,10 @@
 #![no_std]
 extern crate alloc;
 
+use core::fmt::Display;
 
+use alloc::fmt;
+use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 use const_fnv1a_hash::fnv1a_hash_32;
@@ -66,7 +69,7 @@ pub struct MsgHeader {
     pub qos: Option<u8>,
 }
 
-#[derive(Encode, Decode, Default, Clone, Debug,)]
+#[derive(Encode, Decode, Default, Clone, Debug)]
 #[cbor(map)]
 pub struct Msg {
     #[n(0)]
@@ -83,10 +86,9 @@ pub struct Msg {
     pub info_req: Option<Vec<u8>>,
     #[n(6)]
     pub info_reply: Option<InfoMap>,
-
 }
 
- impl Msg {
+impl Msg {
     pub fn new() -> Self {
         Msg {
             dst: None,
@@ -105,9 +107,32 @@ pub struct Msg {
         self.msg_id.map(|msg_id| reply.msg_id = Some(msg_id));
         reply
     }
+    pub fn display(&self) -> String {
+        let mut s = String::new();
+        self.dst.map(|dst| s.push_str(&format!("dst: {},", dst)));
+        self.src.map(|src| s.push_str(&format!("src: {},", src)));
+        self.msg_id
+            .map(|msg_id| s.push_str(&format!("msg_id: {},", msg_id)));
+        self.return_code
+            .map(|return_code| s.push_str(&format!("return_code: {},", return_code)));
+        self.pub_req
+            .as_ref()
+            .map(|pub_req| s.push_str(&format!("pub_req: {},", minicbor::display(pub_req))));
+        self.info_req
+            .as_ref()
+            .map(|info_req| s.push_str(&format!("info_req: {},", minicbor::display(info_req))));
+        self.info_reply
+            .as_ref()
+            .map(|info_reply| s.push_str(&format!("info_reply: {},", info_reply)));
+        s
+    }
 }
 
-
+impl Display for Msg {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.display())
+    }
+}
 
 /*
 
@@ -169,7 +194,7 @@ pub enum MetaPropertyId {
     Qos = -2,
     MsgId = -3,
 }
-#[derive(Encode, Decode, Clone,Debug,Default)]
+#[derive(Encode, Decode, Clone, Debug, Default)]
 #[cbor(map)]
 pub struct InfoMap {
     #[n(0)]
@@ -182,6 +207,37 @@ pub struct InfoMap {
     pub prop_type: Option<PropType>,
     #[n(4)]
     pub prop_mode: Option<PropMode>,
+}
+
+impl InfoMap {
+    pub fn new(id: PropertyId) -> Self {
+        InfoMap {
+            id,
+            name: None,
+            desc: None,
+            prop_type: None,
+            prop_mode: None,
+        }
+    }
+    pub fn display(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("id: {},", self.id));
+        self.name.as_ref()
+            .map(|name| s.push_str(&format!("name:'{}',", name)));
+        self.desc.as_ref()
+            .map(|desc| s.push_str(&format!("desc:'{}',", desc)));
+        self.prop_type
+            .map(|prop_type| s.push_str(&format!("prop_type: {:?},", prop_type)));
+        self.prop_mode
+            .map(|prop_mode| s.push_str(&format!("prop_mode: {:?},", prop_mode)));
+        s
+    }
+}
+
+impl Display for InfoMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.display())
+    }
 }
 
 #[derive(Encode, Decode, Clone)]
@@ -200,7 +256,7 @@ pub enum InfoPropertyId {
     Mode,
 }
 
-#[derive(Encode, Decode, Clone,Debug,Copy)]
+#[derive(Encode, Decode, Clone, Debug, Copy)]
 #[cbor(index_only)]
 #[repr(i8)]
 pub enum PropType {
@@ -220,7 +276,7 @@ pub enum PropType {
     ARRAY,
 }
 
-#[derive(Encode, Decode, Clone,Debug,Copy)]
+#[derive(Encode, Decode, Clone, Debug, Copy)]
 #[cbor(index_only)]
 #[repr(i8)]
 pub enum PropMode {
@@ -232,7 +288,6 @@ pub enum PropMode {
     ReadWrite = 2,
     #[n(3)]
     Notify = 3,
-    
 }
 
 #[derive(Encode, Decode, Clone)]
