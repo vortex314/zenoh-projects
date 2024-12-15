@@ -22,27 +22,9 @@ based on
 use anyhow::Result;
 use async_channel::Sender;
 use embassy_futures::select::{select3, Either3};
-use embassy_time::Duration;
+use embassy_time::{Duration, Instant};
 use esp_idf_svc::sys::{
-    esp, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t,
-    mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1,
-    mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks,
-    mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t,
-    mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start,
-    mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1,
-    mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t,
-    mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH,
-    mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t,
-    mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event,
-    mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer,
-    mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer,
-    mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1,
-    mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1,
-    mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP,
-    mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable,
-    mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop,
-    mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB,
-    soc_module_clk_t_SOC_MOD_CLK_PLL_F160M,
+    esp, esp_get_free_heap_size, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1, mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS, mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start, mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1, mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t, mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH, mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t, mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event, mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer, mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer, mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1, mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1, mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP, mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable, mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop, mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M
 };
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
@@ -51,11 +33,12 @@ use minicbor::{Decode, Encode};
 use msg::{fnv, InfoMap, Msg};
 use msg::{PropMode, PropType};
 use std::ffi::c_void;
+use std::time::SystemTime;
 
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
 const TICKS_PER_PERIOD: u32 = 500; // 50us, 20KHz
-const GPIO_CAPTURE: i32 = 12; // gpio12
+const GPIO_CAPTURE: i32 = 14; // gpio12
 const GPIO_PWM: i32 = 13; // gpio13
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
@@ -167,6 +150,7 @@ pub enum MotorCmd {
 }
 enum TimerId {
     WatchdogTimer = 1,
+    ReportingTimer = 2,
 }
 pub struct MotorActor {
     // actor info
@@ -184,8 +168,10 @@ pub struct MotorActor {
     target_current: u32,
     measured_current: u32,
     // PID info
-    last_measured_time: u64,
-    prev_measured_time: u64,
+    last_measured_time: Instant,
+    last_measured_capture : u32,
+    prev_measured_time: Instant,
+    prev_measured_capture : u32,
     rpm_kp: f32,
     rpm_ki: f32,
     rpm_kd: f32,
@@ -199,17 +185,29 @@ pub struct MotorActor {
     cap_channel_handle: mcpwm_cap_channel_handle_t,
 }
 
+// static bounded channel for isr
+static mut SENDER_CAP: Option<Sender<MotorEvent>> = None;
+
+struct CaptureData  {
+    cap_value: u32,
+    pos_edge: bool,
+}
+
 unsafe extern "C" fn capture_callback(
     _cap_channel: *mut mcpwm_cap_channel_t,
     capture_event: *const mcpwm_capture_event_data_t,
     user_data: *mut c_void,
 ) -> bool {
-    let sender = Box::from_raw(user_data as *mut Sender<MotorEvent>);
-    let _ = sender.try_send(MotorEvent::Isr {
+   // let sender = Box::leak(Box::from_raw(user_data as *mut Sender<MotorEvent>));
+    SENDER_CAP.as_ref().map(|sender| {
+        let _ = sender.try_send(MotorEvent::Isr {
         cap_value: (*capture_event).cap_value,
-        pos_edge: (*capture_event).cap_edge > 1,
-    });
-    info!("Capture callback *****************");
+        pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
+    });});
+    /*let _ = sender.try_send(MotorEvent::Isr {
+        cap_value: (*capture_event).cap_value,
+        pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
+    });*/
     true
 }
 
@@ -234,9 +232,10 @@ impl MotorActor {
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
     }
     pub fn new(topic_name: String) -> Self {
-        let (sender, receiver) = async_channel::bounded(5);
+        let (sender, receiver) = async_channel::bounded(4);
+        unsafe { SENDER_CAP = Some(sender.clone()); };
         MotorActor {
-            cmds: CmdQueue::new(5),
+            cmds: CmdQueue::new(4),
             eventhandlers: EventHandlers::new(),
             timers: Timers::new(),
             sender,
@@ -248,12 +247,14 @@ impl MotorActor {
             measured_rpm: 0,
             target_current: 0,
             measured_current: 0,
-            last_measured_time: 0,
-            prev_measured_time: 0,
+            last_measured_time: Instant::now(),
+            last_measured_capture : 0,
+            prev_measured_time: Instant::now(),
+            prev_measured_capture : 0,
             rpm_kp: 1.0001,
             rpm_ki: 0.0001,
             rpm_kd: -0.0001,
-            pwm_value: 250, // 50% duty cycle to test
+            pwm_value: 400, // 50% duty cycle to test
             timer_handle: std::ptr::null_mut(),
             operator_handle: std::ptr::null_mut(),
             comparator_handle: std::ptr::null_mut(),
@@ -265,7 +266,7 @@ impl MotorActor {
     fn get_dev_info(&self) -> Result<InfoMap> {
         Ok(InfoMap {
             id: -1,
-            name: Some("MotorActor".to_string()),
+            name: Some(self.topic_name.clone()),
             desc: Some("MotorActor as Actor".to_string()),
             prop_type: Some(PropType::OBJECT),
             prop_mode: Some(PropMode::Read),
@@ -389,7 +390,7 @@ impl MotorActor {
     }
     fn pid_update(&mut self) -> Result<f32> {
         let error = (self.target_rpm - self.measured_rpm) as f32;
-        let delta_t = (self.last_measured_time - self.prev_measured_time) as f32;
+        let delta_t = self.last_measured_time.duration_since(self.prev_measured_time).as_millis() as f32;
         let p = self.rpm_kp * error;
         let i = self.rpm_ki * error * delta_t;
         let d = self.rpm_kd * error / delta_t;
@@ -410,18 +411,19 @@ impl MotorActor {
                 &cap_timer_config,
                 &mut self.cap_timer_handle
             ))?;
+
             // initialize capture channel
-            let flags = mcpwm_capture_channel_config_t__bindgen_ty_1::default();
-            flags.pos_edge(); // capture on positive edge
-            flags.neg_edge(); // capture on negative edge
-            let mut cap_channel_config = mcpwm_capture_channel_config_t {
+            let mut flags = mcpwm_capture_channel_config_t__bindgen_ty_1::default();
+            flags.set_pos_edge(1); // capture on positive edge
+            flags.set_neg_edge(1); // capture on negative edge
+ //           flags.set_pull_up(1); // pull up the GPIO
+            let cap_channel_config = mcpwm_capture_channel_config_t {
                 prescale: 1,
                 flags,
-                gpio_num: 0,
+                gpio_num: GPIO_CAPTURE,
                 intr_priority: 1,
             };
-            let cap_chan_gpio: i32 = GPIO_CAPTURE;
-            cap_channel_config.gpio_num = cap_chan_gpio;
+
             esp!(mcpwm_new_capture_channel(
                 self.cap_timer_handle,
                 &cap_channel_config,
@@ -465,8 +467,9 @@ impl MotorActor {
         }
     }
     fn on_timer(&mut self, id: u32) -> Result<()> {
-        match id {
-            id if id == TimerId::WatchdogTimer as u32 => {
+        let timer = unsafe { ::std::mem::transmute::<u8, TimerId>(u8::try_from(id).unwrap() ) };
+        match timer {
+            TimerId::WatchdogTimer  => {
                 let data = minicbor::to_vec(&self.get_prop_values())?;
                 let pub_msg = Msg {
                     src: Some(self.topic_id),
@@ -499,11 +502,38 @@ impl MotorActor {
                 }
                 Ok(())
             }
+            TimerId::ReportingTimer  => {
+                info!("Reporting timer {} heap free ",unsafe { esp_get_free_heap_size()});
+                Ok(())
+            }
             _ => Err(anyhow::anyhow!("Unknown timer id: {}", id)),
         }
     }
     fn on_event(&mut self, event: MotorEvent) {
         match event {
+            MotorEvent::Isr { cap_value , pos_edge } => {
+                info!("Isr cap_value: {} pos_edge: {}", cap_value-self.last_measured_capture, pos_edge);
+                self.last_measured_time = Instant::now();
+                self.last_measured_capture = cap_value;
+
+                let delta_t = self.last_measured_time.duration_since(self.prev_measured_time);
+                
+                let delta_t :f32 = delta_t.as_millis() as f32 / 1000.0;
+                let rpm = 60000000.0 / (cap_value as f32 * delta_t);
+                self.measured_rpm = rpm as u32;
+                self.prev_measured_time = self.last_measured_time;
+                let pid = self.pid_update().unwrap();
+                self.pwm_value = (self.pwm_value as f32 + pid) as u32;
+                if self.pwm_value > TICKS_PER_PERIOD {
+                    self.pwm_value = TICKS_PER_PERIOD;
+                }
+                /*unsafe { esp!(mcpwm_comparator_set_compare_value(
+                    self.comparator_handle,
+                    self.pwm_value
+                ))
+                .unwrap();};*/
+
+            }
             _ => {
                 error!("Unknown event: {:?}", event);
             }
@@ -516,6 +546,10 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::WatchdogTimer as u32,
             Duration::from_millis(1000),
+        ));
+        self.timers.add_timer(Timer::new_repeater(
+            TimerId::ReportingTimer as u32,
+            Duration::from_millis(3000),
         ));
         loop {
             match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {

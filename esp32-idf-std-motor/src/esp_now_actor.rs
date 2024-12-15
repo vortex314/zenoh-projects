@@ -17,7 +17,7 @@ use esp_idf_svc::hal::modem::Modem;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::*;
 
-use log::{debug, error, info};
+use log::{debug,  info};
 
 use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
@@ -77,7 +77,7 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
                     self.on_timeout(idx).await;
                 }
                 Third(msg) => {
-                    msg.map(|msg| self.events.handle(&msg));
+                    let _ = msg.map(|msg| self.events.handle(&msg));
                 }
             }
         }
@@ -104,7 +104,7 @@ impl EspNowActor {
 
         let _sub = {
             eventloop
-                .subscribe::<WifiEvent, _>(move |event| {
+                .subscribe::<WifiEvent, _>(move |_event| {
               //      info!("Wifi event ===> {:?}", event);
                 })
                 .expect("Failed to subscribe to wifi events")
@@ -139,7 +139,7 @@ impl EspNowActor {
 
         //      info!("Added peer {:?}", mac_to_string(&BROADCAST_ADDRESS));
         Ok(EspNowActor {
-            cmds: CmdQueue::new(5),
+            cmds: CmdQueue::new(4),
             events: EventHandlers::new(),
             timers: Timers::new(),
             esp_now,

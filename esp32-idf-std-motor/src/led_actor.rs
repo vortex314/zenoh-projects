@@ -35,7 +35,7 @@ pub struct LedActor {
 impl LedActor {
     pub fn new(pin: PinDriver<'static,AnyOutputPin,Output>) -> Self {
         Self {
-            cmds: CmdQueue::new(5),
+            cmds: CmdQueue::new(4),
             events: EventHandlers::new(),
             timers: Timers::new(),
             state: LedState::ON ,

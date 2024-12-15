@@ -1,7 +1,8 @@
 //! MQTT asynchronous client example which subscribes to an internet MQTT server and then sends
 //! and receives events in its own topic.
 
-use core::time::Duration;
+
+use std::panic;
 
 use anyhow::Ok;
 
@@ -10,7 +11,6 @@ use embassy_futures::select::*;
 use esp_idf_svc::hal::gpio::OutputPin;
 use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::peripherals::Peripherals;
-use esp_idf_svc::timer::EspTimerService;
 
 mod limero_logger;
 use esp_now_actor::mac_to_string;
@@ -37,6 +37,10 @@ use msg::Msg;
 
 fn main() {
     esp_idf_svc::sys::link_patches();
+    panic::set_hook(Box::new(|panic_info| {
+        // Custom panic logging/handling
+        println!("Custom panic: {:?}", panic_info);
+    }));
     //   esp_idf_svc::log::EspLogger::initialize_default();
     let _ = limero_logger_init();
     let result = main_task();
@@ -125,3 +129,4 @@ fn event_display(ev: &EspNowEvent) {
         }
     }
 }
+

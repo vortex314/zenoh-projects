@@ -31,7 +31,7 @@ pio = ["esp-idf-svc/pio"]
 std = ["alloc", "esp-idf-svc/binstart", "esp-idf-svc/std"]
 
 [dependencies]
-anyhow = { version="1.0.93"}
+anyhow = { version="1.0"}
 esp-idf-svc = {version = "0.49", default-features = false}
 log = {version = "0.4.22", default-features = false}
 smol = {version = "2.0.2", default-features = false}
