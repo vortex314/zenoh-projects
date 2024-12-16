@@ -187,6 +187,36 @@ pub struct MotorActor {
 
 // static bounded channel for isr
 static mut SENDER_CAP: Option<Sender<MotorEvent>> = None;
+static mut ISR_DATA : Option<IsrData> = None;
+
+struct IsrData {
+    sender : Sender<MotorEvent>,
+    delta_values: Vec<u32>, // 6 cap values,
+    last_capture : u32,
+}
+
+impl IsrData {
+    fn new(sender:Sender<MotorEvent>) -> Self {
+        let cap_values = Vec::new();
+        cap_values.resize(20,0);
+        IsrData { sender, cap_values: Vec::new(), last_capture: 0 }
+    }
+    unsafe extern "C" fn capture_callback(
+        _cap_channel: *mut mcpwm_cap_channel_t,
+        capture_event: *const mcpwm_capture_event_data_t,
+        user_data: *mut c_void,
+    ) -> bool {
+        let cap_value = (*capture_event).cap_value;
+        
+        let delta_cap = if cap_value > self.last_capture { cap_value - self.last_capture } else { 0xFFFFFFFF - self.last_capture + cap_value };
+        let _ = ISR_DATA.map( |isr_data| isr_data.try_send(MotorEvent::Isr {
+            cap_value: (*capture_event).cap_value,
+            pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
+        };);
+        true
+    }
+
+}
 
 struct CaptureData  {
     cap_value: u32,
