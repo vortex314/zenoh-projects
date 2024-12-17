@@ -141,12 +141,11 @@ static MOTOR_INTERFACE: &[InfoStruct] = &[
 #[derive(Clone, Debug)]
 pub enum MotorEvent {
     Msg { msg: Msg },
-    Isr { cap_value: u32, pos_edge: bool },
+    Isr { sum: u32, count: u32 },
 }
 #[derive(Clone)]
 pub enum MotorCmd {
     Msg { msg: Msg },
-    Stop,
 }
 enum TimerId {
     WatchdogTimer = 1,
@@ -168,10 +167,6 @@ pub struct MotorActor {
     target_current: u32,
     measured_current: u32,
     // PID info
-    last_measured_time: Instant,
-    last_measured_capture : u32,
-    prev_measured_time: Instant,
-    prev_measured_capture : u32,
     rpm_kp: f32,
     rpm_ki: f32,
     rpm_kd: f32,
@@ -186,60 +181,51 @@ pub struct MotorActor {
 }
 
 // static bounded channel for isr
-static mut SENDER_CAP: Option<Sender<MotorEvent>> = None;
 static mut ISR_DATA : Option<IsrData> = None;
 
 struct IsrData {
     sender : Sender<MotorEvent>,
-    delta_values: Vec<u32>, // 6 cap values,
+    sum : u32,
+    count: u32,
     last_capture : u32,
 }
 
 impl IsrData {
     fn new(sender:Sender<MotorEvent>) -> Self {
-        let cap_values = Vec::new();
-        cap_values.resize(20,0);
-        IsrData { sender, cap_values: Vec::new(), last_capture: 0 }
+        IsrData { sender, sum:0, count: 0 ,last_capture:0}
     }
+}
+
     unsafe extern "C" fn capture_callback(
         _cap_channel: *mut mcpwm_cap_channel_t,
         capture_event: *const mcpwm_capture_event_data_t,
-        user_data: *mut c_void,
+        _user_data: *mut c_void,
     ) -> bool {
         let cap_value = (*capture_event).cap_value;
+  //      let pos_edge = (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS;
         
-        let delta_cap = if cap_value > self.last_capture { cap_value - self.last_capture } else { 0xFFFFFFFF - self.last_capture + cap_value };
-        let _ = ISR_DATA.map( |isr_data| isr_data.try_send(MotorEvent::Isr {
-            cap_value: (*capture_event).cap_value,
-            pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
-        };);
+        
+        let _ = ISR_DATA.as_mut().map( | isr_data| 
+            {
+            let ticks_per_period = if cap_value > isr_data.last_capture { cap_value - isr_data.last_capture } else { (0xFFFFFFFF - isr_data.last_capture) + cap_value };
+            isr_data.sum += ticks_per_period;
+            isr_data.count += 1;
+
+            if isr_data.sum > 8_000_000 { // 100 msec at 80 MHz
+                let _ = isr_data.sender.try_send(MotorEvent::Isr {
+                    sum : isr_data.sum,
+                    count:isr_data.count,
+                });
+                isr_data.sum = 0;
+                isr_data.count = 0;
+            };
+            
+            isr_data.last_capture = cap_value;
+            });
         true
     }
 
-}
 
-struct CaptureData  {
-    cap_value: u32,
-    pos_edge: bool,
-}
-
-unsafe extern "C" fn capture_callback(
-    _cap_channel: *mut mcpwm_cap_channel_t,
-    capture_event: *const mcpwm_capture_event_data_t,
-    user_data: *mut c_void,
-) -> bool {
-   // let sender = Box::leak(Box::from_raw(user_data as *mut Sender<MotorEvent>));
-    SENDER_CAP.as_ref().map(|sender| {
-        let _ = sender.try_send(MotorEvent::Isr {
-        cap_value: (*capture_event).cap_value,
-        pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
-    });});
-    /*let _ = sender.try_send(MotorEvent::Isr {
-        cap_value: (*capture_event).cap_value,
-        pos_edge: (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG,
-    });*/
-    true
-}
 
 impl MotorActor {
     fn get_prop_values(&self) -> MotorMsg {
@@ -263,7 +249,7 @@ impl MotorActor {
     }
     pub fn new(topic_name: String) -> Self {
         let (sender, receiver) = async_channel::bounded(4);
-        unsafe { SENDER_CAP = Some(sender.clone()); };
+        unsafe { ISR_DATA = Some(IsrData::new(sender.clone())); };
         MotorActor {
             cmds: CmdQueue::new(4),
             eventhandlers: EventHandlers::new(),
@@ -277,10 +263,6 @@ impl MotorActor {
             measured_rpm: 0,
             target_current: 0,
             measured_current: 0,
-            last_measured_time: Instant::now(),
-            last_measured_capture : 0,
-            prev_measured_time: Instant::now(),
-            prev_measured_capture : 0,
             rpm_kp: 1.0001,
             rpm_ki: 0.0001,
             rpm_kd: -0.0001,
@@ -418,9 +400,8 @@ impl MotorActor {
         }
         Ok(())
     }
-    fn pid_update(&mut self) -> Result<f32> {
+    fn pid_update(&mut self,delta_t :f32) -> Result<f32> {
         let error = (self.target_rpm - self.measured_rpm) as f32;
-        let delta_t = self.last_measured_time.duration_since(self.prev_measured_time).as_millis() as f32;
         let p = self.rpm_kp * error;
         let i = self.rpm_ki * error * delta_t;
         let d = self.rpm_kd * error / delta_t;
@@ -445,8 +426,8 @@ impl MotorActor {
             // initialize capture channel
             let mut flags = mcpwm_capture_channel_config_t__bindgen_ty_1::default();
             flags.set_pos_edge(1); // capture on positive edge
-            flags.set_neg_edge(1); // capture on negative edge
- //           flags.set_pull_up(1); // pull up the GPIO
+ //           flags.set_neg_edge(1); // capture on negative edge
+            flags.set_pull_down(1); // pull up the GPIO
             let cap_channel_config = mcpwm_capture_channel_config_t {
                 prescale: 1,
                 flags,
@@ -489,10 +470,6 @@ impl MotorActor {
                             .map(|motor_msg| self.set_prop_values(&motor_msg))
                     });
                 };
-            }
-
-            MotorCmd::Stop => {
-                self.timers.remove_timer(TimerId::WatchdogTimer as u32);
             }
         }
     }
@@ -541,18 +518,16 @@ impl MotorActor {
     }
     fn on_event(&mut self, event: MotorEvent) {
         match event {
-            MotorEvent::Isr { cap_value , pos_edge } => {
-                info!("Isr cap_value: {} pos_edge: {}", cap_value-self.last_measured_capture, pos_edge);
-                self.last_measured_time = Instant::now();
-                self.last_measured_capture = cap_value;
-
-                let delta_t = self.last_measured_time.duration_since(self.prev_measured_time);
-                
-                let delta_t :f32 = delta_t.as_millis() as f32 / 1000.0;
-                let rpm = 60000000.0 / (cap_value as f32 * delta_t);
+            MotorEvent::Isr { sum , count } => {
+                let avg = sum / count;
+                let hz = 80_000_000 / avg;
+                let rpm = (hz * 60) / 4;
+                info!("Isr sum: {} count: {} freq : {} Hz. RPM = {} ", sum , count, hz, rpm);   
+                let period = sum / count;
+                let delta_t :f32 = period as f32 / 1000.0;
+                let rpm = 60000000.0 / (period as f32 * delta_t);
                 self.measured_rpm = rpm as u32;
-                self.prev_measured_time = self.last_measured_time;
-                let pid = self.pid_update().unwrap();
+                let pid = self.pid_update(sum as f32 ).unwrap();
                 self.pwm_value = (self.pwm_value as f32 + pid) as u32;
                 if self.pwm_value > TICKS_PER_PERIOD {
                     self.pwm_value = TICKS_PER_PERIOD;
