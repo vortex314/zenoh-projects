@@ -23,8 +23,9 @@ use anyhow::Result;
 use async_channel::Sender;
 use embassy_futures::select::{select3, Either3};
 use embassy_time::{Duration, Instant};
+use esp_idf_svc::hal::adc::oneshot::config;
 use esp_idf_svc::sys::{
-    esp, esp_get_free_heap_size, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1, mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS, mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start, mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1, mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t, mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH, mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t, mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event, mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer, mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer, mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1, mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1, mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP, mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable, mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop, mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M
+    esp, esp_get_free_heap_size, gpio_config, gpio_config_t, gpio_int_type_t_GPIO_INTR_DISABLE, gpio_mode_t_GPIO_MODE_OUTPUT, gpio_pulldown_t_GPIO_PULLDOWN_DISABLE, gpio_pullup_t_GPIO_PULLUP_DISABLE, gpio_set_level, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1, mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS, mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start, mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1, mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t, mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH, mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t, mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event, mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer, mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer, mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1, mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1, mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP, mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable, mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop, mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M
 };
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
@@ -38,8 +39,9 @@ use std::time::SystemTime;
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
 const TICKS_PER_PERIOD: u32 = 500; // 50us, 20KHz
-const GPIO_CAPTURE: i32 = 14; // gpio12
-const GPIO_PWM: i32 = 13; // gpio13
+const GPIO_CAPTURE: i32 = 14; // gpio14
+const GPIO_PWM_1: i32 = 13; // gpio13
+const GPIO_PWM_2: i32 = 12; // gpio12
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
 #[derive(Encode, Decode, Default, Clone, Debug)]
@@ -211,7 +213,7 @@ impl IsrData {
             isr_data.sum += ticks_per_period;
             isr_data.count += 1;
 
-            if isr_data.sum > 8_000_000 { // 100 msec at 80 MHz
+            if isr_data.sum > 80_000_000 { // 100 msec at 80 MHz
                 let _ = isr_data.sender.try_send(MotorEvent::Isr {
                     sum : isr_data.sum,
                     count:isr_data.count,
@@ -225,7 +227,18 @@ impl IsrData {
         true
     }
 
-
+unsafe fn config_gpio_to_value(gpio_num: i32, value: u8) -> Result<()> {
+    let io_conf = gpio_config_t {
+        pin_bit_mask: 1 << gpio_num,
+        mode: gpio_mode_t_GPIO_MODE_OUTPUT,
+        pull_up_en: gpio_pullup_t_GPIO_PULLUP_DISABLE,
+        pull_down_en: gpio_pulldown_t_GPIO_PULLDOWN_DISABLE,
+        intr_type: gpio_int_type_t_GPIO_INTR_DISABLE,
+    };
+    esp!(gpio_config(&io_conf))?;
+    esp!(gpio_set_level(gpio_num, value as u32))?;
+    Ok(())
+}
 
 impl MotorActor {
     fn get_prop_values(&self) -> MotorMsg {
@@ -266,7 +279,7 @@ impl MotorActor {
             rpm_kp: 1.0001,
             rpm_ki: 0.0001,
             rpm_kd: -0.0001,
-            pwm_value: 400, // 50% duty cycle to test
+            pwm_value:350, // 20% duty cycle to test
             timer_handle: std::ptr::null_mut(),
             operator_handle: std::ptr::null_mut(),
             comparator_handle: std::ptr::null_mut(),
@@ -357,10 +370,13 @@ impl MotorActor {
                 &mut self.comparator_handle
             ))?;
 
+
+            config_gpio_to_value(GPIO_PWM_2, 1)?;  // value 0 leads to high spike voltage , as the induction current has no way to go 
+
             let flags = mcpwm_generator_config_t__bindgen_ty_1::default();
             flags.pull_up(); // pull up the GPIO
             let generator_config = mcpwm_generator_config_t {
-                gen_gpio_num: GPIO_PWM,
+                gen_gpio_num: GPIO_PWM_1,
                 flags,
             };
             esp!(mcpwm_new_generator(
@@ -425,9 +441,10 @@ impl MotorActor {
 
             // initialize capture channel
             let mut flags = mcpwm_capture_channel_config_t__bindgen_ty_1::default();
-            flags.set_pos_edge(1); // capture on positive edge
- //           flags.set_neg_edge(1); // capture on negative edge
-            flags.set_pull_down(1); // pull up the GPIO
+ //           flags.set_pos_edge(1); // capture on positive edge
+            flags.set_neg_edge(1); // capture on negative edge
+ //           flags.set_pull_down(1); // pull up the GPIO
+ flags.set_pull_up(1);
             let cap_channel_config = mcpwm_capture_channel_config_t {
                 prescale: 1,
                 flags,
