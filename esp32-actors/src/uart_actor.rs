@@ -9,7 +9,6 @@ use esp_hal::
 
 use alloc::vec::Vec;
 use log::info;
-use log::debug;
 
 use anyhow::Error;
 use anyhow::Result;
@@ -73,7 +72,7 @@ where
             match select(self.rx.read_async(&mut small_buf), self.cmds.next()).await {
                 First(r) => match r {
                     Ok(n) => {
-                        debug!("Rx {:?}", n);
+                        info!("Rx {:?}", n);
                         self.event_handlers
                             .handle(&UartEvent::Rxd(small_buf[0..n].to_vec()));
                     }

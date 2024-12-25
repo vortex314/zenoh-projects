@@ -91,6 +91,8 @@ impl Actor<EspNowCmd, EspNowEvent> for EspNowActor {
     }
 }
 
+static mut ESP_NOW_CHANNEL: Option<async_channel::Sender<EspNowEvent>> = None;
+
 impl EspNowActor {
     pub fn new(modem: Modem) -> Result<EspNowActor> {
         let nvs = EspDefaultNvsPartition::take()?;
@@ -113,13 +115,17 @@ impl EspNowActor {
         let esp_now = esp_idf_svc::espnow::EspNow::take()?;
 
         let (sender, receiver) = async_channel::bounded(5);
-        let sender_clone = Box::leak(Box::new(sender.clone()));
+        unsafe { ESP_NOW_CHANNEL = Some(sender.clone()); };
 
         esp_now.register_recv_cb(move |mac, data| {
-            let _ = sender_clone.try_send(EspNowEvent::Rxd {
+            unsafe { ESP_NOW_CHANNEL.as_ref().map(|sender| sender.try_send(EspNowEvent::Rxd {
                 peer: <&[u8; 6]>::try_from(mac).unwrap().clone(),
                 data: data.to_vec(),
-            });
+            }));};
+            /* let _ = sender_clone.try_send(EspNowEvent::Rxd {
+                peer: <&[u8; 6]>::try_from(mac).unwrap().clone(),
+                data: data.to_vec(),
+            });*/
         })?;
         esp_now.register_send_cb(|_data, status| match status {
             SendStatus::SUCCESS => {}

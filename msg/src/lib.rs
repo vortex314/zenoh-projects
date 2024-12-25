@@ -81,11 +81,13 @@ pub struct Msg {
     #[n(3)]
     pub return_code: Option<u32>,
     #[n(4)]
-    pub pub_req: Option<Vec<u8>>,
+    pub publish: Option<Vec<u8>>,
     #[n(5)]
     pub info_req: Option<Vec<u8>>,
     #[n(6)]
-    pub info_reply: Option<InfoMap>,
+    pub info_prop: Option<InfoProp>,
+    #[n(7)]
+    pub info_topic: Option<InfoTopic>,
 }
 
 impl Msg {
@@ -95,9 +97,10 @@ impl Msg {
             src: None,
             msg_id: None,
             return_code: None,
-            pub_req: None,
+            publish: None,
             info_req: None,
-            info_reply: None,
+            info_prop: None,
+            info_topic: None,
         }
     }
     pub fn reply(&self) -> Self {
@@ -115,15 +118,18 @@ impl Msg {
             .map(|msg_id| s.push_str(&format!("msg_id: {},", msg_id)));
         self.return_code
             .map(|return_code| s.push_str(&format!("return_code: {},", return_code)));
-        self.pub_req
+        self.publish
             .as_ref()
-            .map(|pub_req| s.push_str(&format!("pub_req: {},", minicbor::display(pub_req))));
+            .map(|pub_req| s.push_str(&format!("pub_req:  {},", minicbor::display(pub_req))));
         self.info_req
             .as_ref()
             .map(|info_req| s.push_str(&format!("info_req: {},", minicbor::display(info_req))));
-        self.info_reply
+        self.info_prop
             .as_ref()
-            .map(|info_reply| s.push_str(&format!("info_reply: {},", info_reply)));
+            .map(|info_reply| s.push_str(&format!("info_reply: {{ {} }},", info_reply)));
+        self.info_topic
+            .as_ref()
+            .map(|info_topic| s.push_str(&format!("info_topic: {{ {} }},", info_topic)));
         s
     }
 }
@@ -131,6 +137,21 @@ impl Msg {
 impl Display for Msg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.display())
+    }
+}
+
+#[derive(Encode, Decode, Clone, Debug, Default)]
+#[cbor(map)]
+pub struct InfoTopic {
+    #[n(0)]
+    pub name: Option<String>,
+    #[n(2)]
+    pub desc: Option<String>,
+}
+
+impl Display for InfoTopic {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "name: {}, desc: {}", self.name.as_ref().unwrap(), self.desc.as_ref().unwrap())
     }
 }
 
@@ -145,7 +166,7 @@ Info            -     Id1     (propId)    info/topic1
 Info(req)       Id1   xxx    (propId)    info/topic1
 Info(reply)     xxx   Id1    (propId)    dst/topic2
 */
-
+/* 
 impl MsgHeader {
     pub fn is_msg(&self, msg_type: MsgType, dst: Option<u32>, src: Option<u32>) -> bool {
         let mut matches = msg_type as u8 == self.msg_type as u8;
@@ -153,7 +174,9 @@ impl MsgHeader {
         src.map(|src| matches = matches && src == self.src.unwrap());
         matches
     }
-}
+}*/
+
+
 
 #[derive(PartialEq, Encode, Decode, Clone, Default, Debug, Copy)]
 #[cbor(index_only)]
@@ -196,7 +219,7 @@ pub enum MetaPropertyId {
 }
 #[derive(Encode, Decode, Clone, Debug, Default)]
 #[cbor(map)]
-pub struct InfoMap {
+pub struct InfoProp {
     #[n(0)]
     pub id: PropertyId,
     #[n(1)]
@@ -209,9 +232,9 @@ pub struct InfoMap {
     pub prop_mode: Option<PropMode>,
 }
 
-impl InfoMap {
+impl InfoProp {
     pub fn new(id: PropertyId) -> Self {
-        InfoMap {
+        InfoProp {
             id,
             name: None,
             desc: None,
@@ -234,7 +257,7 @@ impl InfoMap {
     }
 }
 
-impl Display for InfoMap {
+impl Display for InfoProp {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.display())
     }

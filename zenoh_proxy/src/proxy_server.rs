@@ -129,7 +129,7 @@ impl Actor<ProxyServerCmd, ProxyServerEvent> for ProxySession {
                     let cmd = cmd.unwrap();
                     match cmd{
                         ProxyServerCmd::Publish { topic, message } => {
-                            debug!("Publishing message to zenoh");
+                            info!("Publishing message to zenoh");
                             self.pubsub_cmd.handle(&PubSubCmd::Publish { topic, payload: message });
                         },
                         ProxyServerCmd::TransportEvent(event) => {

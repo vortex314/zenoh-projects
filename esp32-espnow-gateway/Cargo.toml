@@ -20,10 +20,16 @@ esp-hal = {workspace = true}
 esp-hal-embassy = {workspace = true}
 esp-wifi = {workspace = true}
 log = {workspace = true}
+minicbor = {workspace = true}
 
 limero = {path = "../esp32-limero-embassy"}
 actors = {path = "../esp32-actors"}
 msg = {path = "../msg"}
 
+hashbrown = {version = "0.15.2"}
+json = {version = "0.12.4"}
+
 [features]
 default = []
+
+

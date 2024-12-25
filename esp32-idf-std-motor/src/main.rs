@@ -1,7 +1,6 @@
 //! MQTT asynchronous client example which subscribes to an internet MQTT server and then sends
-//! and receives events in its own topic.
-
-
+//! and receives events in its own topic
+#[allow(dead_code)]
 use std::panic;
 
 use anyhow::Ok;

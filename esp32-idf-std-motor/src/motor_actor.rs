@@ -23,18 +23,16 @@ use anyhow::Result;
 use async_channel::Sender;
 use embassy_futures::select::{select3, Either3};
 use embassy_time::{Duration, Instant};
-use esp_idf_svc::hal::adc::oneshot::config;
 use esp_idf_svc::sys::{
     esp, esp_get_free_heap_size, gpio_config, gpio_config_t, gpio_int_type_t_GPIO_INTR_DISABLE, gpio_mode_t_GPIO_MODE_OUTPUT, gpio_pulldown_t_GPIO_PULLDOWN_DISABLE, gpio_pullup_t_GPIO_PULLUP_DISABLE, gpio_set_level, mcpwm_cap_channel_handle_t, mcpwm_cap_channel_t, mcpwm_cap_timer_handle_t, mcpwm_capture_channel_config_t, mcpwm_capture_channel_config_t__bindgen_ty_1, mcpwm_capture_channel_enable, mcpwm_capture_channel_register_event_callbacks, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_NEG, mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS, mcpwm_capture_event_callbacks_t, mcpwm_capture_event_cb_t, mcpwm_capture_event_data_t, mcpwm_capture_timer_config_t, mcpwm_capture_timer_enable, mcpwm_capture_timer_start, mcpwm_cmpr_handle_t, mcpwm_comparator_config_t, mcpwm_comparator_config_t__bindgen_ty_1, mcpwm_comparator_set_compare_value, mcpwm_gen_compare_event_action_t, mcpwm_gen_handle_t, mcpwm_gen_timer_event_action_t, mcpwm_generator_action_t_MCPWM_GEN_ACTION_HIGH, mcpwm_generator_action_t_MCPWM_GEN_ACTION_LOW, mcpwm_generator_config_t, mcpwm_generator_config_t__bindgen_ty_1, mcpwm_generator_set_action_on_compare_event, mcpwm_generator_set_action_on_timer_event, mcpwm_new_capture_channel, mcpwm_new_capture_timer, mcpwm_new_comparator, mcpwm_new_generator, mcpwm_new_operator, mcpwm_new_timer, mcpwm_oper_handle_t, mcpwm_operator_config_t, mcpwm_operator_config_t__bindgen_ty_1, mcpwm_operator_connect_timer, mcpwm_timer_config_t, mcpwm_timer_config_t__bindgen_ty_1, mcpwm_timer_count_mode_t_MCPWM_TIMER_COUNT_MODE_UP, mcpwm_timer_direction_t_MCPWM_TIMER_DIRECTION_UP, mcpwm_timer_enable, mcpwm_timer_event_t_MCPWM_TIMER_EVENT_EMPTY, mcpwm_timer_handle_t, mcpwm_timer_start_stop, mcpwm_timer_start_stop_cmd_t_MCPWM_TIMER_START_NO_STOP, soc_module_clk_t_SOC_MOD_CLK_APB, soc_module_clk_t_SOC_MOD_CLK_PLL_F160M
 };
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
-use log::{debug, error, info};
+use log::{ error, info};
 use minicbor::{Decode, Encode};
 use msg::{fnv, InfoMap, Msg};
 use msg::{PropMode, PropType};
 use std::ffi::c_void;
-use std::time::SystemTime;
 
 const MCPWM_TIMER_CLK_SRC_DEFAULT: u32 = soc_module_clk_t_SOC_MOD_CLK_PLL_F160M;
 const BLDC_MCPWM_TIMER_RESOLUTION_HZ: u32 = 10000000; // 10MHz, 1 tick = 0.1us
@@ -48,13 +46,13 @@ pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 #[cbor(map)]
 struct MotorMsg {
     #[n(0)]
-    target_rpm: Option<u32>,
+    target_rpm: Option<f32>,
     #[n(1)]
-    measured_rpm: Option<u32>,
+    measured_rpm: Option<f32>,
     #[n(2)]
-    target_current: Option<u32>,
+    target_current: Option<f32>,
     #[n(3)]
-    measured_current: Option<u32>,
+    measured_current: Option<f32>,
     #[n(4)]
     rpm_kp: Option<f32>,
     #[n(5)]
@@ -94,28 +92,28 @@ static MOTOR_INTERFACE: &[InfoStruct] = &[
         id: 0,
         name: "target_rpm",
         desc: "target desired RPM ",
-        prop_type: PropType::UINT,
+        prop_type: PropType::FLOAT,
         prop_mode: PropMode::ReadWrite,
     },
     InfoStruct {
         id: 1,
         name: "measured_rpm",
         desc: "measured RPM ",
-        prop_type: PropType::UINT,
+        prop_type: PropType::FLOAT,
         prop_mode: PropMode::Read,
     },
     InfoStruct {
         id: 2,
         name: "target_current",
         desc: "target current mA",
-        prop_type: PropType::UINT,
+        prop_type: PropType::FLOAT,
         prop_mode: PropMode::ReadWrite,
     },
     InfoStruct {
         id: 3,
         name: "measured_current",
         desc: "measured current mA",
-        prop_type: PropType::UINT,
+        prop_type: PropType::FLOAT,
         prop_mode: PropMode::Read,
     },
     InfoStruct {
@@ -152,6 +150,7 @@ pub enum MotorCmd {
 enum TimerId {
     WatchdogTimer = 1,
     ReportingTimer = 2,
+    PidTimer = 3,
 }
 pub struct MotorActor {
     // actor info
@@ -164,15 +163,18 @@ pub struct MotorActor {
     topic_name: String,
     topic_id: u32,
     prop_counter: u32,
-    target_rpm: u32,
-    measured_rpm: u32,
-    target_current: u32,
-    measured_current: u32,
+    target_rpm: f32,
+    measured_rpm: f32,
+    target_current: f32,
+    measured_current: f32,
     // PID info
     rpm_kp: f32,
     rpm_ki: f32,
     rpm_kd: f32,
+    rpm_integral: f32,
+    last_measured_rpm: Instant  ,
     // Device driver info
+    pwm_percent: f32,
     pwm_value: u32, // from 0 to TICKS_PER_PERIOD
     timer_handle: mcpwm_timer_handle_t,
     operator_handle: mcpwm_oper_handle_t,
@@ -182,65 +184,38 @@ pub struct MotorActor {
     cap_channel_handle: mcpwm_cap_channel_handle_t,
 }
 
-// static bounded channel for isr
-static mut ISR_DATA : Option<IsrData> = None;
-
-struct IsrData {
-    sender : Sender<MotorEvent>,
-    sum : u32,
-    count: u32,
-    last_capture : u32,
-}
-
-impl IsrData {
-    fn new(sender:Sender<MotorEvent>) -> Self {
-        IsrData { sender, sum:0, count: 0 ,last_capture:0}
-    }
-}
-
-    unsafe extern "C" fn capture_callback(
-        _cap_channel: *mut mcpwm_cap_channel_t,
-        capture_event: *const mcpwm_capture_event_data_t,
-        _user_data: *mut c_void,
-    ) -> bool {
-        let cap_value = (*capture_event).cap_value;
-  //      let pos_edge = (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS;
-        
-        
-        let _ = ISR_DATA.as_mut().map( | isr_data| 
-            {
-            let ticks_per_period = if cap_value > isr_data.last_capture { cap_value - isr_data.last_capture } else { (0xFFFFFFFF - isr_data.last_capture) + cap_value };
-            isr_data.sum += ticks_per_period;
-            isr_data.count += 1;
-
-            if isr_data.sum > 80_000_000 { // 100 msec at 80 MHz
-                let _ = isr_data.sender.try_send(MotorEvent::Isr {
-                    sum : isr_data.sum,
-                    count:isr_data.count,
-                });
-                isr_data.sum = 0;
-                isr_data.count = 0;
-            };
-            
-            isr_data.last_capture = cap_value;
-            });
-        true
-    }
-
-unsafe fn config_gpio_to_value(gpio_num: i32, value: u8) -> Result<()> {
-    let io_conf = gpio_config_t {
-        pin_bit_mask: 1 << gpio_num,
-        mode: gpio_mode_t_GPIO_MODE_OUTPUT,
-        pull_up_en: gpio_pullup_t_GPIO_PULLUP_DISABLE,
-        pull_down_en: gpio_pulldown_t_GPIO_PULLDOWN_DISABLE,
-        intr_type: gpio_int_type_t_GPIO_INTR_DISABLE,
-    };
-    esp!(gpio_config(&io_conf))?;
-    esp!(gpio_set_level(gpio_num, value as u32))?;
-    Ok(())
-}
-
 impl MotorActor {
+    pub fn new(topic_name: String) -> Self {
+        let (sender, receiver) = async_channel::bounded(4);
+        unsafe { ISR_DATA = Some(IsrData::new(sender.clone())); };
+        MotorActor {
+            cmds: CmdQueue::new(4),
+            eventhandlers: EventHandlers::new(),
+            timers: Timers::new(),
+            sender,
+            receiver,
+            topic_name: topic_name.clone(),
+            topic_id: fnv(topic_name.as_str()),
+            prop_counter: 0,
+            target_rpm: 500.,
+            measured_rpm: 0.,
+            target_current: 0.,
+            measured_current: 0.,
+            rpm_kp: 0.1,
+            rpm_ki: 0.01,
+            rpm_kd: -0.000,
+            rpm_integral: 0.0,
+            last_measured_rpm: Instant::now(),
+            pwm_percent: 20.0,
+            pwm_value:350, // 20% duty cycle to test
+            timer_handle: std::ptr::null_mut(),
+            operator_handle: std::ptr::null_mut(),
+            comparator_handle: std::ptr::null_mut(),
+            generator_handle: std::ptr::null_mut(),
+            cap_timer_handle: std::ptr::null_mut(),
+            cap_channel_handle: std::ptr::null_mut(),
+        }
+    }
     fn get_prop_values(&self) -> MotorMsg {
         MotorMsg {
             target_rpm: Some(self.target_rpm),
@@ -260,34 +235,7 @@ impl MotorActor {
         msg.rpm_ki.map(|ki| self.rpm_ki = ki);
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
     }
-    pub fn new(topic_name: String) -> Self {
-        let (sender, receiver) = async_channel::bounded(4);
-        unsafe { ISR_DATA = Some(IsrData::new(sender.clone())); };
-        MotorActor {
-            cmds: CmdQueue::new(4),
-            eventhandlers: EventHandlers::new(),
-            timers: Timers::new(),
-            sender,
-            receiver,
-            topic_name: topic_name.clone(),
-            topic_id: fnv(topic_name.as_str()),
-            prop_counter: 0,
-            target_rpm: 0,
-            measured_rpm: 0,
-            target_current: 0,
-            measured_current: 0,
-            rpm_kp: 1.0001,
-            rpm_ki: 0.0001,
-            rpm_kd: -0.0001,
-            pwm_value:350, // 20% duty cycle to test
-            timer_handle: std::ptr::null_mut(),
-            operator_handle: std::ptr::null_mut(),
-            comparator_handle: std::ptr::null_mut(),
-            generator_handle: std::ptr::null_mut(),
-            cap_timer_handle: std::ptr::null_mut(),
-            cap_channel_handle: std::ptr::null_mut(),
-        }
-    }
+
     fn get_dev_info(&self) -> Result<InfoMap> {
         Ok(InfoMap {
             id: -1,
@@ -416,15 +364,42 @@ impl MotorActor {
         }
         Ok(())
     }
-    fn pid_update(&mut self,delta_t :f32) -> Result<f32> {
-        let error = (self.target_rpm - self.measured_rpm) as f32;
+   /*
+   integral value max 50 as result is 0-100% PWM
+   Otherwise integral can grow to high values and cause overshoot
+    */
+    fn pid_update(&mut self,delta_t :f32,error:f32) -> f32 {
+        
         let p = self.rpm_kp * error;
-        let i = self.rpm_ki * error * delta_t;
+        let i = (self.rpm_ki * error * delta_t) + self.rpm_integral;
         let d = self.rpm_kd * error / delta_t;
-        Ok(p + i + d)
+        info!("error:{} p:{} i:{} d:{}",error,p,i,d);
+        if i > 50.0 {
+            self.rpm_integral = 50.0;
+        } else if i < -50.0 {
+            self.rpm_integral = -50.0;
+        } else {
+        self.rpm_integral = i;
+        }
+        p+i+d
     }
+    fn pwm_percent_to_ticks(percent: f32) -> u32 {
+        let ticks = 500.0 - ((percent * TICKS_PER_PERIOD as f32) / 100.0);
+        ticks as u32
+    }
+
+    fn pwm_clip(pwm :f32 ) -> f32 {
+        if pwm > 100.0 {
+            100.0
+        } else if pwm < 0.0 {
+            0.
+        } else {
+            pwm 
+        }
+    }
+
     fn pwm_stop(&mut self) -> Result<()> {
-        self.target_rpm = 0;
+        self.target_rpm = 0.;
         self.pwm_value = 0;
         Ok(())
     }
@@ -530,7 +505,28 @@ impl MotorActor {
                 info!("Reporting timer {} heap free ",unsafe { esp_get_free_heap_size()});
                 Ok(())
             }
-            _ => Err(anyhow::anyhow!("Unknown timer id: {}", id)),
+            TimerId::PidTimer => {
+                let delta_t = self.last_measured_rpm.elapsed().as_millis() as f32 / 1000.0;
+                if  delta_t > 1.0 {
+                info!("No more measurements, delta_t:{} sec",delta_t);  
+                self.measured_rpm = self.target_rpm / 2.0;
+                let pid = self.pid_update(delta_t,self.target_rpm-self.measured_rpm);
+                self.pwm_percent = MotorActor::pwm_clip( pid);
+                self.pwm_value = MotorActor::pwm_percent_to_ticks(self.pwm_percent);
+                if self.pwm_value > TICKS_PER_PERIOD {
+                    self.pwm_value = TICKS_PER_PERIOD;
+                }
+                info!("pid:{} pwm:{} pwm_value:{}",pid,self.pwm_percent,self.pwm_value);
+                unsafe { esp!(mcpwm_comparator_set_compare_value(
+                    self.comparator_handle,
+                    self.pwm_value
+                ))
+                .unwrap();};
+                self.last_measured_rpm = Instant::now();
+            }
+                Ok(())
+            }
+            
         }
     }
     fn on_event(&mut self, event: MotorEvent) {
@@ -538,22 +534,23 @@ impl MotorActor {
             MotorEvent::Isr { sum , count } => {
                 let avg = sum / count;
                 let hz = 80_000_000 / avg;
-                let rpm = (hz * 60) / 4;
+                let rpm = (hz as f32 * 60.) / 4.;
                 info!("Isr sum: {} count: {} freq : {} Hz. RPM = {} ", sum , count, hz, rpm);   
-                let period = sum / count;
-                let delta_t :f32 = period as f32 / 1000.0;
-                let rpm = 60000000.0 / (period as f32 * delta_t);
-                self.measured_rpm = rpm as u32;
-                let pid = self.pid_update(sum as f32 ).unwrap();
-                self.pwm_value = (self.pwm_value as f32 + pid) as u32;
+                let delta_t :f32 = sum as f32 / 80_000_000.0; // sample time in seconds
+                self.measured_rpm = rpm ;
+                let pid = self.pid_update(delta_t,self.target_rpm-self.measured_rpm);
+                self.pwm_percent = MotorActor::pwm_clip( pid);
+                self.pwm_value = MotorActor::pwm_percent_to_ticks(self.pwm_percent);
                 if self.pwm_value > TICKS_PER_PERIOD {
                     self.pwm_value = TICKS_PER_PERIOD;
                 }
-                /*unsafe { esp!(mcpwm_comparator_set_compare_value(
+                info!("sum:{} count:{} rpm:{}/{} pid:{} pwm:{} pwm_value:{}",sum,count,self.measured_rpm,self.target_rpm,pid,self.pwm_percent,self.pwm_value);
+                unsafe { esp!(mcpwm_comparator_set_compare_value(
                     self.comparator_handle,
                     self.pwm_value
                 ))
-                .unwrap();};*/
+                .unwrap();};
+                self.last_measured_rpm = Instant::now();
 
             }
             _ => {
@@ -572,6 +569,10 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
         self.timers.add_timer(Timer::new_repeater(
             TimerId::ReportingTimer as u32,
             Duration::from_millis(3000),
+        ));
+        self.timers.add_timer(Timer::new_repeater(
+            TimerId::PidTimer as u32,
+            Duration::from_millis(1000),
         ));
         loop {
             match select3(self.cmds.next(), self.timers.alarm(), self.receiver.recv()).await {
@@ -597,4 +598,61 @@ impl Actor<MotorCmd, MotorEvent> for MotorActor {
     fn handler(&self) -> Box<dyn Handler<MotorCmd>> {
         self.cmds.handler()
     }
+}
+
+
+// static bounded channel for isr
+static mut ISR_DATA : Option<IsrData> = None;
+struct IsrData {
+    sender : Sender<MotorEvent>,
+    sum : u32,
+    count: u32,
+    last_capture : u32,
+}
+impl IsrData {
+    fn new(sender:Sender<MotorEvent>) -> Self {
+        IsrData { sender, sum:0, count: 0 ,last_capture:0}
+    }
+}
+
+    unsafe extern "C" fn capture_callback(
+        _cap_channel: *mut mcpwm_cap_channel_t,
+        capture_event: *const mcpwm_capture_event_data_t,
+        _user_data: *mut c_void,
+    ) -> bool {
+        let cap_value = (*capture_event).cap_value;
+  //      let pos_edge = (*capture_event).cap_edge == mcpwm_capture_edge_t_MCPWM_CAP_EDGE_POS;
+        
+        
+        let _ = ISR_DATA.as_mut().map( | isr_data| 
+            {
+            let ticks_per_period = if cap_value > isr_data.last_capture { cap_value - isr_data.last_capture } else { (0xFFFFFFFF - isr_data.last_capture) + cap_value };
+            isr_data.sum += ticks_per_period;
+            isr_data.count += 1;
+
+            if isr_data.sum > 8_000_000 { // 100 msec at 80 MHz
+                let _ = isr_data.sender.try_send(MotorEvent::Isr {
+                    sum : isr_data.sum,
+                    count:isr_data.count,
+                });
+                isr_data.sum = 0;
+                isr_data.count = 0;
+            };
+            
+            isr_data.last_capture = cap_value;
+            });
+        true
+    }
+
+unsafe fn config_gpio_to_value(gpio_num: i32, value: u8) -> Result<()> {
+    let io_conf = gpio_config_t {
+        pin_bit_mask: 1 << gpio_num,
+        mode: gpio_mode_t_GPIO_MODE_OUTPUT,
+        pull_up_en: gpio_pullup_t_GPIO_PULLUP_DISABLE,
+        pull_down_en: gpio_pulldown_t_GPIO_PULLDOWN_DISABLE,
+        intr_type: gpio_int_type_t_GPIO_INTR_DISABLE,
+    };
+    esp!(gpio_config(&io_conf))?;
+    esp!(gpio_set_level(gpio_num, value as u32))?;
+    Ok(())
 }

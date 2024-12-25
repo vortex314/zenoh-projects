@@ -12,6 +12,8 @@ To avoid data corruption, the data is framed using COBS and CRC8
 #![no_std]
 #![no_main]
 #![allow(unused_imports)]
+#[allow(dead_code)]
+
 use core::{cell::RefCell, mem::MaybeUninit};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
@@ -60,6 +62,9 @@ use actors::sys_actor::*;
 use actors::uart_actor::*;
 use msg::framer::cobs_crc_frame;
 
+mod translator;
+use translator::*;
+
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) -> ! {
     esp_alloc::heap_allocator!(72 * 1024);
@@ -81,67 +86,77 @@ async fn main(_spawner: Spawner) -> ! {
     esp_hal_embassy::init(timg1.timer0);
     let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
 
-    let  esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
+    info!("Starting ESP-NOW actor");
+    let esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
     info!("esp-now version {}", esp_now.get_version().unwrap());
     let mut esp_now_actor = EspNowActor::new(esp_now);
 
+    info!("Starting LedActor");
     let led_pin = io.pins.gpio2;
     let led_pin: Output = Output::new(led_pin, Level::Low);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
-    let uart0 = Uart::new_async_with_config(
-        peripherals.UART0,
-        Config {
-            baudrate: 115200,
-            data_bits: DataBits::DataBits8,
-            parity: Parity::ParityNone,
-            stop_bits: StopBits::STOP1,
-            clock_source: ClockSource::Apb,
-            rx_fifo_full_threshold: 64,
-            rx_timeout: Some(10),
-        },
-        io.pins.gpio1,
-        io.pins.gpio3,
-    )
-    .unwrap();
+    info!("Starting UART0");
+    /*
+        let uart0 = Uart::new_async_with_config(
+            peripherals.UART0,
+            Config {
+                baudrate: 115200,
+                data_bits: DataBits::DataBits8,
+                parity: Parity::ParityNone,
+                stop_bits: StopBits::STOP1,
+                clock_source: ClockSource::Apb,
+                rx_fifo_full_threshold: 64,
+                rx_timeout: Some(10),
+            },
+            io.pins.gpio1,
+            io.pins.gpio3,
+        )
+        .unwrap();
 
-    let mut uart_actor = UartActor::new(uart0, 0x00); // COBS separator == 0x00
-                                                      //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
-
+        let mut uart_actor = UartActor::new(uart0, 0x00); // COBS separator == 0x00
+                                                          //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
+    */
     let mut framer_actor = FramerActor::new(vec![]);
     // let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
 
     esp_now_actor.map_to(event_to_blink, led_actor.handler()); // ESP-NOW -> LED
 
-    esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless )
+    //    esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless )
 
-    uart_actor.map_to(rxd_to_framer, framer_actor.handler()); // UART -> deframer -> ESP-NOW
+    //  uart_actor.map_to(rxd_to_framer, framer_actor.handler()); // UART -> deframer -> ESP-NOW
     framer_actor.map_to(framer_to_esp_now, esp_now_actor.handler()); // deframer -> ESP-NOW
 
     loop {
-        select(
-            uart_actor.run(),
-            select(led_actor.run(), esp_now_actor.run()),
-        )
-        .await;
+        info!("loop");
+        //     select(
+        //         uart_actor.run(),
+        select(led_actor.run(), esp_now_actor.run()).await;
     }
 }
 
 fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
-    match ev {
+    let data = match ev {
         EspNowEvent::Rxd {
             peer: _,
-            data: _,
+            data,
             rssi: _,
             channel: _,
-        } => Some(LedCmd::Pulse { duration: 50 }),
+        } => data,
         EspNowEvent::Broadcast {
             peer: _,
-            data: _,
+            data,
             rssi: _,
             channel: _,
-        } => Some(LedCmd::Pulse { duration: 50 }),
-    }
+        } => data,
+    };
+
+    let _ = minicbor::decode::<msg::Msg>(data.as_slice())
+        .map(|msg| info!("event {}", msg))
+        .map_err(|e| {
+            warn!("Failed to decode {:?}", e);
+        });
+    Some(LedCmd::Pulse { duration: 100 })
 }
 
 fn esp_now_to_uart(ev: &EspNowEvent) -> Option<UartCmd> {
@@ -159,10 +174,12 @@ fn esp_now_to_uart(ev: &EspNowEvent) -> Option<UartCmd> {
             data,
         } => data,
     };
-    Some(UartCmd::Txd(cobs_crc_frame(data).unwrap()))
+    let data = cobs_crc_frame(data).unwrap();
+    Some(UartCmd::Txd(data))
 }
 
 fn rxd_to_framer(ev: &UartEvent) -> Option<FramerCmd> {
+    info!("rxd_to_framer {:?}", ev);
     match ev {
         UartEvent::Rxd(data) => Some(FramerCmd::Deframe(data.clone())),
     }

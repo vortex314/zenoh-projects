@@ -5,12 +5,14 @@ runner = "espflash flash --monitor"
 
 [env]
 ESP_LOG="INFO"
+PATH="/home/lieven/.rustup/toolchains/esp/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin:$PATH"
+LIBCLANG_PATH="/home/lieven/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-17.0.1_20240419/esp-clang/lib"
+
 
 [build]
 rustflags = [
   "-C", "link-arg=-nostartfiles",
 ]
-
 target = "xtensa-esp32-none-elf"
 
 [unstable]
