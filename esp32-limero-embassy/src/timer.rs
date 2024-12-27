@@ -6,6 +6,8 @@ use alloc::collections::BTreeMap;
 use embassy_time::Duration;
 use embassy_time::Instant;
 
+use anyhow::Result;
+
 use super::async_wait_millis;
 #[derive(Debug, Clone, Copy)]
 pub struct Timer {
@@ -106,6 +108,9 @@ impl Timers {
         }
         expired
     }
+    pub fn with_timer<F>(&mut self, id: u32, func : F ) -> Result<()> where F: Fn(&mut Timer)-> () {
+        self.timers.get_mut(&id).map(|timer| func(timer)).ok_or_else(|| anyhow::anyhow!("Timer not found"))
+    }
     pub fn set_interval(&mut self, id: u32, interval: Duration) {
         if let Some(timer) = self.timers.get_mut(&id) {
             timer.set_interval(interval);
@@ -152,6 +157,7 @@ impl Timers {
                 0
             }
         } else {
+            info!("No timers active");
             async_wait_millis(10000000).await;
             0
         }

@@ -13,7 +13,6 @@ To avoid data corruption, the data is framed using COBS and CRC8
 #![no_main]
 #![allow(unused_imports)]
 #[allow(dead_code)]
-
 use core::{cell::RefCell, mem::MaybeUninit};
 use embassy_executor::Spawner;
 use embassy_futures::select::select;
@@ -65,6 +64,8 @@ use msg::framer::cobs_crc_frame;
 mod translator;
 use translator::*;
 
+static mut TRANSLATOR: Option<Translator> = None;
+
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) -> ! {
     esp_alloc::heap_allocator!(72 * 1024);
@@ -88,7 +89,6 @@ async fn main(_spawner: Spawner) -> ! {
 
     info!("Starting ESP-NOW actor");
     let esp_now = esp_wifi::esp_now::EspNow::new(&init, peripherals.WIFI).unwrap();
-    info!("esp-now version {}", esp_now.get_version().unwrap());
     let mut esp_now_actor = EspNowActor::new(esp_now);
 
     info!("Starting LedActor");
@@ -96,42 +96,82 @@ async fn main(_spawner: Spawner) -> ! {
     let led_pin: Output = Output::new(led_pin, Level::Low);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
-    info!("Starting UART0");
-    /*
-        let uart0 = Uart::new_async_with_config(
-            peripherals.UART0,
-            Config {
-                baudrate: 115200,
-                data_bits: DataBits::DataBits8,
-                parity: Parity::ParityNone,
-                stop_bits: StopBits::STOP1,
-                clock_source: ClockSource::Apb,
-                rx_fifo_full_threshold: 64,
-                rx_timeout: Some(10),
-            },
-            io.pins.gpio1,
-            io.pins.gpio3,
-        )
-        .unwrap();
+    unsafe {
+        TRANSLATOR = Some(Translator::new());
+    };
 
-        let mut uart_actor = UartActor::new(uart0, 0x00); // COBS separator == 0x00
-                                                          //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
-    */
+    info!("Starting UART0");
+
+    let uart0 = Uart::new_async_with_config(
+        peripherals.UART0,
+        Config {
+            baudrate: 115200,
+            data_bits: DataBits::DataBits8,
+            parity: Parity::ParityNone,
+            stop_bits: StopBits::STOP1,
+            clock_source: ClockSource::Apb,
+            rx_fifo_full_threshold: 64,
+            rx_timeout: Some(10),
+        },
+        io.pins.gpio3,
+        io.pins.gpio1,
+    )
+    .unwrap();
+
+    let mut uart_actor = UartActor::new(uart0, 0x00); // COBS separator == 0x00
+                                                      //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
+
     let mut framer_actor = FramerActor::new(vec![]);
     // let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
 
     esp_now_actor.map_to(event_to_blink, led_actor.handler()); // ESP-NOW -> LED
 
-    //    esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless )
+    esp_now_actor.for_each(|ev| {
+        let data = match ev {
+            EspNowEvent::Rxd {
+                peer: _,
+                data,
+                rssi: _,
+                channel: _,
+            } => data,
+            EspNowEvent::Broadcast {
+                peer: _,
+                data,
+                rssi: _,
+                channel: _,
+            } => data,
+        };
+        let msg = minicbor::decode::<msg::Msg>(&data).ok();
+        msg.as_ref()
+            .filter(|msg| msg.info_topic.is_some() || msg.info_prop.is_some())
+            .map(|msg| unsafe {
+                TRANSLATOR
+                    .as_mut()
+                    .map(|translator| translator.analyse(msg));
+            });
+        msg.as_ref()
+            .filter(|msg| msg.publish.is_some())
+            .as_ref()
+            .map(|msg| unsafe {
+                TRANSLATOR
+                    .as_ref()
+                    .map(|translator| translator.translate(msg))
+            })
+            .map(|cmd| info!("cmd {:?}", cmd));
+    });
 
-    //  uart_actor.map_to(rxd_to_framer, framer_actor.handler()); // UART -> deframer -> ESP-NOW
+    esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless )
+
+    uart_actor.map_to(rxd_to_framer, framer_actor.handler()); // UART -> deframer -> ESP-NOW
     framer_actor.map_to(framer_to_esp_now, esp_now_actor.handler()); // deframer -> ESP-NOW
 
     loop {
         info!("loop");
-        //     select(
-        //         uart_actor.run(),
-        select(led_actor.run(), esp_now_actor.run()).await;
+        select(
+            uart_actor.run(),
+            select(led_actor.run(), esp_now_actor.run()),
+        )
+        .await;
     }
 }
 

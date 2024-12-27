@@ -23,7 +23,7 @@ use anyhow::Result;
 use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use minicbor::{Decode, Encode};
-use msg::fnv;
+use msg::{fnv, InfoProp, Msg};
 
 pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 
@@ -39,7 +39,7 @@ pub enum EspNowEvent {
     Rxd { peer: [u8; 6], data: Vec<u8> },
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum EspNowCmd {
     Txd { peer: [u8; 6], data: Vec<u8> },
 }
@@ -161,7 +161,7 @@ impl EspNowActor {
         let mut pub_msg = EspNowProps::default();
         pub_msg.name = Some("esp_now_actor".to_string());
         msg.src = Some(fnv("lm1/esp_now"));
-        msg.pub_req = Some(minicbor::to_vec(pub_msg).expect("Encode failed"));
+        msg.publish = Some(minicbor::to_vec(pub_msg).expect("Encode failed"));
 
         let v = msg::cbor::encode(&msg);
         info!("Broadcast : {}", msg);
@@ -170,16 +170,16 @@ impl EspNowActor {
     }
 
     async fn send_info(&mut self) {
-        let mut msg = msg::Msg::default();
-        let mut info_map = msg::InfoMap::default();
-        info_map.id = 0;
-        info_map.name = Some("esp_now_actor".to_string());
-        info_map.desc = Some("esp_now_actor as Actor".to_string());
-        info_map.prop_type = Some(msg::PropType::STR);
-        info_map.prop_mode = Some(msg::PropMode::Read);
+        let mut msg = Msg::default();
+        let mut info_prop = InfoProp::default();
+        info_prop.id = 0;
+        info_prop.name = Some("esp_now_actor".to_string());
+        info_prop.desc = Some("esp_now_actor as Actor".to_string());
+        info_prop.prop_type = Some(msg::PropType::STR);
+        info_prop.prop_mode = Some(msg::PropMode::Read);
 
         msg.src = Some(fnv("lm1/esp_now"));
-        msg.info_reply = Some(info_map);
+        msg.info_prop = Some(info_prop);
 
         let v = msg::cbor::encode(&msg);
         info!("Sending : {}", msg);

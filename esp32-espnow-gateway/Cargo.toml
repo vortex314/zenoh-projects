@@ -27,7 +27,8 @@ actors = {path = "../esp32-actors"}
 msg = {path = "../msg"}
 
 hashbrown = {version = "0.15.2"}
-json = {version = "0.12.4"}
+serde-json-core-fmt = {version = "0.1.1"}
+serde = {version = "1.0.209",default-features = false, features = ["derive","alloc"]}
 
 [features]
 default = []

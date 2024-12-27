@@ -88,6 +88,7 @@ impl LedActor {
                 self.set_led_high(true);
                 self.timers
                     .set_interval(0, Duration::from_millis(duration as u64));
+                self.timers.start(0);
             }
         }
     }
@@ -100,6 +101,7 @@ impl LedActor {
             }
             LedState::PULSE  => {
                 self.set_led_high(false);
+                let _ = self.timers.with_timer(0, |t| t.stop());
             }
             _ => {}
         }

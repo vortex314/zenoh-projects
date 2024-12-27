@@ -169,7 +169,7 @@ async fn listener(
     receiver: &mut EspNowReceiver<'static>,
 ) -> EspNowEvent {
     let r = receiver.receive_async().await;
-    info!("source {:?}", mac_to_string(&r.info.src_address));
+    debug!("source {:?}", mac_to_string(&r.info.src_address));
     debug!("rx_control {:?}", r.info.rx_control);
     debug!("Received {:?}", r.get_data());
     if r.info.dst_address == BROADCAST_ADDRESS {

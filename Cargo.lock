@@ -856,11 +856,12 @@ dependencies = [
  "esp-hal-embassy",
  "esp-wifi",
  "hashbrown 0.15.2",
- "json",
  "limero",
  "log",
  "minicbor",
  "msg",
+ "serde",
+ "serde-json-core-fmt",
 ]
 
 [[package]]
@@ -1083,12 +1084,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "json"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "078e285eafdfb6c4b434e0d31e8cfcb5115b651496faca5749b88fafd4f23bfd"
-
-[[package]]
 name = "libc"
 version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1115,6 +1110,7 @@ dependencies = [
 name = "limero"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-channel",
  "embassy-sync 0.5.0",
  "embassy-time",
@@ -1524,9 +1520,9 @@ checksum = "a5c5996e5d1dec34b0dff3285e27124e70964504e3fd361bce330dc476cebafd"
 
 [[package]]
 name = "serde"
-version = "1.0.210"
+version = "1.0.216"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8e3592472072e6e22e0a54d5904d9febf8508f65fb8552499a1abc7d1078c3a"
+checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
 dependencies = [
  "serde_derive",
 ]
@@ -1543,10 +1539,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_derive"
-version = "1.0.210"
+name = "serde-json-core-fmt"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "243902eda00fad750862fc144cea25caca5e20d615af0a81bee94ca738f1df1f"
+checksum = "d60f96e644936ac57b9b2fbfd662db2c1dd1014eb8784def9ac2bd4269bdb4c3"
+dependencies = [
+ "ryu",
+ "serde",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.216"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
 dependencies = [
  "proc-macro2",
  "quote",

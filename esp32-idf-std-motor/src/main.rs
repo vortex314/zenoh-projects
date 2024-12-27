@@ -78,6 +78,7 @@ fn main_task() -> anyhow::Result<()> {
                 Either3::Second(_) => {}
                 Either3::Third(_) => {}
             }
+            info!("Main loop ");
         }
     });
     Ok(())
@@ -85,7 +86,7 @@ fn main_task() -> anyhow::Result<()> {
 
 fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
     match ev {
-        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 10 }),
+        EspNowEvent::Rxd { peer: _, data: _ } => Some(LedCmd::Pulse { duration: 100 }),
     }
 }
 

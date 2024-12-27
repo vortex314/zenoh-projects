@@ -30,7 +30,7 @@ use limero::{timer::Timer, timer::Timers};
 use limero::{Actor, CmdQueue, EventHandlers, Handler};
 use log::{ error, info};
 use minicbor::{Decode, Encode};
-use msg::{fnv, InfoMap, Msg};
+use msg::{fnv, InfoProp, InfoTopic, Msg};
 use msg::{PropMode, PropType};
 use std::ffi::c_void;
 
@@ -236,19 +236,16 @@ impl MotorActor {
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
     }
 
-    fn get_dev_info(&self) -> Result<InfoMap> {
-        Ok(InfoMap {
-            id: -1,
+    fn get_dev_info(&self) -> Result<InfoTopic> {
+        Ok(InfoTopic {
             name: Some(self.topic_name.clone()),
             desc: Some("MotorActor as Actor".to_string()),
-            prop_type: Some(PropType::OBJECT),
-            prop_mode: Some(PropMode::Read),
         })
     }
-    fn get_prop_info(&self, prop: u32) -> Result<InfoMap> {
+    fn get_prop_info(&self, prop: u32) -> Result<InfoProp> {
         let str = &MOTOR_INTERFACE[prop as usize];
-        Ok(InfoMap {
-            id: prop as i8,
+        Ok(InfoProp {
+            id: prop as u8,
             name: Some(str.name.to_string()),
             desc: Some(str.desc.to_string()),
             prop_type: Some(str.prop_type),
@@ -456,7 +453,7 @@ impl MotorActor {
         match cmd {
             MotorCmd::Msg { msg } => {
                 if msg.dst.is_some_and(|dst| dst == self.topic_id) {
-                    msg.pub_req.map(|pub_vec| {
+                    msg.publish.map(|pub_vec| {
                         minicbor::decode::<MotorMsg>(&pub_vec)
                             .ok()
                             .map(|motor_msg| self.set_prop_values(&motor_msg))
@@ -473,7 +470,7 @@ impl MotorActor {
                 let pub_msg = Msg {
                     src: Some(self.topic_id),
                     dst: None,
-                    pub_req: Some(data),
+                    publish: Some(data),
                     ..Default::default()
                 };
                 self.eventhandlers.handle(&MotorEvent::Msg { msg: pub_msg });
@@ -483,7 +480,7 @@ impl MotorActor {
                     let dev_info_msg = Msg {
                         src: Some(self.topic_id),
                         dst: None,
-                        info_reply: Some(self.get_dev_info()?),
+                        info_topic: Some(self.get_dev_info()?),
                         ..Default::default()
                     };
                     self.eventhandlers
@@ -492,7 +489,7 @@ impl MotorActor {
                     let prop_info_msg = Msg {
                         src: Some(self.topic_id),
                         dst: None,
-                        info_reply: Some(self.get_prop_info(self.prop_counter)?),
+                        info_prop: Some(self.get_prop_info(self.prop_counter)?),
                         ..Default::default()
                     };
                     self.prop_counter += 1u32;
@@ -508,7 +505,7 @@ impl MotorActor {
             TimerId::PidTimer => {
                 let delta_t = self.last_measured_rpm.elapsed().as_millis() as f32 / 1000.0;
                 if  delta_t > 1.0 {
-                info!("No more measurements, delta_t:{} sec",delta_t);  
+                info!("No recent rpm measurements, delta_t:{} sec",delta_t);  
                 self.measured_rpm = self.target_rpm / 2.0;
                 let pid = self.pid_update(delta_t,self.target_rpm-self.measured_rpm);
                 self.pwm_percent = MotorActor::pwm_clip( pid);

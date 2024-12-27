@@ -120,13 +120,13 @@ impl Msg {
             .map(|return_code| s.push_str(&format!("return_code: {},", return_code)));
         self.publish
             .as_ref()
-            .map(|pub_req| s.push_str(&format!("pub_req:  {},", minicbor::display(pub_req))));
+            .map(|publish| s.push_str(&format!("publish:  {},", minicbor::display(publish))));
         self.info_req
             .as_ref()
             .map(|info_req| s.push_str(&format!("info_req: {},", minicbor::display(info_req))));
         self.info_prop
             .as_ref()
-            .map(|info_reply| s.push_str(&format!("info_reply: {{ {} }},", info_reply)));
+            .map(|info_prop| s.push_str(&format!("info_prop: {{ {} }},", info_prop)));
         self.info_topic
             .as_ref()
             .map(|info_topic| s.push_str(&format!("info_topic: {{ {} }},", info_topic)));
@@ -209,14 +209,8 @@ pub fn request(msg_type: MsgType) -> u8 {
     msg_type as u8
 }
 
-pub type PropertyId = i8;
+pub type PropertyId = u8;
 
-#[repr(i8)]
-pub enum MetaPropertyId {
-    RetCode = -1,
-    Qos = -2,
-    MsgId = -3,
-}
 #[derive(Encode, Decode, Clone, Debug, Default)]
 #[cbor(map)]
 pub struct InfoProp {
@@ -265,7 +259,7 @@ impl Display for InfoProp {
 
 #[derive(Encode, Decode, Clone)]
 #[cbor(index_only)]
-#[repr(i8)]
+#[repr(u8)]
 pub enum InfoPropertyId {
     #[n(0)]
     PropId = 0,
@@ -281,7 +275,7 @@ pub enum InfoPropertyId {
 
 #[derive(Encode, Decode, Clone, Debug, Copy)]
 #[cbor(index_only)]
-#[repr(i8)]
+#[repr(u8)]
 pub enum PropType {
     #[n(0)]
     UINT = 0,
@@ -301,7 +295,7 @@ pub enum PropType {
 
 #[derive(Encode, Decode, Clone, Debug, Copy)]
 #[cbor(index_only)]
-#[repr(i8)]
+#[repr(u8)]
 pub enum PropMode {
     #[n(0)]
     Read = 0,
