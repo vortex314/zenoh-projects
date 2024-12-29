@@ -11,5 +11,5 @@
         "editor.defaultFormatter": "DotJoshJohnson.xml",
         "editor.tabSize": 2
     },
-    "git.ignoreLimitWarning": true,
+    "git.ignoreLimitWarning": false,
 }

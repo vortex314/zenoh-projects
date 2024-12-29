@@ -26,8 +26,8 @@
 #include <zenoh-pico.h>
 
 #if Z_FEATURE_PUBLICATION == 1
-#define ESP_WIFI_SSID "SSID"
-#define ESP_WIFI_PASS "PASS"
+#define STRINGIFY(X) #X
+#define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 #define WIFI_CONNECTED_BIT BIT0
 
@@ -35,13 +35,13 @@ static bool s_is_wifi_connected = false;
 static EventGroupHandle_t s_event_group_handler;
 static int s_retry_count = 0;
 
-#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 1 // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
 #define MODE "client"
-#define CONNECT ""  // If empty, it will scout
+#define CONNECT "" // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
 #define MODE "peer"
-#define CONNECT "udp/224.0.0.225:7447#iface=en0"
+#define CONNECT "udp/224.0.0.123:7447#iface=lo" // If empty, it will scout
 #else
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
@@ -49,21 +49,29 @@ static int s_retry_count = 0;
 #define KEYEXPR "demo/example/zenoh-pico-pub"
 #define VALUE "[ESPIDF]{ESP32} Publication from Zenoh-Pico!"
 
-static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+    {
         esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_count < ESP_MAXIMUM_RETRY) {
+    }
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
+    {
+        if (s_retry_count < ESP_MAXIMUM_RETRY)
+        {
             esp_wifi_connect();
             s_retry_count++;
         }
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    }
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+    {
         xEventGroupSetBits(s_event_group_handler, WIFI_CONNECTED_BIT);
         s_retry_count = 0;
     }
 }
 
-void wifi_init_sta(void) {
+void wifi_init_sta(void)
+{
     s_event_group_handler = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -82,9 +90,9 @@ void wifi_init_sta(void) {
         esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, &handler_got_ip));
 
     wifi_config_t wifi_config;
-    bzero(&wifi_config,sizeof(wifi_config));
-    wifi_config.sta.ssid = ESP_WIFI_SSID;
-    wifi_config.sta.password = ESP_WIFI_PASS;
+    bzero(&wifi_config, sizeof(wifi_config));
+    strcpy((char *)wifi_config.sta.ssid, "Merckx4");
+    strcpy((char *)wifi_config.sta.password, S(WIFI_PASS));
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -92,7 +100,8 @@ void wifi_init_sta(void) {
 
     EventBits_t bits = xEventGroupWaitBits(s_event_group_handler, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
-    if (bits & WIFI_CONNECTED_BIT) {
+    if (bits & WIFI_CONNECTED_BIT)
+    {
         s_is_wifi_connected = true;
     }
 
@@ -101,9 +110,11 @@ void wifi_init_sta(void) {
     vEventGroupDelete(s_event_group_handler);
 }
 
-void app_main() {
+void app_main()
+{
     esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
     }
@@ -112,28 +123,33 @@ void app_main() {
     // Set WiFi in STA mode and trigger attachment
     printf("Connecting to WiFi...");
     wifi_init_sta();
-    while (!s_is_wifi_connected) {
+    while (!s_is_wifi_connected)
+    {
         printf(".");
-        sleep(1);
-    }
-    printf("OK!\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);  
+    };
+    printf("Wifi connected \n");
 
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config;
     z_config_default(&config);
     zp_config_insert(z_loan_mut(config), Z_CONFIG_MODE_KEY, MODE);
-    if (strcmp(CONNECT, "") != 0) {
-        zp_config_insert(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, CONNECT);
+    if (strcmp(CONNECT, "") != 0)
+    {
+//        zp_config_insert(z_loan_mut(config), Z_CONFIG_CONNECT_KEY, CONNECT);
+        zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT);
     }
 
     // Open Zenoh session
     printf("Opening Zenoh Session...");
     z_owned_session_t s;
-    if (z_open(&s, z_move(config), NULL) < 0) {
-        printf("Unable to open session!\n");
+    z_result_t res = z_open(&s, z_move(config), NULL);
+    if (res < 0)
+    {
+        printf("Unable to open session! %d \n", res);
         exit(-1);
     }
-    printf("OK\n");
+    printf("Zenoh session opened \n");
 
     // Start the receive and the session lease loop for zenoh-pico
     zp_start_read_task(z_loan_mut(s), NULL);
@@ -143,22 +159,20 @@ void app_main() {
     z_owned_publisher_t pub;
     z_view_keyexpr_t ke;
     z_view_keyexpr_from_str_unchecked(&ke, KEYEXPR);
-    if (z_declare_publisher(z_loan(s), &pub, z_loan(ke), NULL) < 0) {
+    if (z_declare_publisher(z_loan(s), &pub, z_loan(ke), NULL) < 0)
+    {
         printf("Unable to declare publisher for key expression!\n");
         exit(-1);
     }
     printf("OK\n");
 
     char buf[256];
-    for (int idx = 0; 1; ++idx) {
-        sleep(1);
-        sprintf(buf, "[%4d] %s", idx, VALUE);
-        printf("Putting Data ('%s': '%s')...\n", KEYEXPR, buf);
-
-        // Create payload
-        z_owned_bytes_t payload;
+    z_owned_bytes_t payload;
+    for (int idx = 0; 1; ++idx)
+    {
+        vTaskDelay(5 / portTICK_PERIOD_MS);
+        sprintf(buf, "[%6d] heap : %d ,%s  ", idx, esp_get_free_heap_size(), VALUE);
         z_bytes_copy_from_str(&payload, buf);
-
         z_publisher_put(z_loan(pub), z_move(payload), NULL);
     }
 
@@ -169,7 +183,8 @@ void app_main() {
     printf("OK!\n");
 }
 #else
-void app_main() {
+void app_main()
+{
     printf("ERROR: Zenoh pico was compiled without Z_FEATURE_PUBLICATION but this example requires it.\n");
 }
 #endif
