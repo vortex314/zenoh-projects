@@ -28,6 +28,8 @@ mod transport;
 use core::result::Result;
 use transport::*;
 
+mod translator;
+use translator::*;
 
 mod pubsub;
 use pubsub::*;

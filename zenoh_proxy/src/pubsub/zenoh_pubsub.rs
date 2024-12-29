@@ -65,7 +65,7 @@ impl Actor<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
                             self.events.handle(&PubSubEvent::Disconnected);
                         }
                         Some(PubSubCmd::Publish { topic, payload}) => {
-                            debug!("To zenoh: {}:{}", topic,payload_display(&payload));
+                            info!("To zenoh: {}:[{}]", topic,payload.len());
                             let _res = static_session
                                 .put(&topic,payload.as_slice())
                                 .encoding(KnownEncoding::AppOctetStream)

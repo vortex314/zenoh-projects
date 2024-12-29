@@ -173,7 +173,7 @@ where
             fn handle(&mut self, event: &E) {
                 let r = self.sender.try_send(event.clone());
                 if r.is_err() {
-                    error!("Failed to send event");
+                    error!("Failed to send event {}",r.err().unwrap());
                 }
             }
         }

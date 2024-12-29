@@ -46,13 +46,13 @@ pub const MAC_BROADCAST: [u8; 6] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
 #[cbor(map)]
 struct MotorMsg {
     #[n(0)]
-    target_rpm: Option<f32>,
+    rpm_target: Option<f32>,
     #[n(1)]
-    measured_rpm: Option<f32>,
+    rpm_measured: Option<f32>,
     #[n(2)]
-    target_current: Option<f32>,
+    current_target: Option<f32>,
     #[n(3)]
-    measured_current: Option<f32>,
+    current_measured: Option<f32>,
     #[n(4)]
     rpm_kp: Option<f32>,
     #[n(5)]
@@ -90,29 +90,29 @@ impl InfoStruct {
 static MOTOR_INTERFACE: &[InfoStruct] = &[
     InfoStruct {
         id: 0,
-        name: "target_rpm",
+        name: "rpm_target",
         desc: "target desired RPM ",
         prop_type: PropType::FLOAT,
         prop_mode: PropMode::ReadWrite,
     },
     InfoStruct {
         id: 1,
-        name: "measured_rpm",
+        name: "rpm_measured",
         desc: "measured RPM ",
         prop_type: PropType::FLOAT,
         prop_mode: PropMode::Read,
     },
     InfoStruct {
         id: 2,
-        name: "target_current",
-        desc: "target current mA",
+        name: "current_target",
+        desc: "target current A",
         prop_type: PropType::FLOAT,
         prop_mode: PropMode::ReadWrite,
     },
     InfoStruct {
         id: 3,
-        name: "measured_current",
-        desc: "measured current mA",
+        name: "current_measured",
+        desc: "measured current A",
         prop_type: PropType::FLOAT,
         prop_mode: PropMode::Read,
     },
@@ -163,16 +163,16 @@ pub struct MotorActor {
     topic_name: String,
     topic_id: u32,
     prop_counter: u32,
-    target_rpm: f32,
-    measured_rpm: f32,
-    target_current: f32,
-    measured_current: f32,
+    rpm_target: f32,
+    rpm_measured: f32,
+    current_target: f32,
+    current_measured: f32,
     // PID info
     rpm_kp: f32,
     rpm_ki: f32,
     rpm_kd: f32,
     rpm_integral: f32,
-    last_measured_rpm: Instant  ,
+    last_rpm_measured: Instant  ,
     // Device driver info
     pwm_percent: f32,
     pwm_value: u32, // from 0 to TICKS_PER_PERIOD
@@ -197,15 +197,15 @@ impl MotorActor {
             topic_name: topic_name.clone(),
             topic_id: fnv(topic_name.as_str()),
             prop_counter: 0,
-            target_rpm: 500.,
-            measured_rpm: 0.,
-            target_current: 0.,
-            measured_current: 0.,
+            rpm_target: 500.,
+            rpm_measured: 0.,
+            current_target: 0.,
+            current_measured: 0.,
             rpm_kp: 0.1,
             rpm_ki: 0.01,
             rpm_kd: -0.000,
             rpm_integral: 0.0,
-            last_measured_rpm: Instant::now(),
+            last_rpm_measured: Instant::now(),
             pwm_percent: 20.0,
             pwm_value:350, // 20% duty cycle to test
             timer_handle: std::ptr::null_mut(),
@@ -218,19 +218,19 @@ impl MotorActor {
     }
     fn get_prop_values(&self) -> MotorMsg {
         MotorMsg {
-            target_rpm: Some(self.target_rpm),
-            measured_rpm: Some(self.measured_rpm),
-            target_current: Some(self.target_current),
-            measured_current: Some(self.measured_current),
+            rpm_target: Some(self.rpm_target),
+            rpm_measured: Some(self.rpm_measured),
+            current_target: Some(self.current_target),
+            current_measured: Some(self.current_measured),
             rpm_kp: Some(self.rpm_kp),
             rpm_ki: Some(self.rpm_ki),
             rpm_kd: Some(self.rpm_kd),
         }
     }
     fn set_prop_values(&mut self, msg: &MotorMsg) {
-        msg.target_rpm.map(|rpm| self.target_rpm = rpm);
-        msg.target_current
-            .map(|current| self.target_current = current);
+        msg.rpm_target.map(|rpm| self.rpm_target = rpm);
+        msg.current_target
+            .map(|current| self.current_target = current);
         msg.rpm_kp.map(|kp| self.rpm_kp = kp);
         msg.rpm_ki.map(|ki| self.rpm_ki = ki);
         msg.rpm_kd.map(|kd| self.rpm_kd = kd);
@@ -396,7 +396,7 @@ impl MotorActor {
     }
 
     fn pwm_stop(&mut self) -> Result<()> {
-        self.target_rpm = 0.;
+        self.rpm_target = 0.;
         self.pwm_value = 0;
         Ok(())
     }
@@ -503,11 +503,11 @@ impl MotorActor {
                 Ok(())
             }
             TimerId::PidTimer => {
-                let delta_t = self.last_measured_rpm.elapsed().as_millis() as f32 / 1000.0;
+                let delta_t = self.last_rpm_measured.elapsed().as_millis() as f32 / 1000.0;
                 if  delta_t > 1.0 {
                 info!("No recent rpm measurements, delta_t:{} sec",delta_t);  
-                self.measured_rpm = self.target_rpm / 2.0;
-                let pid = self.pid_update(delta_t,self.target_rpm-self.measured_rpm);
+                self.rpm_measured = self.rpm_target / 2.0;
+                let pid = self.pid_update(delta_t,self.rpm_target-self.rpm_measured);
                 self.pwm_percent = MotorActor::pwm_clip( pid);
                 self.pwm_value = MotorActor::pwm_percent_to_ticks(self.pwm_percent);
                 if self.pwm_value > TICKS_PER_PERIOD {
@@ -519,7 +519,7 @@ impl MotorActor {
                     self.pwm_value
                 ))
                 .unwrap();};
-                self.last_measured_rpm = Instant::now();
+                self.last_rpm_measured = Instant::now();
             }
                 Ok(())
             }
@@ -534,20 +534,20 @@ impl MotorActor {
                 let rpm = (hz as f32 * 60.) / 4.;
                 info!("Isr sum: {} count: {} freq : {} Hz. RPM = {} ", sum , count, hz, rpm);   
                 let delta_t :f32 = sum as f32 / 80_000_000.0; // sample time in seconds
-                self.measured_rpm = rpm ;
-                let pid = self.pid_update(delta_t,self.target_rpm-self.measured_rpm);
+                self.rpm_measured = rpm ;
+                let pid = self.pid_update(delta_t,self.rpm_target-self.rpm_measured);
                 self.pwm_percent = MotorActor::pwm_clip( pid);
                 self.pwm_value = MotorActor::pwm_percent_to_ticks(self.pwm_percent);
                 if self.pwm_value > TICKS_PER_PERIOD {
                     self.pwm_value = TICKS_PER_PERIOD;
                 }
-                info!("sum:{} count:{} rpm:{}/{} pid:{} pwm:{} pwm_value:{}",sum,count,self.measured_rpm,self.target_rpm,pid,self.pwm_percent,self.pwm_value);
+                info!("sum:{} count:{} rpm:{}/{} pid:{} pwm:{} pwm_value:{}",sum,count,self.rpm_measured,self.rpm_target,pid,self.pwm_percent,self.pwm_value);
                 unsafe { esp!(mcpwm_comparator_set_compare_value(
                     self.comparator_handle,
                     self.pwm_value
                 ))
                 .unwrap();};
-                self.last_measured_rpm = Instant::now();
+                self.last_rpm_measured = Instant::now();
 
             }
             _ => {

@@ -5,12 +5,12 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use embassy_sync::channel::Receiver;
-use embassy_sync::channel::Sender;
 use embassy_sync::blocking_mutex::raw::RawMutex;
 use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::channel::Channel;
 use embassy_sync::channel::DynamicSender;
+use embassy_sync::channel::Receiver;
+use embassy_sync::channel::Sender;
 use embassy_time::Duration;
 use embassy_time::Instant;
 use log::error;
@@ -25,20 +25,43 @@ pub trait Handler<T>: Send {
     fn handle(&mut self, item: &T);
 }
 
+pub trait Publisher<T> {
+    fn add_listener(&mut self, listener: Box<dyn Handler<T>>);
+}
+
 pub type Endpoint<T> = Box<dyn Handler<T>>;
 
-pub struct HandlerFunction<C,F> where F: FnMut(&C) -> (),C:Send {
+pub struct HandlerFunction<C, F>
+where
+    F: FnMut(&C) -> (),
+    C: Send,
+{
     func: F,
     v: core::marker::PhantomData<C>,
 }
 
-impl <C,F> HandlerFunction<C,F>  where F: FnMut(&C) -> (), C:Send {
-    pub fn new(func: F) -> Self where F: FnMut(&C) -> (), C:Send {
-        Self { func, v: core::marker::PhantomData }
+impl<C, F> HandlerFunction<C, F>
+where
+    F: FnMut(&C) -> (),
+    C: Send,
+{
+    pub fn new(func: F) -> Self
+    where
+        F: FnMut(&C) -> (),
+        C: Send,
+    {
+        Self {
+            func,
+            v: core::marker::PhantomData,
+        }
     }
 }
 
-impl<C,F> Handler<C> for HandlerFunction<C,F> where F: FnMut(&C) -> ()+Send,C:Send {
+impl<C, F> Handler<C> for HandlerFunction<C, F>
+where
+    F: FnMut(&C) -> () + Send,
+    C: Send,
+{
     fn handle(&mut self, cmd: &C) {
         (self.func)(cmd);
     }
@@ -48,6 +71,30 @@ pub trait Actor<CMD, EVENT> {
     async fn run(&mut self);
     fn handler(&self) -> Box<dyn Handler<CMD>>;
     fn add_listener(&mut self, handler: Box<dyn Handler<EVENT>>);
+    fn map<EVENT2, F>(&mut self, func: F) -> ()
+    where
+        F: Fn(&EVENT) -> () + 'static + Send,
+        CMD: 'static,
+        EVENT: 'static,
+        EVENT2: 'static,
+    {
+        struct Lambda<EV1> {
+            func: Box<dyn Fn(&EV1) -> () + Send + 'static>,
+        }
+        impl<EV1> Handler<EV1> for Lambda<EV1>
+        where
+            EV1: 'static,
+        {
+            fn handle(&mut self, event: &EV1) {
+                (self.func)(event);
+            }
+        }
+        let lambda = Box::new(Lambda::<EVENT> {
+            func: Box::new(func),
+        });
+        self.add_listener(lambda);
+    }
+
     fn map_to<CMD2>(&mut self, func: fn(&EVENT) -> Option<CMD2>, handler: Box<dyn Handler<CMD2>>)
     where
         CMD2: 'static,
@@ -90,8 +137,15 @@ pub trait Actor<CMD, EVENT> {
 
         self.add_listener(Box::new(handler));
     }
-    fn for_all<F>(&mut self, func :  F ) where EVENT: 'static, Self: Actor<CMD, EVENT> , F: FnMut(&EVENT) -> (), F : Sized+Send+'static,EVENT:Send {
-        let handler = HandlerFunction::<EVENT,F>::new(func);
+    fn for_all<F>(&mut self, func: F)
+    where
+        EVENT: 'static,
+        Self: Actor<CMD, EVENT>,
+        F: FnMut(&EVENT) -> (),
+        F: Sized + Send + 'static,
+        EVENT: Send,
+    {
+        let handler = HandlerFunction::<EVENT, F>::new(func);
         self.add_listener(Box::new(handler));
     }
 }
@@ -118,10 +172,9 @@ pub trait ActorExt<CMD, EVENT> {
     }
 }
 
-
 pub struct CmdQueue<T> {
-    sender : async_channel::Sender<T>,
-    receiver : async_channel::Receiver<T>,
+    sender: async_channel::Sender<T>,
+    receiver: async_channel::Receiver<T>,
 }
 
 impl<T> CmdQueue<T>
@@ -129,8 +182,8 @@ where
     T: 'static + Clone + Send,
 {
     pub fn new(capacity: usize) -> Self {
-        let (sender,receiver) = async_channel::bounded(capacity);
-        Self { sender,receiver}
+        let (sender, receiver) = async_channel::bounded(capacity);
+        Self { sender, receiver }
     }
 
     pub async fn next(&mut self) -> Option<T> {
@@ -145,7 +198,7 @@ where
             sender: async_channel::Sender<E>,
         }
 
-        impl<'ch,E> Handler<E> for HandlerImpl<E>
+        impl<'ch, E> Handler<E> for HandlerImpl<E>
         where
             E: Clone + Send,
         {
@@ -192,14 +245,12 @@ pub async fn async_wait_millis(millis: u32) -> () {
     embassy_time::Timer::after_millis(millis as u64).await;
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn it_works() {
-        
         assert_eq!(5, 4);
     }
 }

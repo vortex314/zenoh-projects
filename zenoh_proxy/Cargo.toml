@@ -30,7 +30,9 @@ cobs={ version = "0.2.3", default-features=false,features = [] }
 crc = { version = "3.0.1", features = [] }
 limero = { path = "../limero-linux-tokio" }
 msg = { path = "../msg" }
-anyhow = "*"
+anyhow = "1.0.95"
+hashbrown = "0.15.2"
+serde-json-core-fmt = "0.1.0"
 
 
 [features]

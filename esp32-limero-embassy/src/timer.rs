@@ -157,7 +157,6 @@ impl Timers {
                 0
             }
         } else {
-            info!("No timers active");
             async_wait_millis(10000000).await;
             0
         }

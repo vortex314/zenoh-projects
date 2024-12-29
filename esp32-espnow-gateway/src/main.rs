@@ -61,11 +61,6 @@ use actors::sys_actor::*;
 use actors::uart_actor::*;
 use msg::framer::cobs_crc_frame;
 
-mod translator;
-use translator::*;
-
-static mut TRANSLATOR: Option<Translator> = None;
-
 #[esp_hal_embassy::main]
 async fn main(_spawner: Spawner) -> ! {
     esp_alloc::heap_allocator!(72 * 1024);
@@ -96,10 +91,6 @@ async fn main(_spawner: Spawner) -> ! {
     let led_pin: Output = Output::new(led_pin, Level::Low);
     let mut led_actor = LedActor::new(led_pin); // pass as OutputPin
 
-    unsafe {
-        TRANSLATOR = Some(Translator::new());
-    };
-
     info!("Starting UART0");
 
     let uart0 = Uart::new_async_with_config(
@@ -113,55 +104,15 @@ async fn main(_spawner: Spawner) -> ! {
             rx_fifo_full_threshold: 64,
             rx_timeout: Some(10),
         },
-        io.pins.gpio3,
-        io.pins.gpio1,
+        io.pins.gpio3, //RXD on gpio3
+        io.pins.gpio1, //TXD on gpio1
     )
     .unwrap();
 
     let mut uart_actor = UartActor::new(uart0, 0x00); // COBS separator == 0x00
-                                                      //  let uart_handler = mk_static!(Endpoint<UartCmd>, uart_actor.handler());
-
     let mut framer_actor = FramerActor::new(vec![]);
-    // let framer_handler = mk_static!(Endpoint<FramerCmd>, framer_actor.handler());
-
     esp_now_actor.map_to(event_to_blink, led_actor.handler()); // ESP-NOW -> LED
-
-    esp_now_actor.for_each(|ev| {
-        let data = match ev {
-            EspNowEvent::Rxd {
-                peer: _,
-                data,
-                rssi: _,
-                channel: _,
-            } => data,
-            EspNowEvent::Broadcast {
-                peer: _,
-                data,
-                rssi: _,
-                channel: _,
-            } => data,
-        };
-        let msg = minicbor::decode::<msg::Msg>(&data).ok();
-        msg.as_ref()
-            .filter(|msg| msg.info_topic.is_some() || msg.info_prop.is_some())
-            .map(|msg| unsafe {
-                TRANSLATOR
-                    .as_mut()
-                    .map(|translator| translator.analyse(msg));
-            });
-        msg.as_ref()
-            .filter(|msg| msg.publish.is_some())
-            .as_ref()
-            .map(|msg| unsafe {
-                TRANSLATOR
-                    .as_ref()
-                    .map(|translator| translator.translate(msg))
-            })
-            .map(|cmd| info!("cmd {:?}", cmd));
-    });
-
     esp_now_actor.map_to(esp_now_to_uart, uart_actor.handler()); // ESP-NOW -> UART ( stateless )
-
     uart_actor.map_to(rxd_to_framer, framer_actor.handler()); // UART -> deframer -> ESP-NOW
     framer_actor.map_to(framer_to_esp_now, esp_now_actor.handler()); // deframer -> ESP-NOW
 
@@ -175,27 +126,7 @@ async fn main(_spawner: Spawner) -> ! {
     }
 }
 
-fn event_to_blink(ev: &EspNowEvent) -> Option<LedCmd> {
-    let data = match ev {
-        EspNowEvent::Rxd {
-            peer: _,
-            data,
-            rssi: _,
-            channel: _,
-        } => data,
-        EspNowEvent::Broadcast {
-            peer: _,
-            data,
-            rssi: _,
-            channel: _,
-        } => data,
-    };
-
-    let _ = minicbor::decode::<msg::Msg>(data.as_slice())
-        .map(|msg| info!("event {}", msg))
-        .map_err(|e| {
-            warn!("Failed to decode {:?}", e);
-        });
+fn event_to_blink(_ev: &EspNowEvent) -> Option<LedCmd> {
     Some(LedCmd::Pulse { duration: 100 })
 }
 
