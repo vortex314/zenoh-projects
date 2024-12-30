@@ -10,6 +10,8 @@
 //
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 
 #include <esp_event.h>
 #include <esp_log.h>
@@ -24,6 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <zenoh-pico.h>
+#include <nanocbor/nanocbor.h>
 
 #if Z_FEATURE_PUBLICATION == 1
 #define STRINGIFY(X) #X
@@ -110,8 +113,29 @@ void wifi_init_sta(void)
     vEventGroupDelete(s_event_group_handler);
 }
 
-void app_main()
+#define PWM_ID 0
+float pwm_duty = 0.0;
+
+#include <optional>
+
+struct MotorMsg {
+    std::optional<float> duty;
+};
+
+
+extern "C" void app_main()
 {
+    nanocbor_encoder_t enc;
+    uint8_t buffer[100];
+    nanocbor_encoder_init(&enc, buffer, sizeof(buffer));
+    nanocbor_fmt_map_indefinite(&enc);
+    nanocbor_fmt_int(&enc, PWM_ID);
+    nanocbor_fmt_int(&enc, pwm_duty);
+    nanocbor_fmt_end_indefinite(&enc);
+
+    int len = nanocbor_encoded_len(&enc);
+
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -171,7 +195,7 @@ void app_main()
     for (int idx = 0; 1; ++idx)
     {
         vTaskDelay(5 / portTICK_PERIOD_MS);
-        sprintf(buf, "[%6d] heap : %d ,%s  ", idx, esp_get_free_heap_size(), VALUE);
+        sprintf(buf, "[%6d] heap : %ld ,%s  ", idx, esp_get_free_heap_size(), VALUE);
         z_bytes_copy_from_str(&payload, buf);
         z_publisher_put(z_loan(pub), z_move(payload), NULL);
     }
