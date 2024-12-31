@@ -6,7 +6,7 @@
   // id: "1234567890abcdef",
 
   /// The node's mode (router, peer or client)
-  mode: "client",
+  mode: "router",
 
   /// The node's metadata (name, location, DNS name, etc.) Arbitrary JSON data not interpreted by zenoh and available in admin space @/<zid>/router, @/<zid>/peer or @/<zid>/client
   metadata: {
@@ -81,9 +81,9 @@
     /// The list of endpoints to listen on.
     /// Accepts a single list (e.g. endpoints: ["tcp/[::]:7447", "udp/[::]:7447"])
     /// or different lists for router, peer and client (e.g. endpoints: { router: ["tcp/[::]:7447"], peer: ["tcp/[::]:0"] }).
-    ///
+    ///"tcp/192.168.0.238:7447",
     /// See https://docs.rs/zenoh/latest/zenoh/config/struct.EndPoint.html
-    endpoints: { router: ["tcp/127.0.0.1:7447"], peer: ["tcp/[::]:0","udp/224.0.0.123:7447"] },
+    endpoints: { router: ["tcp/127.0.0.1:7447","tcp/192.168.0.238:7447","udp/192.168.0.238:7447"], peer: ["tcp/[::]:0","udp/224.0.0.123:7447"] },
 
     /// Global listen configuration,
     /// Accepts a single value or different values for router, peer and client.

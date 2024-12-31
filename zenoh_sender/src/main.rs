@@ -32,7 +32,7 @@ async fn main() {
 
     let config = Config::from_file("./config.json5").unwrap();
 
-    let key_expr = KeyExpr::try_from("**").unwrap();
+    let key_expr = KeyExpr::try_from("nikske/**").unwrap();
 
 
     println!("Opening session...");
