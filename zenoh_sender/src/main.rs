@@ -26,47 +26,47 @@ use logger::init;
 #[tokio::main]
 async fn main() {
     // Initiate logging
-  //  zenoh::init_log_from_env_or("info");
-    zenoh::init_log_from_env_or("debug");
+    //  zenoh::init_log_from_env_or("info");
+    zenoh::init_log_from_env_or("info");
     logger::init();
 
     let config = Config::from_file("./config.json5").unwrap();
 
-    let key_expr = KeyExpr::try_from("nikske/**").unwrap();
+    let key_expr = KeyExpr::try_from("**").unwrap();
 
-
-    println!("Opening session...");
+    info!("Opening session...");
     let session = zenoh::open(config).await.unwrap();
-
-
 
     println!("Declaring Subscriber on '{}'...", &key_expr);
     let subscriber = session.declare_subscriber(&key_expr).await.unwrap();
 
     println!("Press CTRL-C to quit...");
+    let mut counter = 0;
+    let mut start_time = std::time::Instant::now();
     while let Ok(sample) = subscriber.recv_async().await {
         // Refer to z_bytes.rs to see how to deserialize different types of message
-        let payload = sample
-            .payload()
-            .try_to_string()
-            .unwrap_or_else(|e| e.to_string().into());
-
-        print!(
-            ">> [Subscriber] Received {} ('{}': '{}')",
-            sample.kind(),
-            sample.key_expr().as_str(),
-            payload
-        );
-        if let Some(att) = sample.attachment() {
-            let att = att.try_to_string().unwrap_or_else(|e| e.to_string().into());
-            print!(" ({})", att);
+        let payload = sample.payload().to_bytes();
+        let bytes: Vec<u8> = payload.to_vec();
+        counter += 1;
+        if counter % 1000 == 0 {
+            info!("Received {} samples , {:.2} msg/sec ", counter, 1000 as f64 / start_time.elapsed().as_secs_f64());
+            info!(
+                ">> [Subscriber] Received {} ('{}': '{}')",
+                sample.kind(),
+                sample.key_expr().as_str(),
+                minicbor::display(&payload)
+            );
+            if let Some(att) = sample.attachment() {
+                let att = att.try_to_string().unwrap_or_else(|e| e.to_string().into());
+                info!(" ({})", att);
+            }
+            start_time = std::time::Instant::now();
         }
-        println!();
-        let session_info = session.info();
+        /*         let session_info = session.info();
         info!(" zid = {}", session.zid());
         for router in session_info.routers_zid().await {
             info!(" router = {}", router);
-        }
+        }*/
     }
 }
 

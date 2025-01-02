@@ -118,47 +118,65 @@ void wifi_init_sta(void) {
 #include <serdes.h>
 
 // using namespace std;
+#define TOPIC_NAME_KEY 0
+#define TOPIC_DESC_KEY 1
 
-class InfoTopic : public Serializable<InfoTopic> {
+class InfoTopic {
 public:
   std::optional<std::string> name;
   std::optional<std::string> desc;
   InfoTopic(){};
 
-  Result<Void> serialize(Serializer &ser) {
-    TEST_R(Void, ser.map_begin(), "Failed to encode map");
-    TEST_R(Void, ser.serialize(0, name), "Failed to encode name");
-    TEST_R(Void, ser.serialize(1, desc), "Failed to encode desc");
-    TEST_R(Void, ser.map_end(), "Failed to encode map");
-    return Result<Void>::Ok(true);
+  Res serialize(Serializer &ser) {
+    RET_ERR(ser.map_begin(), "Failed to encode map");
+    RET_ERR(ser.serialize(0, name), "Failed to encode name");
+    RET_ERR(ser.serialize(1, desc), "Failed to encode desc");
+    RET_ERR(ser.map_end(), "Failed to encode map");
+    return Res::Ok();
   }
 
-  Result<InfoTopic> deserialize(Deserializer &des) {
-    InfoTopic topic = InfoTopic();
-    TEST_R(InfoTopic, des.map_begin(), "Failed to decode map");
-    TEST_R(InfoTopic, des.deserialize_string(), "Failed to decode name");
-    TEST_R(InfoTopic, des.deserialize_string(), "Failed to decode desc");
-    TEST_R(InfoTopic, des.map_end(), "Failed to decode map");
-    return Result<InfoTopic>::Ok(topic);
+  static Res deserialize(Deserializer &des, InfoTopic &info_topic) {
+    des.iterate_map([&info_topic](Deserializer &des, uint32_t key) {
+      switch (key) {
+      case TOPIC_NAME_KEY: {
+        RET_ERR(des.deserialize(info_topic.name), "Failed to decode string");
+        break;
+      }
+      case TOPIC_DESC_KEY: {
+        RET_ERR(des.deserialize(info_topic.desc), "Failed to decode string");
+        break;
+      }
+      default:
+        // todo skip item
+        return Res::Ok(); // ignore unknown keys
+      }
+    });
+    return Res::Ok();
   }
 };
 
 typedef enum PropMode {
-  READ = 0,
-  WRITE = 1,
-  READ_WRITE = 2,
+  PROP_READ = 0,
+  PROP_WRITE = 1,
+  PROP_READ_WRITE = 2,
 } PropMode;
 typedef enum PropType {
-  UINT = 0,
-  INT = 1,
-  STR = 2,
+  PROP_UINT = 0,
+  PROP_INT = 1,
+  PROP_STR = 2,
   BYTES = 3,
-  FLOAT = 4,
-  OBJECT = 5,
-  ARRAY = 6,
+  PROP_FLOAT = 4,
+  PROP_OBJECT = 5,
+  PROP_ARRAY = 6,
 } PropType;
 
-class InfoProp : public Serializable<InfoProp> {
+#define PROP_ID_KEY 0
+#define PROP_NAME_KEY 1
+#define PROP_DESC_KEY 2
+#define PROP_TYPE_KEY 3
+#define PROP_MODE_KEY 4
+
+class InfoProp {
 public:
   std::optional<uint32_t> id;
   std::optional<std::string> name;
@@ -166,27 +184,53 @@ public:
   std::optional<PropType> type;
   std::optional<PropMode> mode;
 
-  Result<Void> serialize(Serializer &ser) {
-    TEST_R(Void, ser.map_begin(), "Failed to encode map");
-    TEST_R(Void, ser.serialize(0, id), "Failed to encode id");
-    TEST_R(Void, ser.serialize(1, name), "Failed to encode name");
-    TEST_R(Void, ser.serialize(2, desc), "Failed to encode desc");
-    TEST_R(Void, ser.serialize(3, type), "Failed to encode type");
-    TEST_R(Void, ser.serialize(4, mode), "Failed to encode mode");
-    TEST_R(Void, ser.map_end(), "Failed to encode map");
-    return Result<Void>::Ok(true);
+  Res serialize(Serializer &ser) {
+    RET_ERR(ser.map_begin(), "Failed to encode map");
+    RET_ERR(ser.serialize(PROP_ID_KEY, id), "Failed to encode id");
+    RET_ERR(ser.serialize(PROP_NAME_KEY, name), "Failed to encode name");
+    RET_ERR(ser.serialize(PROP_DESC_KEY, desc), "Failed to encode desc");
+    RET_ERR(ser.serialize(PROP_TYPE_KEY, (std::optional<uint32_t>)type),
+            "Failed to encode type");
+    RET_ERR(ser.serialize(PROP_MODE_KEY, (std::optional<uint32_t>)mode),
+            "Failed to encode mode");
+    RET_ERR(ser.map_end(), "Failed to encode map");
+    return Res::Ok();
   }
 
-  Result<InfoProp> deserialize(Deserializer &des) {
-    InfoProp prop = InfoProp();
-    TEST_R(InfoProp, des.map_begin(), "Failed to decode map");
-    TEST_R(InfoProp, des.deserialize_uint32(), "Failed to decode id");
-    TEST_R(InfoProp, des.deserialize_string(), "Failed to decode name");
-    TEST_R(InfoProp, des.deserialize_string(), "Failed to decode desc");
-    TEST_R(InfoProp, des.deserialize_uint32(), "Failed to decode type");
-    TEST_R(InfoProp, des.deserialize_uint32(), "Failed to decode mode");
-    TEST_R(InfoProp, des.map_end(), "Failed to decode map");
-    return Result<InfoProp>::Ok(prop);
+  static Res deserialize(Deserializer &des, InfoProp &prop) {
+    des.iterate_map([&prop](Deserializer &des, uint32_t key) {
+      switch (key) {
+      case PROP_ID_KEY: {
+        RET_ERR(des.deserialize(prop.id), "Failed to decode uint32_t");
+        break;
+      }
+      case PROP_NAME_KEY: {
+        RET_ERR(des.deserialize(prop.name), "Failed to decode string");
+        break;
+      }
+      case PROP_DESC_KEY: {
+        RET_ERR(des.deserialize(prop.desc), "Failed to decode string");
+        break;
+      }
+      case PROP_TYPE_KEY: {
+        uint32_t type;
+        RET_ERR(des.deserialize(type), "Failed to decode PropType");
+        prop.type = (PropType)type;
+        break;
+      }
+      case PROP_MODE_KEY: {
+        uint32_t mode;
+        RET_ERR(des.deserialize(mode), "Failed to decode PropMode");
+        prop.mode = (PropMode)mode;
+        break;
+      }
+
+      default:
+        printf("Unknown key %d \n", key);
+        return Res::Err(0, "Unknown key");
+      }
+    });
+    return Res::Ok();
   }
 };
 
@@ -200,8 +244,8 @@ public:
 
   Msg(){};
 
-  Result<Void> serialize(Serializer &ser);
-  Result<Msg> deserialize(Deserializer &des);
+  Res serialize(Serializer &ser);
+  static Res deserialize(Deserializer &des, Msg &msg);
 };
 
 #define DST_KEY 0
@@ -210,30 +254,36 @@ public:
 #define INFO_TOPIC_KEY 7
 #define PUBLISH_KEY 4
 
-Result<Void> Msg::serialize(Serializer &ser) {
-  TEST_R(Void, ser.map_begin(), "Failed to encode map");
-  TEST_R(Void, ser.serialize(DST_KEY, dst), "Failed to encode dst");
-  TEST_R(Void, ser.serialize(SRC_KEY, src), "Failed to encode src");
-  if (info_prop.has_value()) {
-    TEST_R(Void, ser.serialize(INFO_PROP_KEY), "Failed to encode info_prop");
-    TEST_R(Void, info_prop.value().serialize(ser),
-           "Failed to encode info_prop");
-  }
-  if (info_topic.has_value()) {
-    TEST_R(Void, ser.serialize(INFO_TOPIC_KEY), "Failed to encode info_topic");
-    TEST_R(Void, info_topic.value().serialize(ser),
-           "Failed to encode info_topic");
-  }
-  if (publish.has_value()) {
-    TEST_R(Void, ser.serialize(PUBLISH_KEY), "Failed to encode publish");
-    TEST_R(Void, ser.serialize(publish.value()), "Failed to encode publish");
-  }
-  TEST_R(Void, ser.map_end(), "Failed to encode map");
-  return Result<Void>::Ok(true);
+Res Msg::serialize(Serializer &ser) {
+  RET_ERR(ser.map_begin(), "Failed to encode map");
+  RET_ERR(ser.serialize(DST_KEY, dst), "Failed to encode dst");
+  RET_ERR(ser.serialize(SRC_KEY, src), "Failed to encode src");
+  RET_ERR(ser.map_end(), "Failed to encode map");
+  return Res::Ok();
 }
 
-  CborSerializer ser(1024);
+Res Msg::deserialize(Deserializer &des, Msg &msg) { return Res::Ok(); }
 
+class System {
+public:
+  std::optional<uint32_t> free_heap_size;
+  std::optional<int64_t> local_time;
+
+  Res serialize(Serializer &ser) {
+    free_heap_size = esp_get_free_heap_size();
+    local_time = esp_timer_get_time();
+    RET_ERR(ser.map_begin(), "Failed to encode map");
+    RET_ERR(ser.serialize(0, free_heap_size),
+            "Failed to encode free_heap_size");
+    RET_ERR(ser.serialize(1, local_time), "Failed to encode local_time");
+    RET_ERR(ser.map_end(), "Failed to encode map");
+    return Res::Ok();
+  }
+};
+
+Bytes buffer(1024);
+CborSerializer ser(1024);
+CborDeserializer des(1024);
 
 extern "C" void app_main() {
 
@@ -247,29 +297,43 @@ extern "C" void app_main() {
 
   // Set WiFi in STA mode and trigger attachment
   printf("========================================\n");
-  Msg msg;
-  msg.dst = 1;
-  msg.src = 2;
+
   InfoProp prop;
   prop.id = 3;
   prop.name = "prop";
   prop.desc = "prop desc";
-  prop.type = PropType::UINT;
-  prop.mode = PropMode::READ;
-  msg.info_prop = prop;
+  prop.type = PropType::PROP_UINT;
+  prop.mode = PropMode::PROP_READ;
   InfoTopic topic;
   topic.name = "topic";
   topic.desc = "topic desc";
-  msg.info_topic = topic;
-  Bytes b;
-  auto r = msg.serialize(ser);
-  if (r.is_err()) {
+  Bytes buffer;
+  prop.serialize(ser);
+  auto r2 = ser.get_bytes(buffer);
 
-    printf("Failed to serialize message %d : %s \n", r.rc(), r.msg().c_str());
+  if (r2.is_err()) {
+    printf("Failed to fill buffer %d : %s \n", r2.rc(), r2.msg().c_str());
     vTaskDelay(10000 / portTICK_PERIOD_MS);
     return;
-  };
-  auto buffer = ser.get_bytes().value();
+  }; /*
+   auto r = msg.deserialize(des);
+   if (r.is_err()) {
+     printf("Failed to deserialize message %d : %s \n", r.rc(),
+   r.msg().c_str()); vTaskDelay(10000 / portTICK_PERIOD_MS); } else {
+     printf("Deserialized message \n");
+     printf("DST: %d \n", r.value().dst.value());
+     printf("SRC: %d \n", r.value().src.value());
+     printf("INFO_PROP: \n");
+     printf("ID: %d \n", r.value().info_prop.value().id.value());
+     printf("NAME: %s \n", r.value().info_prop.value().name.value().c_str());
+     printf("DESC: %s \n", r.value().info_prop.value().desc.value().c_str());
+     printf("TYPE: %d \n", r.value().info_prop.value().type.value());
+     printf("MODE: %d \n", r.value().info_prop.value().mode.value());
+     printf("INFO_TOPIC: \n");
+     printf("NAME: %s \n", r.value().info_topic.value().name.value().c_str());
+     printf("DESC: %s \n", r.value().info_topic.value().desc.value().c_str());
+   }*/
+
   printf("Connecting to WiFi...\n");
   wifi_init_sta();
   while (!s_is_wifi_connected) {
@@ -290,8 +354,8 @@ extern "C" void app_main() {
 
   // Open Zenoh session
   printf("Opening Zenoh Session...");
-  z_owned_session_t s;
-  z_result_t res = z_open(&s, z_move(config), NULL);
+  z_owned_session_t zenoh_session;
+  z_result_t res = z_open(&zenoh_session, z_move(config), NULL);
   if (res < 0) {
     printf("Unable to open session! %d \n", res);
     exit(-1);
@@ -299,34 +363,48 @@ extern "C" void app_main() {
   printf("Zenoh session opened \n");
 
   // Start the receive and the session lease loop for zenoh-pico
-  zp_start_read_task(z_loan_mut(s), NULL);
-  zp_start_lease_task(z_loan_mut(s), NULL);
+  zp_start_read_task(z_loan_mut(zenoh_session), NULL);
+  zp_start_lease_task(z_loan_mut(zenoh_session), NULL);
 
   printf("Declaring publisher for '%s'...", KEYEXPR);
   z_owned_publisher_t pub;
   z_view_keyexpr_t ke;
   z_view_keyexpr_from_str_unchecked(&ke, KEYEXPR);
-  if (z_declare_publisher(z_loan(s), &pub, z_loan(ke), NULL) < 0) {
+  if (z_declare_publisher(z_loan(zenoh_session), &pub, z_loan(ke), NULL) < 0) {
     printf("Unable to declare publisher for key expression!\n");
     exit(-1);
   }
   printf("OK\n");
+  z_owned_keyexpr_t keyexpr;
+  z_keyexpr_from_str(&keyexpr, "info/lm1/motor");
 
   char buf[256];
   z_owned_bytes_t payload;
   for (int idx = 0; 1; ++idx) {
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+  //  vTaskDelay(5 / portTICK_PERIOD_MS);
+  vPortYield();
     sprintf(buf, "[%6d] heap : %d ,%s  ", idx, esp_get_free_heap_size(), VALUE);
     // z_bytes_copy_from_str(&payload, buf);
-    printf("Publishing '%d'...\n", buffer.size());
+    // printf("Publishing '%d'...\n", buffer.size());
+    ser.reset();
+    prop.id = idx;
+    prop.serialize(ser);
+    ser.get_bytes(buffer);
     z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size());
     z_publisher_put(z_loan(pub), z_move(payload), NULL);
+    ser.get_bytes(buffer);
+    z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size());
+    z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL);
+    z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size());
+    z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL);
+    z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size());
+    z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL);
   }
 
   printf("Closing Zenoh Session...");
   z_drop(z_move(pub));
 
-  z_drop(z_move(s));
+  z_drop(z_move(zenoh_session));
   printf("OK!\n");
 }
 #else
