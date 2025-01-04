@@ -12,4 +12,9 @@
         "editor.tabSize": 2
     },
     "git.ignoreLimitWarning": false,
+    "files.watcherExclude": {
+    ".git/**": true,
+    "target/**": true
+  }
+
 }

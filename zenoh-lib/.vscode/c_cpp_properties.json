@@ -280,7 +280,7 @@
                 "ZENOH_DEBUG=1",
                 "BATCH_UNICAST_SIZE=1024",
                 "BATCH_MULTICAST_SIZE=1024",
-                "Z_FEATURE_AUTO_RECONNECT",
+                "Z_FEATURE_AUTO_RECONNECT=1",
                 "FRAG_MAX_SIZE=1024",
                 "ZENOH_ESPIDF",
                 "ZENOH_ESPIDF",

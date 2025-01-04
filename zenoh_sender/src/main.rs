@@ -27,12 +27,12 @@ use logger::init;
 async fn main() {
     // Initiate logging
     //  zenoh::init_log_from_env_or("info");
-    zenoh::init_log_from_env_or("info");
+    zenoh::init_log_from_env_or("debug");
     logger::init();
 
     let config = Config::from_file("./config.json5").unwrap();
 
-    let key_expr = KeyExpr::try_from("**").unwrap();
+    let key_expr = KeyExpr::try_from("dinkske/**").unwrap();
 
     info!("Opening session...");
     let session = zenoh::open(config).await.unwrap();
@@ -43,13 +43,14 @@ async fn main() {
     println!("Press CTRL-C to quit...");
     let mut counter = 0;
     let mut start_time = std::time::Instant::now();
+    let mut start_counter = 0;
     while let Ok(sample) = subscriber.recv_async().await {
         // Refer to z_bytes.rs to see how to deserialize different types of message
         let payload = sample.payload().to_bytes();
         let bytes: Vec<u8> = payload.to_vec();
         counter += 1;
-        if counter % 1000 == 0 {
-            info!("Received {} samples , {:.2} msg/sec ", counter, 1000 as f64 / start_time.elapsed().as_secs_f64());
+        if counter % 100 == 0 {
+            info!("Received {} samples , {:.2} msg/sec ", counter, (counter-start_counter) as f64 / start_time.elapsed().as_secs_f64());
             info!(
                 ">> [Subscriber] Received {} ('{}': '{}')",
                 sample.kind(),
@@ -61,6 +62,7 @@ async fn main() {
                 info!(" ({})", att);
             }
             start_time = std::time::Instant::now();
+            start_counter = counter;
         }
         /*         let session_info = session.info();
         info!(" zid = {}", session.zid());
