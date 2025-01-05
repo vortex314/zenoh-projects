@@ -1,7 +1,31 @@
 #include <channel.h>
+#include <esp_event.h>
+#include <esp_wifi.h>
 #include <functional>
+#include <msg_info.h>
+#include <optional>
 #include <serdes.h>
 #include <vector>
+
+struct WifiMsg : public Serializable {
+  // WIFI & ethernet
+  std::optional<std::string> mac_address=std::nullopt;
+  std::optional<std::string> ip_address=std::nullopt;
+  std::optional<std::string> gateway=std::nullopt;
+  std::optional<std::string> netmask=std::nullopt;
+  std::optional<std::string> dns=std::nullopt;
+  std::optional<std::string> ssid=std::nullopt;
+  std::optional<uint8_t> channel=std::nullopt; // dynamic
+  std::optional<int8_t> rssi=std::nullopt;
+  std::optional<std::string> encryption=std::nullopt;
+  std::optional<uint8_t> wifi_mode=std::nullopt;
+  std::optional<std::string> ap_scan=std::nullopt;
+
+  Res serialize(Serializer &ser);
+  Res deserialize(Deserializer &des);
+  Res fill();
+  const InfoProp *info(int idx);
+};
 
 typedef enum {
   WIFI_CONNECTED,
@@ -9,11 +33,14 @@ typedef enum {
 } WifiSignal;
 
 struct WifiEvent {
-  std::optional<WifiSignal> signal;
+  std::optional<WifiSignal> signal=std::nullopt;
+  std::optional<WifiMsg> msg=std::nullopt;
+  std::optional<InfoProp> info=std::nullopt;
 };
 
 struct WifiCmd {
-  std::optional<bool> stop_actor;
+  std::optional<bool> stop_actor=std::nullopt;
+  std::optional<WifiMsg> msg=std::nullopt;
 };
 
 class WifiActor {
@@ -21,6 +48,7 @@ public:
   std::vector<std::function<void(WifiEvent)>> handlers;
   Channel<WifiCmd> cmds;
   Timers timers;
+  WifiMsg wifi_msg;
 
 public:
   WifiActor();

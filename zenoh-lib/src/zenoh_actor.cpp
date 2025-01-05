@@ -13,7 +13,7 @@
 
 ZenohActor::ZenohActor() : cmds(10), ser(1024), des(1024) {
   //   cmds = Channel<ZenohCmd>(10);
-  timers.add_timer(Timer::Repetitive(1, 10));
+  timers.add_timer(Timer::Repetitive(1, 1000));
   timers.add_timer(Timer::Repetitive(2, 2000));
   prefix("device");
 }
@@ -45,7 +45,15 @@ void ZenohActor::run() {
           if (res.is_err()) {
             printf("Failed to connect to Zenoh: %s\n", res.msg().c_str());
           } else {
-            printf("Connectied to Zenoh...\n");
+            printf("Connected to Zenoh.\n");
+            std::string topic = _dst_prefix;
+            topic += "/**";
+            auto sub = declare_subscriber(topic.c_str());
+            if (sub.is_err()) {
+              printf("Failed to declare subscriber: %s\n", sub.msg().c_str());
+            } else {
+              subscriber = sub.value();
+            }
           }
         }
         break;
@@ -61,8 +69,12 @@ void ZenohActor::run() {
       }
     }
     if (cmd.publish_serialized && _connected) {
-      zenoh_publish_serializable(cmd.publish_serialized.value().topic.c_str(),
+      printf("Publishing serialized message\n");
+      auto r = zenoh_publish_serializable(cmd.publish_serialized.value().topic.c_str(),
                                  cmd.publish_serialized.value().value);
+      if (r.is_err()) {
+        printf("Failed to publish serialized message: %s\n", r.msg().c_str());
+      }
     }
     if (cmd.publish_binary && _connected) {
       zenoh_publish_binary(cmd.publish_binary.value().topic.c_str(),
@@ -134,6 +146,7 @@ Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic) {
           z_declare_subscriber(z_loan(zenoh_session), &sub, z_loan(ke),
                                z_move(callback), &opts),
           "Unable to declare subscriber for key expression");
+  printf("OK\n");
   return Result<z_owned_subscriber_t>::Ok(sub);
 }
 
@@ -193,29 +206,27 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
 
 void ZenohActor::data_handler(z_loaned_sample_t *sample, void *arg) {
   ZenohActor *actor = (ZenohActor *)arg;
-  z_view_string_t keystr;
-  z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-  z_owned_string_t value;
-  z_bytes_to_string(z_sample_payload(sample), &value);
-  actor->emit(ZenohEvent{
-      ZenohBinary{std::string(z_string_data(z_view_string_loan(&keystr)),
-                              z_string_len(z_view_string_loan(&keystr))),
-                  Bytes{z_string_data(z_string_loan(&value)),
-                        z_string_data(z_string_loan(&value)) +
-                            z_string_len(z_string_loan(&value))}}});
-  printf(" >> [Subscriber handler] Received ('%.*s': '%.*s')\n",
-         (int)z_string_len(z_view_string_loan(&keystr)),
-         z_string_data(z_view_string_loan(&keystr)),
-         (int)z_string_len(z_string_loan(&value)),
-         z_string_data(z_string_loan(&value)));
-  z_string_drop(z_string_move(&value));
+
+  z_view_string_t key_str;
+  z_keyexpr_as_view_string(z_sample_keyexpr(sample), &key_str);
+  const char *key = (const char *)key_str._val._slice.start;
+  int length = key_str._val._slice.len;
+  std::string topic = std::string(key, length);
+
+  const z_loaned_bytes_t *payload = z_sample_payload(sample);
+  z_bytes_reader_t reader = z_bytes_get_reader(payload);
+  Bytes buffer;
+  size_t len = z_bytes_len(payload);
+  buffer.resize(len);
+  _z_bytes_reader_read(&reader, buffer.data(), len);
+
+  actor->emit(ZenohEvent{.binary = ZenohBinary{topic, buffer}});
 }
 
 #include <msg_sys.h>
 #include <msg_wifi.h>
 
 SysMsg sys_msg;
-WifiMsg wifi_msg;
 const char *src_motor = "motor"; // motor control
 const char *src_sys = "sys";     // wifi, time, etc
 const char *src_wifi = "wifi";   // wifi, time, etc
@@ -223,9 +234,6 @@ const char *src_wifi = "wifi";   // wifi, time, etc
 Res ZenohActor::publish_slow() {
   sys_msg.fill();
   RET_ERR(publish_topic_value(src_sys, sys_msg), "Failed to publish sys msg");
-  wifi_msg.fill();
-  RET_ERR(publish_topic_value(src_wifi, wifi_msg),
-          "Failed to publish wifi msg");
   return Res::Ok();
 }
 
@@ -238,13 +246,7 @@ Res ZenohActor::publish_info() {
   }
   publish_topic_value("info/sys", *(InfoProp *)prop);
 
-  static int idx_wifi = 0;
-  const InfoProp *prop_wifi = wifi_msg.info(idx_wifi);
-  if (prop_wifi == NULL) {
-    idx_wifi = 0;
-    prop_wifi = wifi_msg.info(idx_wifi);
-  }
-  publish_topic_value("info/wifi", *(InfoProp *)prop_wifi);
+
   return Res::Ok();
 }
 
@@ -268,9 +270,5 @@ Res ZenohActor::publish_topic_value(const char *topic, Serializable &value) {
   Bytes buffer;
   RET_ERR(ser.serialize(value), "Failed to serialize");
   RET_ERR(ser.get_bytes(buffer), "Failed to get bytes");
-  std::string topic_name = _src_prefix;
-  topic_name += "/";
-  topic_name += topic;
-
-  return zenoh_publish_binary(topic_name.c_str(), buffer);
+  return zenoh_publish_binary(topic, buffer);
 }

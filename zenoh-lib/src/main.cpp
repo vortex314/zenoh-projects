@@ -20,39 +20,25 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 #include <freertos/task.h>
+#include <functional>
 #include <nanocbor/nanocbor.h>
 #include <nvs_flash.h>
+#include <optional>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <zenoh-pico.h>
-
-#include <functional>
-#include <optional>
 #include <string>
+#include <unistd.h>
 #include <vector>
-
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
-#if CLIENT_OR_PEER == 0
-#define MODE "client"
-#define CONNECT "" // If empty, it will scout
-#elif CLIENT_OR_PEER == 1
-#define MODE "peer"
-#define CONNECT "udp/224.0.0.123:7447#iface=lo" // If empty, it will scout
-#else
-#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
-#endif
-
-#define KEYEXPR "demo/example/zenoh-pico-pub"
-#define VALUE "[ESPIDF]{ESP32} Publication from Zenoh-Pico!"
-
 #include <wifi_actor.h>
+#include <zenoh-pico.h>
 #include <zenoh_actor.h>
 
 Bytes buffer(1024);
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
+TaskHandle_t task_handle_zenoh;
+TaskHandle_t task_handle_wifi;
 
 extern "C" void app_main() {
   esp_err_t ret = nvs_flash_init();
@@ -61,42 +47,58 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
-
   ESP_ERROR_CHECK(ret);
 
   zenoh_actor.prefix("lm1");
- // Set WiFi in STA mode and trigger attachment
+  // device name src/<device_name>/<object> -> props messages
+
+  // WiFi connectivity starts and stops zenoh connection
   wifi_actor.handlers.push_back([&](WifiEvent event) {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
       zenoh_actor.cmds.send(ZenohCmd{.action = ZenohAction::Connect});
     }
-    if ( event.signal == WifiSignal::WIFI_DISCONNECTED) {
+    if (event.signal == WifiSignal::WIFI_DISCONNECTED) {
       zenoh_actor.cmds.send(ZenohCmd{.action = ZenohAction::Disconnect});
+    }
+    if ( event.info) {
+      printf("Received wifi info\n");
+      zenoh_actor.cmds.send(ZenohCmd{.publish_serialized = ZenohSerial{"wifi/info", event.info.value()}});
+    }
+    if ( event.msg) {
+      printf("Received wifi msg\n");
+      zenoh_actor.cmds.send(ZenohCmd{.publish_serialized = ZenohSerial{"wifi/msg", event.msg.value()}});
     }
   });
 
-  TaskHandle_t task_handle;
+  zenoh_actor.handlers.push_back([&](ZenohEvent event) {
+    if (event.binary) {
+      ZenohBinary bin = event.binary.value();
+      printf("Received binary: %s\n", bin.topic.c_str());
+    } else {
+      printf("Received Zenoh unknown event\n");
+    }
+  });
+
   xTaskCreate(
       [](void *arg) {
         auto self = static_cast<WifiActor *>(arg);
         self->run();
       },
-      "wifi_actor_task", 10000, &wifi_actor, 5, &task_handle);
+      "wifi_actor_task", 10000, &wifi_actor, 5, &task_handle_wifi);
   xTaskCreate(
       [](void *arg) {
         auto self = static_cast<ZenohActor *>(arg);
         self->run();
       },
-      "zenoh_actor_task", 10000, &zenoh_actor, 5, &task_handle);
+      "zenoh_actor_task", 10000, &zenoh_actor, 5, &task_handle_zenoh);
 
   char buf[256];
   for (int idx = 0; 1; ++idx) {
-    vPortYield();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     sprintf(buf, "Hello World %d", idx);
-    zenoh_actor.cmds.send(ZenohCmd{.publish_binary = ZenohBinary{"motor/pwm", Bytes{buf, buf + strlen(buf)}}});
-    if ( idx%100 ==0) printf(" free heap size: %d\n", esp_get_free_heap_size());
+    zenoh_actor.cmds.send(
+        ZenohCmd{.publish_binary =
+                     ZenohBinary{"motor/pwm", Bytes{buf, buf + strlen(buf)}}});
+    printf(" free heap size: %d\n", esp_get_free_heap_size());
   }
-
 }
-

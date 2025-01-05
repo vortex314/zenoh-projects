@@ -26,14 +26,14 @@
 struct SysMsg : public Serializable {
 public:
   // SYSTEM
-  std::optional<std::string> cpu;
-  std::optional<uint32_t> clock;
-  std::optional<uint32_t> flash_size;
-  std::optional<uint32_t> ram_size;
-  std::optional<uint32_t> free_heap;      // dynamic
-  std::optional<uint64_t> up_time;        // dynamic
-  std::optional<std::string> log_message; // dynamic
-  std::optional<std::string> state;       // dynamic
+  std::optional<std::string> cpu=std::nullopt;
+  std::optional<uint32_t> clock=std::nullopt;
+  std::optional<uint32_t> flash_size=std::nullopt;
+  std::optional<uint32_t> ram_size=std::nullopt;
+  std::optional<uint32_t> free_heap=std::nullopt;      // dynamic
+  std::optional<uint64_t> up_time=std::nullopt;        // dynamic
+  std::optional<std::string> log_message=std::nullopt; // dynamic
+  std::optional<std::string> state=std::nullopt;       // dynamic
 
   Res serialize(Serializer &ser) {
     int idx = 0;

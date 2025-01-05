@@ -31,9 +31,9 @@ struct ZenohEvent {
 };
 
 struct ZenohCmd {
-  std::optional<ZenohAction> action;
-  std::optional<ZenohSerial> publish_serialized;
-  std::optional<ZenohBinary> publish_binary;
+  std::optional<ZenohAction> action=std::nullopt;
+  std::optional<ZenohSerial> publish_serialized=std::nullopt;
+  std::optional<ZenohBinary> publish_binary=std::nullopt;
 };
 
 class ZenohActor {
