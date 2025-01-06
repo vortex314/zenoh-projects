@@ -10,56 +10,44 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : cmds(8)
+WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4096, "wifi", 5, 10)
 {
   INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
-  timers.add_timer(Timer::Repetitive(1, 1000));
-  timers.add_timer(Timer::Repetitive(2, 2000));
+  add_timer(Timer::Repetitive(1, 1000));
+  add_timer(Timer::Repetitive(2, 2000));
 }
 
-void WifiActor::run()
+void WifiActor::on_start()
 {
   wifi_init_sta();
-  WifiCmd *cmd;
-  while (true)
+}
+
+void WifiActor::on_cmd(WifiCmd *cmd){
+  if (cmd->stop_actor)
   {
-    if (cmds.receive(cmd, timers.sleep_time()))
-    {
-      if (cmd->stop_actor)
-      {
-        break;
-      }
-      delete cmd;
-    }
-    else
-    {
-      for (int id : timers.get_expired_timers())
-      {
-        switch (id)
-        {
-        case 1:
-          wifi_msg.fill(esp_netif);
-          emit(WifiEvent{.props = wifi_msg});
-          break;
-        case 2:
-          INFO("Timer 2 expired wifi ");
-          break;
-        default:
-          INFO("Unknown timer expired wifi");
-        }
-        // execute timer
-        timers.update();
-      }
-    }
+    stop();
   }
 }
 
-void WifiActor::emit(WifiEvent event)
+void WifiActor::on_timer(int timer_id)
 {
-  for (auto handler : handlers)
+  switch (timer_id)
   {
-    handler(event);
+  case 1:
+    wifi_msg.fill(esp_netif);
+    emit(WifiEvent{.props = wifi_msg});
+    break;
+  case 2:
+    INFO("Timer 2 expired wifi ");
+    break;
+  default:
+    INFO("Unknown timer expired wifi");
   }
+}
+
+WifiActor::~WifiActor()
+{
+  INFO("Stopping WiFi actor");
 }
 
 void WifiActor::event_handler(void *arg, esp_event_base_t event_base,

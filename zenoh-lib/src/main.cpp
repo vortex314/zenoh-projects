@@ -33,11 +33,13 @@
 #include <wifi_actor.h>
 #include <zenoh-pico.h>
 #include <zenoh_actor.h>
+#include <sys_actor.h>
 #include <log.h>
 
 Bytes buffer(1024);
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
+SysActor sys_actor;
 TaskHandle_t task_handle_zenoh;
 TaskHandle_t task_handle_wifi;
 CborSerializer ser(1024);
@@ -60,60 +62,46 @@ extern "C" void app_main()
   // device name src/<device_name>/<object> -> props messages
 
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.handlers.push_back([](WifiEvent event)
-                                {
+  wifi_actor.add_handler([](WifiEvent event)
+                         {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
-      zenoh_actor.cmds.send(new ZenohCmd{.action = ZenohAction::Connect});
+      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
     }
     if (event.signal == WifiSignal::WIFI_DISCONNECTED) {
-      zenoh_actor.cmds.send(new ZenohCmd{.action = ZenohAction::Disconnect});
+      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});
     }
     if ( event.info) {
       ser.reset();
       ser.serialize(event.info.value());
       ser.get_bytes(buffer);
-      zenoh_actor.cmds.send(new ZenohCmd{.publish_binary = ZenohBinary{"wifi/info", buffer}});
-    }
-    if ( event.props) {
-      ser.serialize(event.props.value());
-      ser.get_bytes(buffer);
-      if ( !zenoh_actor.cmds.send(new ZenohCmd{.publish_binary = ZenohBinary{std::string("wifi/prop"), buffer}})){
-        INFO("Failed to send wifi props");
-      };
+      zenoh_actor.tell(new ZenohCmd{.publish = PublishMsg{"wifi/info", std::move(buffer)}});
     } });
 
-  zenoh_actor.handlers.push_back([&](ZenohEvent event)
-                                 {
-    if (event.binary) {
-      ZenohBinary bin = event.binary.value();
-      INFO("Received binary: %s", bin.topic.c_str());
-    } else {
-      INFO("Received Zenoh unknown event");
+  zenoh_actor.add_handler([&](ZenohEvent event)
+                          {
+    if (event.publish) {
+      PublishMsg pub = event.publish.value();
+      INFO("Received binary: %s", pub.topic.c_str());
+      if (pub.topic == "sys") {
+        sys_actor.tell(new SysCmd{.publish = std::move(pub)});
+      } else if ( pub.topic == "wifi") {
+        wifi_actor.tell(new WifiCmd{.publish = std::move(pub)});
+      } else {
+        INFO("Received Zenoh unknown event");
+      }
     } });
 
-  xTaskCreate(
-      [](void *arg)
-      {
-        auto self = static_cast<WifiActor *>(arg);
-        self->run();
-      },
-      "wifi_actor_task", 10000, &wifi_actor, 5, &task_handle_wifi);
-  xTaskCreate(
-      [](void *arg)
-      {
-        auto self = static_cast<ZenohActor *>(arg);
-        self->run();
-      },
-      "zenoh_actor_task", 10000, &zenoh_actor, 5, &task_handle_zenoh);
+  wifi_actor.start();
+  zenoh_actor.start();
+  sys_actor.start();
 
   char buf[256];
   for (int idx = 0; 1; ++idx)
   {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     sprintf(buf, "Hello World %d ===========================================================================================", idx);
-    zenoh_actor.cmds.send( new 
-        ZenohCmd{.publish_binary =
-                     ZenohBinary{"motor/pwm", Bytes{buf, buf + strlen(buf)}}});
+    zenoh_actor.tell(new ZenohCmd{.publish =
+                                      PublishMsg{"motor/pwm", Bytes{buf, buf + strlen(buf)}}});
     INFO(" free heap size: %lu", esp_get_free_heap_size());
   }
 }

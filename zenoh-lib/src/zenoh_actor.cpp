@@ -11,15 +11,15 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor() : cmds(5), ser(1024), des(1024)
+ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000,"zenoh",5,6), _ser(1024), _des(1024)
 {
   INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
-  timers.add_timer(Timer::Repetitive(1, 1000));
-  timers.add_timer(Timer::Repetitive(2, 2000));
+  add_timer(Timer::Repetitive(1, 1000));
+  add_timer(Timer::Repetitive(2, 2000));
   prefix("device");
 }
 
-Res ZenohActor::on_timeout(int id)
+void ZenohActor::on_timer(int id)
 {
   switch (id)
   {
@@ -33,11 +33,9 @@ Res ZenohActor::on_timeout(int id)
   default:
     INFO("Unknown timer expired");
   }
-  timers.update();
-  return Res::Ok();
 }
 
-Res ZenohActor::on_cmd(ZenohCmd& cmd)
+void ZenohActor::on_cmd(ZenohCmd &cmd)
 {
   if (cmd.action)
   {
@@ -63,7 +61,7 @@ Res ZenohActor::on_cmd(ZenohCmd& cmd)
           }
           else
           {
-            subscriber = sub.value();
+            _subscribers.emplace(topic,sub.value());
           }
         }
       }
@@ -77,51 +75,12 @@ Res ZenohActor::on_cmd(ZenohCmd& cmd)
       break;
     case ZenohAction::Stop:
       INFO("Stopping ZenohActor...");
-      return Res::Ok();
+      return;
     }
   }
-  if (cmd.publish_serialized && _connected)
+  if (cmd.publish && _connected)
   {
-    auto r = zenoh_publish_serializable(cmd.publish_serialized.value().topic.c_str(),
-                                        cmd.publish_serialized.value().value);
-    if (r.is_err())
-    {
-      INFO("Failed to publish serialized message: %s", r.msg().c_str());
-    }
-  }
-  if (cmd.publish_binary && _connected)
-  {
-    zenoh_publish_binary(cmd.publish_binary.value().topic.c_str(),
-                         cmd.publish_binary.value().value);
-  }
-  return Res::Ok();
-}
-
-void ZenohActor::run()
-{
-  ZenohCmd* cmd;
-  while (true)
-  {
-    if ( cmds.receive(cmd, timers.sleep_time()) )
-    {
-      on_cmd(*cmd);
-      delete cmd;
-    }
-    else
-    {
-      for (int id : timers.get_expired_timers())
-      {
-        on_timeout(id);
-      }
-    }
-  }
-}
-
-void ZenohActor::emit(ZenohEvent event)
-{
-  for (auto handler : handlers)
-  {
-    handler(event);
+    zenoh_publish(cmd.publish.value().topic.c_str(), cmd.publish.value().payload);
   }
 }
 
@@ -223,7 +182,7 @@ Result<z_owned_publisher_t> ZenohActor::declare_publisher(const char *topic)
   INFO("OK");
   return Result<z_owned_publisher_t>::Ok(pub);
 }
-
+/*
 Res ZenohActor::zenoh_publish_serializable(const char *topic,
                                            Serializable &value)
 {
@@ -245,7 +204,7 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   z_drop(z_move(payload));
   return Res::Ok();
 }
-
+*/
 void ZenohActor::data_handler(z_loaned_sample_t *sample, void *arg)
 {
   ZenohActor *actor = (ZenohActor *)arg;
@@ -263,39 +222,11 @@ void ZenohActor::data_handler(z_loaned_sample_t *sample, void *arg)
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
 
-  actor->emit(ZenohEvent{.binary = ZenohBinary{topic, buffer}});
+  actor->emit(ZenohEvent{.publish = PublishMsg{topic, std::move(buffer)}});
 }
 
-#include <msg_sys.h>
-#include <msg_wifi.h>
 
-SysMsg sys_msg;
-const char *src_motor = "motor"; // motor control
-const char *src_sys = "sys";     // wifi, time, etc
-const char *src_wifi = "wifi";   // wifi, time, etc
-
-Res ZenohActor::publish_slow()
-{
-  sys_msg.fill();
-  RET_ERR(publish_topic_value(src_sys, sys_msg), "Failed to publish sys msg");
-  return Res::Ok();
-}
-
-Res ZenohActor::publish_info()
-{
-  static int idx = 0;
-  const InfoProp *prop = sys_msg.info(idx);
-  if (prop == NULL)
-  {
-    idx = 0;
-    prop = sys_msg.info(idx);
-  }
-  publish_topic_value("info/sys", *(InfoProp *)prop);
-
-  return Res::Ok();
-}
-
-Res ZenohActor::zenoh_publish_binary(const char *topic, const Bytes &value)
+Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
   std::string topic_name = _src_prefix;
   topic_name += "/";
@@ -313,9 +244,51 @@ Res ZenohActor::zenoh_publish_binary(const char *topic, const Bytes &value)
 
 Res ZenohActor::publish_topic_value(const char *topic, Serializable &value)
 {
-  RET_ERR(ser.reset(), "Failed to reset serializer");
+  RET_ERR(_ser.reset(), "Failed to reset serializer");
   Bytes buffer;
-  RET_ERR(ser.serialize(value), "Failed to serialize");
-  RET_ERR(ser.get_bytes(buffer), "Failed to get bytes");
-  return zenoh_publish_binary(topic, buffer);
+  RET_ERR(_ser.serialize(value), "Failed to serialize");
+  RET_ERR(_ser.get_bytes(buffer), "Failed to get bytes");
+  return zenoh_publish(topic, buffer);
 }
+
+Res ZenohMsg::serialize(Serializer &ser)
+{
+  int idx = 0;
+  ser.reset();
+  ser.serialize(idx++, zid);
+  ser.serialize(idx++, what_am_i);
+  ser.serialize(idx++, peers);
+  ser.serialize(idx++, prefix);
+  ser.serialize(idx++, routers);
+  return ser.serialize(idx++, connect);
+}
+
+Res ZenohMsg::deserialize(Deserializer &des)
+{
+  return Res::Ok();
+}
+
+Res ZenohMsg::fill(z_loaned_session_t *session)
+{
+  z_id_t _zid = z_info_zid(session);
+  z_owned_string_t z_str;
+  ;
+  z_id_to_string(&_zid, &z_str);
+  zid = std::string(z_str._val._slice.start, z_str._val._slice.start + z_str._val._slice.len);
+/*
+  z_owned_string_t what_am_i_str;
+  z_info_what_am_i(session, &what_am_i_str);
+  what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
+*/
+  return Res::Ok();
+}
+
+InfoProp info_props_zenoh[] = {
+    InfoProp(0, "zid", "Zenoh ID", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(1, "what_am_i", "What am I", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(2, "peers", "Peers", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(3, "prefix", "Prefix", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(4, "routers", "Routers", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(5, "connect", "Connect", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(6, "listen", "Listen", PropType::PROP_STR, PropMode::PROP_READ),
+};

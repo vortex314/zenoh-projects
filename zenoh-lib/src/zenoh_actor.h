@@ -2,7 +2,7 @@
 #define ZENOH_ACTOR_H
 
 #include "cbor.h"
-#include <channel.h>
+#include <actor.h>
 #include <functional>
 #include <optional>
 #include <serdes.h>
@@ -11,48 +11,66 @@
 #include <unistd.h>
 #include <vector>
 #include <log.h>
+#include <msg_info.h>
+#include <map>
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-//#pragma GCC diagnostic ignored "-Wunused-variable"
+// #pragma GCC diagnostic ignored "-Wunused-variable"
 #include <zenoh-pico.h>
 
-enum ZenohAction { Connect, Disconnect, Stop };
+enum ZenohAction
+{
+  Connect,
+  Disconnect,
+  Stop
+};
 
-struct ZenohSerial {
+struct ZenohSerial
+{
   std::string topic;
   Serializable &value;
 };
 
-struct ZenohBinary {
-  std::string topic;
-  Bytes value;
+struct ZenohMsg : public Serializable
+{
+  std::optional<std::string> zid;
+  std::optional<std::string> what_am_i;
+  std::optional<std::string> peers;
+  std::optional<std::string> prefix;
+  std::optional<std::string> routers;
+  std::optional<std::string> connect;
+  std::optional<std::string> listen;
+
+  Res serialize(Serializer &ser);
+  Res deserialize(Deserializer &des);
+  Res fill(z_loaned_session_t *session);
+  const InfoProp *info(int idx);
 };
 
-struct ZenohEvent {
-  std::optional<ZenohBinary> binary;
+struct ZenohEvent
+{
+  std::optional<PublishMsg> publish;
 };
 
-struct ZenohCmd {
-  std::optional<ZenohAction> action=std::nullopt;
-  std::optional<ZenohSerial> publish_serialized=std::nullopt;
-  std::optional<ZenohBinary> publish_binary=std::nullopt;
+struct ZenohCmd
+{
+  std::optional<ZenohAction> action = std::nullopt;
+  std::optional<PublishMsg> publish = std::nullopt;
 };
 
-class ZenohActor {
+class ZenohActor : public Actor<ZenohEvent, ZenohCmd>
+{
 public:
-  std::vector<std::function<void(ZenohEvent)>> handlers;
-  Channel<ZenohCmd*> cmds;
-  Timers timers;
   ZenohActor();
   ~ZenohActor();
   void run();
-  Res on_timeout(int id);
-  Res on_cmd(ZenohCmd& cmd);
+  void on_timer(int id);
+  void on_cmd(ZenohCmd &cmd);
   void emit(ZenohEvent event);
   void prefix(const char *prefix);
   Res connect(void);
   Res disconnect();
-  Res zenoh_publish_serializable(const char *topic, Serializable &value);
-  Res zenoh_publish_binary(const char *topic, const Bytes &value);
+  // Res zenoh_publish_serializable(const char *topic, Serializable &value);
+  Res zenoh_publish(const char *topic, const Bytes &value);
   void zenoh_subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
   Result<z_owned_subscriber_t> declare_subscriber(const char *topic);
@@ -67,12 +85,12 @@ public:
 private:
   std::string _src_prefix;
   std::string _dst_prefix;
-  CborSerializer ser;
-  CborDeserializer des;
+  CborSerializer _ser;
+  CborDeserializer _des;
   z_owned_session_t zenoh_session;
   bool _connected = false;
   z_owned_config_t config;
-  z_owned_subscriber_t subscriber;
-  z_owned_publisher_t publisher;
+  std::map<std::string, z_owned_subscriber_t> _subscribers;
+  std::map<std::string, z_owned_publisher_t> _publishers;
 };
 #endif

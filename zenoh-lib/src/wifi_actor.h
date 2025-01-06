@@ -1,4 +1,4 @@
-#include <channel.h>
+#include <actor.h>
 #include <esp_event.h>
 #include <esp_wifi.h>
 #include <functional>
@@ -37,27 +37,26 @@ typedef enum {
 
 struct WifiEvent {
   std::optional<WifiSignal> signal=std::nullopt;
-  std::optional<WifiMsg> props=std::nullopt;
+  std::optional<PublishMsg> publish=std::nullopt;
   std::optional<InfoProp> info=std::nullopt;
 };
 
 struct WifiCmd {
   std::optional<bool> stop_actor=std::nullopt;
-  std::optional<WifiMsg> msg=std::nullopt;
+  std::optional<PublishMsg> publish=std::nullopt;
 };
 
-class WifiActor {
+class WifiActor : public Actor<WifiEvent, WifiCmd> {
 public:
-  std::vector<std::function<void(WifiEvent)>> handlers;
-  Channel<WifiCmd*> cmds;
-  Timers timers;
   WifiMsg wifi_msg;
   esp_netif_t *esp_netif;
 
 public:
   WifiActor();
-  void run();
-  void emit(WifiEvent event);
+  ~WifiActor();
+  void on_cmd(WifiCmd *cmd);
+  void on_timer(int timer_id);
+  void on_start();
   void wifi_init_sta(void);
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
