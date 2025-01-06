@@ -10,8 +10,9 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <log.h>
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#pragma GCC diagnostic ignored "-Wunused-variable"
+//#pragma GCC diagnostic ignored "-Wunused-variable"
 #include <zenoh-pico.h>
 
 enum ZenohAction { Connect, Disconnect, Stop };
@@ -39,11 +40,13 @@ struct ZenohCmd {
 class ZenohActor {
 public:
   std::vector<std::function<void(ZenohEvent)>> handlers;
-  Channel<ZenohCmd> cmds;
+  Channel<ZenohCmd*> cmds;
   Timers timers;
   ZenohActor();
   ~ZenohActor();
   void run();
+  Res on_timeout(int id);
+  Res on_cmd(ZenohCmd& cmd);
   void emit(ZenohEvent event);
   void prefix(const char *prefix);
   Res connect(void);

@@ -10,7 +10,7 @@
 
 #include <msg_info.h>
 
-  const static InfoProp info_props_wifi[11] = {
+const static InfoProp info_props_wifi[11] = {
     InfoProp(0, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(1, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(2, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
@@ -22,9 +22,10 @@
     InfoProp(8, "encryption", "Encryption", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(9, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
     InfoProp(10, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
-  };
+};
 
-struct WifiMsg : public Serializable {
+struct WifiMsg : public Serializable
+{
   // WIFI & ethernet
   std::optional<std::string> mac_address;
   std::optional<std::string> ip_address;
@@ -38,7 +39,8 @@ struct WifiMsg : public Serializable {
   std::optional<uint8_t> wifi_mode;
   std::optional<std::string> ap_scan;
 
-  Res serialize(Serializer &ser) {
+  Res serialize(Serializer &ser)
+  {
     int idx = 0;
     ser.reset();
     ser.serialize(idx++, mac_address);
@@ -53,7 +55,8 @@ struct WifiMsg : public Serializable {
     ser.serialize(idx++, wifi_mode);
     return ser.serialize(idx++, ap_scan);
   }
-  Res deserialize(Deserializer &des) {
+  Res deserialize(Deserializer &des)
+  {
     des.deserialize(mac_address);
     des.deserialize(ip_address);
     des.deserialize(gateway);
@@ -67,13 +70,17 @@ struct WifiMsg : public Serializable {
     return des.deserialize(ap_scan);
   }
 
-  Res fill() {
+  Res fill()
+  {
     // get IP address and publish
-    tcpip_adapter_ip_info_t ip_info;
+    esp_netif_ip_info_t ip_info;
+    esp_netif_t* esp_netif = esp_netif_create_default_wifi_sta();
+    esp_netif_get_ip_info(esp_netif,  &ip_info);
+
     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info);
-    ip_address = ip4addr_ntoa(&ip_info.ip);
-    gateway = ip4addr_ntoa(&ip_info.gw);
-    netmask = ip4addr_ntoa(&ip_info.netmask);
+    ip_address = IP2STR(&ip_info.ip);
+    gateway = IP2STR(&ip_info.gw);
+    netmask = IP2STR(&ip_info.netmask);
     // get MAC address
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
@@ -92,7 +99,8 @@ struct WifiMsg : public Serializable {
     // get RSSI
     rssi = ap_info.rssi;
     // get encryption
-    switch (ap_info.authmode) {
+    switch (ap_info.authmode)
+    {
     case WIFI_AUTH_OPEN:
       encryption = "OPEN";
       break;
@@ -118,10 +126,10 @@ struct WifiMsg : public Serializable {
     return Res::Ok();
   }
 
-
-
-  const InfoProp* info(int idx) {
-    if ( idx >= sizeof(info_props_wifi)/sizeof(InfoProp)) return nullptr;
+  const InfoProp *info(int idx)
+  {
+    if (idx >= sizeof(info_props_wifi) / sizeof(InfoProp))
+      return nullptr;
     return &info_props_wifi[idx];
   }
 };

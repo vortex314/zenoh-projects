@@ -3,77 +3,99 @@
 #include <string.h>
 #include <strings.h>
 #include <wifi_actor.h>
+#include <esp_mac.h>
 
 static int s_retry_count = 0;
 #define STRINGIFY(X) #X
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : cmds(10) {
-  //   cmds = Channel<WifiCmd>(10);
+WifiActor::WifiActor() : cmds(8)
+{
+  INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
   timers.add_timer(Timer::Repetitive(1, 1000));
   timers.add_timer(Timer::Repetitive(2, 2000));
 }
 
-void WifiActor::run() {
+void WifiActor::run()
+{
   wifi_init_sta();
-  WifiCmd cmd;
-  while (true) {
-    cmds.receive(cmd, timers.sleep_time());
-    for (int id : timers.get_expired_timers()) {
-      switch (id) {
-      case 1:
-        printf("Timer 1 expired wifi\n");
-        wifi_msg.fill();
-        emit(WifiEvent{.msg = wifi_msg});
+  WifiCmd *cmd;
+  while (true)
+  {
+    if (cmds.receive(cmd, timers.sleep_time()))
+    {
+      if (cmd->stop_actor)
+      {
         break;
-      case 2:
-        printf("Timer 2 expired wifi \n");
-        break;
-      default:
-        printf("Unknown timer expired wifi\n");
       }
-      // execute timer
-      timers.update();
+      delete cmd;
     }
-    if (cmd.stop_actor) {
-      break;
+    else
+    {
+      for (int id : timers.get_expired_timers())
+      {
+        switch (id)
+        {
+        case 1:
+          wifi_msg.fill(esp_netif);
+          emit(WifiEvent{.props = wifi_msg});
+          break;
+        case 2:
+          INFO("Timer 2 expired wifi ");
+          break;
+        default:
+          INFO("Unknown timer expired wifi");
+        }
+        // execute timer
+        timers.update();
+      }
     }
   }
 }
 
-void WifiActor::emit(WifiEvent event) {
-  for (auto handler : handlers) {
+void WifiActor::emit(WifiEvent event)
+{
+  for (auto handler : handlers)
+  {
     handler(event);
   }
 }
 
 void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
-                              int32_t event_id, void *event_data) {
+                              int32_t event_id, void *event_data)
+{
   WifiActor *actor = (WifiActor *)arg;
-  if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+  if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
+  {
     esp_wifi_connect();
-  } else if (event_base == WIFI_EVENT &&
-             event_id == WIFI_EVENT_STA_DISCONNECTED) {
+  }
+  else if (event_base == WIFI_EVENT &&
+           event_id == WIFI_EVENT_STA_DISCONNECTED)
+  {
     actor->emit(WifiEvent{WifiSignal::WIFI_DISCONNECTED});
     actor->_wifi_connected = false;
-    if (s_retry_count < ESP_MAXIMUM_RETRY) {
+    if (s_retry_count < ESP_MAXIMUM_RETRY)
+    {
       esp_wifi_connect();
       s_retry_count++;
     }
-  } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+  }
+  else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+  {
     actor->emit(WifiEvent{WifiSignal::WIFI_CONNECTED});
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }
 }
 
-void WifiActor::wifi_init_sta(void) {
+void WifiActor::wifi_init_sta(void)
+{
 
   ESP_ERROR_CHECK(esp_netif_init());
 
   ESP_ERROR_CHECK(esp_event_loop_create_default());
-  esp_netif_create_default_wifi_sta();
+  esp_netif = esp_netif_create_default_wifi_sta();
 
   wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&config));
@@ -85,7 +107,7 @@ void WifiActor::wifi_init_sta(void) {
 
   wifi_config_t wifi_config;
   bzero(&wifi_config, sizeof(wifi_config));
-  strcpy((char *)wifi_config.sta.ssid, "Merckx4");
+  strcpy((char *)wifi_config.sta.ssid, "Merckx2");
   strcpy((char *)wifi_config.sta.password, S(WIFI_PASS));
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -112,8 +134,9 @@ InfoProp info_props_wifi[] = {
              PropMode::PROP_READ),
 };
 
-Res WifiMsg::serialize(Serializer &ser) {
-  int idx = 0;
+Res WifiMsg::serialize(Serializer &ser)
+{
+  uint32_t idx = 0;
   ser.reset();
   ser.serialize(idx++, mac_address);
   ser.serialize(idx++, ip_address);
@@ -127,7 +150,8 @@ Res WifiMsg::serialize(Serializer &ser) {
   ser.serialize(idx++, wifi_mode);
   return ser.serialize(idx++, ap_scan);
 }
-Res WifiMsg::deserialize(Deserializer &des) {
+Res WifiMsg::deserialize(Deserializer &des)
+{
   des.deserialize(mac_address);
   des.deserialize(ip_address);
   des.deserialize(gateway);
@@ -141,13 +165,14 @@ Res WifiMsg::deserialize(Deserializer &des) {
   return des.deserialize(ap_scan);
 }
 
-Res WifiMsg::fill() {
+Res WifiMsg::fill(esp_netif_t *esp_netif)
+{
   // get IP address and publish
-  tcpip_adapter_ip_info_t ip_info;
-  tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info);
-  ip_address = ip4addr_ntoa(&ip_info.ip);
-  gateway = ip4addr_ntoa(&ip_info.gw);
-  netmask = ip4addr_ntoa(&ip_info.netmask);
+  esp_netif_ip_info_t ip_info;
+  esp_netif_get_ip_info(esp_netif, &ip_info);
+  ip_address = ip4addr_to_str(&ip_info.ip);
+  gateway = ip4addr_to_str(&ip_info.gw);
+  netmask = ip4addr_to_str(&ip_info.netmask);
   // get MAC address
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
@@ -166,7 +191,8 @@ Res WifiMsg::fill() {
   // get RSSI
   rssi = ap_info.rssi;
   // get encryption
-  switch (ap_info.authmode) {
+  switch (ap_info.authmode)
+  {
   case WIFI_AUTH_OPEN:
     encryption = "OPEN";
     break;
@@ -193,7 +219,8 @@ Res WifiMsg::fill() {
   return Res::Ok();
 }
 
-const InfoProp *WifiMsg::info(int idx) {
+const InfoProp *WifiMsg::info(int idx)
+{
   if (idx >= sizeof(info_props_wifi) / sizeof(InfoProp))
     return nullptr;
   return &info_props_wifi[idx];
@@ -209,3 +236,13 @@ const InfoProp *WifiMsg::info(int idx) {
   }
   publish_topic_value("info/wifi", *(InfoProp *)prop_wifi);
 */
+
+std::string ip4addr_to_str(esp_ip4_addr_t *ip)
+{
+  char buf[16];
+  uint8_t *ip_parts = (uint8_t *)ip;
+  snprintf(buf, 16, "%u.%u.%u.%u",
+           ip_parts[0], ip_parts[1],
+           ip_parts[2], ip_parts[3]);
+  return buf;
+}

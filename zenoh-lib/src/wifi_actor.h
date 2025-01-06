@@ -7,6 +7,9 @@
 #include <serdes.h>
 #include <vector>
 
+
+std::string ip4addr_to_str(esp_ip4_addr_t* ip) ;
+
 struct WifiMsg : public Serializable {
   // WIFI & ethernet
   std::optional<std::string> mac_address=std::nullopt;
@@ -23,7 +26,7 @@ struct WifiMsg : public Serializable {
 
   Res serialize(Serializer &ser);
   Res deserialize(Deserializer &des);
-  Res fill();
+  Res fill(esp_netif_t* esp_netif);
   const InfoProp *info(int idx);
 };
 
@@ -34,7 +37,7 @@ typedef enum {
 
 struct WifiEvent {
   std::optional<WifiSignal> signal=std::nullopt;
-  std::optional<WifiMsg> msg=std::nullopt;
+  std::optional<WifiMsg> props=std::nullopt;
   std::optional<InfoProp> info=std::nullopt;
 };
 
@@ -46,9 +49,10 @@ struct WifiCmd {
 class WifiActor {
 public:
   std::vector<std::function<void(WifiEvent)>> handlers;
-  Channel<WifiCmd> cmds;
+  Channel<WifiCmd*> cmds;
   Timers timers;
   WifiMsg wifi_msg;
+  esp_netif_t *esp_netif;
 
 public:
   WifiActor();

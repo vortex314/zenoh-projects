@@ -7,16 +7,20 @@
 #include <freertos/timers.h>
 #include <stddef.h>
 #include <vector>
+#include <esp_timer.h>
+#include <log.h>
 
 template <typename T> class Channel {
 public:
-  Channel(size_t size) { queue = xQueueCreate(size, sizeof(T)); }
+  Channel(size_t depth) { queue = xQueueCreate(depth, sizeof(T)); 
+  INFO("Channel created [%d][%d]  ", depth, sizeof(T));
+  }
 
-  bool send(const T &message, TickType_t timeout = portMAX_DELAY) {
+  bool send(const T message, TickType_t timeout = portMAX_DELAY) {
     return xQueueSend(queue, &message, timeout) == pdTRUE;
   }
 
-  bool receive(T &message, TickType_t timeout = portMAX_DELAY) {
+  bool receive(T& message, TickType_t timeout = portMAX_DELAY) {
     return xQueueReceive(queue, &message, timeout) == pdTRUE;
   }
 

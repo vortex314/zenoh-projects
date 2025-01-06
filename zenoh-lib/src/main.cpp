@@ -33,72 +33,87 @@
 #include <wifi_actor.h>
 #include <zenoh-pico.h>
 #include <zenoh_actor.h>
+#include <log.h>
 
 Bytes buffer(1024);
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
 TaskHandle_t task_handle_zenoh;
 TaskHandle_t task_handle_wifi;
+CborSerializer ser(1024);
+Log logger;
 
-extern "C" void app_main() {
+extern "C" void app_main()
+{
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
 
+  INFO("Starting WiFi and Zenoh actors");
+
   zenoh_actor.prefix("lm1");
   // device name src/<device_name>/<object> -> props messages
 
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.handlers.push_back([&](WifiEvent event) {
+  wifi_actor.handlers.push_back([](WifiEvent event)
+                                {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
-      zenoh_actor.cmds.send(ZenohCmd{.action = ZenohAction::Connect});
+      zenoh_actor.cmds.send(new ZenohCmd{.action = ZenohAction::Connect});
     }
     if (event.signal == WifiSignal::WIFI_DISCONNECTED) {
-      zenoh_actor.cmds.send(ZenohCmd{.action = ZenohAction::Disconnect});
+      zenoh_actor.cmds.send(new ZenohCmd{.action = ZenohAction::Disconnect});
     }
     if ( event.info) {
-      printf("Received wifi info\n");
-      zenoh_actor.cmds.send(ZenohCmd{.publish_serialized = ZenohSerial{"wifi/info", event.info.value()}});
+      ser.reset();
+      ser.serialize(event.info.value());
+      ser.get_bytes(buffer);
+      zenoh_actor.cmds.send(new ZenohCmd{.publish_binary = ZenohBinary{"wifi/info", buffer}});
     }
-    if ( event.msg) {
-      printf("Received wifi msg\n");
-      zenoh_actor.cmds.send(ZenohCmd{.publish_serialized = ZenohSerial{"wifi/msg", event.msg.value()}});
-    }
-  });
+    if ( event.props) {
+      ser.serialize(event.props.value());
+      ser.get_bytes(buffer);
+      if ( !zenoh_actor.cmds.send(new ZenohCmd{.publish_binary = ZenohBinary{std::string("wifi/prop"), buffer}})){
+        INFO("Failed to send wifi props");
+      };
+    } });
 
-  zenoh_actor.handlers.push_back([&](ZenohEvent event) {
+  zenoh_actor.handlers.push_back([&](ZenohEvent event)
+                                 {
     if (event.binary) {
       ZenohBinary bin = event.binary.value();
-      printf("Received binary: %s\n", bin.topic.c_str());
+      INFO("Received binary: %s", bin.topic.c_str());
     } else {
-      printf("Received Zenoh unknown event\n");
-    }
-  });
+      INFO("Received Zenoh unknown event");
+    } });
 
   xTaskCreate(
-      [](void *arg) {
+      [](void *arg)
+      {
         auto self = static_cast<WifiActor *>(arg);
         self->run();
       },
       "wifi_actor_task", 10000, &wifi_actor, 5, &task_handle_wifi);
   xTaskCreate(
-      [](void *arg) {
+      [](void *arg)
+      {
         auto self = static_cast<ZenohActor *>(arg);
         self->run();
       },
       "zenoh_actor_task", 10000, &zenoh_actor, 5, &task_handle_zenoh);
 
   char buf[256];
-  for (int idx = 0; 1; ++idx) {
+  for (int idx = 0; 1; ++idx)
+  {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    sprintf(buf, "Hello World %d", idx);
-    zenoh_actor.cmds.send(
+    sprintf(buf, "Hello World %d ===========================================================================================", idx);
+    zenoh_actor.cmds.send( new 
         ZenohCmd{.publish_binary =
                      ZenohBinary{"motor/pwm", Bytes{buf, buf + strlen(buf)}}});
-    printf(" free heap size: %d\n", esp_get_free_heap_size());
+    INFO(" free heap size: %lu", esp_get_free_heap_size());
   }
 }

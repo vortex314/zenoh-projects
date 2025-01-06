@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <log.h>
 
 #include <nanocbor/nanocbor.h>
 // #include <ArduinoJson.h>
@@ -16,8 +17,8 @@ typedef bool Void;
   {                                                                            \
     auto rc = (VAL);                                                           \
     if (rc < 0) {                                                              \
-      printf(MSG);                                                             \
-      printf("=%d %s:%d\n", rc, __FILE__, __LINE__);                           \
+      INFO(MSG);                                                             \
+      INFO("=%d %s:%d", rc, __FILE__, __LINE__);                           \
       return Result<TYPE>::Err(rc, MSG);                                       \
     }                                                                          \
   }
@@ -25,8 +26,8 @@ typedef bool Void;
   {                                                                            \
     auto r = (VAL);                                                            \
     if (r.is_err()) {                                                          \
-      printf(MSG);                                                             \
-      printf("=%d %s:%d\n", r.rc(), __FILE__, __LINE__);                       \
+      INFO(MSG);                                                             \
+      INFO("=%d %s:%d", r.rc(), __FILE__, __LINE__);                       \
       return Result<TYPE>::Err(r.rc(), MSG);                                   \
     }                                                                          \
   }
@@ -42,8 +43,8 @@ typedef bool Void;
   {                                                                            \
     int rc = (VAL);                                                            \
     if (rc < 0) {                                                              \
-      printf(MSG);                                                             \
-      printf("=%d %s:%d\n", rc, __FILE__, __LINE__);                           \
+      INFO(MSG);                                                             \
+      INFO("=%d %s:%d", rc, __FILE__, __LINE__);                           \
       return Res::Err(rc, MSG);                                                \
     }                                                                          \
   }
@@ -149,6 +150,8 @@ public:
 
 class Serializer {
 public:
+  virtual Res serialize(uint8_t i) = 0;
+  virtual Res serialize(int8_t i) = 0;
   virtual Res serialize(int32_t i) = 0;
   virtual Res serialize(uint32_t i) = 0;
   virtual Res serialize(int64_t i) = 0;
@@ -165,7 +168,7 @@ public:
     }
     return Res::Ok();
   }
-  template <typename V> Res serialize(int idx, std::optional<V> value) {
+  template <typename V> Res serialize(uint32_t idx, std::optional<V> value) {
     if (value.has_value()) {
       serialize(idx);
       serialize(value.value());

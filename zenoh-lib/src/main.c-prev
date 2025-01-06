@@ -121,14 +121,14 @@ void app_main()
     ESP_ERROR_CHECK(ret);
 
     // Set WiFi in STA mode and trigger attachment
-    printf("Connecting to WiFi...");
+    INFO("Connecting to WiFi...");
     wifi_init_sta();
     while (!s_is_wifi_connected)
     {
-        printf(".");
+        INFO(".");
         vTaskDelay(1000 / portTICK_PERIOD_MS);  
     };
-    printf("Wifi connected \n");
+    INFO("Wifi connected \n");
 
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config;
@@ -141,30 +141,30 @@ void app_main()
     }
 
     // Open Zenoh session
-    printf("Opening Zenoh Session...");
+    INFO("Opening Zenoh Session...");
     z_owned_session_t s;
     z_result_t res = z_open(&s, z_move(config), NULL);
     if (res < 0)
     {
-        printf("Unable to open session! %d \n", res);
+        INFO("Unable to open session! %d \n", res);
         exit(-1);
     }
-    printf("Zenoh session opened \n");
+    INFO("Zenoh session opened \n");
 
     // Start the receive and the session lease loop for zenoh-pico
     zp_start_read_task(z_loan_mut(s), NULL);
     zp_start_lease_task(z_loan_mut(s), NULL);
 
-    printf("Declaring publisher for '%s'...", KEYEXPR);
+    INFO("Declaring publisher for '%s'...", KEYEXPR);
     z_owned_publisher_t pub;
     z_view_keyexpr_t ke;
     z_view_keyexpr_from_str_unchecked(&ke, KEYEXPR);
     if (z_declare_publisher(z_loan(s), &pub, z_loan(ke), NULL) < 0)
     {
-        printf("Unable to declare publisher for key expression!\n");
+        INFO("Unable to declare publisher for key expression!\n");
         exit(-1);
     }
-    printf("OK\n");
+    INFO("OK\n");
 
     char buf[256];
     z_owned_bytes_t payload;
@@ -176,15 +176,15 @@ void app_main()
         z_publisher_put(z_loan(pub), z_move(payload), NULL);
     }
 
-    printf("Closing Zenoh Session...");
+    INFO("Closing Zenoh Session...");
     z_drop(z_move(pub));
 
     z_drop(z_move(s));
-    printf("OK!\n");
+    INFO("OK!\n");
 }
 #else
 void app_main()
 {
-    printf("ERROR: Zenoh pico was compiled without Z_FEATURE_PUBLICATION but this example requires it.\n");
+    INFO("ERROR: Zenoh pico was compiled without Z_FEATURE_PUBLICATION but this example requires it.\n");
 }
 #endif

@@ -1,0 +1,275 @@
+#include "cbor.h"
+
+CborSerializer::CborSerializer(size_t size)
+{
+    _bytes = new uint8_t[size];
+    _size = size;
+    nanocbor_encoder_init(&_enc, _bytes, size);
+}
+CborSerializer::~CborSerializer() { delete _bytes; }
+Res CborSerializer::reset()
+{
+    nanocbor_encoder_init(&_enc, _bytes, _size);
+    return Res::Ok();
+}
+Res CborSerializer::serialize(uint8_t v)
+{
+    RET_ERRI(nanocbor_fmt_uint(&_enc, v), "Failed to encode uint8_t");
+    return Res::Ok();
+}
+Res CborSerializer::serialize(int8_t v)
+{
+    RET_ERRI(nanocbor_fmt_int(&_enc, v), "Failed to encode int8_t");
+    return Res::Ok();
+}
+Res CborSerializer::serialize(int32_t i)
+{
+    RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int");
+    return Res::Ok();
+}
+
+Res CborSerializer::serialize(uint32_t i)
+{
+    RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode uint32_t");
+    return Res::Ok();
+}
+
+Res CborSerializer::serialize(int64_t i)
+{
+    RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int64_t");
+    return Res::Ok();
+}
+
+Res CborSerializer::serialize(uint64_t i)
+{
+    RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode int64_t");
+    return Res::Ok();
+}
+
+Res CborSerializer::serialize(std::string &s)
+{
+    RET_ERRI(nanocbor_put_tstr(&_enc, s.c_str()), "Failed to encode string");
+    return Res::Ok();
+}
+Res CborSerializer::serialize(Bytes b)
+{
+    RET_ERRI(nanocbor_put_bstr(&_enc, b.data(), b.size()),
+             "Failed to encode bytes");
+    return Res::Ok();
+}
+Res CborSerializer::serialize(float f)
+{
+    RET_ERRI(nanocbor_fmt_float(&_enc, f), "Failed to encode float");
+    return Res::Ok();
+}
+Res CborSerializer::map_begin()
+{
+    RET_ERRI(nanocbor_fmt_map_indefinite(&_enc), "Failed to encode map");
+    return Res::Ok();
+}
+Res CborSerializer::map_end()
+{
+    RET_ERRI(nanocbor_fmt_end_indefinite(&_enc), "Failed to encode map");
+    return Res::Ok();
+}
+Res CborSerializer::array_begin()
+{
+    RET_ERRI(nanocbor_fmt_array_indefinite(&_enc), "Failed to encode array");
+    return Res::Ok();
+}
+Res CborSerializer::array_end()
+{
+    RET_ERRI(nanocbor_fmt_end_indefinite(&_enc), "Failed to encode array");
+    return Res::Ok();
+}
+Res CborSerializer::serialize_null()
+{
+    RET_ERRI(nanocbor_fmt_null(&_enc), "Failed to encode null");
+    return Res::Ok();
+}
+Res CborSerializer::get_bytes(Bytes &bytes)
+{
+    size_t length = nanocbor_encoded_len(&_enc);
+    bytes.assign(_bytes, _bytes + length);
+    return Res::Ok();
+}
+
+Res CborSerializer::serialize(Serializable &value) { return value.serialize(*this); }
+
+nanocbor_value_t *CborDeserializer::get_des()
+{
+    switch (_state)
+    {
+    case INIT:
+        return &_des;
+    case MAP:
+        return &_map;
+    case ARRAY:
+        return &_array;
+    }
+    return &_des;
+}
+
+CborDeserializer::CborDeserializer(size_t size)
+{
+    _bytes = new uint8_t[size];
+    _size = 0;
+    _capacity = size;
+    _state = INIT;
+}
+CborDeserializer::~CborDeserializer() { delete _bytes; }
+
+Res CborDeserializer::fill_buffer(Bytes &b)
+{
+    if (b.size() > _capacity)
+    {
+        return Res::Err(ENOSPC, "Buffer too small");
+    }
+    memcpy(_bytes, b.data(), b.size());
+    _size = b.size();
+    _state = INIT;
+    nanocbor_decoder_init(get_des(), _bytes, _size);
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(uint8_t &i)
+{
+    RET_ERRI(nanocbor_get_uint8(get_des(), &i), "Failed to decode uint8_t");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(int8_t &i)
+{
+    RET_ERRI(nanocbor_get_int8(get_des(), &i), "Failed to decode int8_t");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(int32_t &i)
+{
+    int64_t val;
+    RET_ERRI(nanocbor_get_int64(get_des(), &val), "Failed to decode int");
+    if (val > INT32_MAX || val < INT32_MIN)
+    {
+        return Res::Err(ERANGE, "Value out of range");
+    }
+    i = val;
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(uint64_t &val)
+{
+    RET_ERRI(nanocbor_get_uint64(get_des(), &val), "Failed to decode uint64_t");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(int64_t &val)
+{
+    RET_ERRI(nanocbor_get_int64(get_des(), &val), "Failed to decode int64_t");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(uint32_t &val)
+{
+    RET_ERRI(nanocbor_get_uint32(get_des(), &val), "Failed to decode uint32_t");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(std::string &s)
+{
+    const uint8_t *val;
+    size_t len;
+    RET_ERRI(nanocbor_get_tstr(get_des(), &val, &len),
+             "Failed to decode string");
+    s = std::string(val, val + len);
+    return Res::Ok();
+}
+Res CborDeserializer::deserialize(Bytes &bytes)
+{
+    const uint8_t *val;
+    size_t len;
+    RET_ERRI(nanocbor_get_bstr(get_des(), &val, &len),
+             "Failed to decode bytes");
+    bytes = Bytes(val, val + len);
+    return Res::Ok();
+}
+Res CborDeserializer::deserialize(float &f)
+{
+    float val;
+    RET_ERRI(nanocbor_get_float(get_des(), &val), "Failed to decode float");
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(bool &b)
+{
+    bool val;
+    RET_ERRI(nanocbor_get_bool(get_des(), &val), "Failed to decode bool");
+    b = val;
+    return Res::Ok();
+}
+
+Res CborDeserializer::map_begin()
+{
+    RET_ERRI(nanocbor_enter_map(get_des(), &_map), "Failed to decode map");
+    _state = MAP;
+    return Res::Ok();
+}
+Res CborDeserializer::map_end()
+{
+    nanocbor_leave_container(get_des(), &_map);
+    _state = INIT;
+    return Res::Ok();
+}
+Res CborDeserializer::array_begin()
+{
+    RET_ERRI(nanocbor_enter_array(get_des(), &_array),
+             "Failed to decode array");
+    _state = ARRAY;
+    return Res::Ok();
+}
+Res CborDeserializer::array_end()
+{
+    nanocbor_leave_container(get_des(), &_array);
+    _state = INIT;
+    return Res::Ok();
+}
+Res CborDeserializer::peek_type(SerialType &serial_type)
+{
+    int type = nanocbor_get_type(get_des());
+    switch (type)
+    {
+    case NANOCBOR_TYPE_UINT:
+        serial_type = SerialType::SER_UINT;
+        break;
+    case NANOCBOR_TYPE_NINT:
+        serial_type = SerialType::SER_SINT;
+        break;
+    case NANOCBOR_TYPE_FLOAT:
+        serial_type = SerialType::SER_FLOAT;
+        break;
+    case NANOCBOR_TYPE_TSTR:
+        serial_type = SerialType::SER_STR;
+        break;
+    case NANOCBOR_TYPE_BSTR:
+        serial_type = SerialType::SER_BYTES;
+        break;
+    case NANOCBOR_TYPE_ARR:
+        serial_type = SerialType::SER_ARRAY;
+        break;
+    case NANOCBOR_TYPE_MAP:
+        serial_type = SerialType::SER_MAP;
+        break;
+    case NANOCBOR_ERR_END:
+        serial_type = SerialType::SER_END;
+        break;
+    default:
+        return Res::Err(0, "Unknown type");
+    }
+    return Res::Ok();
+}
+
+Res CborDeserializer::deserialize_null()
+{
+    RET_ERRI(nanocbor_get_null(get_des()), "Failed to decode null");
+    return Res::Ok();
+}
+

@@ -9,7 +9,6 @@ exclude = [
   "examples",
   "zenoh_egui",
   "zenoh_proxy",
-  "zenoh_sender",
   "zenohd",
   "esp32-espnow-display",
   "esp32-limero-embassy",
@@ -33,7 +32,7 @@ exclude = [
   "esp32-limero-std",
   "esp32-idf-motor",
   "esp32-idf-std-motor",
-
+  "zenoh-broker"
 ]
 members = ["esp32-actors", "esp32-espnow-gateway", "esp32-dc-motor"]
 
