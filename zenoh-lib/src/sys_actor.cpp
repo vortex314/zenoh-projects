@@ -4,14 +4,31 @@
 SysActor::SysActor() : Actor<SysEvent, SysCmd>(4096, "sys", 5, 10)
 {
     INFO("Starting Sys actor sizeof(SysCmd ) : %d ", sizeof(SysCmd));
+    _up_time.getter = []()
+    { return esp_timer_get_time(); };
+    _up_time.name = "up_time";
+    _up_time.description = "System up time in microseconds";
+    _properties["up_time"] = _up_time;
+
+    _free_heap.getter = []()
+    { return esp_get_free_heap_size(); };
+    _free_heap.name = "free_heap";
+    _free_heap.description = "Free heap size in bytes";
+    _properties["free_heap"] = _free_heap;
+
+    _cpu.name = "cpu";
+    _cpu.description = "CPU type";
+    _cpu.value = "ESP32";
+    _properties["cpu"] = _cpu;
+
     add_timer(Timer::Repetitive(1, 1000));
 }
 
-void SysActor::on_cmd(SysCmd *cmd)
+void SysActor::on_cmd(SysCmd &cmd)
 {
-    if (cmd->actionr)
+    if (cmd.action)
     {
-        switch (cmd->actionr.value())
+        switch (cmd.action.value())
         {
         case SysAction::Reboot:
             esp_restart();
@@ -28,15 +45,18 @@ void SysActor::on_timer(int id)
     {
     case 1:
     {
-        INFO("Timer 1 expired : publish ");
+        for (auto &[key,val] : _properties)
+        {
+            CborSerializer ser;
+            PropertyCommon &p = val;
+            p.serialize(ser);
+            Bytes buffer;
+            ser.get_bytes(buffer);
+            std::string name = key;
 
-        sys_msg.fill();
-        CborSerializer ser(120);
-        ser.serialize(sys_msg);
-        Bytes buffer;
-        ser.get_bytes(buffer);
-
-        emit(SysEvent{.publish = PublishMsg{"sys", buffer}});
+            emit(SysEvent{.publish = PublishBytes{name, buffer}});
+        }
+        //   emit(SysEvent{.serdes = PublishSerdes{"sys", sys_msg}});
         break;
     }
     default:

@@ -7,8 +7,11 @@
 #include <freertos/timers.h>
 #include <stddef.h>
 #include <vector>
+#include <functional>
 #include <esp_timer.h>
 #include <log.h>
+#include <util.h>
+#include <serdes.h>
 
 template <typename T>
 class Channel
@@ -25,10 +28,11 @@ public:
         return xQueueSend(queue, &message, timeout) == pdTRUE;
     }
 
-    bool receive(T &message, TickType_t timeout = portMAX_DELAY)
+    bool receive(T *message, TickType_t timeout = portMAX_DELAY)
     {
-        return xQueueReceive(queue, &message, timeout) == pdTRUE;
+        return xQueueReceive(queue, message, timeout) == pdTRUE;
     }
+    size_t size() { return uxQueueMessagesWaiting(queue); }
 
     ~Channel() { vQueueDelete(queue); }
 
@@ -190,30 +194,23 @@ template <typename EVENT, typename CMD>
 class Actor
 {
 private:
-    std::vector<std::function<void(EVENT)>> handlers;
+    std::vector<std::function<void(EVENT &)>> _handlers;
     Channel<CMD *> _cmds;
     Timers _timers;
-    bool stop_actor = false;
+    bool _stop_actor = false;
     TaskHandle_t _task_handle;
     size_t _stack_size;
     int _priority;
-    const char *_name;
+    const char *_name = "no_name";
 
 public:
-    virtual void on_cmd(CMD *cmd)
-    {
-        INFO("cmd not handled ");
-        delete cmd;
-    };
-    virtual void on_timer(int timer_id)
-    {
-        INFO("timer not handled ");
-        timers.update();
-    };
+    virtual void on_cmd(CMD &cmd) = 0;
+    virtual void on_timer(int id) = 0;
+
     virtual void on_start() {};
     virtual void on_stop() {};
 
-    Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth) _stack_size(stack_size), _priority(priority), _name(name)
+    Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth), _stack_size(stack_size), _priority(priority), _name(name)
     {
     }
 
@@ -221,7 +218,7 @@ public:
     {
         stop();
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        xTaskDelete(_task_handle);
+        // xTaskDelete(_task_handle);
     }
 
     void start()
@@ -229,7 +226,7 @@ public:
         xTaskCreate(
             [](void *arg)
             {
-                auto self = static_cast<WifiActor *>(arg);
+                auto self = static_cast<Actor *>(arg);
                 self->loop();
             },
             _name, _stack_size, this, 5, &_task_handle);
@@ -240,19 +237,19 @@ public:
         INFO("starting actor %s", _name);
         on_start();
         CMD *cmd;
-        while (!stop_actor)
+        while (!_stop_actor)
         {
-            if (_cmds.receive(&cmd))
+            if (_cmds.receive(&cmd, _timers.sleep_time()))
             {
-                on_cmd(cmd);
+                on_cmd(*cmd);
                 delete cmd;
             }
             else
             {
                 for (int id : _timers.get_expired_timers())
                     on_timer(id);
+                _timers.update();
             }
-            _timers.update();
         }
         INFO("stopping actor %s", _name);
         on_stop();
@@ -260,30 +257,101 @@ public:
 
     void emit(EVENT event)
     {
-        for (auto &handler : handlers)
+        for (auto &handler : _handlers)
             handler(event);
     }
     void add_handler(std::function<void(EVENT &)> handler)
     {
-        handlers.push_back(handler);
+        _handlers.push_back(handler);
     }
     bool tell(CMD *msg)
     {
-        return cmds.send(msg);
+        return _cmds.send(msg);
     }
-    int add_timer(Timer timer)
+    void add_timer(Timer timer)
     {
-        timers.add(timer);
+        _timers.add_timer(timer);
     }
     void stop()
     {
-        stop_actor = true;
+        _stop_actor = true;
     }
 };
 // when receiving a message, the actor will call the on_cmd method with envelope
-struct PublishMsg {
+struct PublishBytes
+{
     std::string topic;
     Bytes payload;
+};
+struct PublishSerdes
+{
+    std::string topic;
+    Serializable &payload;
+};
+
+class PropertyCommon : public Serializable
+{
+public:
+    std::string name;
+    std::string description;
+    PropertyCommon(std::string name = "", std::string description = "") : name(name), description(description) {}
+    Res serialize_info(Serializer &ser)
+    {
+        ser.serialize(name);
+        ser.serialize(description);
+        return Res::Ok();
+    }
+    virtual Res serialize(Serializer &ser) = 0;
+    virtual Res deserialize(Deserializer &des) = 0;
+};
+
+template <typename T>
+struct Property : public PropertyCommon
+{
+    T value;
+    std::optional<std::function<T()>> getter;
+    std::optional<std::function<void(T)>> setter;
+    Property(std::string name = "", std::string description = "") : PropertyCommon(name, description) {}
+    Res serialize(Serializer &ser) override
+    {
+        if (getter)
+        {
+            T t = getter.value()();
+            return ser.serialize(t);
+        }
+        return ser.serialize(value);
+    }
+    Res deserialize(Deserializer &des) override
+    {
+        if (setter)
+        {
+            T value;
+            des.deserialize(value);
+            setter.value()(value);
+            return Res::Ok();
+        }
+        des.deserialize(value);
+        return Res::Ok();
+    }
+    Res get_value(T &v)
+    {
+        if (getter)
+        {
+            v = getter.value()();
+            return Res::Ok();
+        }
+        v = value ;
+        return Res::Ok();
+    }
+    Res set_value(T value)
+    {
+        if (setter)
+        {
+            setter.value()(value);
+            return Res::Ok();
+        }
+        return Res::Err(0, "No setter");
+    }
 };
 
 #endif

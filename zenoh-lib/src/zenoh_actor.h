@@ -48,13 +48,13 @@ struct ZenohMsg : public Serializable
 
 struct ZenohEvent
 {
-  std::optional<PublishMsg> publish;
+  std::optional<PublishBytes> publish = std::nullopt;
 };
 
 struct ZenohCmd
 {
   std::optional<ZenohAction> action = std::nullopt;
-  std::optional<PublishMsg> publish = std::nullopt;
+  std::optional<PublishBytes> publish = std::nullopt;
 };
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>
@@ -64,8 +64,7 @@ public:
   ~ZenohActor();
   void run();
   void on_timer(int id);
-  void on_cmd(ZenohCmd &cmd);
-  void emit(ZenohEvent event);
+  void on_cmd(ZenohCmd& cmd);
   void prefix(const char *prefix);
   Res connect(void);
   Res disconnect();
@@ -78,19 +77,20 @@ public:
   Result<z_owned_publisher_t> declare_publisher(const char *topic);
   static void data_handler(z_loaned_sample_t *sample, void *arg);
   Res publish_topic_value(const char *topic, Serializable &value);
-  Res publish_slow();
-  Res publish_info();
   void zenoh_publish(const std::string &topic, const Bytes &value);
 
 private:
   std::string _src_prefix;
   std::string _dst_prefix;
-  CborSerializer _ser;
-  CborDeserializer _des;
-  z_owned_session_t zenoh_session;
+  z_owned_session_t _zenoh_session;
+  ZenohMsg _zenoh_msg;
   bool _connected = false;
   z_owned_config_t config;
-  std::map<std::string, z_owned_subscriber_t> _subscribers;
-  std::map<std::string, z_owned_publisher_t> _publishers;
+  std::map<std::string,z_owned_subscriber_t> _subscribers;
+  std::map<std::string,z_owned_publisher_t> _publishers;
+  std::map<std::string,PropertyCommon*> _properties;
+
+  CborSerializer _ser;
+  CborDeserializer _des;
 };
 #endif

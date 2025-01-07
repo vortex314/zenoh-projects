@@ -14,7 +14,6 @@ WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4096, "wifi", 5, 10)
 {
   INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
   add_timer(Timer::Repetitive(1, 1000));
-  add_timer(Timer::Repetitive(2, 2000));
 }
 
 void WifiActor::on_start()
@@ -22,8 +21,9 @@ void WifiActor::on_start()
   wifi_init_sta();
 }
 
-void WifiActor::on_cmd(WifiCmd *cmd){
-  if (cmd->stop_actor)
+void WifiActor::on_cmd(WifiCmd &cmd)
+{
+  if (cmd.stop_actor)
   {
     stop();
   }
@@ -34,12 +34,11 @@ void WifiActor::on_timer(int timer_id)
   switch (timer_id)
   {
   case 1:
+  {
     wifi_msg.fill(esp_netif);
-    emit(WifiEvent{.props = wifi_msg});
+    emit(WifiEvent{.serdes = PublishSerdes {"wifi",wifi_msg }});
     break;
-  case 2:
-    INFO("Timer 2 expired wifi ");
-    break;
+  }
   default:
     INFO("Unknown timer expired wifi");
   }

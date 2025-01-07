@@ -24,7 +24,7 @@ private:
   State _state;
 
 public:
-  CborSerializer(size_t size) ;
+  CborSerializer(size_t size=256) ;
   ~CborSerializer() ;
   Res reset() ;
   Res serialize(uint8_t v) ;

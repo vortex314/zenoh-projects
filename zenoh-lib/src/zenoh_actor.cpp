@@ -11,7 +11,8 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000,"zenoh",5,6), _ser(1024), _des(1024)
+ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 6),
+                           _ser(1024),_des(1024)
 {
   INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
   add_timer(Timer::Repetitive(1, 1000));
@@ -24,12 +25,12 @@ void ZenohActor::on_timer(int id)
   switch (id)
   {
   case 1:
-    if (_connected)
-      publish_slow();
     break;
-  case 2:
+  case 2: {
     INFO("Timer 2 expired Zenoh Actor");
+    _zenoh_msg.fill(z_loan_mut(_zenoh_session));
     break;
+  }
   default:
     INFO("Unknown timer expired");
   }
@@ -61,7 +62,7 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
           }
           else
           {
-            _subscribers.emplace(topic,sub.value());
+            _subscribers.emplace(topic, sub.value());
           }
         }
       }
@@ -99,12 +100,12 @@ Res ZenohActor::connect(void)
              "Failed to insert connect");
   }
   // Open Zenoh session
-  RET_ERRI(z_open(&zenoh_session, z_move(config), NULL),
+  RET_ERRI(z_open(&_zenoh_session, z_move(config), NULL),
            "Unable to open session");
   // Start the receive and the session lease loop for zenoh-pico
-  RET_ERRI(zp_start_read_task(z_loan_mut(zenoh_session), NULL),
+  RET_ERRI(zp_start_read_task(z_loan_mut(_zenoh_session), NULL),
            "Failed to start read task");
-  RET_ERRI(zp_start_lease_task(z_loan_mut(zenoh_session), NULL),
+  RET_ERRI(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL),
            "Failed to start lease task");
   _connected = true;
   return Res::Ok();
@@ -139,7 +140,7 @@ Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
   z_closure(&callback, ZenohActor::data_handler, NULL, this);
 
   TEST_RC(z_owned_subscriber_t,
-          z_declare_subscriber(z_loan(zenoh_session), &sub, z_loan(ke),
+          z_declare_subscriber(z_loan(_zenoh_session), &sub, z_loan(ke),
                                z_move(callback), &opts),
           "Unable to declare subscriber for key expression");
   INFO("OK");
@@ -156,9 +157,9 @@ void ZenohActor::delete_subscriber(z_owned_subscriber_t sub)
 ZenohActor::~ZenohActor()
 {
   INFO("Closing Zenoh Session...");
-  zp_stop_read_task(z_loan_mut(zenoh_session));
-  zp_stop_lease_task(z_loan_mut(zenoh_session));
-  z_drop(z_move(zenoh_session));
+  zp_stop_read_task(z_loan_mut(_zenoh_session));
+  zp_stop_lease_task(z_loan_mut(_zenoh_session));
+  z_drop(z_move(_zenoh_session));
   INFO("Zenoh session closed ");
 }
 
@@ -173,7 +174,7 @@ Result<z_owned_publisher_t> ZenohActor::declare_publisher(const char *topic)
   opts.encoding = z_move(encoding);
   z_view_keyexpr_from_str_unchecked(&ke, topic);
   INFO("Declaring publisher for '%s'...", topic);
-  if (z_declare_publisher(z_loan(zenoh_session), &pub, z_loan(ke), &opts) < 0)
+  if (z_declare_publisher(z_loan(_zenoh_session), &pub, z_loan(ke), &opts) < 0)
   {
     INFO("Unable to declare publisher for key expression!");
     return Result<z_owned_publisher_t>::Err(
@@ -222,9 +223,8 @@ void ZenohActor::data_handler(z_loaned_sample_t *sample, void *arg)
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
 
-  actor->emit(ZenohEvent{.publish = PublishMsg{topic, std::move(buffer)}});
+  actor->emit(ZenohEvent{.publish = PublishBytes{topic, std::move(buffer)}});
 }
-
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
@@ -236,12 +236,12 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_view_keyexpr_from_str(&keyexpr, topic_name.c_str());
   RET_ERRI(z_bytes_copy_from_buf(&payload, value.data(), value.size()),
            "Failed to copy buffer to payload");
-  RET_ERRI(z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL),
+  RET_ERRI(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL),
            "Failed to publish message");
   z_drop(z_move(payload));
   return Res::Ok();
 }
-
+/*
 Res ZenohActor::publish_topic_value(const char *topic, Serializable &value)
 {
   RET_ERR(_ser.reset(), "Failed to reset serializer");
@@ -250,6 +250,7 @@ Res ZenohActor::publish_topic_value(const char *topic, Serializable &value)
   RET_ERR(_ser.get_bytes(buffer), "Failed to get bytes");
   return zenoh_publish(topic, buffer);
 }
+*/
 
 Res ZenohMsg::serialize(Serializer &ser)
 {
@@ -275,11 +276,11 @@ Res ZenohMsg::fill(z_loaned_session_t *session)
   ;
   z_id_to_string(&_zid, &z_str);
   zid = std::string(z_str._val._slice.start, z_str._val._slice.start + z_str._val._slice.len);
-/*
-  z_owned_string_t what_am_i_str;
-  z_info_what_am_i(session, &what_am_i_str);
-  what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
-*/
+  /*
+    z_owned_string_t what_am_i_str;
+    z_info_what_am_i(session, &what_am_i_str);
+    what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
+  */
   return Res::Ok();
 }
 
