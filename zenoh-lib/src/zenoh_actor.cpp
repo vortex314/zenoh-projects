@@ -137,7 +137,7 @@ Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
   INFO("Declaring subscriber for '%s'...", topic);
   z_owned_closure_sample_t callback;
 
-  z_closure(&callback, ZenohActor::data_handler, NULL, this);
+  z_closure(&callback, ZenohActor::subscription_handler, NULL, this);
 
   TEST_RC(z_owned_subscriber_t,
           z_declare_subscriber(z_loan(_zenoh_session), &sub, z_loan(ke),
@@ -206,7 +206,7 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   return Res::Ok();
 }
 */
-void ZenohActor::data_handler(z_loaned_sample_t *sample, void *arg)
+void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 {
   ZenohActor *actor = (ZenohActor *)arg;
 
@@ -241,16 +241,12 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_drop(z_move(payload));
   return Res::Ok();
 }
-/*
-Res ZenohActor::publish_topic_value(const char *topic, Serializable &value)
-{
-  RET_ERR(_ser.reset(), "Failed to reset serializer");
-  Bytes buffer;
-  RET_ERR(_ser.serialize(value), "Failed to serialize");
-  RET_ERR(_ser.get_bytes(buffer), "Failed to get bytes");
-  return zenoh_publish(topic, buffer);
-}
-*/
+
+//============================================================
+//============================================================
+//============================================================
+//============================================================
+//============================================================
 
 Res ZenohMsg::serialize(Serializer &ser)
 {

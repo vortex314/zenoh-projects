@@ -23,12 +23,12 @@ enum ZenohAction
   Disconnect,
   Stop
 };
-
+/*
 struct ZenohSerial
 {
   std::string topic;
   Serializable &value;
-};
+};*/
 
 struct ZenohMsg : public Serializable
 {
@@ -43,7 +43,6 @@ struct ZenohMsg : public Serializable
   Res serialize(Serializer &ser);
   Res deserialize(Deserializer &des);
   Res fill(z_loaned_session_t *session);
-  const InfoProp *info(int idx);
 };
 
 struct ZenohEvent
@@ -69,15 +68,17 @@ public:
   Res connect(void);
   Res disconnect();
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);
+
   Res zenoh_publish(const char *topic, const Bytes &value);
   void zenoh_subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
+
   Result<z_owned_subscriber_t> declare_subscriber(const char *topic);
   void delete_subscriber(z_owned_subscriber_t sub);
+
   Result<z_owned_publisher_t> declare_publisher(const char *topic);
-  static void data_handler(z_loaned_sample_t *sample, void *arg);
-  Res publish_topic_value(const char *topic, Serializable &value);
-  void zenoh_publish(const std::string &topic, const Bytes &value);
+
+  static void subscription_handler(z_loaned_sample_t *sample, void *arg);
 
 private:
   std::string _src_prefix;
