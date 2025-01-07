@@ -5,11 +5,10 @@
 #include <serdes.h>
 #include "cbor.h"
 #include <vector>
-#include <map>
+//#include <map>
 
 struct SysMsg : public Serializable
 {
-  // WIFI & ethernet
   std::optional<std::string> cpu = std::nullopt;
   std::optional<uint32_t> clock = std::nullopt;
   std::optional<uint32_t> flash_size = std::nullopt;
@@ -21,8 +20,6 @@ struct SysMsg : public Serializable
 
   Res serialize(Serializer &ser);
   Res deserialize(Deserializer &des);
-  Res fill();
-  const InfoProp *info(int idx);
 };
 
 struct SysEvent
@@ -53,12 +50,12 @@ public:
   ~SysActor();
   void on_cmd(SysCmd &cmd);
   void on_timer(int timer_id);
-
+  Res publish_props();
 private:
-  std::map<std::string, PropertyCommon & > _properties; // name, property
   void init_properties();
+  SysMsg _sys_msg;
+  Bytes _buffer;
 
-  CborSerializer _ser;
   Property<uint64_t> _up_time;
   Property<uint32_t> _free_heap;
   Property<std::string> _cpu;

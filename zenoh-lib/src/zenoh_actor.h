@@ -42,12 +42,12 @@ struct ZenohMsg : public Serializable
 
   Res serialize(Serializer &ser);
   Res deserialize(Deserializer &des);
-  Res fill(z_loaned_session_t *session);
 };
 
 struct ZenohEvent
 {
-  std::optional<PublishBytes> publish = std::nullopt;
+  std::optional<PublishBytes> publish = std::nullopt; // publish a message
+  std::optional<PublishSerdes> serialize = std::nullopt; // publish a serializable object
 };
 
 struct ZenohCmd
@@ -70,6 +70,7 @@ public:
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);
 
   Res zenoh_publish(const char *topic, const Bytes &value);
+  Res publish_props();
   void zenoh_subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
 
@@ -91,7 +92,5 @@ private:
   std::map<std::string,z_owned_publisher_t> _publishers;
   std::map<std::string,PropertyCommon*> _properties;
 
-  CborSerializer _ser;
-  CborDeserializer _des;
 };
 #endif

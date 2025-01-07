@@ -4,22 +4,6 @@
 SysActor::SysActor() : Actor<SysEvent, SysCmd>(4096, "sys", 5, 10)
 {
     INFO("Starting Sys actor sizeof(SysCmd ) : %d ", sizeof(SysCmd));
-    _up_time.getter = []()
-    { return esp_timer_get_time(); };
-    _up_time.name = "up_time";
-    _up_time.description = "System up time in microseconds";
-    _properties["up_time"] = _up_time;
-
-    _free_heap.getter = []()
-    { return esp_get_free_heap_size(); };
-    _free_heap.name = "free_heap";
-    _free_heap.description = "Free heap size in bytes";
-    _properties["free_heap"] = _free_heap;
-
-    _cpu.name = "cpu";
-    _cpu.description = "CPU type";
-    _cpu.value = "ESP32";
-    _properties["cpu"] = _cpu;
 
     add_timer(Timer::Repetitive(1, 1000));
 }
@@ -45,18 +29,7 @@ void SysActor::on_timer(int id)
     {
     case 1:
     {
-        for (auto &[key,val] : _properties)
-        {
-            CborSerializer ser;
-            PropertyCommon &p = val;
-            p.serialize(ser);
-            Bytes buffer;
-            ser.get_bytes(buffer);
-            std::string name = key;
-
-            emit(SysEvent{.publish = PublishBytes{name, buffer}});
-        }
-        //   emit(SysEvent{.serdes = PublishSerdes{"sys", sys_msg}});
+        publish_props();
         break;
     }
     default:
@@ -67,6 +40,18 @@ void SysActor::on_timer(int id)
 SysActor::~SysActor()
 {
     INFO("Stopping Sys actor");
+}
+
+Res SysActor::publish_props()
+{
+    _sys_msg.cpu = "ESP32";
+    _sys_msg.clock = 240000000;
+    _sys_msg.flash_size = 0;
+    _sys_msg.ram_size = std::nullopt;
+    _sys_msg.free_heap = esp_get_free_heap_size();
+    _sys_msg.up_time = esp_timer_get_time();
+    emit(SysEvent{.serdes = PublishSerdes{"sys", _sys_msg}});
+    return Res::Ok();
 }
 
 const static InfoProp info_props_sys_msg[8] = {
@@ -84,6 +69,7 @@ Res SysMsg::serialize(Serializer &ser)
 {
     int idx = 0;
     ser.reset();
+    ser.map_begin();
     ser.serialize(idx++, cpu);
     ser.serialize(idx++, clock);
     ser.serialize(idx++, flash_size);
@@ -91,38 +77,11 @@ Res SysMsg::serialize(Serializer &ser)
     ser.serialize(idx++, free_heap);
     ser.serialize(idx++, up_time);
     ser.serialize(idx++, log_message);
+    ser.map_end();
     return ser.serialize(idx++, state);
 }
 
 Res SysMsg::deserialize(Deserializer &des)
 {
-    des.deserialize(cpu);
-    des.deserialize(clock);
-    des.deserialize(flash_size);
-    des.deserialize(ram_size);
-    des.deserialize(free_heap);
-    des.deserialize(up_time);
-    des.deserialize(log_message);
-    return des.deserialize(state);
-}
-
-Res SysMsg::fill()
-{
-    cpu = "ESP32";
-    clock = 240000000;
-    /*esp_flash_t chip;
-    esp_flash_init(&chip);
-    uint32_t size;
-    RET_ERRI(esp_flash_get_size(&chip, &size), "Failed to get flash size");
-    flash_size = size;*/
-    ram_size = esp_get_free_heap_size();
-    up_time = esp_timer_get_time();
-    return Res::Ok();
-}
-
-const InfoProp *SysMsg::info(int idx)
-{
-    if (idx >= sizeof(info_props_sys_msg) / sizeof(InfoProp))
-        return nullptr;
-    return &info_props_sys_msg[idx];
+    return Res::Err(EAFNOSUPPORT, "Not implemented");
 }

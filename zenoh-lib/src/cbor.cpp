@@ -1,15 +1,32 @@
 #include "cbor.h"
 
-CborSerializer::CborSerializer(size_t size)
+void CborSerializer::append_func(nanocbor_encoder_t *enc, void *ctx, const uint8_t *data, size_t len)
 {
-    _bytes = new uint8_t[size];
-    _size = size;
-    nanocbor_encoder_init(&_enc, _bytes, size);
+    CborSerializer *ser = (CborSerializer *)ctx;
+    for (size_t i = 0; i < len; i++)
+    {
+        ser->_bytes.push_back(data[i]);
+    }
 }
-CborSerializer::~CborSerializer() { delete _bytes; }
+// typedef bool (*nanocbor_encoder_fits)(nanocbor_encoder_t *enc, void *ctx, size_t len);
+
+bool CborSerializer::fits_func(nanocbor_encoder_t *enc, void *ctx, size_t len)
+{
+    return true;
+}
+
+CborSerializer::CborSerializer(Bytes &bytes) : _bytes(bytes)
+{
+    nanocbor_encoder_stream_init(&_enc, this,
+                                 CborSerializer::append_func, CborSerializer::fits_func);
+}
+
+CborSerializer::~CborSerializer() {}
 Res CborSerializer::reset()
 {
-    nanocbor_encoder_init(&_enc, _bytes, _size);
+    _bytes.clear();
+    nanocbor_encoder_stream_init(&_enc, this,
+                                 CborSerializer::append_func, CborSerializer::fits_func);
     return Res::Ok();
 }
 Res CborSerializer::serialize(uint8_t v)
@@ -22,6 +39,17 @@ Res CborSerializer::serialize(int8_t v)
     RET_ERRI(nanocbor_fmt_int(&_enc, v), "Failed to encode int8_t");
     return Res::Ok();
 }
+Res CborSerializer::serialize(int i)
+{
+    RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int");
+    return Res::Ok();
+}
+Res CborSerializer::serialize(bool b)
+{
+    RET_ERRI(nanocbor_fmt_bool(&_enc, b), "Failed to encode bool");
+    return Res::Ok();
+}
+
 Res CborSerializer::serialize(int32_t i)
 {
     RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int");
@@ -87,12 +115,7 @@ Res CborSerializer::serialize_null()
     RET_ERRI(nanocbor_fmt_null(&_enc), "Failed to encode null");
     return Res::Ok();
 }
-Res CborSerializer::get_bytes(Bytes &bytes)
-{
-    size_t length = nanocbor_encoded_len(&_enc);
-    bytes.assign(_bytes, _bytes + length);
-    return Res::Ok();
-}
+
 
 Res CborSerializer::serialize(Serializable &value) { return value.serialize(*this); }
 
@@ -272,4 +295,3 @@ Res CborDeserializer::deserialize_null()
     RET_ERRI(nanocbor_get_null(get_des()), "Failed to decode null");
     return Res::Ok();
 }
-

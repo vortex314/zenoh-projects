@@ -137,4 +137,10 @@ public:
     }
   }
 };
+
+template <typename T> void for_each(std::optional<T> &opt, std::function<void()> action) {  
+  if (opt.has_value()) {
+    action();
+  }
+}
 #endif

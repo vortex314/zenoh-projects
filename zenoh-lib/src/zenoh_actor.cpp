@@ -11,13 +11,11 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 6),
-                           _ser(1024),_des(1024)
+ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 6)
 {
   INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
-  add_timer(Timer::Repetitive(1, 1000));
-  add_timer(Timer::Repetitive(2, 2000));
-  prefix("device");
+  add_timer(Timer::Repetitive(1, 1000)); // timer for publishing properties
+  prefix("device"); // default prefix
 }
 
 void ZenohActor::on_timer(int id)
@@ -25,12 +23,9 @@ void ZenohActor::on_timer(int id)
   switch (id)
   {
   case 1:
+    publish_props();
     break;
-  case 2: {
-    INFO("Timer 2 expired Zenoh Actor");
-    _zenoh_msg.fill(z_loan_mut(_zenoh_session));
-    break;
-  }
+
   default:
     INFO("Unknown timer expired");
   }
@@ -242,6 +237,25 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   return Res::Ok();
 }
 
+Res ZenohActor::publish_props()
+{
+if (!_connected)
+  {
+    return Res::Err(ENOTCONN, "Not connected to Zenoh");
+  }
+  z_id_t _zid = z_info_zid(z_loan(_zenoh_session));
+  z_owned_string_t z_str;
+  z_id_to_string(&_zid, &z_str);
+  _zenoh_msg.zid = std::string(z_str._val._slice.start, z_str._val._slice.start + z_str._val._slice.len);
+  /*
+    z_owned_string_t what_am_i_str;
+    z_info_what_am_i(session, &what_am_i_str);
+    what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
+  */
+ emit(ZenohEvent{.serialize = PublishSerdes{"info/zenoh", _zenoh_msg}});
+  return Res::Ok();
+}
+
 //============================================================
 //============================================================
 //============================================================
@@ -252,32 +266,19 @@ Res ZenohMsg::serialize(Serializer &ser)
 {
   int idx = 0;
   ser.reset();
+  ser.map_begin();
   ser.serialize(idx++, zid);
   ser.serialize(idx++, what_am_i);
   ser.serialize(idx++, peers);
   ser.serialize(idx++, prefix);
   ser.serialize(idx++, routers);
-  return ser.serialize(idx++, connect);
+  ser.serialize(idx++, connect);
+  return ser.map_end();
 }
 
 Res ZenohMsg::deserialize(Deserializer &des)
 {
-  return Res::Ok();
-}
-
-Res ZenohMsg::fill(z_loaned_session_t *session)
-{
-  z_id_t _zid = z_info_zid(session);
-  z_owned_string_t z_str;
-  ;
-  z_id_to_string(&_zid, &z_str);
-  zid = std::string(z_str._val._slice.start, z_str._val._slice.start + z_str._val._slice.len);
-  /*
-    z_owned_string_t what_am_i_str;
-    z_info_what_am_i(session, &what_am_i_str);
-    what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
-  */
-  return Res::Ok();
+  return Res::Err(EAFNOSUPPORT, "not implemented");
 }
 
 InfoProp info_props_zenoh[] = {

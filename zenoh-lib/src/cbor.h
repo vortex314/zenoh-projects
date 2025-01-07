@@ -7,13 +7,13 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <util.h>
 
 
 class CborSerializer : public Serializer {
 private:
   nanocbor_encoder_t _enc;
-  uint8_t *_bytes;
-  size_t _size;
+ Bytes& _bytes;
   typedef enum {
     INIT,
     MAP_0,
@@ -22,13 +22,17 @@ private:
     ARRAY_N,
   } State;
   State _state;
+ static void append_func(nanocbor_encoder_t *enc, void *ctx, const uint8_t *data, size_t len) ;
+  static bool fits_func(nanocbor_encoder_t *enc, void *ctx, size_t len) ;
 
 public:
-  CborSerializer(size_t size=256) ;
+  CborSerializer(Bytes& bytes) ;
   ~CborSerializer() ;
   Res reset() ;
   Res serialize(uint8_t v) ;
   Res serialize(int8_t v) ;
+  Res serialize(int i) ;
+  Res serialize(bool b) ;
   Res serialize(int32_t i);
   Res serialize(uint32_t i);
   Res serialize(int64_t i) ;
@@ -42,7 +46,6 @@ public:
   Res array_begin() ;
   Res array_end() ;
   Res serialize_null() ;
-  Res get_bytes(Bytes &bytes) ;
 
   Res serialize(Serializable &value) ;
 };
@@ -54,12 +57,12 @@ class CborDeserializer : public Deserializer {
 
 private:
   /* data */
+  uint8_t* _bytes;
+  size_t _size;
+  size_t _capacity; 
   nanocbor_value_t _des;
   nanocbor_value_t _map;
   nanocbor_value_t _array;
-  uint8_t *_bytes;
-  size_t _size;
-  size_t _capacity;
   typedef enum {
     INIT,
     MAP,
@@ -67,9 +70,9 @@ private:
   } State;
   State _state;
   nanocbor_value_t *get_des() ;
-
+ 
 public:
-  CborDeserializer(size_t size);
+  CborDeserializer(size_t size) ;
   ~CborDeserializer();
 
   Res fill_buffer(Bytes &b) ;

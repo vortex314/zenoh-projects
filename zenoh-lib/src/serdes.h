@@ -22,6 +22,8 @@ public:
   virtual Res serialize(std::string &s) = 0;
   virtual Res serialize(Bytes b) = 0;
   virtual Res serialize(float f) = 0;
+  virtual Res serialize(bool b) = 0;
+  virtual Res serialize(int i) = 0;
   virtual Res serialize_null() = 0;
   template <typename V> Res serialize(std::optional<V> value) {
     if (value.has_value()) {
@@ -44,7 +46,6 @@ public:
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;
   virtual Res array_end() = 0;
-  virtual Res get_bytes(Bytes &bytes) = 0;
   virtual Res reset() = 0;
 };
 
