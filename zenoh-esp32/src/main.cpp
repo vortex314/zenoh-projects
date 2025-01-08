@@ -34,11 +34,13 @@
 #include <zenoh-pico.h>
 #include <zenoh_actor.h>
 #include <sys_actor.h>
+#include <ps4_actor.h>
 #include <log.h>
 
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
 SysActor sys_actor;
+Ps4Actor ps4_actor;
 
 Log logger;
 
@@ -139,6 +141,7 @@ extern "C" void app_main()
   wifi_actor.start();
   zenoh_actor.start();
   sys_actor.start();
+  ps4_actor.start();
 
   char buf[256];
   for (int idx = 0; 1; ++idx)

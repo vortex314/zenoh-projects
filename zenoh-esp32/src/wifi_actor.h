@@ -60,8 +60,7 @@ public:
   void wifi_init_sta(void);
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
-                            Res scan();
-
+Result<std::string>  scan();
 private:
   WifiMsg wifi_msg;
   esp_netif_t *esp_netif;

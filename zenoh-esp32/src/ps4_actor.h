@@ -8,6 +8,13 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #include <esp_event.h>
 #include <esp_wifi.h>
 
+#include <btstack_port_esp32.h>
+#include <btstack_run_loop.h>
+#include <btstack_stdio_esp32.h>
+#include <hci_dump.h>
+#include <hci_dump_embedded_stdout.h>
+#include <uni.h>
+
 struct Ps4Output : public Serializable
 {
   std::optional<bool> button_a = std::nullopt;
@@ -66,23 +73,35 @@ struct Ps4Output : public Serializable
     ser.serialize(21, right_y);
     return ser.map_end();
   }
-}
+};
 
 struct Ps4Input
 {
   std::optional<uni_hid_device_t *> device = std::nullopt;
-}
+};
 
 struct Ps4Cmd
 {
   std::optional<PublishSerdes> publish = std::nullopt;
   std::optional<bool> stop_actor = std::nullopt;
-}
+};
+
+typedef enum BlueEvent
+{
+  DEVICE_DISCOVERED,
+  DEVICE_CONNECTED,
+  DEVICE_DISCONNECTED,
+  DEVICE_READY,
+  CONTROLLER_DATA,
+  OOB_EVENT
+
+} BlueEvent;
 
 struct Ps4Event
 {
   std::optional<PublishSerdes> publish = std::nullopt;
-}
+  std::optional<BlueEvent> blue_event = std::nullopt;
+};
 
 class Ps4Actor : public Actor<Ps4Event, Ps4Cmd>
 {
@@ -93,15 +112,19 @@ public:
   void on_timer(int timer_id);
   void on_start();
 
-  void init(int argc, const char **argv);
-  void on_init_complete(void);
-  uni_error_t on_device_discovered(bd_addr_t addr, const char *name, uint16_t cod, uint8_t rssi);
-  void on_device_connected(uni_hid_device_t *d);
-  void on_device_disconnected(uni_hid_device_t *d);
-  uni_error_t on_device_ready(uni_hid_device_t *d);
-  void on_controller_data(uni_hid_device_t *d, uni_controller_t *ctl);
-  const uni_property_t *get_property(uni_property_idx_t idx);
-  void on_oob_event(uni_platform_oob_event_t event, void *data);
-  struct uni_platform *get_my_platform(void);
-  void trigger_event_on_gamepad(uni_hid_device_t *d);
+  static void init(int argc, const char **argv);
+  static void on_init_complete(void);
+  static uni_error_t on_device_discovered(bd_addr_t addr, const char *name, uint16_t cod, uint8_t rssi);
+  static void on_device_connected(uni_hid_device_t *d);
+  static void on_device_disconnected(uni_hid_device_t *d);
+  static uni_error_t on_device_ready(uni_hid_device_t *d);
+  static void on_gamepad_data(uni_hid_device_t *d, uni_gamepad_t *gp);
+  static void on_controller_data(uni_hid_device_t *d, uni_controller_t *ctl);
+  static const uni_property_t *get_property(uni_property_idx_t idx);
+  static void on_oob_event(uni_platform_oob_event_t event, void *data);
+  static struct uni_platform *get_my_platform(void);
+  static void trigger_event_on_gamepad(uni_hid_device_t *d);
 };
+
+  static  Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
+
