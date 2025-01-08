@@ -1,0 +1,29 @@
+
+# Zenoh integration for ESP32 IDF
+## PS4 controller 
+- captures Bluetooth events and emits them to zenoh
+### References
+https://bluepad32.readthedocs.io/en/latest/plat_esp32/
+## Hoverboard controller
+- Drives a Hoverboard PCB via a serial port
+## DC Motor controller
+# Actors architecture 
+- the platform is composed of different independent tasks that wait for messages
+- the tasks can emit messages , where the expectation is that these are not-blocking handlers
+- tasks emit messages which support the Serializable trait, so that CBOR or JSON serilaization is handled in one place
+- each actor publishes its own properties and meta-data 
+- actors are glued together at main level by attaching events to commands 
+- Notions of Rust are used where possible
+-- std::optional
+-- Result 
+## Wifi Actor
+- Connect to WIfi Access point 
+- looks for the strongest AP and filters on prefix 
+- re-connects when needed
+## Sys Actor
+- reports on generic platform data 
+## Zenoh Actor
+- establishes connection to broker or peers
+- handles all publishing and subscriptions
+- connects when wif is ready
+- re-connects when needed 

@@ -73,6 +73,7 @@ private:
  
 public:
   CborDeserializer(size_t size) ;
+  CborDeserializer(uint8_t *bytes, size_t size) { _bytes = bytes; _size = size; _capacity = size; nanocbor_decoder_init(&_des, _bytes, _size, &_map); } ;
   ~CborDeserializer();
 
   Res fill_buffer(Bytes &b) ;

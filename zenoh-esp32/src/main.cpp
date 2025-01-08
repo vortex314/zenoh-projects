@@ -124,6 +124,8 @@ extern "C" void app_main()
     if (event.publish) {
       PublishBytes pub = event.publish.value();
       if (pub.topic == "sys") {
+        SysMsg sys_msg;
+        CborDeserializer des(pub.payload.data(), pub.payload.size());
         sys_actor.tell(new SysCmd{.publish = std::move(pub)});
       } else if ( pub.topic == "wifi") {
         wifi_actor.tell(new WifiCmd{.publish = std::move(pub)});
