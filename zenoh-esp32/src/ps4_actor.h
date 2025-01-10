@@ -15,6 +15,13 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #include <hci_dump_embedded_stdout.h>
 #include <uni.h>
 
+// #include "sdkconfig.h"
+
+// Sanity check
+#ifndef CONFIG_BLUEPAD32_PLATFORM_CUSTOM
+#error "Must use BLUEPAD32_PLATFORM_CUSTOM"
+#endif
+
 struct Ps4Output : public Serializable
 {
   std::optional<bool> button_a = std::nullopt;

@@ -19,7 +19,7 @@ void Ps4Actor::on_start()
     uni_init(0 /* argc */, NULL /* argv */);
 
     // Does not return.
-    btstack_run_loop_execute();
+    btstack_run_loop_execute(); // Blocking call, no timers will be triggered.No cmd will be processed.
 }
 
 void Ps4Actor::on_cmd(Ps4Cmd &cmd)
@@ -246,10 +246,7 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
 //
 // Helpers
 //
-Ps4Actor *get_my_platform_instance(uni_hid_device_t *d)
-{
-    return (Ps4Actor *)&d->platform_data[0];
-}
+
 
 void Ps4Actor::trigger_event_on_gamepad(uni_hid_device_t *d)
 {
@@ -304,4 +301,9 @@ struct uni_platform *Ps4Actor::get_my_platform(void)
     };
 
     return &plat;
+}
+
+Ps4Actor *get_my_platform_instance(uni_hid_device_t *d)
+{
+    return (Ps4Actor *)&d->platform_data[0];
 }
