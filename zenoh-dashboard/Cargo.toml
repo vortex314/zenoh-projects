@@ -5,3 +5,9 @@ edition = "2021"
 
 [dependencies]
 egui_tiles = "0.11.0"
+eframe ="*"
+zenoh = { version = "1.1.0"}
+tokio = { version = "1.0.0", features = ["full"] }
+env_logger = "0.11.6"
+egui = "0.30.0"
+
