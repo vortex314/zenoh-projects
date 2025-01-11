@@ -1,3 +1,9 @@
+# Building PS4_actor
+- follow : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
+- install btstack in esp-idf
+
+
+
 # Actor framework in FreeRTOS
 - As lightway as possible, inherits from base class Actor 
 - Actor is a separate thread

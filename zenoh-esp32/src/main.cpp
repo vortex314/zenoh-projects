@@ -35,12 +35,14 @@
 #include <zenoh_actor.h>
 #include <sys_actor.h>
 #include <ps4_actor.h>
+#include <led_actor.h>
 #include <log.h>
 
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
 SysActor sys_actor;
 Ps4Actor ps4_actor;
+LedActor led_actor;
 
 Log logger;
 
@@ -85,6 +87,7 @@ void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &serdes)
     auto &serializable = serdes.value().payload;
     serializable.serialize(ser);
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+    led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
   }
 }
 
@@ -166,6 +169,7 @@ extern "C" void app_main()
   zenoh_actor.start();
   sys_actor.start();
   ps4_actor.start();
+  led_actor.start();
 
   char buf[256];
   for (int idx = 0; 1; ++idx)

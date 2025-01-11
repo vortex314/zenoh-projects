@@ -92,6 +92,22 @@ public:
         return Timer(id, false, true, 0, now() + delay);
     }
 
+    void make_one_shot(uint64_t delay)
+    {
+        _active = true;
+        _auto_reload = false;
+        _period = 0;
+        _expires_at = now() + delay;
+    }
+
+    void make_repetitive(uint64_t period)
+    {
+        _active = true;
+        _auto_reload = true;
+        _period = period;
+        _expires_at = now() + period;
+    }
+
     bool is_expired(uint64_t now) const & { return now >= _expires_at; }
 
     void update(uint64_t now)
@@ -188,6 +204,42 @@ public:
             timer.update(now);
         }
     }
+
+    void one_shot(int id, uint64_t delay)
+    {
+        for (Timer &timer : timers)
+        {
+            if (timer.id() == id)
+            {
+                timer.make_one_shot(delay);
+                return;
+            }
+        }
+        timers.push_back(Timer::OneShot(id, delay));
+    }
+    void repetitive(int id, uint64_t period)
+    {
+        for (Timer &timer : timers)
+        {
+            if (timer.id() == id)
+            {
+                timer.make_repetitive(period);
+                return;
+            }
+        }
+        timers.push_back(Timer::Repetitive(id, period));
+    }
+    void stop(int id)
+    {
+        for (Timer &timer : timers)
+        {
+            if (timer.id() == id)
+            {
+                timer.stop();
+                return;
+            }
+        }
+    }
 };
 
 template <typename EVENT, typename CMD>
@@ -276,6 +328,18 @@ public:
     {
         _stop_actor = true;
     }
+    void timer_one_shot(int id, uint64_t delay)
+    {
+        _timers.one_shot(id, delay);
+    }
+    void timer_repetitive(int id, uint64_t period)
+    {
+        _timers.repetitive(id, period);
+    }
+    void timer_stop(int id)
+    {
+        _timers.stop(id);
+    }
 };
 // when receiving a message, the actor will call the on_cmd method with envelope
 struct PublishBytes
@@ -340,7 +404,7 @@ struct Property : public PropertyCommon
             v = getter.value()();
             return Res::Ok();
         }
-        v = value ;
+        v = value;
         return Res::Ok();
     }
     Res set_value(T value)

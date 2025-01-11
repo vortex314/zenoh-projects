@@ -72,7 +72,7 @@ void Ps4Actor::init(int argc, const char **argv)
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
-    INFO("custom: init()\n");
+    INFO("custom: init()");
 
 #if 0
     uni_gamepad_mappings_t mappings = GAMEPAD_DEFAULT_MAPPINGS;
@@ -95,7 +95,7 @@ void Ps4Actor::init(int argc, const char **argv)
 
 void Ps4Actor::on_init_complete(void)
 {
-    INFO("custom: on_init_complete()\n");
+    INFO("custom: on_init_complete()");
 
     // Safe to call "unsafe" functions since they are called from BT thread
 
@@ -121,7 +121,7 @@ uni_error_t Ps4Actor::on_device_discovered(bd_addr_t addr, const char *name, uin
     // As an example, if you want to filter out keyboards, do:
     if (((cod & UNI_BT_COD_MINOR_MASK) & UNI_BT_COD_MINOR_KEYBOARD) == UNI_BT_COD_MINOR_KEYBOARD)
     {
-        INFO("Ignoring keyboard\n");
+        INFO("Ignoring keyboard");
         return UNI_ERROR_IGNORE_DEVICE;
     }
     // emit(Ps4Event{ .blue_event = DEVICE_DISCOVERED });
@@ -130,21 +130,21 @@ uni_error_t Ps4Actor::on_device_discovered(bd_addr_t addr, const char *name, uin
 
 void Ps4Actor::on_device_connected(uni_hid_device_t *d)
 {
-    INFO("custom: device connected: %p\n", d);
+    INFO("custom: device connected: %p", d);
     Ps4Actor *ps = get_my_platform_instance(d);
     ps->emit(Ps4Event{.blue_event = DEVICE_CONNECTED});
 }
 
 void Ps4Actor::on_device_disconnected(uni_hid_device_t *d)
 {
-    INFO("custom: device disconnected: %p\n", d);
+    INFO("custom: device disconnected: %p", d);
     Ps4Actor *ps = get_my_platform_instance(d);
     ps->emit(Ps4Event{.blue_event = DEVICE_DISCONNECTED});
 }
 
 uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
 {
-    INFO("custom: device ready: %p\n", d);
+    INFO("custom: device ready: %p", d);
     Ps4Actor *ps = get_my_platform_instance(d);
     ps->emit(Ps4Event{.blue_event = DEVICE_READY});
 
@@ -214,10 +214,10 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
 
         if (d == NULL)
         {
-            loge("ERROR: my_platform_on_oob_event: Invalid NULL device\n");
+            loge("ERROR: my_platform_on_oob_event: Invalid NULL device");
             return;
         }
-        INFO("custom: on_device_oob_event(): %d\n", event);
+        INFO("custom: on_device_oob_event(): %d", event);
 
         Ps4Actor *ps = get_my_platform_instance(d);
         // ins->gamepad_seat = ins->gamepad_seat == GAMEPAD_SEAT_A ? GAMEPAD_SEAT_B : GAMEPAD_SEAT_A;
@@ -227,11 +227,11 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
     }
 
     case UNI_PLATFORM_OOB_BLUETOOTH_ENABLED:
-        INFO("custom: Bluetooth enabled: %d\n", (bool)(data));
+        INFO("custom: Bluetooth enabled: %d", (bool)(data));
         break;
 
     default:
-        INFO("my_platform_on_oob_event: unsupported event: 0x%04x\n", event);
+        INFO("my_platform_on_oob_event: unsupported event: 0x%04x", event);
         break;
     }
 }
@@ -242,7 +242,7 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
 
 void Ps4Actor::trigger_event_on_gamepad(uni_hid_device_t *d)
 {
-    Ps4Actor *ps = get_my_platform_instance(d);
+   // Ps4Actor *ps = get_my_platform_instance(d);
 
     if (d->report_parser.play_dual_rumble != NULL)
     {

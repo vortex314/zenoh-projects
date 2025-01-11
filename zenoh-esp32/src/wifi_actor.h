@@ -57,10 +57,16 @@ public:
   void on_cmd(WifiCmd &cmd);
   void on_timer(int timer_id);
   void on_start();
-  void wifi_init_sta(void);
+  Res net_init();
+  Res wifi_init_sta(void);
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
-Result<std::string>  scan();
+  Res scan();
+  std::string wifi_ssid;
+  std::string wifi_password;
+  int channel;
+  std::vector<std::string> ssid_list;
+
 private:
   WifiMsg wifi_msg;
   esp_netif_t *esp_netif;
