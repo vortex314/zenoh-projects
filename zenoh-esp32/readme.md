@@ -23,3 +23,6 @@ wifi_actor.handlers.push_back([&](WifiEvent wifi_event){
     }
 }
 ```
+## tuning to get this programmed
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE 2304 -> 3120
+CONFIG_ESP_MAIN_TASK_STACK_SIZE increase

@@ -1,7 +1,22 @@
 #include <ps4_actor.h>
 
-Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(4096, "ps4", 5, 10)
+#define BUTTON_SQUARE 0x04
+#define BUTTON_CROSS 0x01
+#define BUTTON_CIRCLE 0x02
+#define BUTTON_TRIANGLE 0x08
+
+#define BUTTON_LEFT_SHOULDER 0x10
+#define BUTTON_RIGHT_SHOULDER 0x20
+#define BUTTON_LEFT_TRIGGER 0x40
+#define BUTTON_RIGHT_TRIGGER 0x80
+
+#define BUTTON_LEFT_JOYSTICK 0x100
+#define BUTTON_RIGHT_JOYSTICK 0x200
+#define BUTTON_SHARE 0x400
+
+Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(5120, "ps4", 5, 10)
 {
+    Ps4Actor::ps4_actor_instance = this;
     INFO("Starting PS4 actor sizeof(Ps4Cmd ) : %d ", sizeof(Ps4Cmd));
     add_timer(Timer::Repetitive(1, 1000));
 }
@@ -138,70 +153,48 @@ uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
     return UNI_ERROR_SUCCESS;
 }
 
+void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
+{
+    ps4_output.dpad = gp->dpad;
+
+    ps4_output.button_square = gp->buttons & BUTTON_SQUARE;
+    ps4_output.button_cross = gp->buttons & BUTTON_CROSS;
+    ps4_output.button_circle = gp->buttons & BUTTON_CIRCLE;
+    ps4_output.button_triangle = gp->buttons & BUTTON_TRIANGLE;
+
+    ps4_output.button_left_sholder = gp->buttons & BUTTON_LEFT_SHOULDER;
+    ps4_output.button_right_sholder = gp->buttons & BUTTON_RIGHT_SHOULDER;
+    ps4_output.button_left_trigger = gp->buttons & BUTTON_LEFT_TRIGGER;
+    ps4_output.button_right_trigger = gp->buttons & BUTTON_RIGHT_TRIGGER;
+
+    ps4_output.button_left_joystick = gp->buttons & BUTTON_LEFT_JOYSTICK;
+    ps4_output.button_right_joystick = gp->buttons & BUTTON_RIGHT_JOYSTICK;
+
+    ps4_output.button_share = gp->buttons & BUTTON_SHARE;
+    ps4_output.axis_lx = gp->axis_x >> 2;
+    ps4_output.axis_ly = gp->axis_y >> 2;
+    ps4_output.axis_rx = gp->axis_rx >> 2;
+    ps4_output.axis_ry = gp->axis_ry >> 2;
+    ps4_output.gyro_x = gp->gyro[0];
+    ps4_output.gyro_y = gp->gyro[1];
+    ps4_output.gyro_z = gp->gyro[2];
+    ps4_output.accel_x = gp->accel[0];
+    ps4_output.accel_y = gp->accel[1];
+    ps4_output.accel_z = gp->accel[2];
+    // ps4_output.rumble = gp->rumble;
+    // ps4
+
+    emit(Ps4Event{.serdes = PublishSerdes{"ps4", ps4_output}});
+}
+
 void Ps4Actor::on_controller_data(uni_hid_device_t *d, uni_controller_t *ctl)
 {
-    static uint8_t leds = 0;
-    static uint8_t enabled = true;
-    static uni_controller_t prev;
-    //   bzero(&prev, sizeof(prev));
+    Ps4Actor *ps = get_my_platform_instance(d);
     uni_gamepad_t *gp;
-
-    // Optimization to avoid processing the previous data so that the console
-    // does not get spammed with a lot of logs, but remove it from your project.
-    if (memcmp(&prev, ctl, sizeof(*ctl)) == 0)
+    if (ctl->klass == UNI_CONTROLLER_CLASS_GAMEPAD)
     {
-        return;
-    }
-    prev = *ctl;
-    // Print device Id before dumping gamepad.
-    // This could be very CPU intensive and might crash the ESP32.
-    // Remove these 2 lines in production code.
-    //    INFO("(%p), id=%d, \n", d, uni_hid_device_get_idx_for_instance(d));
-    //    uni_controller_dump(ctl);
-
-    switch (ctl->klass)
-    {
-    case UNI_CONTROLLER_CLASS_GAMEPAD:
         gp = &ctl->gamepad;
-
-        // Debugging
-        // Axis ry: control rumble
-        if ((gp->buttons & BUTTON_A) && d->report_parser.play_dual_rumble != NULL)
-        {
-            d->report_parser.play_dual_rumble(d, 0 /* delayed start ms */, 250 /* duration ms */,
-                                              255 /* weak magnitude */, 0 /* strong magnitude */);
-        }
-        // Buttons: Control LEDs On/Off
-        if ((gp->buttons & BUTTON_B) && d->report_parser.set_player_leds != NULL)
-        {
-            d->report_parser.set_player_leds(d, leds++ & 0x0f);
-        }
-        // Axis: control RGB color
-        if ((gp->buttons & BUTTON_X) && d->report_parser.set_lightbar_color != NULL)
-        {
-            uint8_t r = (gp->axis_x * 256) / 512;
-            uint8_t g = (gp->axis_y * 256) / 512;
-            uint8_t b = (gp->axis_rx * 256) / 512;
-            d->report_parser.set_lightbar_color(d, r, g, b);
-        }
-
-        // Toggle Bluetooth connections
-        // Toggle Bluetooth connections
-        if ((gp->buttons & BUTTON_SHOULDER_L) && enabled)
-        {
-            logi("*** Disabling Bluetooth connections\n");
-            uni_bt_enable_new_connections_safe(false);
-            enabled = false;
-        }
-        if ((gp->buttons & BUTTON_SHOULDER_R) && !enabled)
-        {
-            logi("*** Enabling Bluetooth connections\n");
-            uni_bt_enable_new_connections_safe(true);
-            enabled = true;
-        }
-        break;
-    default:
-        break;
+        ps->gamepad_to_output(gp);
     }
 }
 
@@ -247,10 +240,9 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
 // Helpers
 //
 
-
 void Ps4Actor::trigger_event_on_gamepad(uni_hid_device_t *d)
 {
- //   Ps4Actor *ps = get_my_platform_instance(d);
+    Ps4Actor *ps = get_my_platform_instance(d);
 
     if (d->report_parser.play_dual_rumble != NULL)
     {
@@ -275,7 +267,8 @@ void Ps4Actor::trigger_event_on_gamepad(uni_hid_device_t *d)
 void Ps4Actor::on_gamepad_data(uni_hid_device_t *d, uni_gamepad_t *gp)
 {
     Ps4Actor *ps = get_my_platform_instance(d);
-    ps->emit(Ps4Event{.blue_event = CONTROLLER_DATA});
+    ps->gamepad_to_output(gp);
+    //   ps->emit(Ps4Event{.blue_event = CONTROLLER_DATA});
 }
 
 //
@@ -303,7 +296,9 @@ struct uni_platform *Ps4Actor::get_my_platform(void)
     return &plat;
 }
 
-Ps4Actor *get_my_platform_instance(uni_hid_device_t *d)
+Ps4Actor *Ps4Actor::ps4_actor_instance = 0;
+
+extern "C" Ps4Actor *get_my_platform_instance(uni_hid_device_t *d)
 {
-    return (Ps4Actor *)&d->platform_data[0];
+    return Ps4Actor::ps4_actor_instance;
 }

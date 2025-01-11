@@ -44,6 +44,8 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
         if (res.is_err())
         {
           INFO("Failed to connect to Zenoh: %s", res.msg().c_str());
+          vTaskDelay(1000 / portTICK_PERIOD_MS);
+          tell(new ZenohCmd{.action = ZenohAction::Connect});
         }
         else
         {

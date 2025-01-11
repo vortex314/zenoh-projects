@@ -75,8 +75,7 @@ struct MotorMsg : Serializable
 };
 
 // re-entrant function to publish a serializable object
-void
-publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &value)
+void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &value)
 {
   if (!value)
   {
@@ -120,6 +119,32 @@ extern "C" void app_main()
 
   zenoh_actor.add_handler([](ZenohEvent event) // send to myself
                           { publish(zenoh_actor, event.serialize); });
+  ps4_actor.add_handler([](Ps4Event event)
+                        {
+                          if ( event.serdes ) {
+                            publish(zenoh_actor, event.serdes);
+                          }
+                          if (event.blue_event) {
+                             switch (event.blue_event.value()) {
+                              case DEVICE_DISCOVERED:
+                                INFO("DEVICE_DISCOVERED");
+                                break;
+                              case DEVICE_CONNECTED:
+                                INFO("DEVICE_CONNECTED");
+                                break;
+                              case DEVICE_DISCONNECTED:
+                                INFO("DEVICE_DISCONNECTED");
+                                break;
+                              case DEVICE_READY:
+                                INFO("DEVICE_READY");
+                                break;
+                              case CONTROLLER_DATA:
+                               // INFO("CONTROLLER_DATA");
+                                break;
+                              case OOB_EVENT:
+                                INFO("OOB_EVENT");
+                                break;
+                            } } });
 
   zenoh_actor.add_handler([&](ZenohEvent event)
                           {
@@ -153,7 +178,7 @@ extern "C" void app_main()
     motor_msg.speed = 100;
     motor_msg.distance = 100;
     motor_msg.angle = 90;
-    PublishSerdes pub { .topic= "motor/pwm", .payload = motor_msg};
+    PublishSerdes pub{.topic = "motor/pwm", .payload = motor_msg};
     std::optional<PublishSerdes> opt = pub;
     publish(zenoh_actor, opt);
 
