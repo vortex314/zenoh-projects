@@ -6,8 +6,7 @@
 #include <esp_mac.h>
 
 #ifndef WIFI_PASS
-#define WIFI_PASS "LievenMarletteEwoutRonald"
-// #error "WIFI_PASS not defined"
+#error "WIFI_PASS not defined"
 #endif
 
 static int s_retry_count = 0;
@@ -19,7 +18,7 @@ WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4096, "wifi", 5, 10)
 {
   INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
   add_timer(Timer::Repetitive(1, 1000));
-  wifi_ssid = "Merckx2";
+  wifi_ssid = S(WIFI_SSID);
   wifi_password = S(WIFI_PASS);
 }
 
@@ -45,7 +44,7 @@ void WifiActor::on_start()
     }
   }
   wifi_ssid = "Merckx2";
-  wifi_password = "LievenMarletteEwoutRonald";
+ // wifi_password = "LievenMarletteEwoutRonald";
   if (wifi_init_sta().is_err())
   {
     INFO("Failed to init wifi");

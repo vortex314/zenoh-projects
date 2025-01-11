@@ -4,6 +4,40 @@ struct Pane {
     nr: usize,
 }
 
+struct Text {
+    text: String,
+}
+
+
+impl egui_tiles::Behavior<Text> for Text {
+    fn tab_title_for_pane(&mut self, pane: &Text) -> egui::WidgetText {
+        format!("Pane {}", pane.text).into()
+    }
+
+    fn pane_ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        _tile_id: egui_tiles::TileId,
+        pane: &mut Text,
+    ) -> egui_tiles::UiResponse {
+        // Give each pane a unique color:
+        let color = egui::epaint::Hsva::new(0.103 * pane.text.len() as f32, 0.5, 0.5, 1.0);
+        ui.painter().rect_filled(ui.max_rect(), 0.0, color);
+
+        ui.label(format!("The contents of pane {}.", pane.text));
+
+        // You can make your pane draggable like so:
+        if ui
+            .add(egui::Button::new("Drag me!").sense(egui::Sense::drag()))
+            .drag_started()
+        {
+            egui_tiles::UiResponse::DragStarted
+        } else {
+            egui_tiles::UiResponse::None
+        }
+    }
+}
+
 struct TreeBehavior {}
 
 impl egui_tiles::Behavior<Pane> for TreeBehavior {
@@ -70,6 +104,7 @@ fn create_tree() -> egui_tiles::Tree<Pane> {
     });
     tabs.push({
         let cells = (0..11).map(|_| tiles.insert_pane(gen_pane())).collect();
+        tiles.insert_pane(Text { text: "Hello Lieven".to_owned() });
         tiles.insert_grid_tile(cells)
     });
     tabs.push(tiles.insert_pane(gen_pane()));
