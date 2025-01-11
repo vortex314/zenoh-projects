@@ -14,7 +14,7 @@
 #define BUTTON_RIGHT_JOYSTICK 0x200
 #define BUTTON_SHARE 0x400
 
-Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(5120, "ps4", 5, 10)
+Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(6120, "ps4", 5, 10)
 {
     Ps4Actor::ps4_actor_instance = this;
     INFO("Starting PS4 actor sizeof(Ps4Cmd ) : %d ", sizeof(Ps4Cmd));
@@ -146,7 +146,6 @@ uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
 {
     INFO("custom: device ready: %p\n", d);
     Ps4Actor *ps = get_my_platform_instance(d);
-    // ins->gamepad_seat = GAMEPAD_SEAT_A;
     ps->emit(Ps4Event{.blue_event = DEVICE_READY});
 
     trigger_event_on_gamepad(d);
@@ -181,8 +180,9 @@ void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
     ps4_output.accel_x = gp->accel[0];
     ps4_output.accel_y = gp->accel[1];
     ps4_output.accel_z = gp->accel[2];
-    // ps4_output.rumble = gp->rumble;
-    // ps4
+    // rumble and led not used on output
+    ps4_output.rumble = std::nullopt;
+    ps4_output.led_rgb = std::nullopt;
 
     emit(Ps4Event{.serdes = PublishSerdes{"ps4", ps4_output}});
 }
@@ -268,7 +268,6 @@ void Ps4Actor::on_gamepad_data(uni_hid_device_t *d, uni_gamepad_t *gp)
 {
     Ps4Actor *ps = get_my_platform_instance(d);
     ps->gamepad_to_output(gp);
-    //   ps->emit(Ps4Event{.blue_event = CONTROLLER_DATA});
 }
 
 //
@@ -290,7 +289,6 @@ struct uni_platform *Ps4Actor::get_my_platform(void)
         .on_oob_event = Ps4Actor::on_oob_event,
         .device_dump = 0,
         .register_console_cmds = 0,
-
     };
 
     return &plat;

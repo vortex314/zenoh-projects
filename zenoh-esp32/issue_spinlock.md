@@ -1,9 +1,9 @@
-## spinlock_acquire spinlock.h:140 (lock->count == 0)
-Caused by high traffic load.
+# spinlock_acquire spinlock.h:140 (lock->count == 0)
+## Solution
 
 Solved by setting IPC stack size higher to 1500
 
-
+### log
 
 ```
 assert failed: spinlock_acquire spinlock.h:140 (lock->count == 0)

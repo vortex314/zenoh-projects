@@ -1,6 +1,7 @@
 [workspace]
 
 exclude = [
+"egui-dashboard",
   "esp32-devices",
   "esp32-idf",
   "esp32-mqtt",
@@ -34,7 +35,7 @@ exclude = [
   "esp32-idf-std-motor",
   "zenoh-broker"
 ]
-members = ["esp32-actors", "esp32-espnow-gateway", "esp32-dc-motor"]
+members = ["esp32-actors", "esp32-espnow-gateway", "esp32-dc-motor", "zenoh-dashboard"]
 
 resolver = "2"
 

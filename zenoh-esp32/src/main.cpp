@@ -75,18 +75,17 @@ struct MotorMsg : Serializable
 };
 
 // re-entrant function to publish a serializable object
-void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &value)
+void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &serdes)
 {
-  if (!value)
+  if (serdes)
   {
-    return;
+    Bytes buffer;
+    CborSerializer ser(buffer);
+    auto topic = serdes.value().topic;
+    auto &serializable = serdes.value().payload;
+    serializable.serialize(ser);
+    zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
   }
-  Bytes buffer;
-  CborSerializer ser(buffer);
-  auto topic = value.value().topic;
-  auto &serializable = value.value().payload;
-  serializable.serialize(ser);
-  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
 }
 
 extern "C" void app_main()

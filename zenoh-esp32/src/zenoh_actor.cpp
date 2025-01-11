@@ -15,7 +15,7 @@ ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 6)
 {
   INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
   add_timer(Timer::Repetitive(1, 1000)); // timer for publishing properties
-  prefix("device"); // default prefix
+  prefix("device");                      // default prefix
 }
 
 void ZenohActor::on_timer(int id)
@@ -78,7 +78,13 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
   }
   if (cmd.publish && _connected)
   {
-    zenoh_publish(cmd.publish.value().topic.c_str(), cmd.publish.value().payload);
+    if (zenoh_publish(cmd.publish.value().topic.c_str(), cmd.publish.value().payload).is_err())
+    {
+      INFO("Failed to publish message");
+   //   disconnect();
+   //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+   //   tell(new ZenohCmd{.action = ZenohAction::Connect});
+    }
   }
 }
 
@@ -111,6 +117,22 @@ Res ZenohActor::connect(void)
 Res ZenohActor::disconnect()
 {
   INFO("Closing Zenoh Session...");
+  if (z_session_is_closed(z_loan_mut(_zenoh_session)))
+  {
+    INFO("Zenoh session is not open");
+    return Res::Ok();
+  }
+
+  _connected = false;
+  for (auto &sub : _subscribers)
+  {
+    z_drop(z_move(sub.second));
+    delete_subscriber(sub.second);
+  }
+  _subscribers.clear();
+  zp_stop_read_task(z_loan_mut(_zenoh_session));
+  zp_stop_lease_task(z_loan_mut(_zenoh_session));
+  z_drop(z_move(_zenoh_session));
   //  z_drop(z_move(zenoh_session));
   INFO("Zenoh session closed ");
   return Res::Ok();
@@ -241,7 +263,7 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 
 Res ZenohActor::publish_props()
 {
-if (!_connected)
+  if (!_connected)
   {
     return Res::Err(ENOTCONN, "Not connected to Zenoh");
   }
@@ -254,7 +276,8 @@ if (!_connected)
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
- emit(ZenohEvent{.serialize = PublishSerdes{"info/zenoh", _zenoh_msg}});
+  emit(ZenohEvent{.serialize = PublishSerdes{"info/zenoh", _zenoh_msg}});
+  z_drop(z_move(z_str));
   return Res::Ok();
 }
 
