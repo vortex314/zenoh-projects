@@ -1,9 +1,15 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::thread;
 
+// hide console window on Windows in release
+#[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
 
 mod actor_zenoh;
-
+use actor_zenoh::{Actor, ActorZenoh};
+mod logger;
+use logger::init;
+use log::info;
 trait PaneWidget: std::fmt::Debug {
     fn ui(&mut self, ui: &mut egui::Ui);
     fn title(&self) -> String;
@@ -79,9 +85,16 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
     }
 }
 
-fn main() -> Result<(), eframe::Error> {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() -> Result<(), eframe::Error> {
+    logger::init(); 
+    info!("Starting dashboard ");
 
+    let mut actor_zenoh = ActorZenoh::new();
+    tokio::spawn(async move {
+        actor_zenoh.run().await;
+    });
+    
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
