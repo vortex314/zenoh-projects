@@ -6804,10 +6804,13 @@ dependencies = [
 name = "zenoh-dashboard"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "eframe",
  "egui",
  "egui_tiles",
  "env_logger",
+ "log",
+ "serde",
  "tokio",
  "zenoh",
 ]

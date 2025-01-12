@@ -9,6 +9,10 @@
 #error "WIFI_PASS not defined"
 #endif
 
+#ifndef WIFI_SSID
+#error "WIFI_SSID not defined"
+#endif
+
 static int s_retry_count = 0;
 #define STRINGIFY(X) #X
 #define S(X) STRINGIFY(X)
@@ -18,7 +22,7 @@ WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4096, "wifi", 5, 10)
 {
   INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
   add_timer(Timer::Repetitive(1, 1000));
-  wifi_ssid = S(WIFI_SSID);
+  wifi_ssid = "Merckx2";
   wifi_password = S(WIFI_PASS);
 }
 
@@ -43,8 +47,8 @@ void WifiActor::on_start()
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
   }
-  wifi_ssid = "Merckx2";
- // wifi_password = "LievenMarletteEwoutRonald";
+  wifi_ssid = S(WIFI_SSID);
+  wifi_password = S(WIFI_PASS);
   if (wifi_init_sta().is_err())
   {
     INFO("Failed to init wifi");
