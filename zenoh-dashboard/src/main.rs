@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use std::thread;
 
+use egui::Visuals;
 // hide console window on Windows in release
 #[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
@@ -8,22 +8,23 @@ use serde::{Deserialize, Serialize};
 mod actor_zenoh;
 use actor_zenoh::{Actor, ActorZenoh};
 mod logger;
-use logger::init;
 use log::info;
+use logger::init;
+use tokio::sync::Mutex;
 trait PaneWidget: std::fmt::Debug {
-    fn ui(&mut self, ui: &mut egui::Ui);
+    fn show(&mut self, ui: &mut egui::Ui);
     fn title(&self) -> String;
 }
 
 #[derive(Debug)]
 struct Pane {
-    widget: Box<dyn PaneWidget>,
+    widget: Mutex<Box<dyn PaneWidget>>,
 }
 
 impl Pane {
     fn new(widget: impl PaneWidget + 'static) -> Self {
         Self {
-            widget: Box::new(widget),
+            widget: Mutex::new(Box::new(widget)),
         }
     }
 }
@@ -34,7 +35,7 @@ struct TextPane {
 }
 
 impl PaneWidget for TextPane {
-    fn ui(&mut self, ui: &mut egui::Ui) {
+    fn show(&mut self, ui: &mut egui::Ui) {
         ui.label(&self.text);
     }
 
@@ -47,8 +48,7 @@ struct TreeBehavior {}
 
 impl egui_tiles::Behavior<Pane> for TreeBehavior {
     fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
-        pane.widget.title().into()
-        // format!("Pane {}", pane.nr).into()
+        pane.widget.try_lock().unwrap().title().into()
     }
 
     fn pane_ui(
@@ -57,6 +57,14 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         _tile_id: egui_tiles::TileId,
         pane: &mut Pane,
     ) -> egui_tiles::UiResponse {
+        let rect = ui.max_rect();
+        ui.add(egui::widgets::Label::new(format!(
+            "Rect [{},{}] , [{},{}] ",
+            rect.left(),
+            rect.top(),
+            rect.right(),
+            rect.bottom(),
+        )));
         let response = if ui
             .add(egui::Button::new("Hello, world!").sense(egui::Sense::drag()))
             .drag_started()
@@ -65,36 +73,21 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         } else {
             egui_tiles::UiResponse::None
         };
-        pane.widget.ui(ui);
-        // Give each pane a unique color:
-        /*  let color = egui::epaint::Hsva::new(0.103 * pane.nr as f32, 0.5, 0.5, 1.0);
-        ui.painter().rect_filled(ui.max_rect(), 0.0, color);
-
-        ui.label(format!("The contents of pane {}.", pane.nr));
-
-        // You can make your pane draggable like so:
-        if ui
-            .add(egui::Button::new("Drag me!").sense(egui::Sense::drag()))
-            .drag_started()
-        {
-            egui_tiles::UiResponse::DragStarted
-        } else {
-            egui_tiles::UiResponse::None
-        }*/
+        pane.widget.try_lock().unwrap().show(ui);
         response
     }
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> Result<(), eframe::Error> {
-    logger::init(); 
+    logger::init();
     info!("Starting dashboard ");
 
     let mut actor_zenoh = ActorZenoh::new();
     tokio::spawn(async move {
         actor_zenoh.run().await;
     });
-    
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
@@ -102,8 +95,9 @@ async fn main() -> Result<(), eframe::Error> {
 
     let mut tree = create_tree();
 
-    eframe::run_simple_native("My egui App", options, move |ctx, _frame| {
+    eframe::run_simple_native("Zenoh ", options, move |ctx, _frame| {
         egui::CentralPanel::default().show(ctx, |ui| {
+            ctx.set_visuals(Visuals::light());
             let mut behavior = TreeBehavior {};
             tree.ui(&mut behavior, ui);
         });
@@ -127,14 +121,6 @@ fn create_tree() -> egui_tiles::Tree<Pane> {
         let children = (0..7).map(|_| tiles.insert_pane(gen_pane())).collect();
         tiles.insert_horizontal_tile(children)
     });
-    tabs.push({
-        let cells = (0..11).map(|_| tiles.insert_pane(gen_pane())).collect();
-        let _ = tiles.insert_pane(Pane::new(TextPane {
-            text: "Hello, world!".to_owned(),
-        }));
-        tiles.insert_grid_tile(cells)
-    });
-    tabs.push(tiles.insert_pane(gen_pane()));
 
     let root = tiles.insert_tab_tile(tabs);
 

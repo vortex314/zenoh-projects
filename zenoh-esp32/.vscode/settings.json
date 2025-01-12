@@ -61,5 +61,13 @@
         "compare": "cpp",
         "concepts": "cpp",
         "numbers": "cpp"
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/target/**": true
+    },
+    "files.exclude": {
+        "**/.git/objects/**": true,
+        "**/target/**": true
     }
 }

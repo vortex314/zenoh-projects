@@ -27,6 +27,7 @@ pub trait Actor {
     fn add_listener(&mut self, listener: Box<dyn Handler<Self::Event> + 'static>);
 }
 
+#[derive(Debug, Serialize)]
 pub enum ZenohCmd {
     Connect,
     Disconnect,
@@ -53,26 +54,28 @@ impl Actor for ActorZenoh {
     type Cmd = ZenohCmd;
     type Event = ZenohEvent;
 
-    fn add_listener(&mut self, listener: Box<dyn Handler<Self::Event> + 'static>) {
+     fn add_listener(&mut self, listener: Box<dyn Handler<Self::Event> + 'static>) {
         self.event_handlers.push(listener);
     }
 
     async fn run(&mut self) {
         let config = self.config.clone().unwrap();
+        zenoh::init_log_from_env_or("info");
         let zenoh_session = zenoh::open(config).await.unwrap();
+
 
         let subscriber = zenoh_session.declare_subscriber("**").await.unwrap();
         loop {
             select! {
                 cmd = self.rx_cmd.recv() => {
-
+                    info!("ActorZenoh::run() cmd {:?}", cmd);
                 },
                 msg = subscriber.recv_async() => {
                     match msg {
                         Ok(msg) => {
                             let topic = msg.key_expr().to_string();
                             let payload = msg.payload().to_bytes();
-                            debug!("From zenoh: {}:{}", topic,minicbor::display(&payload));
+                            info!("From zenoh: {}:{}", topic,minicbor::display(&payload));
                         }
                         Err(e) => {
                             info!("PubSubActor::run() error {} ",e);

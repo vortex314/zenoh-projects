@@ -1,2 +1,3 @@
-espcoredump.py info_corefile  -t raw  .pio/build/az-delivery-devkit-v4/firmware.elf > issues/cd3.txt
+source $HOME/esp/esp-idf/export.sh
+ $HOME/esp/esp-idf/components/espcoredump/espcoredump.py info_corefile  -t raw  .pio/build/ps4/firmware.elf 
 

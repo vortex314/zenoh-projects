@@ -86,6 +86,10 @@ void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &serdes)
     auto topic = serdes.value().topic;
     auto &serializable = serdes.value().payload;
     serializable.serialize(ser);
+    if ( buffer.size() > 1024 || topic.size() > 1024 ) {
+      ERROR("publish: buffer or topic too large {} {}", buffer.size(), topic.size());
+      return;
+    }
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
     led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
   }
@@ -186,6 +190,6 @@ extern "C" void app_main()
     std::optional<PublishSerdes> opt = pub;
     publish(zenoh_actor, opt);
 
-    INFO(" free heap size: %lu", esp_get_free_heap_size());
+    INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(),heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
 }
