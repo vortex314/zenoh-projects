@@ -108,7 +108,7 @@ extern "C" void app_main()
 
   zenoh_actor.prefix("lm1");
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.add_handler([](WifiEvent event)
+  wifi_actor.on_event([](WifiEvent event)
                          {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
       zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
@@ -117,15 +117,15 @@ extern "C" void app_main()
       zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});
     } });
 
-  wifi_actor.add_handler([](WifiEvent event)
+  wifi_actor.on_event([](WifiEvent event)
                          { publish(zenoh_actor, event.serdes); });
 
-  sys_actor.add_handler([](SysEvent event)
+  sys_actor.on_event([](SysEvent event)
                         { publish(zenoh_actor, event.serdes); });
 
-  zenoh_actor.add_handler([](ZenohEvent event) // send to myself
+  zenoh_actor.on_event([](ZenohEvent event) // send to myself
                           { publish(zenoh_actor, event.serialize); });
-  ps4_actor.add_handler([](Ps4Event event)
+  ps4_actor.on_event([](Ps4Event event)
                         {
                           if ( event.serdes ) {
                             publish(zenoh_actor, event.serdes);
@@ -152,7 +152,7 @@ extern "C" void app_main()
                                 break;
                             } } });
 
-  zenoh_actor.add_handler([&](ZenohEvent event)
+  zenoh_actor.on_event([&](ZenohEvent event)
                           {
     if (event.publish) {
       PublishBytes pub = event.publish.value();

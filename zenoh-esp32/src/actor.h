@@ -312,7 +312,7 @@ public:
         for (auto &handler : _handlers)
             handler(event);
     }
-    void add_handler(std::function<void(EVENT &)> handler)
+    void on_event(std::function<void(EVENT &)> handler)
     {
         _handlers.push_back(handler);
     }
