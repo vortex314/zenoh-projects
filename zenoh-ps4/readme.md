@@ -1,34 +1,58 @@
+# A PS4 controller to drive your next robotics application
+
+![Architecture](doc/ps4-zenoh.drawio.png)
+
+## Purpose
+This integration provides a low-cost solution to drive or control remotely a robot. As I needed something for my own private project.
+The interpretation of the data is up to the application itself. 
+The PS4 controller sends about 25 msg/sec via Zenoh. 
+The data is serialized in a CBOR Array 
+No filtering is applied yet. 
+The same message can be send to the controller for invoking rumble or activate leds. ( TBD ) 
+
+## Data layout 
+```C++
+struct Ps4Output : public Serializable
+{
+  std::optional<int> dpad = std::nullopt;
+  std::optional<bool> button_square = std::nullopt;
+  std::optional<bool> button_cross = std::nullopt;
+  std::optional<bool> button_circle = std::nullopt;
+  std::optional<bool> button_triangle = std::nullopt;
+
+  std::optional<bool> button_left_sholder = std::nullopt;
+  std::optional<bool> button_right_sholder = std::nullopt;
+  std::optional<bool> button_left_trigger = std::nullopt;
+  std::optional<bool> button_right_trigger = std::nullopt;
+  std::optional<bool> button_left_joystick = std::nullopt;
+  std::optional<bool> button_right_joystick = std::nullopt;
+  std::optional<bool> button_share = std::nullopt;
+
+  std::optional<int> axis_lx = std::nullopt;
+  std::optional<int> axis_ly = std::nullopt;
+  std::optional<int> axis_rx = std::nullopt;
+  std::optional<int> axis_ry = std::nullopt;
+
+  std::optional<int> gyro_x = std::nullopt;
+  std::optional<int> gyro_y = std::nullopt;
+  std::optional<int> gyro_z = std::nullopt;
+
+  std::optional<int> accel_x = std::nullopt;
+  std::optional<int> accel_y = std::nullopt;
+  std::optional<int> accel_z = std::nullopt;
+
+  std::optional<int> rumble = std::nullopt;
+  std::optional<int> led_rgb = std::nullopt;
+}:
+```
+
+## Build instructions
+TBD
+
 # Building PS4_actor
 - follow : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 - install btstack in esp-idf
 
-
-
-# Actor framework in FreeRTOS
-- As lightway as possible, inherits from base class Actor 
-- Actor is a separate thread
-- Actor has a single queue for messages to act upon
-- Actor can invoke registered function handlers for events , which MUST not be blocking.
-- Events are passed by reference 
-- Messages are a collection of optional fields in a sruct
-- The Message queue is passing pointers and the receiving side MUST 'delete' the memory 
-- _Actors are not aware about each other, know only their own types_
-- Actors are glued together at the main level by registering closure handlers that send messages to other actors
-
-## Future ??
-- a single thread across multiple actors with FreeRTOS queue sets 
--- multiple queues consolidation
--- multiple timers consolidation
-
-
-## Example Wifi Actor wakes up Zenoh Actor
-```
-wifi_actor.handlers.push_back([&](WifiEvent wifi_event){ 
-    if (event.signal == WifiSignal::WIFI_CONNECTED) {
-      zenoh_actor.cmds.send(new ZenohCmd{.action = ZenohAction::Connect});
-    }
-}
-```
 ## tuning to get this programmed
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE 2304 -> 3120
 CONFIG_ESP_MAIN_TASK_STACK_SIZE increase

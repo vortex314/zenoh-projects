@@ -242,8 +242,19 @@ public:
     }
 };
 
+class ThreadSupport
+{
+public:
+    virtual void on_start() = 0;
+    virtual void on_stop() = 0;
+    virtual QueueHandle_t queue_handle() = 0;
+    virtual uint64_t sleep_time() = 0;
+    virtual void handle_cmd() = 0;
+    virtual void handle_timers() = 0;
+};
+
 template <typename EVENT, typename CMD>
-class Actor
+class Actor : public ThreadSupport
 {
 private:
     std::vector<std::function<void(EVENT &)>> _handlers;
@@ -261,6 +272,24 @@ public:
 
     virtual void on_start() {};
     virtual void on_stop() {};
+
+    QueueHandle_t queue_handle() override { return _cmds.getQueue(); }
+    uint64_t sleep_time() override { return _timers.sleep_time(); }
+    void handle_cmd() override
+    {
+        CMD *cmd;
+        while (_cmds.receive(&cmd, 0))
+        {
+            on_cmd(*cmd);
+            delete cmd;
+        }
+    };
+    void handle_timers() override
+    {
+        for (int id : _timers.get_expired_timers())
+            on_timer(id);
+        _timers.update();
+    };
 
     Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth), _stack_size(stack_size), _priority(priority), _name(name)
     {
@@ -341,6 +370,72 @@ public:
         _timers.stop(id);
     }
 };
+
+struct Thread
+{
+    std::vector<ThreadSupport &> _actors;
+    QueueSet _queue_set;
+    std::string _name;
+    Thread(const char *name) : _name(name) {}
+    size_t _stack_size;
+    TaskHandle_t _task_handle;
+    bool _stop_thread = false;
+
+    void start()
+    {
+        xTaskCreate(
+            [](void *arg)
+            {
+                auto self = static_cast<Thread *>(arg);
+                self->loop();
+            },
+            _name.c_str(), _stack_size, this, 5, &_task_handle);
+    }
+
+    Res add_actor(ThreadSupport &actor)
+    {
+        _actors.push_back(actor);
+        _queue_set.addQueue(actor.queue_handle());
+        return Res::Ok();
+    }
+
+    void loop()
+    {
+        INFO("starting actor %s", _name);
+        for ( ThreadSUpport&  actor : _actors)
+        {
+            actor.on_start();
+        };
+        while (!_stop_thread)
+        {
+            // find lowest sleep time
+            uint64_t sleep_time = UINT64_MAX;
+            for ( auto &actor : _actors)
+            {
+                uint64_t st = actor.sleep_time();
+                if (st < sleep_time)
+                {
+                    sleep_time = st;
+                }
+            };
+            QueueHandle_t queue = _queue_set.wait(sleep_time);
+            for ( auto &actor : _actors)
+            {
+                if (queue == actor.queue_handle())
+                {
+                    actor.handle_cmd();
+                }
+                actor.handle_timers();
+            };
+
+        }
+        INFO("stopping actor %s", _name);
+        for ( auto &actor : _actors)
+        {
+            actor.on_stop();
+        };
+    }
+}
 // when receiving a message, the actor will call the on_cmd method with envelope
 struct PublishBytes
 {

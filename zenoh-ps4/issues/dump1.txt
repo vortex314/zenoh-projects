@@ -1,0 +1,8 @@
+Checking "python3" ...
+Python 3.10.12
+"python3" has been detected
+
+Done! You can now compile ESP-IDF projects.
+Go to the project directory and run:
+
+  idf.py build
