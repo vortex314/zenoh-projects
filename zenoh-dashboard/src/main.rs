@@ -14,6 +14,7 @@ use tokio::sync::Mutex;
 trait PaneWidget: std::fmt::Debug {
     fn show(&mut self, ui: &mut egui::Ui);
     fn title(&self) -> String;
+    fn on_message(&mut self, message: String) {}
 }
 
 #[derive(Debug)]

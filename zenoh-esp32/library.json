@@ -1,0 +1,25 @@
+{
+    "name": "limero",
+    "version": "1.0.0",
+    "description": "An Actor framework with some opinionated ideas",
+    "keywords": "actors,esp32,",
+    "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/vortex314/zenoh-projects.git"
+    },
+    "authors":
+    [
+      {
+        "name": "Lieven Merckx",
+        "email": "lieven.merckx@gmail.com",
+        "url": "https://vortex314.blogspot.com"
+      }
+    ],
+    "license": "MIT",
+    "homepage": "https://vortex314.blogspot.com",
+    "dependencies": {
+    },
+    "frameworks": "espidf",
+    "platforms": "espressif32"
+  }

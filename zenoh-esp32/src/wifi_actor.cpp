@@ -140,7 +140,7 @@ Res WifiActor::wifi_init_sta(void)
   strcpy((char *)wifi_config.sta.password, wifi_password.c_str());
 
   
-  INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
+  DEBUG("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
        wifi_config.sta.password);
   // CHECK(esp_wifi_stop());
   CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
