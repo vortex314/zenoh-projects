@@ -38,6 +38,7 @@ struct TextPane {
 impl PaneWidget for TextPane {
     fn show(&mut self, ui: &mut egui::Ui) {
         ui.label(&self.text);
+        ui.label("Hello, TextPane");
     }
 
     fn title(&self) -> String {
@@ -59,13 +60,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         pane: &mut Pane,
     ) -> egui_tiles::UiResponse {
         let rect = ui.max_rect();
-        ui.add(egui::widgets::Label::new(format!(
-            "Rect [{},{}] , [{},{}] ",
-            rect.left(),
-            rect.top(),
-            rect.right(),
-            rect.bottom(),
-        )));
+
         let response = if ui
             .add(egui::Button::new("Hello, world!").sense(egui::Sense::drag()))
             .drag_started()
@@ -74,6 +69,13 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         } else {
             egui_tiles::UiResponse::None
         };
+        ui.add(egui::widgets::Label::new(format!(
+            "Rect [{},{}] , [{},{}] ",
+            rect.left(),
+            rect.top(),
+            rect.right(),
+            rect.bottom(),
+        )));
         pane.widget.try_lock().unwrap().show(ui);
         response
     }
@@ -109,7 +111,7 @@ fn create_tree() -> egui_tiles::Tree<Pane> {
     let mut next_view_nr = 0;
     let mut gen_pane = || {
         let pane = TextPane {
-            text: format!("{}", next_view_nr),
+            text: format!("TextPane {}", next_view_nr),
         };
         next_view_nr += 1;
         Pane::new(pane)

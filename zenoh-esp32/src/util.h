@@ -55,9 +55,9 @@ typedef bool Void;
   #define CHECK(VAL)                       \
   {                                              \
     int rc = (VAL);                              \
-    if (rc < 0)                                  \
+    if (rc != 0)                                  \
     {                                            \
-      ERROR("=%d %s:%d %s", rc, __FILE__, __LINE__,#VAL ); \
+      ERROR("rc=%d %s:%d %s", rc, __FILE__, __LINE__,#VAL ); \
       return Res::Err(rc, #VAL);                  \
     }                                            \
   }

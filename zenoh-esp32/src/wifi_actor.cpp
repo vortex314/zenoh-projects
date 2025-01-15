@@ -93,11 +93,13 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   WifiActor *actor = (WifiActor *)arg;
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
   {
+    INFO("WiFi STA started");
     esp_wifi_connect();
   }
   else if (event_base == WIFI_EVENT &&
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
+    INFO("WiFi STA disconnected");
     actor->emit(WifiEvent{WifiSignal::WIFI_DISCONNECTED});
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
@@ -108,6 +110,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   }
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
+    INFO("WiFi STA got IP address");
     actor->emit(WifiEvent{WifiSignal::WIFI_CONNECTED});
     actor->_wifi_connected = true;
     s_retry_count = 0;
@@ -172,6 +175,7 @@ Res WifiMsg::serialize(Serializer &ser)
 {
   uint32_t idx = 0;
   ser.reset();
+  ser.begin_map();
   ser.serialize(idx++, mac_address);
   ser.serialize(idx++, ip_address);
   ser.serialize(idx++, gateway);
@@ -182,21 +186,12 @@ Res WifiMsg::serialize(Serializer &ser)
   ser.serialize(idx++, rssi);
   ser.serialize(idx++, encryption);
   ser.serialize(idx++, wifi_mode);
-  return ser.serialize(idx++, ap_scan);
+  ser.serialize(idx++, ap_scan);
+  return ser.end_map();
 }
 Res WifiMsg::deserialize(Deserializer &des)
 {
-  des.deserialize(mac_address);
-  des.deserialize(ip_address);
-  des.deserialize(gateway);
-  des.deserialize(netmask);
-  des.deserialize(dns);
-  des.deserialize(ssid);
-  des.deserialize(channel);
-  des.deserialize(rssi);
-  des.deserialize(encryption);
-  des.deserialize(wifi_mode);
-  return des.deserialize(ap_scan);
+  return Res::Err(-1, "Not implemented");
 }
 
 Res WifiMsg::fill(esp_netif_t *esp_netif)

@@ -381,15 +381,18 @@ struct Thread
     TaskHandle_t _task_handle;
     bool _stop_thread = false;
 
-    void start()
+    Thread(const char *name, size_t stack_size) : _name(name), _stack_size(stack_size) {}
+
+    Res start()
     {
-        xTaskCreate(
+        CHECK(xTaskCreate(
             [](void *arg)
             {
                 auto self = static_cast<Thread *>(arg);
                 self->loop();
             },
-            _name.c_str(), _stack_size, this, 5, &_task_handle);
+            _name.c_str(), _stack_size, this, 5, &_task_handle));
+            return Res::Ok();
     }
 
     Res add_actor(ThreadSupport &actor)
@@ -402,7 +405,7 @@ struct Thread
     void loop()
     {
         INFO("starting actor %s", _name);
-        for ( ThreadSUpport&  actor : _actors)
+        for ( ThreadSupport&  actor : _actors)
         {
             actor.on_start();
         };
@@ -413,6 +416,10 @@ struct Thread
             for ( auto &actor : _actors)
             {
                 uint64_t st = actor.sleep_time();
+                if ( st == 0 ) {
+                    actor.handle_timers();
+                    st = actor.sleep_time();
+                }
                 if (st < sleep_time)
                 {
                     sleep_time = st;
