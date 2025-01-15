@@ -47,13 +47,13 @@ struct ZenohMsg : public Serializable
 struct ZenohEvent
 {
   std::optional<PublishBytes> publish = std::nullopt; // publish a message
-  std::optional<PublishSerdes> serialize = std::nullopt; // publish a serializable object
+  std::optional<PublishSerdes> serdes = std::nullopt; // publish a serializable object
 };
 
 struct ZenohCmd
 {
   std::optional<ZenohAction> action = std::nullopt;
-  std::optional<PublishBytes> publish = std::nullopt;
+  std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>

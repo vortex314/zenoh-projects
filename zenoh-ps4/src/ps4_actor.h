@@ -57,7 +57,11 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 
 struct Ps4Output : public Serializable
 {
-  std::optional<int> dpad = std::nullopt;
+  std::optional<bool> button_left = std::nullopt;
+  std::optional<bool> button_right = std::nullopt;
+  std::optional<bool> button_up = std::nullopt;
+  std::optional<bool> button_down = std::nullopt;
+
   std::optional<bool> button_square = std::nullopt;
   std::optional<bool> button_cross = std::nullopt;
   std::optional<bool> button_circle = std::nullopt;
@@ -87,11 +91,12 @@ struct Ps4Output : public Serializable
   std::optional<int> rumble = std::nullopt;
   std::optional<int> led_rgb = std::nullopt;
 
-
+  ~Ps4Output() override {
+    INFO("Ps4Output destructor");
+  }
 
   Res deserialize(Deserializer &des) override
   {
-
     return Res::Err(EAFNOSUPPORT, "Not implemented");
   }
   Res serialize(Serializer &ser) override

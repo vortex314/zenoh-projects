@@ -253,6 +253,24 @@ public:
     virtual void handle_timers() = 0;
 };
 
+/*
+
+Actor usage as independent threads
+
+Create actor - Run actor
+
+
+Actor actor = Actor(4000, "actor", 5, 10);
+actor.on_event([](Event &event) {
+    INFO("Event received");
+});
+actor.start();
+
+The start method creates a thread dedicated to the actor. The actor will run in the thread until the stop method is called.
+
+
+*/
+
 template <typename EVENT, typename CMD>
 class Actor : public ThreadSupport
 {
@@ -371,6 +389,12 @@ public:
     }
 };
 
+/*
+
+A thread is created to manage multiple actors. The thread will wait for the actor with the lowest sleep time and handle the command or timer event.
+
+*/
+
 struct Thread
 {
     std::vector<ThreadSupport &> _actors;
@@ -404,6 +428,7 @@ struct Thread
 
     void loop()
     {
+        uint32_t loop_count=0;
         INFO("starting actor %s", _name);
         for ( ThreadSupport&  actor : _actors)
         {
@@ -416,9 +441,15 @@ struct Thread
             for ( auto &actor : _actors)
             {
                 uint64_t st = actor.sleep_time();
-                if ( st == 0 ) {
+                loop_count=0;
+                while ( st == 0 ) {
                     actor.handle_timers();
                     st = actor.sleep_time();
+                    loop_count++;
+                    if (loop_count > 10) {
+                        ERROR("loop count exceeded for timer handling %s", actor._name);
+                        break;
+                    }
                 }
                 if (st < sleep_time)
                 {

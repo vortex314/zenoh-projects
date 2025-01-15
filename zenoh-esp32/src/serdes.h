@@ -26,17 +26,17 @@ public:
   virtual Res serialize(int i) = 0;
   virtual Res serialize_null() = 0;
   template <typename V> Res serialize(std::optional<V> value) {
-    if (value.has_value()) {
-      serialize(value.value());
+    if (value) {
+      serialize(*value);
     } else {
       serialize_null();
     }
     return Res::Ok();
   }
   template <typename V> Res serialize(uint32_t idx, std::optional<V> value) {
-    if (value.has_value()) {
+    if (value) {
       serialize(idx);
-      serialize(value.value());
+      serialize(*value);
     }
     return Res::Ok();
   }

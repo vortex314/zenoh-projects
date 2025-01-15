@@ -5,6 +5,11 @@
 #define BUTTON_CIRCLE 0x02
 #define BUTTON_TRIANGLE 0x08
 
+#define BUTTON_LEFT 0x08
+#define BUTTON_DOWN 0x02
+#define BUTTON_RIGHT 0x04
+#define BUTTON_UP 0x01
+
 #define BUTTON_LEFT_SHOULDER 0x10
 #define BUTTON_RIGHT_SHOULDER 0x20
 #define BUTTON_LEFT_TRIGGER 0x40
@@ -23,7 +28,7 @@ Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(6120, "ps4", 5, 10)
 extern "C" const char* btdm_controller_get_compile_version();
 void Ps4Actor::on_start()
 {
-    btstack_stdio_init();
+    // btstack_stdio_init();
     INFO("btdm_controller_get_compile_version()=%s",btdm_controller_get_compile_version());
     // Configure BTstack for ESP32 VHCI Controller
     btstack_init();
@@ -156,6 +161,11 @@ uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
 void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
 {
     ps4_output.dpad = gp->dpad;
+
+    ps4_output.button_left = gp->buttons & BUTTON_LEFT;
+    ps4_output.button_right = gp->buttons & BUTTON_RIGHT;
+    ps4_output.button_up = gp->buttons & BUTTON_UP;
+    ps4_output.button_down = gp->buttons & BUTTON_DOWN;
 
     ps4_output.button_square = gp->buttons & BUTTON_SQUARE;
     ps4_output.button_cross = gp->buttons & BUTTON_CROSS;

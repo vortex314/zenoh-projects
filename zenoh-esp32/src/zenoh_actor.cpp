@@ -93,23 +93,18 @@ Res ZenohActor::connect(void)
   // Initialize Zenoh Session and other parameters
   z_owned_config_t config;
   z_config_default(&config);
-  RET_ERRI(zp_config_insert(z_loan_mut(config), Z_CONFIG_MODE_KEY, MODE),
-           "Failed to insert mode");
+  CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_MODE_KEY, MODE));
   if (strcmp(CONNECT, "") != 0)
   {
     //        zp_config_insert(z_loan_mut(config), Z_CONFIG_CONNECT_KEY,
     //        CONNECT);
-    RET_ERRI(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT),
-             "Failed to insert connect");
+    CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT));
   }
   // Open Zenoh session
-  RET_ERRI(z_open(&_zenoh_session, z_move(config), NULL),
-           "Unable to open session");
+  CHECK(z_open(&_zenoh_session, z_move(config), NULL));
   // Start the receive and the session lease loop for zenoh-pico
-  RET_ERRI(zp_start_read_task(z_loan_mut(_zenoh_session), NULL),
-           "Failed to start read task");
-  RET_ERRI(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL),
-           "Failed to start lease task");
+  CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), NULL));
+  CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL));
   _connected = true;
   return Res::Ok();
 }
@@ -217,10 +212,8 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   topic_name += topic;
 
   z_view_keyexpr_from_str_unchecked(&keyexpr, topic_name.c_str());
-  RET_ERRI(z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size()),
-           "Failed to copy buffer to payload");
-  RET_ERRI(z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL),
-           "Failed to publish message");
+  CHECK(z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size()));
+  CHECK(z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
   return Res::Ok();
 }
@@ -253,10 +246,8 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic_name.c_str());
-  RET_ERRI(z_bytes_copy_from_buf(&payload, value.data(), value.size()),
-           "Failed to copy buffer to payload");
-  RET_ERRI(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL),
-           "Failed to publish message");
+  CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size());
+  CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
   return Res::Ok();
 }
@@ -276,7 +267,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.serialize = PublishSerdes{"info/zenoh", _zenoh_msg}});
+  emit(ZenohEvent{.serdes = PublishSerdes{"info/zenoh", _zenoh_msg}});
   z_drop(z_move(z_str));
   return Res::Ok();
 }

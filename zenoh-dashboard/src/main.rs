@@ -1,9 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use egui::Visuals;
+use serde::de::DeserializeOwned;
 // hide console window on Windows in release
 #[allow(unused_imports)]
 use serde::{Deserialize, Serialize};
+
+use anyhow::Result;
 
 mod actor_zenoh;
 use actor_zenoh::{Actor, ActorZenoh};
@@ -11,10 +14,18 @@ mod logger;
 use log::info;
 use logger::init;
 use tokio::sync::Mutex;
+
+
 trait PaneWidget: std::fmt::Debug {
     fn show(&mut self, ui: &mut egui::Ui);
     fn title(&self) -> String;
-    fn on_message(&mut self, message: String) {}
+    fn process_data<'de, T>(input: &'de Vec<u8>) -> Result<T, &str>
+    where
+        T: Deserialize<'de>,
+    {
+        minicbor::decode(input).map_err(|_| "failed to parse")?
+    }
+
 }
 
 #[derive(Debug)]

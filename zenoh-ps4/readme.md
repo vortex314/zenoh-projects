@@ -10,11 +10,19 @@ The data is serialized in a CBOR Array
 No filtering is applied yet. 
 The same message can be send to the controller for invoking rumble or activate leds. ( TBD ) 
 
+## How to connect with PS4 bluetooth controller
+
+[![Youtube PS4](https://img.youtube.com/vi/URw88NguXek/0.jpg)](https://www.youtube.com/watch?v=URw88NguXek)
+
 ## Data layout 
 ```C++
 struct Ps4Output : public Serializable
 {
-  std::optional<int> dpad = std::nullopt;
+  std::optional<bool> button_left = std::nullopt;
+  std::optional<bool> button_right = std::nullopt;
+  std::optional<bool> button_up = std::nullopt;
+  std::optional<bool> button_down = std::nullopt;
+  
   std::optional<bool> button_square = std::nullopt;
   std::optional<bool> button_cross = std::nullopt;
   std::optional<bool> button_circle = std::nullopt;
