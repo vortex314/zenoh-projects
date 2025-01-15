@@ -251,6 +251,7 @@ public:
     virtual uint64_t sleep_time() = 0;
     virtual void handle_cmd() = 0;
     virtual void handle_timers() = 0;
+    virtual const char *name() = 0;
 };
 
 /*
@@ -308,6 +309,8 @@ public:
             on_timer(id);
         _timers.update();
     };
+
+    const char *name() { return _name; }
 
     Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth), _stack_size(stack_size), _priority(priority), _name(name)
     {
@@ -395,17 +398,20 @@ A thread is created to manage multiple actors. The thread will wait for the acto
 
 */
 
-struct Thread
+class Thread
 {
-    std::vector<ThreadSupport &> _actors;
-    QueueSet _queue_set;
+    std::vector<ThreadSupport *> _actors;
+    QueueSetHandle_t _queue_set;
     std::string _name;
-    Thread(const char *name) : _name(name) {}
     size_t _stack_size;
     TaskHandle_t _task_handle;
     bool _stop_thread = false;
 
-    Thread(const char *name, size_t stack_size) : _name(name), _stack_size(stack_size) {}
+public:
+    Thread(const char *name, size_t stack_size, size_t queue_size) : _name(name), _stack_size(stack_size)
+    {
+        _queue_set = xQueueCreateSet(queue_size);
+    }
 
     Res start()
     {
@@ -416,38 +422,44 @@ struct Thread
                 self->loop();
             },
             _name.c_str(), _stack_size, this, 5, &_task_handle));
-            return Res::Ok();
+        return Res::Ok();
     }
 
     Res add_actor(ThreadSupport &actor)
     {
-        _actors.push_back(actor);
-        _queue_set.addQueue(actor.queue_handle());
+        _actors.push_back(&actor);
+        xQueueAddToSet(actor.queue_handle(), _queue_set);
         return Res::Ok();
     }
 
     void loop()
     {
-        uint32_t loop_count=0;
+        uint32_t loop_count = 0;
         INFO("starting actor %s", _name);
-        for ( ThreadSupport&  actor : _actors)
+        for (int i = 0; i < _actors.size(); i++)
         {
+            auto &actor = *_actors[i];
             actor.on_start();
         };
+
         while (!_stop_thread)
         {
             // find lowest sleep time
             uint64_t sleep_time = UINT64_MAX;
-            for ( auto &actor : _actors)
+            for (int i = 0; i < _actors.size(); i++)
             {
-                uint64_t st = actor.sleep_time();
-                loop_count=0;
-                while ( st == 0 ) {
+                auto &actor = *_actors[i];
+
+                loop_count = 0;
+                int st = 0;
+                while (st == 0)
+                {
                     actor.handle_timers();
                     st = actor.sleep_time();
                     loop_count++;
-                    if (loop_count > 10) {
-                        ERROR("loop count exceeded for timer handling %s", actor._name);
+                    if (loop_count > 10)
+                    {
+                        ERROR("loop count exceeded for timer handling %s", actor.name());
                         break;
                     }
                 }
@@ -456,24 +468,27 @@ struct Thread
                     sleep_time = st;
                 }
             };
-            QueueHandle_t queue = _queue_set.wait(sleep_time);
-            for ( auto &actor : _actors)
+            INFO("sleep time %d", sleep_time);
+            auto queue = xQueueSelectFromSet(_queue_set, sleep_time);
+            for (int i = 0; i < _actors.size(); i++)
             {
+                auto &actor = *_actors[i];
                 if (queue == actor.queue_handle())
                 {
                     actor.handle_cmd();
                 }
                 actor.handle_timers();
             };
-
         }
         INFO("stopping actor %s", _name);
-        for ( auto &actor : _actors)
+        for (int i = 0; i < _actors.size(); i++)
         {
+            auto &actor = *_actors[i];
             actor.on_stop();
         };
     }
-}
+};
+
 // when receiving a message, the actor will call the on_cmd method with envelope
 struct PublishBytes
 {
@@ -482,7 +497,6 @@ struct PublishBytes
 };
 struct PublishSerdes
 {
-    std::string topic;
     Serializable &payload;
 };
 

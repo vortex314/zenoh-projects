@@ -30,6 +30,7 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+#include <actor.h>
 #include <wifi_actor.h>
 #include <zenoh-pico.h>
 #include <zenoh_actor.h>
@@ -43,24 +44,22 @@ ZenohActor zenoh_actor;
 SysActor sys_actor;
 Ps4Actor ps4_actor;
 LedActor led_actor;
-Thread actors("actors", 7000, 5, 1);
+Thread actors("actors", 7000, 20);
+Thread bluetooth("bluetooth", 7000, 20);
 Log logger;
 
 // re-entrant function to publish a serializable object
-void publish(ZenohActor &zenoh_actor, std::optional<PublishSerdes> &serdes)
+void publish(ZenohActor &zenoh_actor, const char *topic, std::optional<PublishSerdes> &serdes)
 {
   if (serdes)
   {
     Bytes buffer;
     CborSerializer ser(buffer);
-    auto topic = serdes.value().topic;
     auto &serializable = serdes.value().payload;
     serializable.serialize(ser);
 
     assert(buffer.size() > 0);
-    assert(topic.size() > 0);
     assert(buffer.size() < 1024);
-    assert(topic.size() < 1024);
 
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
     // pulse led when we publish
@@ -73,7 +72,8 @@ std::optional<T> deserialize(Bytes bytes)
 {
   CborDeserializer des(bytes.data(), bytes.size());
   T obj;
-  if ( obj.deserialize(des)== Res::Ok() return obj;
+  if (obj.deserialize(des).is_ok())
+    return obj;
   return std::nullopt;
 }
 
@@ -99,8 +99,8 @@ extern "C" void app_main()
   ESP_ERROR_CHECK(ret);
 
   zenoh_actor.prefix("lm1"); // set the zenoh prefix to src/lm1 and destination dst/lm1
-  
-                             // WIRING the actors together
+
+  // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([](WifiEvent event)
                       {
@@ -113,13 +113,13 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { publish(zenoh_actor, event.serdes); });
+                      { publish(zenoh_actor, "wifi", event.serdes); });
   sys_actor.on_event([&](SysEvent event)
-                     { publish(zenoh_actor, event.serdes); });
+                     { publish(zenoh_actor, "sys", event.serdes); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { publish(zenoh_actor, event.serialize); });
+                       { publish(zenoh_actor, "zenoh", event.serdes); });
   ps4_actor.on_event([&](Ps4Event event)
-                     { publish(zenoh_actor, event.serdes); });
+                     { publish(zenoh_actor, "ps4", event.serdes); });
 
   // log connection events
   ps4_actor.on_event([](Ps4Event event)
@@ -156,28 +156,29 @@ extern "C" void app_main()
       CborDeserializer des(pub.payload.data(), pub.payload.size());
       if (pub.topic == "sys") {
         auto msg = deserialize<SysMsg>(pub.payload);
-        if ( msg )  sys_actor.tell(new SysCmd{.serdes = std::move(msg)});
+        if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes { msg.value() }});  
       } else if ( pub.topic == "wifi") {
         auto msg = deserialize<WifiMsg>(pub.payload);
-        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = std::move(msg)});
+        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes { msg.value() }});
       } else if ( pub.topic == "ps4") {
         auto msg = deserialize<Ps4Msg>(pub.payload);
-        if ( msg ) ps4_actor.tell(new Ps4Cmd{.serdes = std::move(msg)});
+        if ( msg ) ps4_actor.tell(new Ps4Cmd{.serdes = PublishSerdes { msg.value() }});
       } else if ( pub.topic == "zenoh") {
         auto msg = deserialize<ZenohMsg>(pub.payload);
-        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = std::move(msg)});
+        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
       } else {
         INFO("Received Zenoh unknown event");
       }
     } });
 
   // one thread to rule them all, in the hope to save some memory
-  actors.add_actor(&wifi_actor);
-  actors.add_actor(&zenoh_actor);
-  actors.add_actor(&sys_actor);
-  actors.add_actor(&ps4_actor);
-  actors.add_actor(&led_actor);
+  actors.add_actor(wifi_actor);
+  actors.add_actor(zenoh_actor);
+  actors.add_actor(sys_actor);
+  bluetooth.add_actor(ps4_actor);
+  actors.add_actor(led_actor);
   actors.start();
+  bluetooth.start();
 
   // log heap size, monitoring thread in main, we could exit also
   while (true)

@@ -54,6 +54,7 @@ struct ZenohCmd
 {
   std::optional<ZenohAction> action = std::nullopt;
   std::optional<PublishSerdes> serdes = std::nullopt;
+  std::optional<PublishBytes> publish = std::nullopt;
 };
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>

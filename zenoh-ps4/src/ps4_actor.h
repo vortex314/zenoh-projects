@@ -1,3 +1,5 @@
+#ifndef PS4_ACTOR_H
+#define PS4_ACTOR_H
 /*
 https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 
@@ -55,7 +57,7 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 
 */
 
-struct Ps4Output : public Serializable
+struct Ps4Msg : public Serializable
 {
   std::optional<bool> button_left = std::nullopt;
   std::optional<bool> button_right = std::nullopt;
@@ -91,8 +93,8 @@ struct Ps4Output : public Serializable
   std::optional<int> rumble = std::nullopt;
   std::optional<int> led_rgb = std::nullopt;
 
-  ~Ps4Output() override {
-    INFO("Ps4Output destructor");
+  ~Ps4Msg()  {
+    INFO("Ps4Msg destructor");
   }
 
   Res deserialize(Deserializer &des) override
@@ -103,7 +105,10 @@ struct Ps4Output : public Serializable
   {
     ser.reset();
     ser.array_begin();
-    ser.serialize(dpad);
+    ser.serialize(button_left );
+    ser.serialize(button_right);
+    ser.serialize(button_up);
+    ser.serialize(button_down);
 
     ser.serialize(button_square);
     ser.serialize(button_cross);
@@ -142,7 +147,7 @@ struct Ps4Input
 
 struct Ps4Cmd
 {
-  std::optional<PublishSerdes> publish = std::nullopt;
+  std::optional<PublishSerdes> serdes = std::nullopt;
   std::optional<bool> stop_actor = std::nullopt;
 };
 
@@ -161,7 +166,7 @@ struct Ps4Event
 {
   std::optional<PublishSerdes> serdes = std::nullopt;
   std::optional<BlueEvent> blue_event = std::nullopt;
-  std::optional<Ps4Output> output = std::nullopt;
+  std::optional<Ps4Msg> output = std::nullopt;
 };
 
 class Ps4Actor : public Actor<Ps4Event, Ps4Cmd>
@@ -172,7 +177,7 @@ public:
   void on_cmd(Ps4Cmd &cmd);
   void on_timer(int timer_id);
   void on_start();
-  Ps4Output ps4_output  ;
+  Ps4Msg ps4_output  ;
 
   void gamepad_to_output(uni_gamepad_t *gp);
 
@@ -195,3 +200,4 @@ public:
 
  extern "C"   Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
 
+#endif

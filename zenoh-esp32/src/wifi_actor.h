@@ -56,14 +56,13 @@ typedef enum
 struct WifiEvent
 {
   std::optional<WifiSignal> signal = std::nullopt;
-  std::optional<PublishBytes> publish = std::nullopt;
   std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
 struct WifiCmd
 {
   std::optional<bool> stop_actor = std::nullopt;
-  std::optional<PublishBytes> publish = std::nullopt;
+  std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
 class WifiActor : public Actor<WifiEvent, WifiCmd>

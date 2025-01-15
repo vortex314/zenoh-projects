@@ -1,7 +1,7 @@
 # Building PS4_actor
 - follow : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 - install btstack in esp-idf
-
+[Architecture](doc/)
 
 
 # Actor framework in FreeRTOS

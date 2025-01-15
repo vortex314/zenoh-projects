@@ -1,5 +1,6 @@
 #include <actor.h>
 #include <driver/gpio.h>
+#include <soc/gpio_num.h>
 
 enum LedAction {
     LED_ON,
@@ -11,6 +12,7 @@ enum LedAction {
 struct LedCmd {
     std::optional<LedAction> action = std::nullopt;
     std::optional<int> duration = std::nullopt;
+    std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
 struct LedEvent {

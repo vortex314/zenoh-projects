@@ -72,8 +72,9 @@ void WifiActor::on_timer(int timer_id)
   {
     if (_wifi_connected)
     {
+      INFO("Publishing WiFi properties");
       wifi_msg.fill(esp_netif);
-      emit(WifiEvent{.serdes = PublishSerdes{"wifi", wifi_msg}});
+      emit(WifiEvent{.serdes = PublishSerdes{.payload =wifi_msg}});
     }
     break;
   }
@@ -175,7 +176,7 @@ Res WifiMsg::serialize(Serializer &ser)
 {
   uint32_t idx = 0;
   ser.reset();
-  ser.begin_map();
+  ser.map_begin();
   ser.serialize(idx++, mac_address);
   ser.serialize(idx++, ip_address);
   ser.serialize(idx++, gateway);
@@ -187,7 +188,7 @@ Res WifiMsg::serialize(Serializer &ser)
   ser.serialize(idx++, encryption);
   ser.serialize(idx++, wifi_mode);
   ser.serialize(idx++, ap_scan);
-  return ser.end_map();
+  return ser.map_end();
 }
 Res WifiMsg::deserialize(Deserializer &des)
 {

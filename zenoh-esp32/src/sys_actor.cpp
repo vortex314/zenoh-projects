@@ -29,6 +29,7 @@ void SysActor::on_timer(int id)
     {
     case 1:
     {
+        INFO("Publishing Sys properties");
         publish_props();
         break;
     }
@@ -50,7 +51,7 @@ Res SysActor::publish_props()
     _sys_msg.ram_size = std::nullopt;
     _sys_msg.free_heap = esp_get_free_heap_size();
     _sys_msg.up_time = esp_timer_get_time();
-    emit(SysEvent{.serdes = PublishSerdes{"sys", _sys_msg}});
+    emit(SysEvent{.serdes = PublishSerdes{.payload = _sys_msg}});
     return Res::Ok();
 }
 

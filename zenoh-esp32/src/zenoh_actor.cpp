@@ -246,7 +246,7 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic_name.c_str());
-  CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size());
+  CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
   CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
   return Res::Ok();
@@ -267,7 +267,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.serdes = PublishSerdes{"info/zenoh", _zenoh_msg}});
+  emit(ZenohEvent{.serdes =  PublishSerdes{.payload =_zenoh_msg}});
   z_drop(z_move(z_str));
   return Res::Ok();
 }

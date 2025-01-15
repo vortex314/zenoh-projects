@@ -25,11 +25,11 @@ Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(6120, "ps4", 5, 10)
     INFO("Starting PS4 actor sizeof(Ps4Cmd ) : %d ", sizeof(Ps4Cmd));
     add_timer(Timer::Repetitive(1, 1000));
 }
-extern "C" const char* btdm_controller_get_compile_version();
+extern "C" const char *btdm_controller_get_compile_version();
 void Ps4Actor::on_start()
 {
     // btstack_stdio_init();
-    INFO("btdm_controller_get_compile_version()=%s",btdm_controller_get_compile_version());
+    INFO("btdm_controller_get_compile_version()=%s", btdm_controller_get_compile_version());
     // Configure BTstack for ESP32 VHCI Controller
     btstack_init();
 
@@ -160,12 +160,10 @@ uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
 
 void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
 {
-    ps4_output.dpad = gp->dpad;
-
-    ps4_output.button_left = gp->buttons & BUTTON_LEFT;
-    ps4_output.button_right = gp->buttons & BUTTON_RIGHT;
-    ps4_output.button_up = gp->buttons & BUTTON_UP;
-    ps4_output.button_down = gp->buttons & BUTTON_DOWN;
+    ps4_output.button_left = gp->dpad & BUTTON_LEFT;
+    ps4_output.button_right = gp->dpad & BUTTON_RIGHT;
+    ps4_output.button_up = gp->dpad & BUTTON_UP;
+    ps4_output.button_down = gp->dpad & BUTTON_DOWN;
 
     ps4_output.button_square = gp->buttons & BUTTON_SQUARE;
     ps4_output.button_cross = gp->buttons & BUTTON_CROSS;
@@ -195,7 +193,7 @@ void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
     ps4_output.rumble = std::nullopt;
     ps4_output.led_rgb = std::nullopt;
 
-    emit(Ps4Event{.serdes = PublishSerdes{"ps4", ps4_output}});
+    emit(Ps4Event{.serdes = PublishSerdes{ps4_output}});
 }
 
 void Ps4Actor::on_controller_data(uni_hid_device_t *d, uni_controller_t *ctl)
@@ -253,7 +251,7 @@ void Ps4Actor::on_oob_event(uni_platform_oob_event_t event, void *data)
 
 void Ps4Actor::trigger_event_on_gamepad(uni_hid_device_t *d)
 {
-   // Ps4Actor *ps = get_my_platform_instance(d);
+    // Ps4Actor *ps = get_my_platform_instance(d);
 
     if (d->report_parser.play_dual_rumble != NULL)
     {

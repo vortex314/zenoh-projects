@@ -5,7 +5,7 @@
 #include <serdes.h>
 #include "cbor.h"
 #include <vector>
-//#include <map>
+// #include <map>
 
 struct SysMsg : public Serializable
 {
@@ -24,7 +24,6 @@ struct SysMsg : public Serializable
 
 struct SysEvent
 {
-  std::optional<PublishBytes> publish = std::nullopt;
   std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
@@ -35,8 +34,8 @@ enum SysAction
 
 struct SysCmd
 {
+  std::optional<PublishSerdes> serdes = std::nullopt;
   std::optional<SysAction> action = std::nullopt;
-  std::optional<PublishBytes> publish = std::nullopt;
 };
 
 class SysActor : public Actor<SysEvent, SysCmd>
@@ -51,6 +50,7 @@ public:
   void on_cmd(SysCmd &cmd);
   void on_timer(int timer_id);
   Res publish_props();
+
 private:
   void init_properties();
   SysMsg _sys_msg;
