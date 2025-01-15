@@ -18,7 +18,7 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4000, "wifi", 5, 10)
+WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4000, "wifi", 5, 5)
 {
   INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
   add_timer(Timer::Repetitive(1, 1000));

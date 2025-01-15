@@ -1,7 +1,7 @@
 
 #include <sys_actor.h>
 
-SysActor::SysActor() : Actor<SysEvent, SysCmd>(4096, "sys", 5, 10)
+SysActor::SysActor() : Actor<SysEvent, SysCmd>(4096, "sys", 5, 5)
 {
     INFO("Starting Sys actor sizeof(SysCmd ) : %d ", sizeof(SysCmd));
 

@@ -11,7 +11,7 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 6)
+ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 5)
 {
   INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
   add_timer(Timer::Repetitive(1, 1000)); // timer for publishing properties

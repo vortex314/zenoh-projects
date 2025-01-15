@@ -3,7 +3,7 @@
 #define LED_ON_VALUE 1
 #define LED_OFF_VALUE 0
 
-LedActor::LedActor() : Actor<LedEvent, LedCmd>(2048, "led", 5, 10)
+LedActor::LedActor() : Actor<LedEvent, LedCmd>(2048, "led", 5, 5)
 {
     INFO("Starting LED actor sizeof(LedCmd ) : %d ", sizeof(LedCmd));
     add_timer(Timer::Repetitive(1, 1000));

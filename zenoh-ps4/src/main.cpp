@@ -175,15 +175,16 @@ extern "C" void app_main()
   actors.add_actor(wifi_actor);
   actors.add_actor(zenoh_actor);
   actors.add_actor(sys_actor);
-  bluetooth.add_actor(ps4_actor);
   actors.add_actor(led_actor);
   actors.start();
+  
+  bluetooth.add_actor(ps4_actor);
   bluetooth.start();
 
   // log heap size, monitoring thread in main, we could exit also
   while (true)
   {
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
     INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
 }

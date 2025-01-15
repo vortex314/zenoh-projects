@@ -16,10 +16,12 @@
 template <typename T>
 class Channel
 {
+    size_t _depth;
 public:
     Channel(size_t depth)
     {
         queue = xQueueCreate(depth, sizeof(T));
+        _depth = depth;
         INFO("Channel created [%d][%d]  ", depth, sizeof(T));
     }
 
@@ -37,6 +39,7 @@ public:
     ~Channel() { vQueueDelete(queue); }
 
     QueueHandle_t getQueue() { return queue; }
+    size_t getQueueDepth() { return _depth; }
 
 private:
     QueueHandle_t queue;
@@ -297,10 +300,12 @@ public:
     void handle_cmd() override
     {
         CMD *cmd;
-        while (_cmds.receive(&cmd, 0))
+        if  (_cmds.receive(&cmd, 0))
         {
             on_cmd(*cmd);
             delete cmd;
+        } else {
+            ERROR("Failed to receive command for actor %s", _name);
         }
     };
     void handle_timers() override
@@ -428,7 +433,11 @@ public:
     Res add_actor(ThreadSupport &actor)
     {
         _actors.push_back(&actor);
-        xQueueAddToSet(actor.queue_handle(), _queue_set);
+        auto r = xQueueAddToSet(actor.queue_handle(), _queue_set);
+        if (r != pdPASS)
+        {
+            return Res::Err(0, "Failed to add actor to queue set");
+        }
         return Res::Ok();
     }
 
@@ -468,12 +477,11 @@ public:
                     sleep_time = st;
                 }
             };
-            INFO("sleep time %d", sleep_time);
-            auto queue = xQueueSelectFromSet(_queue_set, sleep_time);
+            QueueSetMemberHandle_t queue = xQueueSelectFromSet(_queue_set, sleep_time);
             for (int i = 0; i < _actors.size(); i++)
             {
                 auto &actor = *_actors[i];
-                if (queue == actor.queue_handle())
+                if (queue != NULL && queue == actor.queue_handle())
                 {
                     actor.handle_cmd();
                 }
