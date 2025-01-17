@@ -42,10 +42,12 @@
 WifiActor wifi_actor;
 ZenohActor zenoh_actor;
 SysActor sys_actor;
-Ps4Actor ps4_actor;
 LedActor led_actor;
 Thread actors("actors", 7000, 20);
+
+Ps4Actor ps4_actor;
 Thread bluetooth("bluetooth", 7000, 20);
+
 Log logger;
 
 // re-entrant function to publish a serializable object
@@ -98,7 +100,7 @@ extern "C" void app_main()
   }
   ESP_ERROR_CHECK(ret);
 
-  zenoh_actor.prefix("lm1"); // set the zenoh prefix to src/lm1 and destination dst/lm1
+  zenoh_actor.prefix("lm1"); // set the zenoh prefix to src/lm1 and destination subscriber dst/lm1/ ** 
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection

@@ -24,7 +24,7 @@ pub trait Actor {
     type Event;
     async fn run(&mut self);
     fn sender(&self) -> Result<Sender<Self::Cmd>>;
-    fn add_listener(&mut self, listener: Box<dyn Handler<Self::Event> + 'static>);
+    fn add_listener<FUNC: Fn(&Self::Event) + 'static + Send >(&mut self, f:FUNC ) -> ();
 }
 
 #[derive(Debug, Serialize)]
@@ -35,7 +35,7 @@ pub enum ZenohCmd {
     Subscribe { topic: String },
     Unsubscribe { topic: String },
 }
-
+#[derive(Debug)]
 pub enum ZenohEvent {
     Connected,
     Disconnected,
@@ -45,7 +45,7 @@ pub enum ZenohEvent {
 pub struct ActorZenoh {
     tx_cmd: Sender<ZenohCmd>,
     rx_cmd: Receiver<ZenohCmd>,
-    event_handlers: Vec<Box<dyn Handler<ZenohEvent>>>,
+    event_handlers: Vec<Box<dyn Fn(&ZenohEvent) + Send >>,
     config: Option<zenoh::config::Config>,
     zenoh_session: Option<Session>,
 }
@@ -54,14 +54,16 @@ impl Actor for ActorZenoh {
     type Cmd = ZenohCmd;
     type Event = ZenohEvent;
 
-     fn add_listener(&mut self, listener: Box<dyn Handler<Self::Event> + 'static>) {
-        self.event_handlers.push(listener);
+     fn add_listener<FUNC: Fn(&Self::Event) + 'static + Send >(&mut self, f:FUNC) {
+        self.event_handlers.push(Box::new(f));
     }
 
     async fn run(&mut self) {
         let config = self.config.clone().unwrap();
         zenoh::init_log_from_env_or("info");
         let zenoh_session = zenoh::open(config).await.unwrap();
+
+        self.add_listener(|e|  { info!(" Received an event {:?}", e)});
 
 
         let subscriber = zenoh_session.declare_subscriber("**").await.unwrap();

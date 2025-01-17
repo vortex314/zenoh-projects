@@ -60,7 +60,8 @@
         "bit": "cpp",
         "compare": "cpp",
         "concepts": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "queue": "cpp"
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,

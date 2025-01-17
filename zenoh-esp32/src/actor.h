@@ -17,6 +17,7 @@ template <typename T>
 class Channel
 {
     size_t _depth;
+
 public:
     Channel(size_t depth)
     {
@@ -252,8 +253,8 @@ public:
     virtual void on_stop() = 0;
     virtual QueueHandle_t queue_handle() = 0;
     virtual uint64_t sleep_time() = 0;
-    virtual void handle_cmd() = 0;
-    virtual void handle_timers() = 0;
+    virtual void handle_all_cmd() = 0;
+    virtual void handle_expired_timers() = 0;
     virtual const char *name() = 0;
 };
 
@@ -297,18 +298,16 @@ public:
 
     QueueHandle_t queue_handle() override { return _cmds.getQueue(); }
     uint64_t sleep_time() override { return _timers.sleep_time(); }
-    void handle_cmd() override
+    void handle_all_cmd() override
     {
         CMD *cmd;
-        if  (_cmds.receive(&cmd, 0))
+        while (_cmds.receive(&cmd, 0))
         {
             on_cmd(*cmd);
             delete cmd;
-        } else {
-            ERROR("Failed to receive command for actor %s", _name);
         }
     };
-    void handle_timers() override
+    void handle_expired_timers() override
     {
         for (int id : _timers.get_expired_timers())
             on_timer(id);
@@ -443,57 +442,31 @@ public:
 
     void loop()
     {
-        uint32_t loop_count = 0;
         INFO("starting actor %s", _name);
-        for (int i = 0; i < _actors.size(); i++)
-        {
-            auto &actor = *_actors[i];
-            actor.on_start();
-        };
-
+        for(auto actor : _actors)
+            actor->on_start();
+        
         while (!_stop_thread)
         {
             // find lowest sleep time
             uint64_t sleep_time = UINT64_MAX;
-            for (int i = 0; i < _actors.size(); i++)
+            for ( auto actor : _actors )
             {
-                auto &actor = *_actors[i];
-
-                loop_count = 0;
-                int st = 0;
-                while (st == 0)
+                if (actor->sleep_time() < sleep_time)
                 {
-                    actor.handle_timers();
-                    st = actor.sleep_time();
-                    loop_count++;
-                    if (loop_count > 10)
-                    {
-                        ERROR("loop count exceeded for timer handling %s", actor.name());
-                        break;
-                    }
+                    sleep_time = actor->sleep_time();
                 }
-                if (st < sleep_time)
-                {
-                    sleep_time = st;
-                }
-            };
-            QueueSetMemberHandle_t queue = xQueueSelectFromSet(_queue_set, sleep_time);
-            for (int i = 0; i < _actors.size(); i++)
+            }
+            QueueSetMemberHandle_t queue_handle = xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(sleep_time));
+            for ( auto actor : _actors )
             {
-                auto &actor = *_actors[i];
-                if (queue != NULL && queue == actor.queue_handle())
-                {
-                    actor.handle_cmd();
-                }
-                actor.handle_timers();
+                actor->handle_all_cmd();
+                actor->handle_expired_timers();
             };
         }
         INFO("stopping actor %s", _name);
-        for (int i = 0; i < _actors.size(); i++)
-        {
-            auto &actor = *_actors[i];
-            actor.on_stop();
-        };
+        for (auto actor : _actors)
+            actor->on_stop();
     }
 };
 
