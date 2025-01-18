@@ -18,10 +18,11 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : Actor<WifiEvent, WifiCmd>(4000, "wifi", 5, 5)
+WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
+
+WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<WifiEvent, WifiCmd>(stack_size, name, priority, queue_depth)
 {
-  INFO("Starting WiFi actor sizeof(WifiCmd ) : %d ", sizeof(WifiCmd));
-  add_timer(Timer::Repetitive(1, 1000));
+  _timer_publish = timer_repetitive(1000);
   wifi_ssid = "Merckx2";
   wifi_password = S(WIFI_PASS);
 }
@@ -30,7 +31,7 @@ void WifiActor::on_start()
 {
   if (net_init().is_err())
   {
-    INFO("Failed to init net");
+    ERROR("Failed to init net");
     return;
   }
   while (true)
@@ -66,20 +67,15 @@ void WifiActor::on_cmd(WifiCmd &cmd)
 
 void WifiActor::on_timer(int timer_id)
 {
-  switch (timer_id)
+  if (timer_id == _timer_publish)
   {
-  case 1:
-  {
+    INFO("Timer 1 : Publishing WiFi properties");
     if (_wifi_connected)
     {
       INFO("Publishing WiFi properties");
       wifi_msg.fill(esp_netif);
-      emit(WifiEvent{.serdes = PublishSerdes{.payload =wifi_msg}});
+      emit(WifiEvent{.serdes = PublishSerdes{.payload = wifi_msg}});
     }
-    break;
-  }
-  default:
-    INFO("Unknown timer expired wifi");
   }
 }
 
@@ -143,9 +139,8 @@ Res WifiActor::wifi_init_sta(void)
   strcpy((char *)wifi_config.sta.ssid, wifi_ssid.c_str());
   strcpy((char *)wifi_config.sta.password, wifi_password.c_str());
 
-  
   DEBUG("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
-       wifi_config.sta.password);
+        wifi_config.sta.password);
   // CHECK(esp_wifi_stop());
   CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   // CHECK(esp_wifi_start());

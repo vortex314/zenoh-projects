@@ -11,23 +11,23 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor() : Actor<ZenohEvent, ZenohCmd>(4000, "zenoh", 5, 5)
+ZenohActor::ZenohActor() : ZenohActor("zenoh", 4096, 5, 5) {}
+
+ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
+    : Actor<ZenohEvent, ZenohCmd>(stack_size, name, priority, queue_depth)
 {
-  INFO("Starting WiFi actor sizeof(ZenohCmd ) : %d ", sizeof(ZenohCmd));
-  add_timer(Timer::Repetitive(1, 1000)); // timer for publishing properties
-  prefix("device");                      // default prefix
+  _timer_publish = timer_repetitive(1000); // timer for publishing properties
+  prefix("device");                        // default prefix
 }
 
 void ZenohActor::on_timer(int id)
 {
-  switch (id)
+  if (id == _timer_publish)
   {
-  case 1:
+    INFO("Timer publish : Publishing Zenoh properties");
     publish_props();
-    break;
-
-  default:
-    INFO("Unknown timer expired");
+  } else {
+    INFO("Unknown timer id: %d", id);
   }
 }
 
@@ -81,9 +81,9 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
     if (zenoh_publish(cmd.publish.value().topic.c_str(), cmd.publish.value().payload).is_err())
     {
       INFO("Failed to publish message");
-   //   disconnect();
-   //   vTaskDelay(1000 / portTICK_PERIOD_MS);
-   //   tell(new ZenohCmd{.action = ZenohAction::Connect});
+      //   disconnect();
+      //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+      //   tell(new ZenohCmd{.action = ZenohAction::Connect});
     }
   }
 }
@@ -267,7 +267,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.serdes =  PublishSerdes{.payload =_zenoh_msg}});
+  emit(ZenohEvent{.serdes = PublishSerdes{.payload = _zenoh_msg}});
   z_drop(z_move(z_str));
   return Res::Ok();
 }

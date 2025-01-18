@@ -10,7 +10,7 @@ Go to the project directory and run:
 ==================== ESP32 CORE DUMP START ====================
 The ROM ELF file won't load automatically since it was not found for the provided chip type.
 
-Crashed task handle: 0x3ffd8d74, name: 'IDLE0', GDB name: 'process 1073581428'
+Crashed task handle: 0x3ffbd568, name: 'IDLE0', GDB name: 'process 1073468776'
 Crashed task is not in the interrupt context
 
 ================== CURRENT THREAD REGISTERS ===================
@@ -41,17 +41,17 @@ a0             0x20000070          536871024
 a1             0x0                 0
 a2             0x0                 0
 a3             0x0                 0
-a4             0x60020             393248
-a5             0x60023             393251
-a6             0x2e2a1c            3025436
+a4             0x60d20             396576
+a5             0x60d23             396579
+a6             0x9d37              40247
 a7             0x0                 0
 a8             0x3ff000dc          1072693468
 a9             0x1                 1
-a10            0x3ffbde40          1073471040
+a10            0x3ffbde30          1073471024
 a11            0xffffffff          -1
-a12            0x3ffbba64          1073461860
-a13            0x60023             393251
-a14            0x3ffe95e8          1073649128
+a12            0x3fff0d38          1073679672
+a13            0x60d23             396579
+a14            0x3ffe3cf8          1073626360
 a15            0xcdcd              52685
 
 ==================== CURRENT THREAD STACK =====================
@@ -59,216 +59,221 @@ a15            0xcdcd              52685
 
 ======================== THREADS INFO =========================
   Id   Target Id          Frame 
-* 1    process 1073581428 0x20000000 in ?? ()
-  2    process 1073583568 0x4008f086 in esp_cpu_wait_for_intr () at /home/lieven/.platformio/packages/framework-espidf/components/esp_hw_support/cpu.c:64
-  3    process 1073594512 0x4000bff0 in ?? ()
-  4    process 1073610060 0x4000bff0 in ?? ()
-  5    process 1073609716 0x4000bff0 in ?? ()
-  6    process 1073589828 0x4000bff0 in ?? ()
-  7    process 1073468096 0x40081d0c in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
-  8    process 1073706224 0x40081d0c in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
-  9    process 1073626488 0x4000bff0 in ?? ()
-  10   process 1073630912 0x4000bff0 in ?? ()
-  11   process 1073644128 0x4000bff0 in ?? ()
-  12   process 1073445456 0x4000bff0 in ?? ()
-  13   process 1073599296 0x4000bff0 in ?? ()
-  14   process 1073443608 0x4000bff0 in ?? ()
-  15   process 1073700756 0x4000bff0 in ?? ()
-  16   process 1073681716 0x4000bff0 in ?? ()
-  17   process 1073461856 0x4000bff0 in ?? ()
-  18   process 1073609372 0x4000bff0 in ?? ()
+* 1    process 1073468776 0x20000000 in ?? ()
+  2    process 1073469120 0x4008f06a in esp_cpu_wait_for_intr () at /home/lieven/.platformio/packages/framework-espidf/components/esp_hw_support/cpu.c:64
+  3    process 1073701544 0x4000bff0 in ?? ()
+  4    process 1073600080 0x4000bff0 in ?? ()
+  5    process 1073468432 0x40081cf0 in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
+  6    process 1073707012 vTaskDelay (xTicksToDelay=3333) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:1592
+  7    process 1073443608 0x4000bff0 in ?? ()
+  8    process 1073604924 0x4000bff0 in ?? ()
+  9    process 1073445456 0x4000bff0 in ?? ()
+  10   process 1073605268 0x4000bff0 in ?? ()
+  11   process 1073606188 0x4000bff0 in ?? ()
+  12   process 1073595416 0x4000bff0 in ?? ()
+  13   process 1073462024 0x4000bff0 in ?? ()
+  14   process 1073679668 0x4000bff0 in ?? ()
+  15   process 1073609012 0x4000bff0 in ?? ()
 
 
        TCB             NAME PRIO C/B  STACK USED/FREE
 ---------- ---------------- -------- ----------------
-0x3ffd8d74            IDLE0      0/0         416/1368
-0x3ffd95d0            IDLE1      0/0         416/1364
-0x3ffdc090              tiT    18/18         560/3012
-0x3ffdfd4c              sys      5/5         528/3560
-0x3ffdfbf4            zenoh      5/5         528/3468
-0x3ffdae44             wifi      5/5         528/3456
-0x3ffbd2c0             main      1/1         576/4924
-0x3fff74f0                     12/12         480/4628
-0x3ffe3d78              ps4      5/5         608/5508
-0x3ffe4ec0              led      5/5         528/1508
-0x3ffe8260    btstack_stdio    12/12         480/1556
+0x3ffbd568            IDLE0      0/0         416/1372
+0x3ffbd6c0            IDLE1      0/0         416/1368
+0x3fff62a8                     23/12        1072/4044
+0x3ffdd650              tiT    18/18         560/3012
+0x3ffbd410             main      1/1         512/4988
+0x3fff7804                     12/12         448/4656
+0x3ffb7318             ipc0    24/24         432/1064
+0x3ffde93c          sys_evt    20/20         544/3080
 0x3ffb7a50             ipc1    24/24         432/1056
-0x3ffdd340          sys_evt    20/20         544/3076
-0x3ffb7318             ipc0      5/5         432/1064
-0x3fff5f94                     23/12        1136/3968
-0x3fff1534     btController    23/23         512/3568
-0x3ffbba60        esp_timer    22/22         432/7068
-0x3ffdfa9c             wifi    23/23         512/6136
+0x3ffdea94           actors    23/23         944/8044
+0x3ffdee2c        bluetooth      5/5        1808/7188
+0x3ffdc418             wifi      5/5         944/8052
+0x3ffbbb08        esp_timer    22/22         432/7076
+0x3fff0d34     btController    23/23         512/3568
+0x3ffdf934             wifi    23/23         512/6136
 
-==================== THREAD 1 (TCB: 0x3ffd8d74, name: 'IDLE0') =====================
+==================== THREAD 1 (TCB: 0x3ffbd568, name: 'IDLE0') =====================
 #0  0x20000000 in ?? ()
 
-==================== THREAD 2 (TCB: 0x3ffd95d0, name: 'IDLE1') =====================
-#0  0x4008f086 in esp_cpu_wait_for_intr () at /home/lieven/.platformio/packages/framework-espidf/components/esp_hw_support/cpu.c:64
-#1  0x400f9db9 in esp_vApplicationIdleHook () at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/freertos_hooks.c:58
-#2  0x401bd614 in prvIdleTask (pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:4344
-#3  0x400907f9 in vPortTaskWrapper (pxCode=0x401bd608 <prvIdleTask>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+==================== THREAD 2 (TCB: 0x3ffbd6c0, name: 'IDLE1') =====================
+#0  0x4008f06a in esp_cpu_wait_for_intr () at /home/lieven/.platformio/packages/framework-espidf/components/esp_hw_support/cpu.c:64
+#1  0x400f7f61 in esp_vApplicationIdleHook () at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/freertos_hooks.c:58
+#2  0x401ba35c in prvIdleTask (pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:4344
+#3  0x400906f1 in vPortTaskWrapper (pxCode=0x401ba350 <prvIdleTask>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 3 (TCB: 0x3ffdc090, name: 'tiT') =====================
+==================== THREAD 3 (TCB: 0x3fff62a8, name: '') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffdb200) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffdb1b4, pvBuffer=0x3ffdbfd8, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x40113320 in sys_arch_mbox_fetch (mbox=<optimized out>, msg=0x3ffdbfd8, timeout=250) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/port/freertos/sys_arch.c:317
-#5  0x40100977 in tcpip_timeouts_mbox_fetch (mbox=0x3ffd33bc <tcpip_mbox>, msg=0x3ffdbfd8) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/tcpip.c:104
-#6  0x40100a45 in tcpip_thread (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/tcpip.c:142
-#7  0x400907f9 in vPortTaskWrapper (pxCode=0x40100a18 <tcpip_thread>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3fff360c) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9d7d in xQueueReceive (xQueue=0x3fff35c0, pvBuffer=0x3fff5fd8, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
+#4  0x401110c8 in sys_arch_mbox_fetch (mbox=<optimized out>, msg=0x3fff5fd8, timeout=100) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/port/freertos/sys_arch.c:317
+#5  0x4011267a in netconn_recv_data (conn=0x3fff3588, new_buf=0x3fff6038, apiflags=0 '\000') at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/api_lib.c:615
+#6  0x40112758 in netconn_recv_udp_raw_netbuf_flags (conn=0x3fff3588, new_buf=0x3fff6038, apiflags=0 '\000') at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/api_lib.c:847
+#7  0x400fcfc1 in lwip_recvfrom_udp_raw (sock=0x3ffd3244 <sockets>, flags=0, msg=0x3fff6080, datagram_len=0x3fff6076, dbg_s=54) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/sockets.c:1117
+#8  0x400fdd72 in lwip_recvfrom (s=54, mem=0x3fff3f5c, len=2048, flags=0, from=0x3fff60d0, fromlen=0x3fff60cc) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/sockets.c:1238
+#9  0x40181e24 in recvfrom (fromlen=0x3fff60cc, from=0x3fff60d0, flags=0, len=2048, mem=0x3fff3f5c, s=54) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/include/lwip/sockets.h:40
+#10 _z_read_udp_unicast (sock=..., ptr=0x3fff3f5c <error: Cannot access memory at address 0x3fff3f5c>, len=2048) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/network.c:214
+#11 0x4017dffc in _z_f_link_read_udp_unicast (self=0x3fff2180, ptr=0x3fff3f5c <error: Cannot access memory at address 0x3fff3f5c>, len=2048, addr=0x0) at .pio/libdeps/ps4/zenoh-pico/src/link/unicast/udp.c:157
+#12 0x4017d8bf in _z_link_recv_zbuf (link=0x3fff2180, zbf=0x3fff2200, addr=0x0) at .pio/libdeps/ps4/zenoh-pico/src/link/link.c:138
+#13 0x4017c41e in _zp_unicast_read_task (ztu_arg=0x3fff217c) at .pio/libdeps/ps4/zenoh-pico/src/transport/unicast/read.c:88
+#14 0x4017a9d4 in z_task_wrapper (arg=0x3fff23a0) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:61
+#15 0x400906f1 in vPortTaskWrapper (pxCode=0x4017a9c8 <z_task_wrapper>, pvParameters=0x3fff23a0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 4 (TCB: 0x3ffdfd4c, name: 'sys') =====================
+==================== THREAD 4 (TCB: 0x3ffdd650, name: 'tiT') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffb7d50) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffb7d04, pvBuffer=0x3ffe24ac, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x400d4c2d in Channel<SysCmd*>::receive (timeout=<optimized out>, message=0x3ffe24ac, this=0x3ffc3ee8 <sys_actor+16>) at .pio/libdeps/ps4/limero/src/actor.h:33
-#5  Actor<SysEvent, SysCmd>::loop (this=0x3ffc3ed8 <sys_actor>) at .pio/libdeps/ps4/limero/src/actor.h:294
-#6  0x400d4cd8 in Actor<SysEvent, SysCmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc3ed8 <sys_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:279
-#7  Actor<SysEvent, SysCmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:279
-#8  0x400907f9 in vPortTaskWrapper (pxCode=0x400d4cd0 <Actor<SysEvent, SysCmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc3ed8 <sys_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffdc7c0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9d7d in xQueueReceive (xQueue=0x3ffdc774, pvBuffer=0x3ffdd598, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
+#4  0x401110c8 in sys_arch_mbox_fetch (mbox=<optimized out>, msg=0x3ffdd598, timeout=1000) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/port/freertos/sys_arch.c:317
+#5  0x400fe7af in tcpip_timeouts_mbox_fetch (mbox=0x3ffd349c <tcpip_mbox>, msg=0x3ffdd598) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/tcpip.c:104
+#6  0x400fe87d in tcpip_thread (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/tcpip.c:142
+#7  0x400906f1 in vPortTaskWrapper (pxCode=0x400fe850 <tcpip_thread>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 5 (TCB: 0x3ffdfbf4, name: 'zenoh') =====================
+==================== THREAD 5 (TCB: 0x3ffbd410, name: 'main') =====================
+#0  0x40081cf0 in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
+#1  0x401ba6f5 in vTaskDelay (xTicksToDelay=3000) at /home/lieven/.platformio/packages/framework-espidf/components/xtensa/include/xt_utils.h:41
+#2  0x400d5a1d in app_main () at src/main.cpp:122
+#3  0x401b8e45 in main_task (args=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/app_startup.c:208
+#4  0x400906f1 in vPortTaskWrapper (pxCode=0x401b8d7c <main_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+
+==================== THREAD 6 (TCB: 0x3fff7804, name: '') =====================
+#0  vTaskDelay (xTicksToDelay=3333) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:1592
+#1  0x4017ab31 in z_sleep_ms (time=<optimized out>) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:179
+#2  0x4017c2ff in _zp_unicast_lease_task (ztu_arg=0x3fff217c) at .pio/libdeps/ps4/zenoh-pico/src/transport/unicast/lease.c:110
+#3  0x4017a9d4 in z_task_wrapper (arg=0x3fff23e8) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:61
+#4  0x400906f1 in vPortTaskWrapper (pxCode=0x4017a9c8 <z_task_wrapper>, pvParameters=0x3fff23e8) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+
+==================== THREAD 7 (TCB: 0x3ffb7318, name: 'ipc0') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffb7cbc) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffb7c70, pvBuffer=0x3ffe14ac, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x400d4b29 in Channel<ZenohCmd*>::receive (timeout=<optimized out>, message=0x3ffe14ac, this=0x3ffc4188 <zenoh_actor+16>) at .pio/libdeps/ps4/limero/src/actor.h:33
-#5  Actor<ZenohEvent, ZenohCmd>::loop (this=0x3ffc4178 <zenoh_actor>) at .pio/libdeps/ps4/limero/src/actor.h:294
-#6  0x400d4bd4 in Actor<ZenohEvent, ZenohCmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc4178 <zenoh_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:279
-#7  Actor<ZenohEvent, ZenohCmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:279
-#8  0x400907f9 in vPortTaskWrapper (pxCode=0x400d4bcc <Actor<ZenohEvent, ZenohCmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc4178 <zenoh_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffbe0e0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401ba5b8 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
+#4  0x40081d44 in ipc_task (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/esp_ipc.c:62
+#5  0x400906f1 in vPortTaskWrapper (pxCode=0x40081d14 <ipc_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 6 (TCB: 0x3ffdae44, name: 'wifi') =====================
+==================== THREAD 8 (TCB: 0x3ffde93c, name: 'sys_evt') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffb7bf4) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffb7ba8, pvBuffer=0x3ffdad5c, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x400d4a25 in Channel<WifiCmd*>::receive (timeout=<optimized out>, message=0x3ffdad5c, this=0x3ffc4310 <wifi_actor+16>) at .pio/libdeps/ps4/limero/src/actor.h:33
-#5  Actor<WifiEvent, WifiCmd>::loop (this=0x3ffc4300 <wifi_actor>) at .pio/libdeps/ps4/limero/src/actor.h:294
-#6  0x400d4ad0 in Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc4300 <wifi_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:279
-#7  Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:279
-#8  0x400907f9 in vPortTaskWrapper (pxCode=0x400d4ac8 <Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc4300 <wifi_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffdd8a4) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9d7d in xQueueReceive (xQueue=0x3ffdd858, pvBuffer=0x3ffde85c, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
+#4  0x401b7120 in esp_event_loop_run (event_loop=0x3ffdc594, ticks_to_run=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/esp_event/esp_event.c:560
+#5  0x401b714c in esp_event_loop_run_task (args=0x3ffdc594) at /home/lieven/.platformio/packages/framework-espidf/components/esp_event/esp_event.c:105
+#6  0x400906f1 in vPortTaskWrapper (pxCode=0x401b7140 <esp_event_loop_run_task>, pvParameters=0x3ffdc594) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 7 (TCB: 0x3ffbd2c0, name: 'main') =====================
-#0  0x40081d0c in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
-#1  0x401bd9ad in vTaskDelay (xTicksToDelay=1000) at /home/lieven/.platformio/packages/framework-espidf/components/xtensa/include/xt_utils.h:41
-#2  0x400d5e2d in app_main () at src/main.cpp:183
-#3  0x401bc001 in main_task (args=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/app_startup.c:208
-#4  0x400907f9 in vPortTaskWrapper (pxCode=0x401bbf38 <main_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
-
-==================== THREAD 8 (TCB: 0x3fff74f0, name: '') =====================
-#0  0x40081d0c in esp_crosscore_int_send_yield (core_id=0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/crosscore_int.c:121
-#1  0x401bd9ad in vTaskDelay (xTicksToDelay=3333) at /home/lieven/.platformio/packages/framework-espidf/components/xtensa/include/xt_utils.h:41
-#2  0x4017cd8d in z_sleep_ms (time=<optimized out>) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:179
-#3  0x4017e55b in _zp_unicast_lease_task (ztu_arg=0x3fff2b10) at .pio/libdeps/ps4/zenoh-pico/src/transport/unicast/lease.c:110
-#4  0x4017cc30 in z_task_wrapper (arg=0x3fff2d8c) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:61
-#5  0x400907f9 in vPortTaskWrapper (pxCode=0x4017cc24 <z_task_wrapper>, pvParameters=0x3fff2d8c) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
-
-==================== THREAD 9 (TCB: 0x3ffe3d78, name: 'ps4') =====================
+==================== THREAD 9 (TCB: 0x3ffb7a50, name: 'ipc1') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffbe0f0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401be709 in xTaskGenericNotifyWait (uxIndexToWait=0, ulBitsToClearOnEntry=<optimized out>, ulBitsToClearOnExit=4294967295, pulNotificationValue=0x0, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5841
-#4  0x400e56ec in btstack_run_loop_freertos_execute () at /home/lieven/workspace/bluepad32/src/components/btstack/platform/freertos/btstack_run_loop_freertos.c:202
-#5  0x400dce06 in btstack_run_loop_execute () at /home/lieven/workspace/bluepad32/src/components/btstack/src/btstack_run_loop.c:310
-#6  0x400d601e in Ps4Actor::on_start (this=0x3ffc3e1c <ps4_actor>) at src/ps4_actor.cpp:38
-#7  0x400d4d18 in Actor<Ps4Event, Ps4Cmd>::loop (this=0x3ffc3e1c <ps4_actor>) at .pio/libdeps/ps4/limero/src/actor.h:290
-#8  0x400d4de0 in Actor<Ps4Event, Ps4Cmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc3e1c <ps4_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:279
-#9  Actor<Ps4Event, Ps4Cmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:279
-#10 0x400907f9 in vPortTaskWrapper (pxCode=0x400d4dd8 <Actor<Ps4Event, Ps4Cmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc3e1c <ps4_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffbe0e0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401ba5b8 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
+#4  0x40081d44 in ipc_task (arg=0x1) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/esp_ipc.c:62
+#5  0x400906f1 in vPortTaskWrapper (pxCode=0x40081d14 <ipc_task>, pvParameters=0x1) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 10 (TCB: 0x3ffe4ec0, name: 'led') =====================
+==================== THREAD 10 (TCB: 0x3ffdea94, name: 'actors') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffb7e98) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffb7e4c, pvBuffer=0x3ffe4ddc, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x400d4e39 in Channel<LedCmd*>::receive (timeout=<optimized out>, message=0x3ffe4ddc, this=0x3ffc3de8 <led_actor+16>) at .pio/libdeps/ps4/limero/src/actor.h:33
-#5  Actor<LedEvent, LedCmd>::loop (this=0x3ffc3dd8 <led_actor>) at .pio/libdeps/ps4/limero/src/actor.h:294
-#6  0x400d4ed8 in Actor<LedEvent, LedCmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc3dd8 <led_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:279
-#7  Actor<LedEvent, LedCmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:279
-#8  0x400907f9 in vPortTaskWrapper (pxCode=0x400d4ed0 <Actor<LedEvent, LedCmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc3dd8 <led_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffb7ca8) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9bb8 in xQueueGenericSend (xQueue=0x3ffb7c5c, pvItemToQueue=0x3ffe268c, xTicksToWait=<optimized out>, xCopyPosition=0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1110
+#4  0x400d36a9 in Channel<ZenohCmd*>::send (this=0x3ffc4240 <zenoh_actor+16>, message=<optimized out>, timeout=4294967295) at .pio/libdeps/ps4/limero/src/actor.h:34
+#5  0x400d51bb in Actor<ZenohEvent, ZenohCmd>::tell (msg=0x3fff7e24, this=0x3ffc4230 <zenoh_actor>) at .pio/libdeps/ps4/limero/src/actor.h:247
+#6  zenoh_publish (topic=<optimized out>, serdes=...) at src/main.cpp:140
+#7  0x400d528c in operator() (event=..., __closure=0x3ffbdb10) at src/main.cpp:76
+#8  std::__invoke_impl<void, app_main()::<lambda(SysEvent)>&, SysEvent&> (__f=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:61
+#9  std::__invoke_r<void, app_main()::<lambda(SysEvent)>&, SysEvent&>(struct {...} &) (__fn=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:111
+#10 0x400d52ac in std::_Function_handler<void(SysEvent&), app_main()::<lambda(SysEvent)> >::_M_invoke(const std::_Any_data &, SysEvent &) (__functor=..., __args#0=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:86
+#11 0x400d97a9 in std::function<void (SysEvent&)>::operator()(SysEvent&) const (__args#0=..., this=0x3ffbdb10) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:591
+#12 Actor<SysEvent, SysCmd>::emit (event=..., this=0x3ffc3f78 <sys_actor>) at .pio/libdeps/ps4/limero/src/actor.h:241
+#13 SysActor::publish_props (this=0x3ffc3f78 <sys_actor>) at .pio/libdeps/ps4/limero/src/sys_actor.cpp:48
+#14 0x400d9807 in SysActor::on_timer (id=0, this=0x3ffc3f78 <sys_actor>) at .pio/libdeps/ps4/limero/src/sys_actor.cpp:31
+#15 SysActor::on_timer (this=0x3ffc3f78 <sys_actor>, id=0) at .pio/libdeps/ps4/limero/src/sys_actor.cpp:26
+#16 0x400d8ce1 in Actor<SysEvent, SysCmd>::handle_expired_timers (this=0x3ffc3f78 <sys_actor>) at .pio/libdeps/ps4/limero/src/actor.h:184
+#17 0x400d6b5a in Thread::run (this=0x3ffc3ed8 <actor_thread>) at .pio/libdeps/ps4/limero/src/actor.cpp:266
+#18 0x400d6ba4 in operator() (arg=0x3ffc3ed8 <actor_thread>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.cpp:172
+#19 _FUN () at .pio/libdeps/ps4/limero/src/actor.cpp:172
+#20 0x400906f1 in vPortTaskWrapper (pxCode=0x400d6b9c <_FUN(void*)>, pvParameters=0x3ffc3ed8 <actor_thread>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 11 (TCB: 0x3ffe8260, name: 'btstack_stdio') =====================
+==================== THREAD 11 (TCB: 0x3ffdee2c, name: 'bluetooth') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffe5268) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bcf29 in xQueuePeek (xQueue=0x3ffe521c, pvBuffer=0x3ffe81a0, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:2084
-#4  0x400dd793 in btstack_stdio_task (arg=0x0) at /home/lieven/workspace/bluepad32/src/components/btstack/btstack_stdio_esp32.c:135
-#5  0x400907f9 in vPortTaskWrapper (pxCode=0x400dd770 <btstack_stdio_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffb7ca8) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9bb8 in xQueueGenericSend (xQueue=0x3ffb7c5c, pvItemToQueue=0x3ffe640c, xTicksToWait=<optimized out>, xCopyPosition=0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1110
+#4  0x400d36a9 in Channel<ZenohCmd*>::send (this=0x3ffc4240 <zenoh_actor+16>, message=<optimized out>, timeout=4294967295) at .pio/libdeps/ps4/limero/src/actor.h:34
+#5  0x400d51bb in Actor<ZenohEvent, ZenohCmd>::tell (msg=0x3fff7ff4, this=0x3ffc4230 <zenoh_actor>) at .pio/libdeps/ps4/limero/src/actor.h:247
+#6  zenoh_publish (topic=<optimized out>, serdes=...) at src/main.cpp:140
+#7  0x400d532c in operator() (event=..., __closure=0x3ffda0a4) at src/main.cpp:80
+#8  std::__invoke_impl<void, app_main()::<lambda(Ps4Event)>&, Ps4Event&>(std::__invoke_other, struct {...} &) (__f=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:61
+#9  0x400d5360 in std::__invoke_r<void, app_main()::<lambda(Ps4Event)>&, Ps4Event&> (__fn=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:104
+#10 std::_Function_handler<void(Ps4Event&), app_main()::<lambda(Ps4Event)> >::_M_invoke(const std::_Any_data &, Ps4Event &) (__functor=..., __args#0=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:290
+#11 0x400d5c5a in std::function<void (Ps4Event&)>::operator()(Ps4Event&) const (this=0x3ffda0a4, __args#0=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:591
+#12 0x400d5c6f in Actor<Ps4Event, Ps4Cmd>::emit (this=0x3ffc3e04 <ps4_actor>, event=...) at .pio/libdeps/ps4/limero/src/actor.h:241
+#13 0x400d6323 in Ps4Actor::gamepad_to_output (this=0x3ffc3e04 <ps4_actor>, gp=0x3ffd11cc <g_devices+820>) at src/ps4_actor.cpp:201
+#14 0x400d6361 in Ps4Actor::on_controller_data (d=0x3ffd0e98 <g_devices>, ctl=0x3ffd11c8 <g_devices+816>) at src/ps4_actor.cpp:211
+#15 0x400e7c78 in uni_hid_device_process_controller (d=0x3ffd0e98 <g_devices>) at /home/lieven/workspace/bluepad32/src/components/bluepad32/uni_hid_device.c:785
+#16 0x400e8335 in uni_bt_bredr_on_l2cap_data_packet (channel=67, packet=0x3ffc4e41 <hci_packet_with_pre_buffer+17> "", size=79) at /home/lieven/workspace/bluepad32/src/components/bluepad32/bt/uni_bt_bredr.c:524
+#17 0x400e5d32 in uni_bt_packet_handler (packet_type=6 '\006', channel=67, packet=0x3ffc4e41 <hci_packet_with_pre_buffer+17> "", size=<optimized out>) at /home/lieven/workspace/bluepad32/src/components/bluepad32/bt/uni_bt.c:479
+#18 0x401b4669 in l2cap_dispatch_to_channel (channel=0x3fff7c70, type=6 '\006', data=0x3ffc4e41 <hci_packet_with_pre_buffer+17> "", size=79) at /home/lieven/workspace/bluepad32/src/components/btstack/src/l2cap.c:1126
+#19 0x40192da5 in l2cap_acl_classic_handler_for_channel (l2cap_channel=0x3fff7c70, packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=87) at /home/lieven/workspace/bluepad32/src/components/btstack/src/l2cap.c:4803
+#20 0x40194796 in l2cap_acl_classic_handler (handle=129, packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=87) at /home/lieven/workspace/bluepad32/src/components/btstack/src/l2cap.c:4865
+#21 0x40194d40 in l2cap_acl_handler (packet_type=2 '\002', channel=0, packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=87) at /home/lieven/workspace/bluepad32/src/components/btstack/src/l2cap.c:4944
+#22 0x400de618 in hci_emit_acl_packet (packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=87) at /home/lieven/workspace/bluepad32/src/components/btstack/src/hci.c:7987
+#23 0x400e4078 in acl_handler (packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=<optimized out>) at /home/lieven/workspace/bluepad32/src/components/btstack/src/hci.c:1256
+#24 0x400e4232 in packet_handler (packet_type=2 '\002', packet=0x3ffc4e39 <hci_packet_with_pre_buffer+9> "", size=87) at /home/lieven/workspace/bluepad32/src/components/btstack/src/hci.c:4767
+#25 0x400dd469 in transport_deliver_packets (context=0x0) at /home/lieven/workspace/bluepad32/src/components/btstack/btstack_port_esp32.c:191
+#26 0x400e5320 in btstack_run_loop_freertos_execute () at /home/lieven/workspace/bluepad32/src/components/btstack/platform/freertos/btstack_run_loop_freertos.c:172
+#27 0x400dccb2 in btstack_run_loop_execute () at /home/lieven/workspace/bluepad32/src/components/btstack/src/btstack_run_loop.c:310
+#28 0x400d5bfa in Ps4Actor::on_start (this=0x3ffc3e04 <ps4_actor>) at src/ps4_actor.cpp:48
+#29 0x400d6ac0 in Thread::run (this=0x3ffc3dc8 <ps4_thread>) at .pio/libdeps/ps4/limero/src/actor.cpp:236
+#30 0x400d6ba4 in operator() (arg=0x3ffc3dc8 <ps4_thread>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.cpp:172
+#31 _FUN () at .pio/libdeps/ps4/limero/src/actor.cpp:172
+#32 0x400906f1 in vPortTaskWrapper (pxCode=0x400d6b9c <_FUN(void*)>, pvParameters=0x3ffc3dc8 <ps4_thread>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 12 (TCB: 0x3ffb7a50, name: 'ipc1') =====================
+==================== THREAD 12 (TCB: 0x3ffdc418, name: 'wifi') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffbe0f0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd870 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
-#4  0x40081d60 in ipc_task (arg=0x1) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/esp_ipc.c:62
-#5  0x400907f9 in vPortTaskWrapper (pxCode=0x40081d30 <ipc_task>, pvParameters=0x1) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffb7ca8) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9bb8 in xQueueGenericSend (xQueue=0x3ffb7c5c, pvItemToQueue=0x3ffdc19c, xTicksToWait=<optimized out>, xCopyPosition=0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1110
+#4  0x400d36a9 in Channel<ZenohCmd*>::send (this=0x3ffc4240 <zenoh_actor+16>, message=<optimized out>, timeout=4294967295) at .pio/libdeps/ps4/limero/src/actor.h:34
+#5  0x400d51bb in Actor<ZenohEvent, ZenohCmd>::tell (msg=0x3fff80c8, this=0x3ffc4230 <zenoh_actor>) at .pio/libdeps/ps4/limero/src/actor.h:247
+#6  zenoh_publish (topic=<optimized out>, serdes=...) at src/main.cpp:140
+#7  0x400d5248 in operator() (event=..., __closure=0x3ffda068) at src/main.cpp:74
+#8  std::__invoke_impl<void, app_main()::<lambda(WifiEvent)>&, WifiEvent&>(std::__invoke_other, struct {...} &) (__f=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:61
+#9  0x400d5268 in std::__invoke_r<void, app_main()::<lambda(WifiEvent)>&, WifiEvent&> (__fn=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/invoke.h:104
+#10 std::_Function_handler<void(WifiEvent&), app_main()::<lambda(WifiEvent)> >::_M_invoke(const std::_Any_data &, WifiEvent &) (__functor=..., __args#0=...) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:290
+#11 0x400d99a1 in std::function<void (WifiEvent&)>::operator()(WifiEvent&) const (__args#0=..., this=0x3ffda068) at /home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/xtensa-esp-elf/include/c++/13.2.0/bits/std_function.h:591
+#12 Actor<WifiEvent, WifiCmd>::emit (this=<optimized out>, event=...) at .pio/libdeps/ps4/limero/src/actor.h:241
+#13 0x400da9a4 in WifiActor::on_timer (timer_id=0, this=0x3ffc43d4 <wifi_actor>) at .pio/libdeps/ps4/limero/src/wifi_actor.cpp:77
+#14 WifiActor::on_timer (this=0x3ffc43d4 <wifi_actor>, timer_id=0) at .pio/libdeps/ps4/limero/src/wifi_actor.cpp:68
+#15 0x400d4c83 in Actor<WifiEvent, WifiCmd>::loop (this=0x3ffc43d4 <wifi_actor>) at .pio/libdeps/ps4/limero/src/actor.h:229
+#16 0x400d4cf0 in Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::operator()(void*) const (arg=0x3ffc43d4 <wifi_actor>, __closure=0x0) at .pio/libdeps/ps4/limero/src/actor.h:205
+#17 Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::_FUN(void*) () at .pio/libdeps/ps4/limero/src/actor.h:205
+#18 0x400906f1 in vPortTaskWrapper (pxCode=0x400d4ce8 <Actor<WifiEvent, WifiCmd>::start()::{lambda(void*)#1}::_FUN(void*)>, pvParameters=0x3ffc43d4 <wifi_actor>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 13 (TCB: 0x3ffdd340, name: 'sys_evt') =====================
+==================== THREAD 13 (TCB: 0x3ffbbb08, name: 'esp_timer') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffdc2a8) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffdc25c, pvBuffer=0x3ffdd25c, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x401b952c in esp_event_loop_run (event_loop=0x3ffdc240, ticks_to_run=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/esp_event/esp_event.c:560
-#5  0x401b9558 in esp_event_loop_run_task (args=0x3ffdc240) at /home/lieven/.platformio/packages/framework-espidf/components/esp_event/esp_event.c:105
-#6  0x400907f9 in vPortTaskWrapper (pxCode=0x401b954c <esp_event_loop_run_task>, pvParameters=0x3ffdc240) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffbe0e0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401ba5b8 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
+#4  0x40199c2b in timer_task (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_timer/src/esp_timer.c:480
+#5  0x400906f1 in vPortTaskWrapper (pxCode=0x40199c1c <timer_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 14 (TCB: 0x3ffb7318, name: 'ipc0') =====================
+==================== THREAD 14 (TCB: 0x3fff0d34, name: 'btController') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffbe0f0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd870 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
-#4  0x40081d60 in ipc_task (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_system/esp_ipc.c:62
-#5  0x400907f9 in vPortTaskWrapper (pxCode=0x40081d30 <ipc_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffefb78) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9d7d in xQueueReceive (xQueue=0x3ffefb2c, pvBuffer=0x3fff0c70, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
+#4  0x40183e38 in queue_recv_hlevel_wrapper (queue=0x3ffb6a98, item=0x3fff0c70, block_time_ms=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/bt/controller/esp32/bt.c:781
+#5  0x4016a312 in btdm_controller_task ()
+#6  0x400906f1 in vPortTaskWrapper (pxCode=0x4016a2ec <btdm_controller_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
-==================== THREAD 15 (TCB: 0x3fff5f94, name: '') =====================
+==================== THREAD 15 (TCB: 0x3ffdf934, name: 'wifi') =====================
 #0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3fff312c) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3fff30e0, pvBuffer=0x3fff5c78, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x401132fd in sys_arch_mbox_fetch (mbox=<optimized out>, msg=0x3fff5c78, timeout=0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/port/freertos/sys_arch.c:313
-#5  0x401148d2 in netconn_recv_data (conn=0x3fff2eec, new_buf=0x3fff5d28, apiflags=8 '\b') at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/api_lib.c:615
-#6  0x40114a09 in netconn_recv_data_tcp (conn=0x3fff2eec, new_buf=0x3fff5d28, apiflags=8 '\b') at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/api_lib.c:727
-#7  0x40114ab4 in netconn_recv_tcp_pbuf_flags (conn=0x3fff2eec, new_buf=0x3fff5d28, apiflags=8 '\b') at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/api_lib.c:808
-#8  0x400ff04c in lwip_recv_tcp (sock=0x3ffd3164 <sockets>, mem=0x3fff41cd, len=<optimized out>, flags=0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/sockets.c:951
-#9  0x400ffee7 in lwip_recvfrom (s=54, mem=0x3fff41cd, len=467, flags=0, from=0x0, fromlen=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/sockets.c:1218
-#10 0x400fffd1 in lwip_recv (s=54, mem=0x3fff41cd, len=467, flags=0) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/lwip/src/api/sockets.c:1283
-#11 0x40183f0d in recv (flags=0, len=467, mem=0x3fff41cd, s=54) at /home/lieven/.platformio/packages/framework-espidf/components/lwip/include/lwip/sockets.h:38
-#12 _z_read_tcp (sock=..., ptr=0x3fff41cd <error: Cannot access memory at address 0x3fff41cd>, len=467) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/network.c:120
-#13 0x4017ffd8 in _z_f_link_read_tcp (zl=0x3fff2b14, ptr=0x3fff41cd <error: Cannot access memory at address 0x3fff41cd>, len=467, addr=0x0) at .pio/libdeps/ps4/zenoh-pico/src/link/unicast/tcp.c:150
-#14 0x4017fb1b in _z_link_recv_zbuf (link=0x3fff2b14, zbf=0x3fff2b94, addr=0x0) at .pio/libdeps/ps4/zenoh-pico/src/link/link.c:138
-#15 0x4017e628 in _zp_unicast_read_task (ztu_arg=0x3fff2b10) at .pio/libdeps/ps4/zenoh-pico/src/transport/unicast/read.c:67
-#16 0x4017cc30 in z_task_wrapper (arg=0x3fff2d44) at .pio/libdeps/ps4/zenoh-pico/src/system/espidf/system.c:61
-#17 0x400907f9 in vPortTaskWrapper (pxCode=0x4017cc24 <z_task_wrapper>, pvParameters=0x3fff2d44) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
-
-==================== THREAD 16 (TCB: 0x3fff1534, name: 'btController') =====================
-#0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3fff0378) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3fff032c, pvBuffer=0x3fff1470, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x40186094 in queue_recv_hlevel_wrapper (queue=0x3ffe79f0, item=0x3fff1470, block_time_ms=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/bt/controller/esp32/bt.c:781
-#5  0x4016c572 in btdm_controller_task ()
-#6  0x400907f9 in vPortTaskWrapper (pxCode=0x4016c54c <btdm_controller_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
-
-==================== THREAD 17 (TCB: 0x3ffbba60, name: 'esp_timer') =====================
-#0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffbe0f0 <xKernelLock>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd870 in ulTaskGenericNotifyTake (uxIndexToWait=0, xClearCountOnExit=1, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/tasks.c:5756
-#4  0x4019be87 in timer_task (arg=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/esp_timer/src/esp_timer.c:480
-#5  0x400907f9 in vPortTaskWrapper (pxCode=0x4019be78 <timer_task>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
-
-==================== THREAD 18 (TCB: 0x3ffdfa9c, name: 'wifi') =====================
-#0  0x4000bff0 in ?? ()
-#1  0x40090a1e in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
-#2  vPortExitCritical (mux=0x3ffdd9f4) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
-#3  0x401bd06d in xQueueReceive (xQueue=0x3ffdd9a8, pvBuffer=0x3ffdf9e0, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
-#4  0x401bbc26 in queue_recv_wrapper (queue=0x3ffdd9a8, item=0x3ffdf9e0, block_time_tick=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/esp_wifi/esp32/esp_adapter.c:323
-#5  0x40097b04 in ppTask ()
-#6  0x400907f9 in vPortTaskWrapper (pxCode=0x40097ad8 <ppTask>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+#1  0x40090916 in vPortClearInterruptMaskFromISR (prev_level=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:560
+#2  vPortExitCritical (mux=0x3ffdf290) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:505
+#3  0x401b9d7d in xQueueReceive (xQueue=0x3ffdf244, pvBuffer=0x3ffe8330, xTicksToWait=<optimized out>) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/queue.c:1632
+#4  0x401b8a6a in queue_recv_wrapper (queue=0x3ffdf244, item=0x3ffe8330, block_time_tick=4294967295) at /home/lieven/.platformio/packages/framework-espidf/components/esp_wifi/esp32/esp_adapter.c:323
+#5  0x400979fc in ppTask ()
+#6  0x400906f1 in vPortTaskWrapper (pxCode=0x400979d0 <ppTask>, pvParameters=0x0) at /home/lieven/.platformio/packages/framework-espidf/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
 
 
 ======================= ALL MEMORY REGIONS ========================
@@ -280,52 +285,46 @@ Name   Address   Size   Attrs
 .rtc.force_slow 0x50000000 0x0 RW  
 .rtc_fast_reserved 0x3ff82000 0x0 RW  
 .iram0.vectors 0x40080000 0x403 R XA
-.iram0.text 0x40080404 0x1c83f R XA
-.dram0.data 0x3ffbdb60 0x6270 RW A
+.iram0.text 0x40080404 0x1c737 R XA
+.dram0.data 0x3ffbdb60 0x6260 RW A
 .ext_ram_noinit 0x3f800000 0x0 RW  
 .ext_ram.bss 0x3f800000 0x0 RW  
 .flash.appdesc 0x3f400020 0x100 R  A
-.flash.rodata 0x3f400120 0x33990 RW A
-.flash.text 0x400d0020 0xf0cc2 R XA
-.iram0.data 0x4009cc44 0x0 RW  
-.iram0.bss 0x4009cc44 0x0 RW  
-.dram0.heap_start 0x3ffd8a90 0x0 RW  
-.coredump.tasks.data 0x3ffd95d0 0x154 RW 
-.coredump.tasks.data 0x3ffd9420 0x1a0 RW 
-.coredump.tasks.data 0x3ffd8d74 0x154 RW 
+.flash.rodata 0x3f400120 0x32d10 RW A
+.flash.text 0x400d0020 0xeda0a R XA
+.iram0.data 0x4009cb3c 0x0 RW  
+.iram0.bss 0x4009cb3c 0x0 RW  
+.dram0.heap_start 0x3ffd8b70 0x0 RW  
+.coredump.tasks.data 0x3ffbd568 0x154 RW 
 .coredump.tasks.data 0x20000000 0x70 RW 
-.coredump.tasks.data 0x3ffdc090 0x154 RW 
-.coredump.tasks.data 0x3ffdbe50 0x230 RW 
-.coredump.tasks.data 0x3ffdfd4c 0x154 RW 
-.coredump.tasks.data 0x3ffe2370 0x210 RW 
-.coredump.tasks.data 0x3ffdfbf4 0x154 RW 
-.coredump.tasks.data 0x3ffe1370 0x210 RW 
-.coredump.tasks.data 0x3ffdae44 0x154 RW 
-.coredump.tasks.data 0x3ffdac20 0x210 RW 
-.coredump.tasks.data 0x3ffbd2c0 0x154 RW 
-.coredump.tasks.data 0x3ffbd070 0x240 RW 
-.coredump.tasks.data 0x3fff74f0 0x154 RW 
-.coredump.tasks.data 0x3fff7300 0x1e0 RW 
-.coredump.tasks.data 0x3ffe3d78 0x154 RW 
-.coredump.tasks.data 0x3ffe3b10 0x260 RW 
-.coredump.tasks.data 0x3ffe4ec0 0x154 RW 
-.coredump.tasks.data 0x3ffe4ca0 0x210 RW 
-.coredump.tasks.data 0x3ffe8260 0x154 RW 
-.coredump.tasks.data 0x3ffe8070 0x1e0 RW 
-.coredump.tasks.data 0x3ffb7a50 0x154 RW 
-.coredump.tasks.data 0x3ffb7890 0x1b0 RW 
-.coredump.tasks.data 0x3ffdd340 0x154 RW 
-.coredump.tasks.data 0x3ffdd110 0x220 RW 
+.coredump.tasks.data 0x3ffbd6c0 0x154 RW 
+.coredump.tasks.data 0x3ffd9ab0 0x1a0 RW 
+.coredump.tasks.data 0x3fff62a8 0x154 RW 
+.coredump.tasks.data 0x3fff5e70 0x430 RW 
+.coredump.tasks.data 0x3ffdd650 0x154 RW 
+.coredump.tasks.data 0x3ffdd410 0x230 RW 
+.coredump.tasks.data 0x3ffbd410 0x154 RW 
+.coredump.tasks.data 0x3ffbd200 0x200 RW 
+.coredump.tasks.data 0x3fff7804 0x154 RW 
+.coredump.tasks.data 0x3fff7630 0x1c0 RW 
 .coredump.tasks.data 0x3ffb7318 0x154 RW 
 .coredump.tasks.data 0x3ffb7160 0x1b0 RW 
-.coredump.tasks.data 0x3fff5f94 0x154 RW 
-.coredump.tasks.data 0x3fff5b10 0x470 RW 
-.coredump.tasks.data 0x3fff1534 0x154 RW 
-.coredump.tasks.data 0x3fff1320 0x200 RW 
-.coredump.tasks.data 0x3ffbba60 0x154 RW 
-.coredump.tasks.data 0x3ffbb8a0 0x1b0 RW 
-.coredump.tasks.data 0x3ffdfa9c 0x154 RW 
-.coredump.tasks.data 0x3ffdf890 0x200 RW 
+.coredump.tasks.data 0x3ffde93c 0x154 RW 
+.coredump.tasks.data 0x3ffde710 0x220 RW 
+.coredump.tasks.data 0x3ffb7a50 0x154 RW 
+.coredump.tasks.data 0x3ffb7890 0x1b0 RW 
+.coredump.tasks.data 0x3ffdea94 0x154 RW 
+.coredump.tasks.data 0x3ffe2550 0x3b0 RW 
+.coredump.tasks.data 0x3ffdee2c 0x154 RW 
+.coredump.tasks.data 0x3ffe62d0 0x710 RW 
+.coredump.tasks.data 0x3ffdc418 0x154 RW 
+.coredump.tasks.data 0x3ffdc060 0x3b0 RW 
+.coredump.tasks.data 0x3ffbbb08 0x154 RW 
+.coredump.tasks.data 0x3ffbb950 0x1b0 RW 
+.coredump.tasks.data 0x3fff0d34 0x154 RW 
+.coredump.tasks.data 0x3fff0b20 0x200 RW 
+.coredump.tasks.data 0x3ffdf934 0x154 RW 
+.coredump.tasks.data 0x3ffe81e0 0x200 RW 
 
 ===================== ESP32 CORE DUMP END =====================
 ===============================================================

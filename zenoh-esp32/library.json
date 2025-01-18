@@ -1,6 +1,6 @@
 {
     "name": "limero",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "An Actor framework with some opinionated ideas",
     "keywords": "actors,esp32,",
     "repository":

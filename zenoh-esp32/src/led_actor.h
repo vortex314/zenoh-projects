@@ -32,8 +32,10 @@ class LedActor : public Actor<LedEvent, LedCmd> {
     int _duration = 100;
     int _gpio_led = GPIO_LED;
     bool _led_is_on = false;
+    int _timer_publish = -1;
 public:
     LedActor();
+    LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
     ~LedActor();
     void on_cmd(LedCmd &cmd);
     void on_timer(int timer_id);

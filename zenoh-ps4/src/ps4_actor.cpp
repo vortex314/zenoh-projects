@@ -23,7 +23,12 @@ Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(6120, "ps4", 5, 10)
 {
     Ps4Actor::ps4_actor_instance = this;
     INFO("Starting PS4 actor sizeof(Ps4Cmd ) : %d ", sizeof(Ps4Cmd));
-    add_timer(Timer::Repetitive(1, 1000));
+    _timer_id = timer_repetitive(1000);
+}
+Ps4Actor::Ps4Actor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<Ps4Event, Ps4Cmd>(stack_size, name, priority, queue_depth)
+{
+    Ps4Actor::ps4_actor_instance = this;
+    _timer_id = timer_repetitive(1000);
 }
 extern "C" const char *btdm_controller_get_compile_version();
 void Ps4Actor::on_start()

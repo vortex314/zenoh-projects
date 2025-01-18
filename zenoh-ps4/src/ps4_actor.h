@@ -171,8 +171,10 @@ struct Ps4Event
 
 class Ps4Actor : public Actor<Ps4Event, Ps4Cmd>
 {
+  int _timer_id=0;
 public:
   Ps4Actor();
+  Ps4Actor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~Ps4Actor();
   void on_cmd(Ps4Cmd &cmd);
   void on_timer(int timer_id);

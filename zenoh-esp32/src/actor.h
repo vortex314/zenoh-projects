@@ -13,22 +13,30 @@
 #include <util.h>
 #include <serdes.h>
 
+uint64_t current_time();
+
 template <typename T>
 class Channel
 {
+private:
+    QueueHandle_t queue;
     size_t _depth;
 
 public:
-    Channel(size_t depth)
+    Channel(size_t depth) : _depth(depth)
     {
         queue = xQueueCreate(depth, sizeof(T));
-        _depth = depth;
-        INFO("Channel created [%d][%d]  ", depth, sizeof(T));
+        INFO("Channel created [%d][%d]", depth, sizeof(T));
     }
 
     bool send(const T message, TickType_t timeout = portMAX_DELAY)
     {
-        return xQueueSend(queue, &message, timeout) == pdTRUE;
+        auto ok = xQueueSend(queue, &message, timeout) == pdTRUE;
+        if (!ok)
+        {
+            ERROR("Failed to send message to channel");
+        }
+        return ok;
     }
 
     bool receive(T *message, TickType_t timeout = portMAX_DELAY)
@@ -36,33 +44,34 @@ public:
         return xQueueReceive(queue, message, timeout) == pdTRUE;
     }
     size_t size() { return uxQueueMessagesWaiting(queue); }
-
     ~Channel() { vQueueDelete(queue); }
-
     QueueHandle_t getQueue() { return queue; }
     size_t getQueueDepth() { return _depth; }
-
-private:
-    QueueHandle_t queue;
 };
 
 // Queue Set wrapper
 class QueueSet
 {
+private:
+    QueueSetHandle_t set;
+
 public:
     QueueSet(size_t maxQueues) { set = xQueueCreateSet(maxQueues); }
 
-    void addQueue(QueueHandle_t queue) { xQueueAddToSet(queue, set); }
+    inline void addQueue(QueueHandle_t queue)
+    {
+        if (xQueueAddToSet(queue, set) != pdTRUE)
+        {
+            ERROR("Failed to add queue to set");
+        }
+    }
 
-    QueueHandle_t wait(TickType_t timeout = portMAX_DELAY)
+    inline QueueHandle_t wait(TickType_t timeout = portMAX_DELAY)
     {
         return xQueueSelectFromSet(set, timeout);
     }
 
-    ~QueueSet() { vQueueDelete(set); }
-
-private:
-    QueueSetHandle_t set;
+    inline ~QueueSet() { vQueueDelete(set); }
 };
 
 struct Timer
@@ -71,179 +80,40 @@ struct Timer
     uint64_t _expires_at;
     uint64_t _period;
     bool _active = false;
-    int _id;
 
 public:
-    Timer(int id, bool auto_reload, bool active, uint64_t period,
-          uint64_t expires_at)
-    {
-        _auto_reload = auto_reload;
-        _active = active;
-        _period = period;
-        _expires_at = expires_at;
-        _id = id;
-    }
-
-    static uint64_t now() { return esp_timer_get_time() / 1000; }
-
-    static Timer Repetitive(int id, uint64_t period)
-    {
-        return Timer(id, true, true, period, now() + period);
-    }
-
-    static Timer OneShot(int id, uint64_t delay)
-    {
-        return Timer(id, false, true, 0, now() + delay);
-    }
-
-    void make_one_shot(uint64_t delay)
-    {
-        _active = true;
-        _auto_reload = false;
-        _period = 0;
-        _expires_at = now() + delay;
-    }
-
-    void make_repetitive(uint64_t period)
-    {
-        _active = true;
-        _auto_reload = true;
-        _period = period;
-        _expires_at = now() + period;
-    }
-
-    bool is_expired(uint64_t now) const & { return now >= _expires_at; }
-
-    void update(uint64_t now)
-    {
-        if (_active)
-        {
-            if (_auto_reload && _period > 0)
-            {
-                _expires_at = now + _period;
-            }
-            else
-            {
-                if (now > _expires_at)
-                {
-                    _active = false;
-                }
-            }
-        }
-    }
-    void start()
-    {
-        _active = true;
-        _expires_at = now() + _period;
-    }
-
-    void stop() { _active = false; }
-
-    void reset() { _expires_at = now() + _period; }
-
-    int id() const & { return _id; }
+    Timer(bool auto_reload, bool active, uint64_t period,
+          uint64_t expires_at);
+    static Timer Repetitive(uint64_t period);
+    static Timer OneShot(uint64_t delay);
+    void make_one_shot(uint64_t delay);
+    void make_repetitive(uint64_t period);
+    bool is_expired(uint64_t now) const &;
+    void refresh(uint64_t now);
+    void start();
+    inline void stop() { _active = false; }
+    void reset();
+    void fire(uint64_t delay);
 };
+
+void refresh_expired_timers(std::vector<Timer> &timers);
 
 class Timers
 {
+    std::vector<Timer> _timers;
+
 public:
-    std::vector<Timer> timers;
     Timers() {}
-    void add_timer(Timer timer) { timers.push_back(timer); }
-    void remove_timer(int id)
-    {
-        for (int i = 0; i < timers.size(); i++)
-        {
-            if (timers[i].id() == id)
-            {
-                timers.erase(timers.begin() + i);
-                break;
-            }
-        }
-    }
-
-    uint64_t get_next_expires_at()
-    {
-        uint64_t expires_at = UINT64_MAX;
-        for (const Timer &timer : timers)
-        {
-            if (timer._active && timer._expires_at < expires_at)
-            {
-                expires_at = timer._expires_at;
-            }
-        }
-        return expires_at;
-    }
-
-    uint64_t sleep_time()
-    {
-        uint64_t expires_at = get_next_expires_at();
-        uint64_t now = Timer::now();
-        if (expires_at <= now)
-        {
-            return 0;
-        }
-        return expires_at - now;
-    }
-
-    std::vector<int> get_expired_timers()
-    {
-        uint64_t now = Timer::now();
-        std::vector<int> expired_timers;
-        for (const Timer &timer : timers)
-        {
-            if (timer.is_expired(now))
-            {
-                expired_timers.push_back(timer.id());
-            }
-        }
-        return expired_timers;
-    }
-
-    void update()
-    {
-        uint64_t now = Timer::now();
-        for (Timer &timer : timers)
-        {
-            timer.update(now);
-        }
-    }
-
-    void one_shot(int id, uint64_t delay)
-    {
-        for (Timer &timer : timers)
-        {
-            if (timer.id() == id)
-            {
-                timer.make_one_shot(delay);
-                return;
-            }
-        }
-        timers.push_back(Timer::OneShot(id, delay));
-    }
-    void repetitive(int id, uint64_t period)
-    {
-        for (Timer &timer : timers)
-        {
-            if (timer.id() == id)
-            {
-                timer.make_repetitive(period);
-                return;
-            }
-        }
-        timers.push_back(Timer::Repetitive(id, period));
-    }
-    void stop(int id)
-    {
-        for (Timer &timer : timers)
-        {
-            if (timer.id() == id)
-            {
-                timer.stop();
-                return;
-            }
-        }
-    }
+    uint64_t get_next_expires_at();
+    uint64_t sleep_time();
+    std::vector<int> get_expired_timers();
+    void refresh_expired_timers();
+    void refresh(int id);
+    int create_one_shot(uint64_t delay);
+    int create_repetitive(uint64_t period);
+    int start();
+    void fire(int id, uint64_t delay);
+    void stop(int id);
 };
 
 class ThreadSupport
@@ -272,7 +142,7 @@ actor.on_event([](Event &event) {
 actor.start();
 
 The start method creates a thread dedicated to the actor. The actor will run in the thread until the stop method is called.
-
+The base actor only passes pointers through the queue to the actor. The actor is responsible for deleting the message.
 
 */
 
@@ -287,7 +157,7 @@ private:
     TaskHandle_t _task_handle;
     size_t _stack_size;
     int _priority;
-    const char *_name = "no_name";
+    std::string _name;
 
 public:
     virtual void on_cmd(CMD &cmd) = 0;
@@ -301,7 +171,7 @@ public:
     void handle_all_cmd() override
     {
         CMD *cmd;
-        while (_cmds.receive(&cmd, 0))
+        if (_cmds.receive(&cmd, 0))
         {
             on_cmd(*cmd);
             delete cmd;
@@ -310,11 +180,13 @@ public:
     void handle_expired_timers() override
     {
         for (int id : _timers.get_expired_timers())
+        {
             on_timer(id);
-        _timers.update();
+            _timers.refresh(id);
+        }
     };
 
-    const char *name() { return _name; }
+    const char *name() { return _name.c_str(); }
 
     Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth), _stack_size(stack_size), _priority(priority), _name(name)
     {
@@ -323,7 +195,7 @@ public:
     ~Actor()
     {
         stop();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000);
         // xTaskDelete(_task_handle);
     }
 
@@ -335,12 +207,12 @@ public:
                 auto self = static_cast<Actor *>(arg);
                 self->loop();
             },
-            _name, _stack_size, this, 5, &_task_handle);
+            name(), _stack_size, this, 5, &_task_handle);
     }
 
     void loop()
     {
-        INFO("starting actor %s", _name);
+        INFO("starting actor %s", name());
         on_start();
         CMD *cmd;
         while (!_stop_actor)
@@ -353,11 +225,13 @@ public:
             else
             {
                 for (int id : _timers.get_expired_timers())
+                {
                     on_timer(id);
-                _timers.update();
+                    _timers.refresh(id);
+                }
             }
         }
-        INFO("stopping actor %s", _name);
+        INFO("stopping actor %s", name());
         on_stop();
     }
 
@@ -374,25 +248,33 @@ public:
     {
         return _cmds.send(msg);
     }
-    void add_timer(Timer timer)
-    {
-        _timers.add_timer(timer);
-    }
     void stop()
     {
         _stop_actor = true;
     }
-    void timer_one_shot(int id, uint64_t delay)
+    int timer_one_shot(uint64_t delay)
     {
-        _timers.one_shot(id, delay);
+        return _timers.create_one_shot(delay);
     }
-    void timer_repetitive(int id, uint64_t period)
+    int timer_repetitive(uint64_t period)
     {
-        _timers.repetitive(id, period);
+        return _timers.create_repetitive(period);
     }
     void timer_stop(int id)
     {
         _timers.stop(id);
+    }
+    void timer_start(int id, uint64_t delay)
+    {
+        _timers.refresh(id);
+    }
+    void refresh(int id)
+    {
+        _timers.refresh(id);
+    }
+    void timer_fire(int id, uint64_t delay)
+    {
+        _timers.fire(id, delay);
     }
 };
 
@@ -402,6 +284,13 @@ A thread is created to manage multiple actors. The thread will wait for the acto
 
 */
 
+typedef enum Cpu
+{
+    CPU0,
+    CPU1,
+    CPU_ANY
+} Cpu;
+
 class Thread
 {
     std::vector<ThreadSupport *> _actors;
@@ -410,64 +299,24 @@ class Thread
     size_t _stack_size;
     TaskHandle_t _task_handle;
     bool _stop_thread = false;
+    int _priority;
+    Cpu _preferred_cpu;
 
 public:
-    Thread(const char *name, size_t stack_size, size_t queue_size) : _name(name), _stack_size(stack_size)
+    Thread(const char *name, size_t stack_size, size_t queue_set_size, int priority = 5, Cpu preferred_cpu = Cpu::CPU_ANY) : _name(name),
+                                                                                                                             _stack_size(stack_size),
+                                                                                                                             _priority(priority),
+                                                                                                                             _preferred_cpu(preferred_cpu)
     {
-        _queue_set = xQueueCreateSet(queue_size);
+        _queue_set = xQueueCreateSet(queue_set_size);
     }
-
-    Res start()
-    {
-        CHECK(xTaskCreate(
-            [](void *arg)
-            {
-                auto self = static_cast<Thread *>(arg);
-                self->loop();
-            },
-            _name.c_str(), _stack_size, this, 5, &_task_handle));
-        return Res::Ok();
-    }
-
-    Res add_actor(ThreadSupport &actor)
-    {
-        _actors.push_back(&actor);
-        auto r = xQueueAddToSet(actor.queue_handle(), _queue_set);
-        if (r != pdPASS)
-        {
-            return Res::Err(0, "Failed to add actor to queue set");
-        }
-        return Res::Ok();
-    }
-
-    void loop()
-    {
-        INFO("starting actor %s", _name);
-        for(auto actor : _actors)
-            actor->on_start();
-        
-        while (!_stop_thread)
-        {
-            // find lowest sleep time
-            uint64_t sleep_time = UINT64_MAX;
-            for ( auto actor : _actors )
-            {
-                if (actor->sleep_time() < sleep_time)
-                {
-                    sleep_time = actor->sleep_time();
-                }
-            }
-            QueueSetMemberHandle_t queue_handle = xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(sleep_time));
-            for ( auto actor : _actors )
-            {
-                actor->handle_all_cmd();
-                actor->handle_expired_timers();
-            };
-        }
-        INFO("stopping actor %s", _name);
-        for (auto actor : _actors)
-            actor->on_stop();
-    }
+    const char *name() { return _name.c_str(); }
+    Res start();
+    Res add_actor(ThreadSupport &actor);
+    void run();
+    void step();
+    void handle_all_cmd();
+    void handle_expired_timers();
 };
 
 // when receiving a message, the actor will call the on_cmd method with envelope

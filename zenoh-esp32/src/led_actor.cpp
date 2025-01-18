@@ -3,10 +3,11 @@
 #define LED_ON_VALUE 1
 #define LED_OFF_VALUE 0
 
-LedActor::LedActor() : Actor<LedEvent, LedCmd>(2048, "led", 5, 5)
+LedActor::LedActor() : LedActor("led", 4096, 5, 5) {}
+
+LedActor::LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<LedEvent, LedCmd>(stack_size, name, priority, queue_depth)
 {
-    INFO("Starting LED actor sizeof(LedCmd ) : %d ", sizeof(LedCmd));
-    add_timer(Timer::Repetitive(1, 1000));
+    _timer_publish = timer_repetitive(1000);
 }
 
 void LedActor::on_cmd(LedCmd &cmd)
@@ -16,15 +17,17 @@ void LedActor::on_cmd(LedCmd &cmd)
         switch (cmd.action.value())
         {
         case LED_ON:
-            //  INFO("LedActor::on_cmd LED_ON");
+        {
             _state = LED_STATE_ON;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
             break;
+        }
         case LED_OFF:
-            INFO("LedActor::on_cmd LED_OFF");
+        {
             _state = LED_STATE_OFF;
             gpio_set_level(GPIO_LED, LED_OFF_VALUE);
             break;
+        }
         case LED_PULSE:
         {
             _state = LED_STATE_PULSE;
@@ -32,22 +35,20 @@ void LedActor::on_cmd(LedCmd &cmd)
             _led_is_on = true;
             if (cmd.duration)
             {
-                //      INFO("LedActor::on_cmd duration %d", cmd.duration.value());
                 _duration = cmd.duration.value();
-                timer_one_shot(1, _duration);
+                timer_fire(_timer_publish, _duration);
             }
             break;
         }
         case LED_BLINK:
         {
-            INFO("LedActor::on_cmd LED_BLINK");
             _state = LED_STATE_BLINK;
             _led_is_on = true;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
             if (cmd.duration)
             {
                 _duration = cmd.duration.value();
-                timer_repetitive(1, _duration);
+                timer_fire(_timer_publish, _duration);
             }
             break;
         }
@@ -57,9 +58,7 @@ void LedActor::on_cmd(LedCmd &cmd)
 
 void LedActor::on_timer(int timer_id)
 {
-    switch (timer_id)
-    {
-    case 1:
+    if (timer_id == _timer_publish)
     {
         switch (_state)
         {
@@ -97,17 +96,16 @@ void LedActor::on_timer(int timer_id)
             timer_stop(1);
             break;
         }
-        break;
         }
-        break;
     }
-    default:
-        INFO("Unknown timer expired led");
+    else
+    {
+        INFO("timer_id %d not handled", timer_id);
     }
 }
 
 void LedActor::on_start()
 {
     gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_LED, 0);
+    gpio_set_level(GPIO_LED, LED_OFF_VALUE);
 }

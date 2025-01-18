@@ -67,8 +67,10 @@ struct WifiCmd
 
 class WifiActor : public Actor<WifiEvent, WifiCmd>
 {
+  int _timer_publish;
 public:
   WifiActor();
+  WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~WifiActor();
   void on_cmd(WifiCmd &cmd);
   void on_timer(int timer_id);

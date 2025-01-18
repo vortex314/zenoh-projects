@@ -43,9 +43,10 @@ class SysActor : public Actor<SysEvent, SysCmd>
 private:
   SysMsg sys_msg;
   const char *src_sys = "sys"; // wifi, time, etc
-
+  int _timer_publish=-1;
 public:
   SysActor();
+  SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~SysActor();
   void on_cmd(SysCmd &cmd);
   void on_timer(int timer_id);

@@ -59,12 +59,14 @@ struct ZenohCmd
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>
 {
+  int _timer_publish=-1;
 public:
   ZenohActor();
+  ZenohActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~ZenohActor();
   void run();
   void on_timer(int id);
-  void on_cmd(ZenohCmd& cmd);
+  void on_cmd(ZenohCmd &cmd);
   void prefix(const char *prefix);
   Res connect(void);
   Res disconnect();
@@ -89,9 +91,8 @@ private:
   ZenohMsg _zenoh_msg;
   bool _connected = false;
   z_owned_config_t config;
-  std::map<std::string,z_owned_subscriber_t> _subscribers;
-  std::map<std::string,z_owned_publisher_t> _publishers;
-  std::map<std::string,PropertyCommon*> _properties;
-
+  std::map<std::string, z_owned_subscriber_t> _subscribers;
+  std::map<std::string, z_owned_publisher_t> _publishers;
+  std::map<std::string, PropertyCommon *> _properties;
 };
 #endif

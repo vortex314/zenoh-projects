@@ -1,11 +1,11 @@
 
 #include <sys_actor.h>
 
-SysActor::SysActor() : Actor<SysEvent, SysCmd>(4096, "sys", 5, 5)
-{
-    INFO("Starting Sys actor sizeof(SysCmd ) : %d ", sizeof(SysCmd));
+SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 
-    add_timer(Timer::Repetitive(1, 1000));
+SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<SysEvent, SysCmd>(stack_size, name, priority, queue_depth)
+{
+    _timer_publish = timer_repetitive(1000);
 }
 
 void SysActor::on_cmd(SysCmd &cmd)
@@ -25,16 +25,10 @@ void SysActor::on_cmd(SysCmd &cmd)
 
 void SysActor::on_timer(int id)
 {
-    switch (id)
+    if (id == _timer_publish)
     {
-    case 1:
-    {
-        INFO("Publishing Sys properties");
+        INFO("Timer 1 : Publishing Sys properties");
         publish_props();
-        break;
-    }
-    default:
-        INFO("Unknown timer expired");
     }
 }
 
