@@ -10,6 +10,10 @@ LedActor::LedActor(const char *name, size_t stack_size, int priority, size_t que
     _timer_publish = timer_repetitive(1000);
 }
 
+LedActor::~LedActor()
+{
+}
+
 void LedActor::on_cmd(LedCmd &cmd)
 {
     if (cmd.action)

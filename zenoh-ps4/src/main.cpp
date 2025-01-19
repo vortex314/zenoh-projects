@@ -13,12 +13,17 @@
 #include <led_actor.h>
 #include <log.h>
 
+#include <esp_wifi.h>
+#include <esp_coexist.h>
+#include <esp_event.h>
+// threads can be run separately or share a thread
+// Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
 WifiActor wifi_actor("wifi", 9000, 40, 5);
 ZenohActor zenoh_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23,Cpu::CPU0);
-
+// the btstack is a blocking task so it has its own thread
 Ps4Actor ps4_actor("ps4", 9000, 40, 5);
 Thread ps4_thread("bluetooth", 9000, 20, 5,Cpu::CPU0);
 
@@ -55,6 +60,9 @@ extern "C" void app_main()
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
+
+  esp_wifi_set_ps(WIFI_PS_NONE);
+  esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
   zenoh_actor.prefix("lm1"); // set the zenoh prefix to src/lm1 and destination subscriber dst/lm1/ **
 

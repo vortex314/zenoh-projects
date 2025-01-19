@@ -15,4 +15,3 @@ anyhow = "1.0.44"
 log = "0.4.14"
 minicbor = { version = "0.25.1",default-features = false, features = ["alloc","half"] }
 chrono = "0.4.39"
-
