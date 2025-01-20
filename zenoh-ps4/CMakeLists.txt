@@ -5,4 +5,4 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 #  list(APPEND EXTRA_COMPONENT_DIRS /home/lieven/esp/esp-idf/components/btstack)
 # list(APPEND EXTRA_COMPONENT_DIRS /home/lieven/esp/esp-idf/components/bt)
 
-project(zenoh-lib)
+project(zenoh-ps4)

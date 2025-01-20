@@ -7,7 +7,6 @@ pub trait PaneWidget: std::fmt::Debug + Send {
     fn show(&mut self, ui: &mut egui::Ui);
     fn title(&self) -> String;
     fn process_data(&mut self, topic: String, value: &Value) -> ();
-
 }
 
 #[derive(Debug, Clone)]
