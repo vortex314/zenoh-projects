@@ -1,13 +1,11 @@
-use crate::pane::Pane;
-use crate::pane::PaneWidget;
+use crate::{pane::PaneWidget, theme::THEME};
 use crate::value::Value;
-use egui::Ui;
-use egui::Widget;
+
 use egui_tiles::UiResponse;
 use log::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WidgetText {
     title: String,
     topic: String,
@@ -25,11 +23,25 @@ impl WidgetText {
 }
 
 impl PaneWidget for WidgetText {
-    fn show(&mut self, ui: &mut egui::Ui)-> UiResponse {
-
+    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+        let mut button_rect = ui.max_rect();
+        button_rect.max.y = button_rect.min.y + 20.0;
+        let response = if ui
+            .put(
+                button_rect,
+                egui::Button::new(self.title.clone())
+                    .sense(egui::Sense::drag())
+                    .fill(THEME.title_background),
+            )
+            .drag_started()
+        {
+            egui_tiles::UiResponse::DragStarted
+        } else {
+            egui_tiles::UiResponse::None
+        };
         ui.label(&self.text);
         ui.label("============================================");
-        UiResponse::None
+        response
     }
 
     fn title(&self) -> String {
@@ -44,6 +56,6 @@ impl PaneWidget for WidgetText {
                 info!(" didn't find value at index 0");
             }
             self.text = format!("{}", value.at_idx(0).unwrap());
-        } 
+        }
     }
 }

@@ -1,6 +1,5 @@
-use std::sync::{Arc, Mutex};
 use egui_tiles::UiResponse;
-use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 use crate::value::Value;
 
@@ -10,7 +9,7 @@ pub trait PaneWidget: std::fmt::Debug + Send {
     fn process_data(&mut self, topic: String, value: &Value) -> ();
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 
 pub struct Pane {
    pub widget: Box<dyn PaneWidget>,
@@ -18,11 +17,11 @@ pub struct Pane {
 impl Pane {
     pub fn new(widget: impl PaneWidget + 'static) -> Self {
         Self {
-            widget: Arc::new(Mutex::new(Box::new(widget))),
+            widget: Box::new(widget),
         }
     }
     pub fn title(&self) -> String {
-        self.widget.try_lock().map(|w| w.title()).unwrap_or_default()
+        self.widget.title()
     }
 }
 

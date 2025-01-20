@@ -1,15 +1,11 @@
 use log::*;
 
-use minicbor::display;
-use minicbor::encode;
 
 use serde::Serialize;
 use tokio::select;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
-use zenoh::config;
-use zenoh::open;
 
 use anyhow::Result;
 use zenoh::Config;

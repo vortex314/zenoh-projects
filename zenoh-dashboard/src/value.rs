@@ -4,7 +4,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use anyhow::Result;
 use anyhow::anyhow;
-use minicbor::{data::Token, Decode, Decoder};
+use minicbor::{data::Token, Decoder};
 
 
 pub enum Value {

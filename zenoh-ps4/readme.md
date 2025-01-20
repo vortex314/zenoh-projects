@@ -56,6 +56,7 @@ struct Ps4Output : public Serializable
 
 ## Build instructions
 - Install Bluepad32 : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
+- set WIFI_PASS and WIFI_SSID to the desired AP
 - Build in vscode with platformio as extension installed
 # Building PS4_actor
 - follow : https://bluepad32.readthedocs.io/en/latest/plat_esp32/

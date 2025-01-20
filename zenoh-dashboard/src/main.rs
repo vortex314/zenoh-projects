@@ -7,7 +7,6 @@ use eframe::egui;
 use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
 use pane::Pane;
-use pane::PaneWidget;
 mod value;
 use value::Value;
 mod widget_text;
@@ -15,13 +14,15 @@ use widget_text::WidgetText;
 mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
-
+mod theme;
+use theme::Theme;
+use theme::THEME;
 use log::info;
 
-fn main() -> Result<(), eframe::Error> {
-    logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 
-    
+async fn main() -> Result<(), eframe::Error> {
+    logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
@@ -142,10 +143,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
     }
 
     fn tab_title_for_pane(&mut self, view: &Pane) -> egui::WidgetText {
-        format!(
-            "View {}",
-            view.widget.title()
-        ).into()
+        format!("View {}", view.widget.title()).into()
     }
 
     fn top_bar_right_ui(
@@ -216,7 +214,6 @@ struct MyApp {
 
 impl Default for MyApp {
     fn default() -> Self {
-
         let mut next_view_nr = 0;
         let mut gen_view = || {
             let view = Pane::new(WidgetText::new(
@@ -226,8 +223,6 @@ impl Default for MyApp {
             next_view_nr += 1;
             view
         };
-
-
 
         let mut tiles = egui_tiles::Tiles::default();
 
@@ -263,16 +258,18 @@ impl Default for MyApp {
                 let r = Value::from_cbor(payload.to_vec());
                 if let Ok(value) = r {
                     info!(" RXD {} :{} ", topic, value);
-                    tree_clone.try_lock().map( | mut tree_clone| 
-                    for (_tile_id, mut tile_pane) in tree_clone.tiles.iter_mut() {
-                        match tile_pane {
-                            egui_tiles::Tile::Pane(mut pane) => {
-                                let _ = pane.widget.process_data(topic.clone(), &value);
-                            },
-                            egui_tiles::Tile::Container(_) => {}
+                    let _ = tree_clone.lock().map(|mut tree_clone| {
+                        for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
+                            match tile_pane {
+                                egui_tiles::Tile::Pane(pane) => {
+                                    let _ = pane.widget.process_data(topic.clone(), &value);
+                                }
+                                egui_tiles::Tile::Container(_) => {}
+                            }
                         }
                     });
-            }}
+                }
+            }
             _ => {}
         });
 
@@ -289,56 +286,10 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-
-        egui::SidePanel::left("tree").show(ctx, |ui| {
-
-            self.tree.lock().map( |mut tree| {
-            if ui.button("Reset").clicked() {
-                *self = Default::default();
-            }
-            self.behavior.ui(ui);
-
-            ui.separator();
-
-            ui.collapsing("Tree", |ui| {
-                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-                let tree_debug = format!("{:#?}", self.tree);
-                ui.monospace(&tree_debug);
-            });
-
-            ui.separator();
-
-            ui.collapsing("Active tiles", |ui| {
-                let active =  tree.active_tiles();
-                for tile_id in active {
-                    use egui_tiles::Behavior as _;
-                    let name = self.behavior.tab_title_for_tile(&tree.tiles, tile_id);
-                    ui.label(format!("{} - {tile_id:?}", name.text()));
-                }
-            });
-
-            ui.separator();
-
-            if let Some(root) = tree.root() {
-                tree_ui(ui, &mut self.behavior, &mut tree.tiles, root);
-            }
-
-            if let Some(parent) = self.behavior.add_child_to.take() {
-                let new_child = tree.tiles.insert_pane(Pane::new(WidgetText::new(
-                    "New Pane".to_string(),
-                    "topic".to_string(),
-                )));
-                if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
-                    tree.tiles.get_mut(parent)
-                {
-                    tabs.add_child(new_child);
-                    tabs.set_active(new_child);
-                }
-            }
-        }) ;});
-
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.tree.lock().map( |mut tree| tree.ui(&mut self.behavior, ui));
+            let _ = self.tree
+                .lock()
+                .map(|mut tree| tree.ui(&mut self.behavior, ui));
         });
     }
 
