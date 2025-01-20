@@ -1,7 +1,9 @@
 use crate::pane::Pane;
 use crate::pane::PaneWidget;
 use crate::value::Value;
+use egui::Ui;
 use egui::Widget;
+use egui_tiles::UiResponse;
 use log::*;
 use serde::{Serialize, Deserialize};
 
@@ -23,10 +25,11 @@ impl WidgetText {
 }
 
 impl PaneWidget for WidgetText {
-    fn show(&mut self, ui: &mut egui::Ui) {
+    fn show(&mut self, ui: &mut egui::Ui)-> UiResponse {
 
         ui.label(&self.text);
         ui.label("============================================");
+        UiResponse::None
     }
 
     fn title(&self) -> String {

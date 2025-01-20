@@ -1,10 +1,11 @@
 use std::sync::{Arc, Mutex};
+use egui_tiles::UiResponse;
 use serde::{ser::SerializeStruct, Deserialize, Serialize, Serializer};
 
 use crate::value::Value;
 
 pub trait PaneWidget: std::fmt::Debug + Send {
-    fn show(&mut self, ui: &mut egui::Ui);
+    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse;
     fn title(&self) -> String;
     fn process_data(&mut self, topic: String, value: &Value) -> ();
 }
@@ -12,7 +13,7 @@ pub trait PaneWidget: std::fmt::Debug + Send {
 #[derive(Debug, Clone)]
 
 pub struct Pane {
-   pub widget: Arc<Mutex<Box<dyn PaneWidget>>>,
+   pub widget: Box<dyn PaneWidget>,
 }
 impl Pane {
     pub fn new(widget: impl PaneWidget + 'static) -> Self {
