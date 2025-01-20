@@ -55,8 +55,8 @@ struct Ps4Output : public Serializable
 ```
 
 ## Build instructions
-TBD
-
+- Install Bluepad32 : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
+- Build in vscode with platformio as extension installed
 # Building PS4_actor
 - follow : https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 - install btstack in esp-idf
