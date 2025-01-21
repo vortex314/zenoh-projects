@@ -31,7 +31,7 @@ impl PaneWidget for WidgetText {
                 button_rect,
                 egui::Button::new(self.title.clone())
                     .sense(egui::Sense::drag())
-                    .fill(THEME.title_background),
+       //             .fill(THEME.title_background_color),
             )
             .drag_started()
         {
@@ -48,14 +48,16 @@ impl PaneWidget for WidgetText {
         self.title.clone()
     }
 
-    fn process_data(&mut self, topic: String, value: &Value) -> () {
+    fn process_data(&mut self, topic: String, value: &Value) -> bool {
         if topic == self.topic {
-            info!("{}", value.at_idx(0).unwrap());
+     //       info!("{}", value.at_idx(0).unwrap());
             let r = value.at_idx(0);
             if r.is_none() {
                 info!(" didn't find value at index 0");
             }
-            self.text = format!("{}", value.at_idx(0).unwrap());
-        }
+            self.text = format!("{}", value.at_idx(5).unwrap());
+            true
+        } else 
+        { false }
     }
 }

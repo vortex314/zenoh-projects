@@ -1,12 +1,12 @@
 use egui_tiles::UiResponse;
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::value::Value;
+use crate::{value::Value, widget_text::WidgetText};
 
 pub trait PaneWidget: std::fmt::Debug + Send {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse;
     fn title(&self) -> String;
-    fn process_data(&mut self, topic: String, value: &Value) -> ();
+    fn process_data(&mut self, topic: String, value: &Value) -> bool;
 }
 
 #[derive(Debug)]
@@ -32,7 +32,18 @@ impl Serialize for Pane {
     {
         let title = self.title();
         let mut state = serializer.serialize_struct("Pane", 1)?;
+        state.serialize_field("widget", &self.widget)?;
         state.serialize_field("title", &title)?;
         state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Pane {
+    fn deserialize<'de, D>(deserializer: D) -> Result<Pane, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let title = String::deserialize(deserializer)?;
+        Ok(Pane::new(WidgetText::new(title, "".to_string())))
     }
 }

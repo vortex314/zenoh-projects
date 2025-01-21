@@ -1,11 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use eframe::egui;
+use egui::Color32;
+use egui::Stroke;
+use egui::Ui;
 use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
+use minicbor::decode::info;
 use pane::Pane;
 mod value;
 use value::Value;
@@ -18,24 +24,31 @@ mod theme;
 use theme::Theme;
 use theme::THEME;
 use log::info;
+mod file_storage;
+use file_storage::FileStorage;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 
 async fn main() -> Result<(), eframe::Error> {
-    logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
 
-    let options = eframe::NativeOptions {
+
+    let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
+    options.persist_window = true;
+    options.persistence_path = Some( PathBuf::from("./save.ron"));
+
     eframe::run_native(
-        "egui_tiles example",
+        "Zenoh Dashboard",
         options,
-        Box::new(|_cc| {
+        Box::new( |_cc| {
             #[cfg_attr(not(feature = "serde"), allow(unused_mut))]
             let mut app = MyApp::default();
             #[cfg(feature = "serde")]
             if let Some(storage) = _cc.storage {
+                info!("Loading state");
                 if let Some(state) = eframe::get_value(storage, eframe::APP_KEY) {
                     app = state;
                 }
@@ -102,6 +115,11 @@ impl TreeBehavior {
             gap_width,
             add_child_to: _,
         } = self;
+
+        Ui::style_mut(ui).visuals.widgets.inactive.bg_fill = Color32::BLUE;
+        Ui::style_mut(ui).visuals.widgets.inactive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
+        Ui::style_mut(ui).visuals.widgets.noninteractive.bg_fill = Color32::GREEN;
+        Ui::style_mut(ui).visuals.widgets.noninteractive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
 
         egui::Grid::new("behavior_ui")
             .num_columns(2)
@@ -218,7 +236,7 @@ impl Default for MyApp {
         let mut gen_view = || {
             let view = Pane::new(WidgetText::new(
                 format!("{}", next_view_nr),
-                "topic".to_string(),
+                "src/lm1/sys".to_string(),
             ));
             next_view_nr += 1;
             view
@@ -256,18 +274,23 @@ impl Default for MyApp {
         actor_zenoh.add_listener(move |_event| match _event {
             actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                 let r = Value::from_cbor(payload.to_vec());
+                let mut refresh_gui = false;
                 if let Ok(value) = r {
                     info!(" RXD {} :{} ", topic, value);
                     let _ = tree_clone.lock().map(|mut tree_clone| {
                         for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
                             match tile_pane {
                                 egui_tiles::Tile::Pane(pane) => {
-                                    let _ = pane.widget.process_data(topic.clone(), &value);
+                                    refresh_gui &= pane.widget.process_data(topic.clone(), &value);
                                 }
                                 egui_tiles::Tile::Container(_) => {}
                             }
                         }
                     });
+                    if refresh_gui {
+                        info!("refreshing gui");
+                       // request_repaint();
+                    }
                 }
             }
             _ => {}
@@ -291,66 +314,13 @@ impl eframe::App for MyApp {
                 .lock()
                 .map(|mut tree| tree.ui(&mut self.behavior, ui));
         });
+        ctx.request_repaint_after(Duration::from_millis(100));
     }
 
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        info!("Saving state");
         #[cfg(feature = "serde")]
         eframe::set_value(_storage, eframe::APP_KEY, &self);
     }
 }
 
-fn tree_ui(
-    ui: &mut egui::Ui,
-    behavior: &mut dyn egui_tiles::Behavior<Pane>,
-    tiles: &mut egui_tiles::Tiles<Pane>,
-    tile_id: egui_tiles::TileId,
-) {
-    // Get the name BEFORE we remove the tile below!
-    let text = format!(
-        "{} - {tile_id:?}",
-        behavior.tab_title_for_tile(tiles, tile_id).text()
-    );
-
-    // Temporarily remove the tile to circumvent the borrowchecker
-    let Some(mut tile) = tiles.remove(tile_id) else {
-        log::debug!("Missing tile {tile_id:?}");
-        return;
-    };
-
-    let default_open = true;
-    egui::collapsing_header::CollapsingState::load_with_default_open(
-        ui.ctx(),
-        ui.id().with((tile_id, "tree")),
-        default_open,
-    )
-    .show_header(ui, |ui| {
-        ui.label(text);
-        let mut visible = tiles.is_visible(tile_id);
-        ui.checkbox(&mut visible, "Visible");
-        tiles.set_visible(tile_id, visible);
-    })
-    .body(|ui| match &mut tile {
-        egui_tiles::Tile::Pane(_) => {}
-        egui_tiles::Tile::Container(container) => {
-            let mut kind = container.kind();
-            egui::ComboBox::from_label("Kind")
-                .selected_text(format!("{kind:?}"))
-                .show_ui(ui, |ui| {
-                    for typ in egui_tiles::ContainerKind::ALL {
-                        ui.selectable_value(&mut kind, typ, format!("{typ:?}"))
-                            .clicked();
-                    }
-                });
-            if kind != container.kind() {
-                container.set_kind(kind);
-            }
-
-            for &child in container.children() {
-                tree_ui(ui, behavior, tiles, child);
-            }
-        }
-    });
-
-    // Put the tile back
-    tiles.insert(tile_id, tile);
-}
