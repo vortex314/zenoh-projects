@@ -15,8 +15,8 @@ use minicbor::decode::info;
 use pane::Pane;
 mod value;
 use value::Value;
-mod widget_text;
-use widget_text::WidgetText;
+mod text_widget;
+use text_widget::TextWidget;
 mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
@@ -234,7 +234,7 @@ impl Default for MyApp {
     fn default() -> Self {
         let mut next_view_nr = 0;
         let mut gen_view = || {
-            let view = Pane::new(WidgetText::new(
+            let view = Pane::new(TextWidget::new(
                 format!("{}", next_view_nr),
                 "src/lm1/sys".to_string(),
             ));
