@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-egui_tiles = "0.11.0"
+egui_tiles = "*"
 eframe ={ version = "0.30.0", features = ["ron","serde","persistence"] }
 zenoh = { version = "1.1.0"}
 tokio = { version = "1.0.0", features = ["full"] }

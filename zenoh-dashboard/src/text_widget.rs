@@ -1,12 +1,13 @@
+use crate::pane::Pane;
 use crate::value::Value;
 use crate::{pane::PaneWidget, theme::THEME};
 
-use egui::TextEdit;
 use egui_tiles::UiResponse;
 use log::*;
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct TextWidget {
     title: String,
     topic: String,
@@ -23,35 +24,24 @@ impl TextWidget {
     }
 }
 
-fn get_text_property(ui: &mut egui::Ui, label: &str, target: &mut String) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        ui.add(TextEdit::singleline(target));
-    });
-}
-
 impl PaneWidget for TextWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
         let mut button_rect = ui.max_rect();
         button_rect.max.y = button_rect.min.y + 20.0;
-        let resp = ui.put(
-            button_rect,
-            egui::Button::new(self.title.clone()).sense(egui::Sense::drag()), //             .fill(THEME.title_background_color),
-        );
-        resp.context_menu(|ui| {
-            get_text_property(ui, "title ", &mut self.title);
-            get_text_property(ui, "topic ", &mut self.topic);
-            if ui.button("Close the menu").clicked() {
-                ui.close_menu();
-            }
-        });
-        let uiresponse = if resp.drag_started() {
+        let response = if ui
+            .put(
+                button_rect,
+                egui::Button::new(self.title.clone()).sense(egui::Sense::drag()), //             .fill(THEME.title_background_color),
+            )
+            .drag_started()
+        {
             egui_tiles::UiResponse::DragStarted
         } else {
             egui_tiles::UiResponse::None
         };
+        ui.label(&self.text);
         ui.label("============================================");
-        uiresponse
+        response
     }
 
     fn title(&self) -> String {
@@ -70,5 +60,23 @@ impl PaneWidget for TextWidget {
         } else {
             false
         }
+    }
+
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let title = self.title();
+        let mut state = serializer.serialize_struct("Pane", 1)?;
+        state.serialize_field("title", &title)?;
+        state.end()
+    }
+
+    fn deserialize<'de, D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let title = String::deserialize(deserializer)?;
+        Ok(Pane::new(TextWidget::new(title, "".to_string())))
     }
 }

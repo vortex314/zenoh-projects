@@ -7,7 +7,9 @@ use std::time::Duration;
 
 use eframe::egui;
 use egui::Color32;
+use egui::Rounding;
 use egui::Stroke;
+use egui::Style;
 use egui::Ui;
 use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
@@ -20,9 +22,9 @@ mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
 mod theme;
+use log::info;
 use theme::Theme;
 use theme::THEME;
-use log::info;
 mod file_storage;
 use file_storage::FileStorage;
 
@@ -31,18 +33,17 @@ use file_storage::FileStorage;
 async fn main() -> Result<(), eframe::Error> {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
 
-
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
     options.persist_window = true;
-    options.persistence_path = Some( PathBuf::from("./save.ron"));
+    options.persistence_path = Some(PathBuf::from("./save.ron"));
 
     eframe::run_native(
         "Zenoh Dashboard",
         options,
-        Box::new( |_cc| {
+        Box::new(|_cc| {
             #[cfg_attr(not(feature = "serde"), allow(unused_mut))]
             let mut app = MyApp::default();
             #[cfg(feature = "serde")]
@@ -56,38 +57,7 @@ async fn main() -> Result<(), eframe::Error> {
         }),
     )
 }
-/*
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-pub struct Pane {
-    nr: usize,
-}
 
-impl std::fmt::Debug for Pane {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("View").field("nr", &self.nr).finish()
-    }
-}
-
-impl Pane {
-    pub fn with_nr(nr: usize) -> Self {
-        Self { nr }
-    }
-
-    pub fn ui(&self, ui: &mut egui::Ui) -> egui_tiles::UiResponse {
-        let color = egui::epaint::Hsva::new(0.103 * self.nr as f32, 0.5, 0.5, 1.0);
-        ui.painter().rect_filled(ui.max_rect(), 0.0, color);
-        let dragged = ui
-            .allocate_rect(ui.max_rect(), egui::Sense::click_and_drag())
-            .on_hover_cursor(egui::CursorIcon::Grab)
-            .dragged();
-        if dragged {
-            egui_tiles::UiResponse::DragStarted
-        } else {
-            egui_tiles::UiResponse::None
-        }
-    }
-}
-*/
 struct TreeBehavior {
     simplification_options: egui_tiles::SimplificationOptions,
     tab_bar_height: f32,
@@ -100,7 +70,7 @@ impl Default for TreeBehavior {
         Self {
             simplification_options: Default::default(),
             tab_bar_height: 24.0,
-            gap_width: 2.0,
+            gap_width: 1.0,
             add_child_to: None,
         }
     }
@@ -114,12 +84,12 @@ impl TreeBehavior {
             gap_width,
             add_child_to: _,
         } = self;
-
-        Ui::style_mut(ui).visuals.widgets.inactive.bg_fill = Color32::BLUE;
-        Ui::style_mut(ui).visuals.widgets.inactive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
-        Ui::style_mut(ui).visuals.widgets.noninteractive.bg_fill = Color32::GREEN;
-        Ui::style_mut(ui).visuals.widgets.noninteractive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
-
+        /*
+                Ui::style_mut(ui).visuals.widgets.inactive.bg_fill = Color32::BLUE;
+                Ui::style_mut(ui).visuals.widgets.inactive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
+                Ui::style_mut(ui).visuals.widgets.noninteractive.bg_fill = Color32::GREEN;
+                Ui::style_mut(ui).visuals.widgets.noninteractive.fg_stroke = Stroke::new(2.0,THEME.title_text_color);
+        */
         egui::Grid::new("behavior_ui")
             .num_columns(2)
             .show(ui, |ui| {
@@ -133,7 +103,6 @@ impl TreeBehavior {
                     "",
                 );
                 ui.end_row();
-
                 ui.label("Tab bar height:");
                 ui.add(
                     egui::DragValue::new(tab_bar_height)
@@ -141,7 +110,6 @@ impl TreeBehavior {
                         .speed(1.0),
                 );
                 ui.end_row();
-
                 ui.label("Gap width:");
                 ui.add(egui::DragValue::new(gap_width).range(0.0..=20.0).speed(1.0));
                 ui.end_row();
@@ -288,7 +256,7 @@ impl Default for MyApp {
                     });
                     if refresh_gui {
                         info!("refreshing gui");
-                       // request_repaint();
+                        // request_repaint();
                     }
                 }
             }
@@ -309,10 +277,18 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let _ = self.tree
+            let _ = self
+                .tree
                 .lock()
                 .map(|mut tree| tree.ui(&mut self.behavior, ui));
         });
+        ctx.set_visuals_of(
+            egui::Theme::Light,
+            egui::Visuals {
+                panel_fill: egui::Color32::GREEN,
+                ..Default::default()
+            },
+        );
         ctx.request_repaint_after(Duration::from_millis(100));
     }
 
@@ -322,4 +298,3 @@ impl eframe::App for MyApp {
         eframe::set_value(_storage, eframe::APP_KEY, &self);
     }
 }
-
