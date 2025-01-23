@@ -11,12 +11,11 @@ use egui::Stroke;
 use egui::Ui;
 use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
-use minicbor::decode::info;
 use pane::Pane;
 mod value;
+use pane::PaneWidget;
+use pane::TextWidget;
 use value::Value;
-mod text_widget;
-use text_widget::TextWidget;
 mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
@@ -155,13 +154,13 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         &mut self,
         ui: &mut egui::Ui,
         _tile_id: egui_tiles::TileId,
-        view: &mut Pane,
+        pane: &mut Pane,
     ) -> egui_tiles::UiResponse {
-        view.widget.show(ui)
+        pane.show(ui)
     }
 
-    fn tab_title_for_pane(&mut self, view: &Pane) -> egui::WidgetText {
-        format!("View {}", view.widget.title()).into()
+    fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
+        format!("View {}", pane.title()).into()
     }
 
     fn top_bar_right_ui(
@@ -234,7 +233,7 @@ impl Default for MyApp {
     fn default() -> Self {
         let mut next_view_nr = 0;
         let mut gen_view = || {
-            let view = Pane::new(TextWidget::new(
+            let view = Pane::TextWidget(TextWidget::new(
                 format!("{}", next_view_nr),
                 "src/lm1/sys".to_string(),
             ));
@@ -281,7 +280,7 @@ impl Default for MyApp {
                         for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
                             match tile_pane {
                                 egui_tiles::Tile::Pane(pane) => {
-                                    refresh_gui &= pane.widget.process_data(topic.clone(), &value);
+                                    refresh_gui &= pane.process_data(topic.clone(), &value);
                                 }
                                 egui_tiles::Tile::Container(_) => {}
                             }

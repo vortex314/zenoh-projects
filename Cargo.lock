@@ -6861,6 +6861,7 @@ dependencies = [
  "log",
  "minicbor",
  "serde",
+ "serde_json",
  "tokio",
  "zenoh",
 ]

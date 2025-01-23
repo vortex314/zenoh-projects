@@ -18,14 +18,14 @@ impl FileStorage {
 }
 
 impl eframe::Storage for FileStorage {
-    fn get_string(&self, key: &str) -> Option<String> {
+    fn get_string(&self, _key: &str) -> Option<String> {
         match self.load() {
             Ok(data) => Some(data),
             Err(_) => None,
         }
     }
 
-    fn set_string(&mut self, key: &str, value: String) {
+    fn set_string(&mut self, _key: &str, value: String) {
         match self.save(&value) {
             Ok(_) => (),
             Err(e) => eprintln!("Error saving data: {}", e),
