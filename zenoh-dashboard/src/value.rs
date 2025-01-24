@@ -6,7 +6,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use minicbor::{data::Token, Decoder};
 
-
+#[derive(Debug,Clone)]
 pub enum Value {
     MapIdx(HashMap<usize, Value>),
     List(Vec<Value>),

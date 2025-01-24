@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -195,6 +197,8 @@ struct MyApp {
     tree: Arc<Mutex<egui_tiles::Tree<Pane>>>,
     #[cfg_attr(feature = "serde", serde(skip))]
     behavior: TreeBehavior,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    registry : Arc<Mutex<HashMap<String, Value>>>,
 }
 
 impl Default for MyApp {
@@ -238,12 +242,16 @@ impl Default for MyApp {
         let tree_clone = tree.clone();
         let mut actor_zenoh: ZenohActor = ZenohActor::new();
 
+        let mut registry = Arc::new(Mutex::new(HashMap::new()));
+        let registry_clone = registry.clone();
+
         actor_zenoh.add_listener(move |_event| match _event {
             actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                 let r = Value::from_cbor(payload.to_vec());
                 let mut refresh_gui = false;
                 if let Ok(value) = r {
                     info!(" RXD {} :{} ", topic, value);
+                    registry_clone.lock().map(| mut reg| reg.insert(topic.clone(), value.clone()));
                     let _ = tree_clone.lock().map(|mut tree_clone| {
                         for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
                             match tile_pane {
@@ -270,6 +278,7 @@ impl Default for MyApp {
         Self {
             tree,
             behavior: Default::default(),
+            registry,
         }
     }
 }
