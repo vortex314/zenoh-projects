@@ -50,6 +50,11 @@ impl PaneWidget for StatusWidget {
         response
     }
 
+    fn context_menu(&mut self,ui: &mut egui::Ui) {
+        info!("StatusWidget context menu");
+        ui.label("StatusWidget context menu");
+    }
+
     fn process_data(&mut self, topic: String, _value: &Value) -> bool {
         self.pub_sub.src.as_ref().unwrap().iter().any(|ep| {
             if ep.topic == topic {

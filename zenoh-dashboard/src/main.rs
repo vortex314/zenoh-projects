@@ -1,21 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-
+#![allow(unused_imports)]
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
 use eframe::egui;
-use egui::Color32;
-use egui::Rounding;
-use egui::Stroke;
-use egui::Style;
-use egui::Ui;
 use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
+use pane::NullWidget;
 use pane::Pane;
+use pane::Widget;
 mod value;
 use pane::PaneWidget;
 use pane::TextWidget;
@@ -23,12 +19,8 @@ use value::Value;
 mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
-mod theme;
 use log::info;
-use theme::Theme;
-use theme::THEME;
 mod file_storage;
-use file_storage::FileStorage;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 
@@ -55,6 +47,43 @@ async fn main() -> Result<(), eframe::Error> {
                     app = state;
                 }
             }
+
+            let tree_clone = app.tree.clone();
+
+            let registry_clone = app.registry.clone();
+            let mut actor_zenoh: ZenohActor = ZenohActor::new();
+
+            actor_zenoh.add_listener(move |_event| match _event {
+                actor_zenoh::ZenohEvent::Publish { topic, payload } => {
+                    let r = Value::from_cbor(payload.to_vec());
+                    let mut refresh_gui = false;
+                    if let Ok(value) = r {
+                        info!(" RXD {} :{} ", topic, value);
+                        let _ = registry_clone
+                            .lock()
+                            .map(|mut reg| reg.insert(topic.clone(), value.clone()));
+                        let _ = tree_clone.lock().map(|mut tree_clone| {
+                            for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
+                                match tile_pane {
+                                    egui_tiles::Tile::Pane(pane) => {
+                                        refresh_gui &= pane.process_data(topic.clone(), &value);
+                                    }
+                                    egui_tiles::Tile::Container(_) => {}
+                                }
+                            }
+                        });
+                        if refresh_gui {
+                            info!("refreshing gui");
+                            // request_repaint();
+                        }
+                    }
+                }
+                _ => {}
+            });
+
+            tokio::spawn(async move {
+                actor_zenoh.run().await;
+            });
             Ok(Box::new(app))
         }),
     )
@@ -144,6 +173,14 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         if ui.button("➕").clicked() {
             self.add_child_to = Some(tile_id);
         }
+        if ui.button("🔃").clicked() {
+            info!("refreshing gui");
+            // request_repaint();
+        }
+    }
+
+    fn retain_pane(&mut self, _pane: &Pane) -> bool {
+        _pane.retain()
     }
 
     // ---
@@ -165,22 +202,26 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         true
     }
 
+    fn on_edit(&mut self, _edit_action: egui_tiles::EditAction) {
+        // log::info!("Edit: {:?}", edit_action);
+    }
+
     fn on_tab_close(&mut self, tiles: &mut Tiles<Pane>, tile_id: TileId) -> bool {
         if let Some(tile) = tiles.get(tile_id) {
             match tile {
                 Tile::Pane(pane) => {
                     // Single pane removal
                     let tab_title = self.tab_title_for_pane(pane);
-                    log::debug!("Closing tab: {}, tile ID: {tile_id:?}", tab_title.text());
+                    log::info!("Closing tab: {}, tile ID: {tile_id:?}", tab_title.text());
                 }
                 Tile::Container(container) => {
                     // Container removal
-                    log::debug!("Closing container: {:?}", container.kind());
+                    log::info!("Closing container: {:?}", container.kind());
                     let children_ids = container.children();
                     for child_id in children_ids {
                         if let Some(Tile::Pane(pane)) = tiles.get(*child_id) {
                             let tab_title = self.tab_title_for_pane(pane);
-                            log::debug!("Closing tab: {}, tile ID: {tile_id:?}", tab_title.text());
+                            log::info!("Closing tab: {}, tile ID: {tile_id:?}", tab_title.text());
                         }
                     }
                 }
@@ -198,17 +239,17 @@ struct MyApp {
     #[cfg_attr(feature = "serde", serde(skip))]
     behavior: TreeBehavior,
     #[cfg_attr(feature = "serde", serde(skip))]
-    registry : Arc<Mutex<HashMap<String, Value>>>,
+    registry: Arc<Mutex<HashMap<String, Value>>>,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         let mut next_view_nr = 0;
         let mut gen_view = || {
-            let view = Pane::TextWidget(TextWidget::new(
+            let view = Pane::new(Widget::TextWidget(TextWidget::new(
                 format!("{}", next_view_nr),
                 "src/lm1/sys".to_string(),
-            ));
+            )));
             next_view_nr += 1;
             view
         };
@@ -239,41 +280,7 @@ impl Default for MyApp {
 
         let tree = Arc::new(Mutex::new(egui_tiles::Tree::new("my_tree", root, tiles)));
 
-        let tree_clone = tree.clone();
-        let mut actor_zenoh: ZenohActor = ZenohActor::new();
-
-        let mut registry = Arc::new(Mutex::new(HashMap::new()));
-        let registry_clone = registry.clone();
-
-        actor_zenoh.add_listener(move |_event| match _event {
-            actor_zenoh::ZenohEvent::Publish { topic, payload } => {
-                let r = Value::from_cbor(payload.to_vec());
-                let mut refresh_gui = false;
-                if let Ok(value) = r {
-                    info!(" RXD {} :{} ", topic, value);
-                    registry_clone.lock().map(| mut reg| reg.insert(topic.clone(), value.clone()));
-                    let _ = tree_clone.lock().map(|mut tree_clone| {
-                        for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
-                            match tile_pane {
-                                egui_tiles::Tile::Pane(pane) => {
-                                    refresh_gui &= pane.process_data(topic.clone(), &value);
-                                }
-                                egui_tiles::Tile::Container(_) => {}
-                            }
-                        }
-                    });
-                    if refresh_gui {
-                        info!("refreshing gui");
-                        // request_repaint();
-                    }
-                }
-            }
-            _ => {}
-        });
-
-        tokio::spawn(async move {
-            actor_zenoh.run().await;
-        });
+        let registry = Arc::new(Mutex::new(HashMap::new()));
 
         Self {
             tree,
@@ -295,10 +302,25 @@ impl eframe::App for MyApp {
             egui::Theme::Light,
             egui::Visuals {
                 panel_fill: egui::Color32::GREEN,
+
                 ..Default::default()
             },
         );
         ctx.request_repaint_after(Duration::from_millis(100));
+
+        if let Some(parent) = self.behavior.add_child_to.take() {
+            let _ = self.tree.lock().map(|mut tree| {
+                let new_child = tree
+                    .tiles
+                    .insert_pane(Pane::new(Widget::NullWidget(NullWidget::new())));
+                if let Some(egui_tiles::Tile::Container(egui_tiles::Container::Tabs(tabs))) =
+                    tree.tiles.get_mut(parent)
+                {
+                    tabs.add_child(new_child);
+                    tabs.set_active(new_child);
+                }
+            });
+        }
     }
 
     fn save(&mut self, _storage: &mut dyn eframe::Storage) {
