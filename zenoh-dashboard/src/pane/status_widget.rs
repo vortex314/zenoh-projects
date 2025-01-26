@@ -51,7 +51,6 @@ impl PaneWidget for StatusWidget {
     }
 
     fn context_menu(&mut self,ui: &mut egui::Ui) {
-        info!("StatusWidget context menu");
         ui.label("StatusWidget context menu");
     }
 

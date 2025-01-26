@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use eframe::egui;
 use egui_tiles::{Tile, TileId, Tiles};
+use egui_extras::install_image_loaders;
 mod pane;
 use pane::NullWidget;
 use pane::Pane;
@@ -101,6 +102,7 @@ async fn main() -> Result<(), eframe::Error> {
                 actor_zenoh.run().await;
             });
 
+            install_image_loaders(&_cc.egui_ctx);
             _cc.egui_ctx.set_theme(egui::Theme::Light); // Switch to light mode
 
             _cc.egui_ctx.style_mut(|style| {
