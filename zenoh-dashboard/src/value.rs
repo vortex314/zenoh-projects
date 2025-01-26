@@ -8,6 +8,7 @@ use minicbor::{data::Token, Decoder};
 
 #[derive(Debug,Clone)]
 pub enum Value {
+    MapStr(HashMap<String, Value>),
     MapIdx(HashMap<usize, Value>),
     List(Vec<Value>),
     String(String),
@@ -150,12 +151,32 @@ impl Value {
             _ => None,
         }
     }
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        match self {
+            Value::MapIdx(map) => {
+                let idx = key.parse::<usize>().ok()?;
+                map.get(&idx)
+            }
+            Value::MapStr(map) => map.get(key),
+            _ => None,
+        }
+    }
 }
 
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Value::MapIdx(map) => {
+                write!(f, "{{")?;
+                for (i, (key, value)) in map.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", key, value)?;
+                }
+                write!(f, "}}")
+            }
+            Value::MapStr(map) => {
                 write!(f, "{{")?;
                 for (i, (key, value)) in map.iter().enumerate() {
                     if i > 0 {

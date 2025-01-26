@@ -64,6 +64,7 @@ impl Actor for ZenohActor {
 
 
         let subscriber = zenoh_session.declare_subscriber("**").await.unwrap();
+        self.zenoh_session = Some(zenoh_session);
         loop {
             select! {
                 cmd = self.rx_cmd.recv() => {

@@ -55,18 +55,9 @@ impl PaneWidget for StatusWidget {
         ui.label("StatusWidget context menu");
     }
 
-    fn process_data(&mut self, topic: String, _value: &Value) -> bool {
-        self.pub_sub.src.as_ref().unwrap().iter().any(|ep| {
-            if ep.topic == topic {
-                info!("found topic: {}", topic);
-                true
-            } else {
-                false
-            }
-        })
+    fn process_data(&mut self, _topic: String, _value: &Value)  {
+        self.status = Status::Ok;
     }
 
-    fn title(&self) -> String {
-        self.title.clone()
-    }
+
 }

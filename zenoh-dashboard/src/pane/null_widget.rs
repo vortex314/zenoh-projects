@@ -14,35 +14,27 @@ enum Status {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct NullWidget {
-    title: String,
-}
+pub struct NullWidget {}
 
 impl NullWidget {
     pub fn new() -> NullWidget {
-        NullWidget {
-            title: "Null Widget".to_string(),
-
-        }
+        NullWidget {}
     }
 }
 
 impl PaneWidget for NullWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
-        ui.label(&self.title);
+        // paint rectangle yellow
+        let rect = ui.available_rect_before_wrap();
+        ui.painter().rect_filled(rect, 0.0, egui::Color32::from_rgb(255, 255, 0));
+        ui.label("NullWidget");
         ui.separator();
         UiResponse::None
     }
 
-    fn context_menu(&mut self,ui: &mut egui::Ui) {
+    fn context_menu(&mut self, ui: &mut egui::Ui) {
         ui.label("NullWidget context menu");
     }
 
-    fn process_data(&mut self, _topic: String, _value: &Value) -> bool {
-        return false;
-    }
-
-    fn title(&self) -> String {
-        self.title.clone()
-    }
+    fn process_data(&mut self, _topic: String, _value: &Value) {}
 }

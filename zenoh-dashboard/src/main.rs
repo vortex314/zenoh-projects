@@ -15,12 +15,17 @@ use pane::Widget;
 mod value;
 use pane::PaneWidget;
 use pane::TextWidget;
+use shared::on_shared;
+use shared::FieldInfo;
 use value::Value;
 mod actor_zenoh;
 mod logger;
 use actor_zenoh::{Actor, ZenohActor};
 use log::info;
 mod file_storage;
+
+mod shared;
+use shared::SHARED;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 
@@ -49,33 +54,44 @@ async fn main() -> Result<(), eframe::Error> {
             }
 
             let tree_clone = app.tree.clone();
-
             let registry_clone = app.registry.clone();
             let mut actor_zenoh: ZenohActor = ZenohActor::new();
 
             actor_zenoh.add_listener(move |_event| match _event {
                 actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                     let r = Value::from_cbor(payload.to_vec());
-                    let mut refresh_gui = false;
                     if let Ok(value) = r {
                         info!(" RXD {} :{} ", topic, value);
+                        if let Value::MapIdx(map) = &value {
+                            on_shared(|shared| {
+                                for (k, v) in map.iter() {
+                                    let key = topic.clone() +"."+ &k.to_string();
+
+                                    shared.registry.insert(
+                                        key.clone(),
+                                        FieldInfo {
+                                            name : key.clone(),
+                                            desc : v.to_string(),
+                                        },
+                                    );
+                                }
+                            });
+                        }
+
                         let _ = registry_clone
                             .lock()
                             .map(|mut reg| reg.insert(topic.clone(), value.clone()));
+
                         let _ = tree_clone.lock().map(|mut tree_clone| {
                             for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
                                 match tile_pane {
                                     egui_tiles::Tile::Pane(pane) => {
-                                        refresh_gui &= pane.process_data(topic.clone(), &value);
+                                        pane.process_data(topic.clone(), &value);
                                     }
                                     egui_tiles::Tile::Container(_) => {}
                                 }
                             }
                         });
-                        if refresh_gui {
-                            info!("refreshing gui");
-                            // request_repaint();
-                        }
                     }
                 }
                 _ => {}
@@ -83,6 +99,12 @@ async fn main() -> Result<(), eframe::Error> {
 
             tokio::spawn(async move {
                 actor_zenoh.run().await;
+            });
+
+            _cc.egui_ctx.set_theme(egui::Theme::Light); // Switch to light mode
+
+            _cc.egui_ctx.style_mut(|style| {
+                style.visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(0, 255, 0);
             });
             Ok(Box::new(app))
         }),
@@ -246,10 +268,8 @@ impl Default for MyApp {
     fn default() -> Self {
         let mut next_view_nr = 0;
         let mut gen_view = || {
-            let view = Pane::new(Widget::TextWidget(TextWidget::new(
-                format!("{}", next_view_nr),
-                "src/lm1/sys".to_string(),
-            )));
+            let mut view = Pane::new(Widget::TextWidget(TextWidget::new()));
+            view.title = format!("View {}", next_view_nr);
             next_view_nr += 1;
             view
         };
@@ -298,16 +318,9 @@ impl eframe::App for MyApp {
                 .lock()
                 .map(|mut tree| tree.ui(&mut self.behavior, ui));
         });
-        ctx.set_visuals_of(
-            egui::Theme::Light,
-            egui::Visuals {
-                panel_fill: egui::Color32::GREEN,
-
-                ..Default::default()
-            },
-        );
+        // refresh the gui every 100ms
         ctx.request_repaint_after(Duration::from_millis(100));
-
+        // adding a child to the selected tab
         if let Some(parent) = self.behavior.add_child_to.take() {
             let _ = self.tree.lock().map(|mut tree| {
                 let new_child = tree

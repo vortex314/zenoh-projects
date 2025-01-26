@@ -8,54 +8,46 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextWidget {
-    title: String,
-    topic: String,
+    prefix : String,
+    suffix : String,
     #[serde(skip)]
     text: String,
 }
 
 impl TextWidget {
-    pub fn new(title: String, topic: String) -> TextWidget {
+    pub fn new() -> TextWidget {
         TextWidget {
-            title,
-            topic,
+            prefix: "'".to_string(),
+            suffix: "'".to_string(),
             text: "-".to_string(),
         }
     }
 }
 
-fn get_text_property(ui: &mut egui::Ui, label: &str, target: &mut String) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        ui.add(TextEdit::singleline(target));
-    });
-}
-
 impl PaneWidget for TextWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
-        let s = format!("{} : {}", self.topic, self.text);
+        let s = format!("{}{}{}",self.prefix, self.text,self.suffix );
         ui.label(s.clone());
-        //     info!("TextWidget {} {}",self.title, s);
         egui_tiles::UiResponse::None
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
+        ui.separator();
         ui.label("TextWidget context menu");
-        get_text_property(ui, "Title", &mut self.title);
-        get_text_property(ui, "Topic", &mut self.topic);
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("Prefix:");
+            ui.text_edit_singleline(&mut self.prefix);
+        });
+        ui.horizontal(|ui| {
+            ui.label("Suffix:");
+            ui.text_edit_singleline(&mut self.suffix);
+        });
+
     }
 
-    fn title(&self) -> String {
-        self.title.clone()
-    }
-
-    fn process_data(&mut self, topic: String, value: &Value) -> bool {
-        if topic == self.topic {
-            self.text = format!("{}", value);
-            //      info!("TextWidget::process_data: {}, value={}", self.title, self.text);
-            true
-        } else {
-            false
-        }
+    fn process_data(&mut self, topic: String, value: &Value)  {
+        info!("TextWidget process_data {} {:?}", topic, value);
+        self.text = format!("{}", value);
     }
 }
