@@ -10,6 +10,8 @@ use eframe::egui;
 use egui_tiles::{Tile, TileId, Tiles};
 use egui_extras::install_image_loaders;
 mod pane;
+use log::debug;
+use log::error;
 use pane::NullWidget;
 use pane::Pane;
 use pane::Widget;
@@ -61,27 +63,9 @@ async fn main() -> Result<(), eframe::Error> {
             actor_zenoh.add_listener(move |_event| match _event {
                 actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                     let r = Value::from_cbor(payload.to_vec());
+                    registry_add_topic(topic.clone());
                     if let Ok(value) = r {
-                        info!(" RXD {} :{} ", topic, value);
-                        if let Value::MapIdx(map) = &value {
-                            on_shared(|shared| {
-                                for (k, v) in map.iter() {
-                                    let key = topic.clone() +"."+ &k.to_string();
-
-                                    shared.registry.insert(
-                                        key.clone(),
-                                        FieldInfo {
-                                            name : key.clone(),
-                                            desc : v.to_string(),
-                                        },
-                                    );
-                                }
-                            });
-                        }
-
-                        let _ = registry_clone
-                            .lock()
-                            .map(|mut reg| reg.insert(topic.clone(), value.clone()));
+                        debug!(" RXD {} :{} ", topic, value);
 
                         let _ = tree_clone.lock().map(|mut tree_clone| {
                             for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
@@ -93,6 +77,8 @@ async fn main() -> Result<(), eframe::Error> {
                                 }
                             }
                         });
+                    } else {
+                        error!("Error decoding payload from topic {}", topic);
                     }
                 }
                 _ => {}
@@ -111,6 +97,26 @@ async fn main() -> Result<(), eframe::Error> {
             Ok(Box::new(app))
         }),
     )
+}
+
+fn registry_add_topic(topic: String) {
+    on_shared(|shared| {
+        if shared.registry.contains_key(&topic) {
+            return;
+        }
+        shared.registry.insert(
+            topic.clone(),
+            Vec::new(),
+        );
+    });
+}
+
+fn registry_add_field(topic: String, field: FieldInfo) {
+    on_shared(|shared| {
+        if let Some(fields) = shared.registry.get_mut(&topic) {
+            fields.push(field);
+        }
+    });
 }
 
 struct TreeBehavior {
@@ -263,7 +269,7 @@ struct MyApp {
     #[cfg_attr(feature = "serde", serde(skip))]
     behavior: TreeBehavior,
     #[cfg_attr(feature = "serde", serde(skip))]
-    registry: Arc<Mutex<HashMap<String, Value>>>,
+    registry: Arc<Mutex<HashMap<String, Vec<FieldInfo>>>>,
 }
 
 impl Default for MyApp {

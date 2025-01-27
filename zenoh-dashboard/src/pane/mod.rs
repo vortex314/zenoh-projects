@@ -1,6 +1,6 @@
 use egui::{include_image, ImageSource, Sense};
 use egui_tiles::UiResponse;
-use log::info;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use crate::{shared::possible_topics, value::Value};
@@ -109,10 +109,8 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
         {
             event = Some(IconEvent::Label);
         }
-
     });
     event
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -138,7 +136,7 @@ impl PaneWidget for Widget {
             Widget::TextWidget(tw) => tw.context_menu(ui),
             Widget::StatusWidget(sw) => sw.context_menu(ui),
             Widget::NullWidget(nw) => nw.context_menu(ui),
-            Widget::GaugeWidget(gw) => gw.context_menu(ui), 
+            Widget::GaugeWidget(gw) => gw.context_menu(ui),
         }
     }
 
@@ -181,7 +179,8 @@ impl Pane {
 fn get_topic(ui: &mut egui::Ui, selected_value: &mut String) {
     let options = possible_topics();
     egui::ComboBox::from_label("Select a topic ")
-        .width(200.0)
+        .selected_text(selected_value.as_str())
+        .width(150.0)
         .show_ui(ui, |ui| {
             for option in options {
                 ui.selectable_value::<String>(selected_value, option.clone(), option);
@@ -278,6 +277,7 @@ impl PaneWidget for Pane {
             .iter()
             .filter(|ep| ep.topic == topic)
             .map(|ep| {
+                debug!("Processing data for topic {} [{}]{:?} {:?}", topic,ep.field, value.get(&ep.field),value);
                 value
                     .get(&ep.field)
                     .map(|v| self.widget.process_data(topic.clone(), &v));

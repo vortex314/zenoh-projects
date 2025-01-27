@@ -28,7 +28,7 @@ pub fn on_shared(f: impl FnOnce(&mut Shared))  {
     }
 }
 pub struct Shared {
-    pub registry: HashMap<String, FieldInfo>,
+    pub registry: HashMap<String, Vec<FieldInfo>>,
 }
 
 pub fn possible_topics () -> Vec<String> {

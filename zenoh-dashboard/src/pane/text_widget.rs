@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextWidget {
+    // config fields
     prefix : String,
     suffix : String,
+    // runtime fields
     #[serde(skip)]
     text: String,
 }

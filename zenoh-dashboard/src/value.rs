@@ -158,6 +158,10 @@ impl Value {
                 map.get(&idx)
             }
             Value::MapStr(map) => map.get(key),
+            Value::List(list) => {
+                let idx = key.parse::<usize>().ok()?;
+                list.get(idx)
+            }
             _ => None,
         }
     }
