@@ -11,13 +11,24 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
+InfoProp info_props_zenoh[] = {
+    InfoProp(0, "zid", "Zenoh ID", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(1, "what_am_i", "What am I", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(2, "peers", "Peers", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(3, "prefix", "Prefix", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(4, "routers", "Routers", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(5, "connect", "Connect", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(6, "listen", "Listen", PropType::PROP_STR, PropMode::PROP_READ),
+};
+
 ZenohActor::ZenohActor() : ZenohActor("zenoh", 4096, 5, 5) {}
 
 ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
     : Actor<ZenohEvent, ZenohCmd>(stack_size, name, priority, queue_depth)
 {
-  _timer_publish = timer_repetitive(1000); // timer for publishing properties
-  prefix("device");                        // default prefix
+  _timer_publish = timer_repetitive(1000);       // timer for publishing properties
+  _timer_publish_props = timer_repetitive(5000); // timer for publishing properties
+  prefix("device");                              // default prefix
 }
 
 void ZenohActor::on_timer(int id)
@@ -26,10 +37,16 @@ void ZenohActor::on_timer(int id)
   {
     INFO("Timer publish : Publishing Zenoh properties");
     publish_props();
-  } else {
-    INFO("Unknown timer id: %d", id);
   }
+  else if (id == _timer_publish_props)
+  {
+    INFO("Timer publish_props : Publishing Zenoh properties info");
+    publish_props_info();
+  }
+  else
+    INFO("Unknown timer id: %d", id);
 }
+
 
 void ZenohActor::on_cmd(ZenohCmd &cmd)
 {
@@ -240,12 +257,12 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
-  std::string topic_name = _src_prefix;
+  /*std::string topic_name = _src_prefix;
   topic_name += "/";
-  topic_name += topic;
+  topic_name += topic;*/
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
-  z_view_keyexpr_from_str(&keyexpr, topic_name.c_str());
+  z_view_keyexpr_from_str(&keyexpr, topic);
   CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
   CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
@@ -269,6 +286,17 @@ Res ZenohActor::publish_props()
   */
   emit(ZenohEvent{.serdes = PublishSerdes{.payload = _zenoh_msg}});
   z_drop(z_move(z_str));
+  return Res::Ok();
+}
+
+Res ZenohActor::publish_props_info()
+{
+  if (!_connected)
+  {
+    return Res::Err(ENOTCONN, "Not connected to Zenoh");
+  }
+  emit (ZenohEvent{.prop_info = PublishSerdes{.payload = info_props_zenoh[_prop_counter]}});
+  _prop_counter = (_prop_counter + 1) % (sizeof(info_props_zenoh) / sizeof(InfoProp));
   return Res::Ok();
 }
 
@@ -296,13 +324,3 @@ Res ZenohMsg::deserialize(Deserializer &des)
 {
   return Res::Err(EAFNOSUPPORT, "not implemented");
 }
-
-InfoProp info_props_zenoh[] = {
-    InfoProp(0, "zid", "Zenoh ID", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(1, "what_am_i", "What am I", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(2, "peers", "Peers", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(3, "prefix", "Prefix", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(4, "routers", "Routers", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(5, "connect", "Connect", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(6, "listen", "Listen", PropType::PROP_STR, PropMode::PROP_READ),
-};

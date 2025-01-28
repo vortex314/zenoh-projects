@@ -25,6 +25,7 @@ struct SysMsg : public Serializable
 struct SysEvent
 {
   std::optional<PublishSerdes> serdes = std::nullopt;
+  std::optional<PublishSerdes> prop_info = std::nullopt;
 };
 
 enum SysAction
@@ -44,6 +45,8 @@ private:
   SysMsg sys_msg;
   const char *src_sys = "sys"; // wifi, time, etc
   int _timer_publish=-1;
+  int _timer_publish_props=-1;
+  int _prop_counter = 0;
 public:
   SysActor();
   SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
@@ -51,6 +54,7 @@ public:
   void on_cmd(SysCmd &cmd);
   void on_timer(int timer_id);
   Res publish_props();
+  Res publish_props_info();
 
 private:
   void init_properties();

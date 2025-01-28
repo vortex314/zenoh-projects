@@ -22,10 +22,10 @@ WifiActor wifi_actor("wifi", 9000, 40, 5);
 ZenohActor zenoh_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
-Thread actor_thread("actors", 9000, 40, 23,Cpu::CPU0);
+Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 // the btstack is a blocking task so it has its own thread
 Ps4Actor ps4_actor("ps4", 9000, 40, 5);
-Thread ps4_thread("bluetooth", 9000, 20, 5,Cpu::CPU0);
+Thread ps4_thread("bluetooth", 9000, 20, 5, Cpu::CPU0);
 
 Log logger;
 
@@ -79,13 +79,18 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("wifi", event.serdes); });
+                      { zenoh_publish("src/lm1/wifi", event.serdes);
+                      zenoh_publish("info/lm1/wifi",event.prop_info); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("sys", event.serdes); });
+                     { zenoh_publish("src/lm1/sys", event.serdes); 
+                     zenoh_publish("info/lm1/sys",event.prop_info); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("zenoh", event.serdes); });
+                       { zenoh_publish("src/lm1/zenoh", event.serdes); 
+                       zenoh_publish("info/lm1/zenoh",event.prop_info);
+                       });
   ps4_actor.on_event([&](Ps4Event event)
-                     { zenoh_publish("ps4", event.serdes); });
+                     { zenoh_publish("src/lm1/ps4", event.serdes); 
+                     zenoh_publish("info/lm1/ps4",event.prop_info); });
   // log connection events
   ps4_actor.on_event([](Ps4Event event)
                      { log_ps4_event(event); });

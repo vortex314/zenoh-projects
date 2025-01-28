@@ -6,6 +6,7 @@ SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<SysEvent, SysCmd>(stack_size, name, priority, queue_depth)
 {
     _timer_publish = timer_repetitive(1000);
+    _timer_publish_props = timer_repetitive(5000);
 }
 
 void SysActor::on_cmd(SysCmd &cmd)
@@ -29,6 +30,11 @@ void SysActor::on_timer(int id)
     {
         INFO("Timer 1 : Publishing Sys properties");
         publish_props();
+    } else if ( id == _timer_publish_props) {
+        INFO("Timer 2 : Publishing Sys properties info");
+        publish_props_info();
+    } else {
+        INFO("Unknown timer id: %d", id);
     }
 }
 
@@ -49,7 +55,7 @@ Res SysActor::publish_props()
     return Res::Ok();
 }
 
-const static InfoProp info_props_sys_msg[8] = {
+InfoProp info_props_sys_msg[8] = {
     InfoProp(0, "cpu", "CPU", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(1, "clock", "Clock in Hz", PropType::PROP_UINT, PropMode::PROP_READ),
     InfoProp(2, "flash_size", "Flash Size in bytes", PropType::PROP_UINT, PropMode::PROP_READ),
@@ -59,6 +65,13 @@ const static InfoProp info_props_sys_msg[8] = {
     InfoProp(6, "log_message", "Log Message", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(7, "state", "State", PropType::PROP_STR, PropMode::PROP_READ),
 };
+
+Res SysActor::publish_props_info()
+{
+    emit(SysEvent{.prop_info = PublishSerdes{.payload = info_props_sys_msg[_prop_counter]}});
+    _prop_counter = (_prop_counter + 1) % (sizeof(info_props_sys_msg) / sizeof(InfoProp));
+    return Res::Ok();
+}
 
 Res SysMsg::serialize(Serializer &ser)
 {

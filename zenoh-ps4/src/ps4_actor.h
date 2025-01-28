@@ -7,6 +7,7 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 */
 
 #include <actor.h>
+#include <msg_info.h>
 #include <esp_event.h>
 #include <esp_wifi.h>
 #include <esp_bt.h>
@@ -25,37 +26,43 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #error "Must use BLUEPAD32_PLATFORM_CUSTOM"
 #endif
 
-/*
- {Ps4::BUTTON_SQUARE, "button_square", "Square button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_CROSS, "button_cross", "Cross button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_CIRCLE, "button_circle", "Circle button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_TRIANGLE, "button_triangle", "Triangle button", ValueType::UINT, ValueMode::READ},
+typedef enum Ps4Props {
+  BUTTON_LEFT = 0,
+  BUTTON_RIGHT,
+  BUTTON_UP,
+  BUTTON_DOWN,
 
-    {Ps4::BUTTON_LEFT_SHOULDER, "button_left_shoulder", "Left Shoulder button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_RIGHT_SHOULDER, "button_right_shoulder", "Right Shoulder button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_LEFT_TRIGGER, "button_left_trigger", "Left Trigger button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_RIGHT_TRIGGER, "button_right_trigger", "Right Trigger button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_LEFT_JOYSTICK, "button_left_joystick", "Left Joystick button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_RIGHT_JOYSTICK, "button_right_joystick", "Right Joystick button", ValueType::UINT, ValueMode::READ},
-    {Ps4::BUTTON_SHARE, "button_share", "Share button", ValueType::UINT, ValueMode::READ},
+  BUTTON_SQUARE,
+  BUTTON_CROSS,
+  BUTTON_CIRCLE,
+  BUTTON_TRIANGLE,
 
-    {Ps4::STICK_LEFT_X, "axis_x", "Left Stick X", ValueType::INT, ValueMode::READ},
-    {Ps4::STICK_LEFT_Y, "axis_y", "Left Stick Y", ValueType::INT, ValueMode::READ},
-    {Ps4::STICK_RIGHT_X, "axis_rx", "Right Stick X", ValueType::INT, ValueMode::READ},
-    {Ps4::STICK_RIGHT_Y, "axis_ry", "Right Stick Y", ValueType::INT, ValueMode::READ},
+  BUTTON_LEFT_SHOULDER,
+  BUTTON_RIGHT_SHOULDER,
+  BUTTON_LEFT_TRIGGER,
+  BUTTON_RIGHT_TRIGGER,
+  BUTTON_LEFT_JOYSTICK,
+  BUTTON_RIGHT_JOYSTICK,
+  BUTTON_SHARE,
 
-    {Ps4::GYRO_X, "gyro_x", "Gyro X axis", ValueType::INT, ValueMode::READ},
-    {Ps4::GYRO_Y, "gyro_y", "Gyro Y axis", ValueType::INT, ValueMode::READ},
-    {Ps4::GYRO_Z, "gyro_z", "Gyro Z axis", ValueType::INT, ValueMode::READ},
+  STICK_LEFT_X,
+  STICK_LEFT_Y,
+  STICK_RIGHT_X,
+  STICK_RIGHT_Y,
 
-    {Ps4::ACCEL_X, "accel_x", "Accelerometer X Axis ", ValueType::INT, ValueMode::READ},
-    {Ps4::ACCEL_Y, "accel_y", "Accelerometer Y Axis ", ValueType::INT, ValueMode::READ},
-    {Ps4::ACCEL_Z, "accel_z", "Accelerometer Z Axis ", ValueType::INT, ValueMode::READ},
+  GYRO_X,
+  GYRO_Y,
+  GYRO_Z,
 
-    {Ps4::RUMBLE, "rumble", "Rumble", ValueType::UINT, ValueMode::WRITE},
-    {Ps4::LIGHTBAR_RGB, "led_green", "Green LED", ValueType::UINT, ValueMode::WRITE}
+  ACCEL_X,
+  ACCEL_Y,
+  ACCEL_Z,
 
-*/
+  RUMBLE,
+  LIGHTBAR_RGB
+
+} Ps4Props;
+
 
 struct Ps4Msg : public Serializable
 {
@@ -93,7 +100,8 @@ struct Ps4Msg : public Serializable
   std::optional<int> rumble = std::nullopt;
   std::optional<int> led_rgb = std::nullopt;
 
-  ~Ps4Msg()  {
+  ~Ps4Msg()
+  {
     INFO("Ps4Msg destructor");
   }
 
@@ -105,7 +113,7 @@ struct Ps4Msg : public Serializable
   {
     ser.reset();
     ser.array_begin();
-    ser.serialize(button_left );
+    ser.serialize(button_left);
     ser.serialize(button_right);
     ser.serialize(button_up);
     ser.serialize(button_down);
@@ -122,7 +130,7 @@ struct Ps4Msg : public Serializable
 
     ser.serialize(button_left_joystick);
     ser.serialize(button_right_joystick);
-    
+
     ser.serialize(button_share);
     ser.serialize(axis_lx);
     ser.serialize(axis_ly);
@@ -167,11 +175,14 @@ struct Ps4Event
   std::optional<PublishSerdes> serdes = std::nullopt;
   std::optional<BlueEvent> blue_event = std::nullopt;
   std::optional<Ps4Msg> output = std::nullopt;
+  std::optional<PublishSerdes> prop_info = std::nullopt;
 };
 
 class Ps4Actor : public Actor<Ps4Event, Ps4Cmd>
 {
-  int _timer_id=0;
+  int _timer_id = 0;
+  int _prop_counter = 0;
+
 public:
   Ps4Actor();
   Ps4Actor(const char *name, size_t stack_size, int priority, size_t queue_depth);
@@ -179,7 +190,7 @@ public:
   void on_cmd(Ps4Cmd &cmd);
   void on_timer(int timer_id);
   void on_start();
-  Ps4Msg ps4_output  ;
+  Ps4Msg ps4_output;
 
   void gamepad_to_output(uni_gamepad_t *gp);
 
@@ -197,9 +208,9 @@ public:
   static void on_oob_event(uni_platform_oob_event_t event, void *data);
   static struct uni_platform *get_my_platform(void);
   static void trigger_event_on_gamepad(uni_hid_device_t *d);
-//  static  Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
+  //  static  Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
 };
 
- extern "C"   Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
+extern "C" Ps4Actor *get_my_platform_instance(uni_hid_device_t *d);
 
 #endif

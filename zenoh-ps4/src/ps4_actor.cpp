@@ -1,35 +1,85 @@
 #include <ps4_actor.h>
 
-#define BUTTON_SQUARE 0x04
-#define BUTTON_CROSS 0x01
-#define BUTTON_CIRCLE 0x02
-#define BUTTON_TRIANGLE 0x08
+#define BUTTON_SQUARE_MASK 0x04
+#define BUTTON_CROSS_MASK 0x01
+#define BUTTON_CIRCLE_MASK 0x02
+#define BUTTON_TRIANGLE_MASK 0x08
 
-#define BUTTON_LEFT 0x08
-#define BUTTON_DOWN 0x02
-#define BUTTON_RIGHT 0x04
-#define BUTTON_UP 0x01
+#define BUTTON_LEFT_MASK 0x08
+#define BUTTON_DOWN_MASK 0x02
+#define BUTTON_RIGHT_MASK 0x04
+#define BUTTON_UP_MASK 0x01
 
-#define BUTTON_LEFT_SHOULDER 0x10
-#define BUTTON_RIGHT_SHOULDER 0x20
-#define BUTTON_LEFT_TRIGGER 0x40
-#define BUTTON_RIGHT_TRIGGER 0x80
+#define BUTTON_LEFT_SHOULDER_MASK 0x10
+#define BUTTON_RIGHT_SHOULDER_MASK 0x20
+#define BUTTON_LEFT_TRIGGER_MASK 0x40
+#define BUTTON_RIGHT_TRIGGER_MASK 0x80
 
-#define BUTTON_LEFT_JOYSTICK 0x100
-#define BUTTON_RIGHT_JOYSTICK 0x200
-#define BUTTON_SHARE 0x400
+#define BUTTON_LEFT_JOYSTICK_MASK 0x100
+#define BUTTON_RIGHT_JOYSTICK_MASK 0x200
+#define BUTTON_SHARE_MASK 0x400
+
+struct InfoProp ps4_props[] = {
+    {Ps4Props::BUTTON_LEFT, "button_left", "Left button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_RIGHT, "button_right", "Right button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_UP, "button_up", "Up button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_DOWN, "button_down", "Down button", PropType::PROP_UINT, PropMode::PROP_READ},
+
+    {Ps4Props::BUTTON_SQUARE, "button_square", "Square button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_CROSS, "button_cross", "Cross button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_CIRCLE, "button_circle", "Circle button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_TRIANGLE, "button_triangle", "Triangle button", PropType::PROP_UINT, PropMode::PROP_READ},
+
+    {Ps4Props::BUTTON_LEFT_SHOULDER, "button_left_shoulder", "Left Shoulder button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_RIGHT_SHOULDER, "button_right_shoulder", "Right Shoulder button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_LEFT_TRIGGER, "button_left_trigger", "Left Trigger button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_RIGHT_TRIGGER, "button_right_trigger", "Right Trigger button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_LEFT_JOYSTICK, "button_left_joystick", "Left Joystick button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_RIGHT_JOYSTICK, "button_right_joystick", "Right Joystick button", PropType::PROP_UINT, PropMode::PROP_READ},
+    {Ps4Props::BUTTON_SHARE, "button_share", "Share button", PropType::PROP_UINT, PropMode::PROP_READ},
+
+    {Ps4Props::STICK_LEFT_X, "axis_x", "Left Stick X", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::STICK_LEFT_Y, "axis_y", "Left Stick Y", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::STICK_RIGHT_X, "axis_rx", "Right Stick X", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::STICK_RIGHT_Y, "axis_ry", "Right Stick Y", PropType::PROP_SINT, PropMode::PROP_READ},
+
+    {Ps4Props::GYRO_X, "gyro_x", "Gyro X axis", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::GYRO_Y, "gyro_y", "Gyro Y axis", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::GYRO_Z, "gyro_z", "Gyro Z axis", PropType::PROP_SINT, PropMode::PROP_READ},
+
+    {Ps4Props::ACCEL_X, "accel_x", "Accelerometer X Axis ", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::ACCEL_Y, "accel_y", "Accelerometer Y Axis ", PropType::PROP_SINT, PropMode::PROP_READ},
+    {Ps4Props::ACCEL_Z, "accel_z", "Accelerometer Z Axis ", PropType::PROP_SINT, PropMode::PROP_READ},
+
+    {Ps4Props::RUMBLE, "rumble", "Rumble", PropType::PROP_UINT, PropMode::PROP_WRITE},
+    {Ps4Props::LIGHTBAR_RGB, "led_green", "Green LED", PropType::PROP_UINT, PropMode::PROP_WRITE}
+
+};
 
 Ps4Actor::Ps4Actor() : Actor<Ps4Event, Ps4Cmd>(6120, "ps4", 5, 10)
 {
     Ps4Actor::ps4_actor_instance = this;
     INFO("Starting PS4 actor sizeof(Ps4Cmd ) : %d ", sizeof(Ps4Cmd));
-    _timer_id = timer_repetitive(1000);
+ //   _timer_id = timer_repetitive(1000);
 }
 Ps4Actor::Ps4Actor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<Ps4Event, Ps4Cmd>(stack_size, name, priority, queue_depth)
 {
     Ps4Actor::ps4_actor_instance = this;
-    _timer_id = timer_repetitive(1000);
+   // _timer_id = timer_repetitive(1000); // timer not used, goes via btstack
 }
+#define INTERVAL_MS 1000
+static void timer_handler(btstack_timer_source_t *ts)
+{
+    // Your code here
+    Ps4Actor *ps = (Ps4Actor *)ts->context;
+    // INFO("Timer handler called");
+    ps-> on_timer(0);
+
+    // If you want the timer to repeat, re-register it:
+    btstack_run_loop_set_timer(ts, INTERVAL_MS);
+    btstack_run_loop_add_timer(ts);
+}
+
 extern "C" const char *btdm_controller_get_compile_version();
 void Ps4Actor::on_start()
 {
@@ -43,7 +93,15 @@ void Ps4Actor::on_start()
 
     // Init Bluepad32.
     uni_init(0 /* argc */, NULL /* argv */);
+    struct btstack_timer_source timer;
+    timer.process = timer_handler;
+    timer.context = this;
 
+    btstack_run_loop_set_timer_handler(&timer, timer_handler);
+    btstack_run_loop_set_timer(&timer, INTERVAL_MS);
+
+    // Add timer to run loop
+    btstack_run_loop_add_timer(&timer);
     // Does not return.
     btstack_run_loop_execute(); // Blocking call, no timers will be triggered.No cmd will be processed.
 }
@@ -58,14 +116,17 @@ void Ps4Actor::on_cmd(Ps4Cmd &cmd)
 
 void Ps4Actor::on_timer(int timer_id)
 {
-    switch (timer_id)
+    if (timer_id == _timer_id)
     {
-    case 1:
-    {
-        emit(Ps4Event{});
-        break;
+        //   emit(Ps4Event{.serdes = PublishSerdes{ps4_output}});
+        INFO("publishing ps4 props %s", ps4_props[_prop_counter].name.value().c_str());
+        emit(Ps4Event{.prop_info = PublishSerdes{ps4_props[_prop_counter]}});
+        _prop_counter++;
+        if (_prop_counter >= sizeof(ps4_props) / sizeof(InfoProp))
+            _prop_counter = 0;
     }
-    default:
+    else
+    {
         INFO("Unknown timer expired ps4");
     }
 }
@@ -165,25 +226,25 @@ uni_error_t Ps4Actor::on_device_ready(uni_hid_device_t *d)
 
 void Ps4Actor::gamepad_to_output(uni_gamepad_t *gp)
 {
-    ps4_output.button_left = gp->dpad & BUTTON_LEFT;
-    ps4_output.button_right = gp->dpad & BUTTON_RIGHT;
-    ps4_output.button_up = gp->dpad & BUTTON_UP;
-    ps4_output.button_down = gp->dpad & BUTTON_DOWN;
+    ps4_output.button_left = gp->dpad & BUTTON_LEFT_MASK;
+    ps4_output.button_right = gp->dpad & BUTTON_RIGHT_MASK;
+    ps4_output.button_up = gp->dpad & BUTTON_UP_MASK;
+    ps4_output.button_down = gp->dpad & BUTTON_DOWN_MASK;
 
-    ps4_output.button_square = gp->buttons & BUTTON_SQUARE;
-    ps4_output.button_cross = gp->buttons & BUTTON_CROSS;
-    ps4_output.button_circle = gp->buttons & BUTTON_CIRCLE;
-    ps4_output.button_triangle = gp->buttons & BUTTON_TRIANGLE;
+    ps4_output.button_square = gp->buttons & BUTTON_SQUARE_MASK;
+    ps4_output.button_cross = gp->buttons & BUTTON_CROSS_MASK;
+    ps4_output.button_circle = gp->buttons & BUTTON_CIRCLE_MASK;
+    ps4_output.button_triangle = gp->buttons & BUTTON_TRIANGLE_MASK;
 
-    ps4_output.button_left_sholder = gp->buttons & BUTTON_LEFT_SHOULDER;
-    ps4_output.button_right_sholder = gp->buttons & BUTTON_RIGHT_SHOULDER;
-    ps4_output.button_left_trigger = gp->buttons & BUTTON_LEFT_TRIGGER;
-    ps4_output.button_right_trigger = gp->buttons & BUTTON_RIGHT_TRIGGER;
+    ps4_output.button_left_sholder = gp->buttons & BUTTON_LEFT_SHOULDER_MASK;
+    ps4_output.button_right_sholder = gp->buttons & BUTTON_RIGHT_SHOULDER_MASK;
+    ps4_output.button_left_trigger = gp->buttons & BUTTON_LEFT_TRIGGER_MASK;
+    ps4_output.button_right_trigger = gp->buttons & BUTTON_RIGHT_TRIGGER_MASK;
 
-    ps4_output.button_left_joystick = gp->buttons & BUTTON_LEFT_JOYSTICK;
-    ps4_output.button_right_joystick = gp->buttons & BUTTON_RIGHT_JOYSTICK;
+    ps4_output.button_left_joystick = gp->buttons & BUTTON_LEFT_JOYSTICK_MASK;
+    ps4_output.button_right_joystick = gp->buttons & BUTTON_RIGHT_JOYSTICK_MASK;
 
-    ps4_output.button_share = gp->buttons & BUTTON_SHARE;
+    ps4_output.button_share = gp->buttons & BUTTON_SHARE_MASK;
     ps4_output.axis_lx = gp->axis_x >> 2;
     ps4_output.axis_ly = gp->axis_y >> 2;
     ps4_output.axis_rx = gp->axis_rx >> 2;

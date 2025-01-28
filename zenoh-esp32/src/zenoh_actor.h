@@ -48,6 +48,7 @@ struct ZenohEvent
 {
   std::optional<PublishBytes> publish = std::nullopt; // publish a message
   std::optional<PublishSerdes> serdes = std::nullopt; // publish a serializable object
+  std::optional<PublishSerdes> prop_info = std::nullopt; // publish a serializable object of propinfo
 };
 
 struct ZenohCmd
@@ -60,6 +61,8 @@ struct ZenohCmd
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>
 {
   int _timer_publish=-1;
+  int _timer_publish_props=-1;
+  int _prop_counter = 0;
 public:
   ZenohActor();
   ZenohActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
@@ -74,6 +77,8 @@ public:
 
   Res zenoh_publish(const char *topic, const Bytes &value);
   Res publish_props();
+  Res publish_props_info();
+
   void zenoh_subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
 

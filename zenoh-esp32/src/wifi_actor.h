@@ -9,22 +9,7 @@
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
-/*
 
-const static InfoProp info_props_wifi[11] = {
-    InfoProp(0, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(1, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(2, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(3, "netmask", "Netmask", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(4, "dns", "DNS", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(5, "ssid", "SSID", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(6, "channel", "Channel", PropType::PROP_UINT, PropMode::PROP_READ),
-    InfoProp(7, "rssi", "RSSI", PropType::PROP_SINT, PropMode::PROP_READ),
-    InfoProp(8, "encryption", "Encryption", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(9, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
-    InfoProp(10, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
-};
-*/
 
 struct WifiMsg : public Serializable
 {
@@ -57,6 +42,7 @@ struct WifiEvent
 {
   std::optional<WifiSignal> signal = std::nullopt;
   std::optional<PublishSerdes> serdes = std::nullopt;
+  std::optional<PublishSerdes> prop_info = std::nullopt;
 };
 
 struct WifiCmd
@@ -68,6 +54,8 @@ struct WifiCmd
 class WifiActor : public Actor<WifiEvent, WifiCmd>
 {
   int _timer_publish;
+  int _timer_publish_props;
+  int _prop_counter = 0;
 public:
   WifiActor();
   WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
@@ -77,6 +65,7 @@ public:
   void on_start();
   Res net_init();
   Res wifi_init_sta(void);
+  Res publish_props_info();
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
   Res scan();

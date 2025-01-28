@@ -18,11 +18,43 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
+typedef enum WifiProp {
+  MAC_ADDRESS=0,
+  IP_ADDRESS,
+  GATEWAY,
+  NETMASK,
+  DNS,
+  SSID,
+  CHANNEL,
+  RSSI,
+  ENCRYPTION,
+  WIFI_MODE,
+  AP_SCAN
+} WifiProp;
+
+
+  InfoProp info_props_wifi[11] = {
+    InfoProp(WifiProp::MAC_ADDRESS, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::IP_ADDRESS, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::GATEWAY, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::NETMASK, "netmask", "Netmask", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::DNS, "dns", "DNS", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::SSID, "ssid", "SSID", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::CHANNEL, "channel", "Channel", PropType::PROP_UINT, PropMode::PROP_READ),
+    InfoProp(WifiProp::RSSI, "rssi", "RSSI", PropType::PROP_SINT, PropMode::PROP_READ),
+    InfoProp(WifiProp::ENCRYPTION, "encryption", "Encryption", PropType::PROP_STR, PropMode::PROP_READ),
+    InfoProp(WifiProp::WIFI_MODE, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
+    InfoProp(WifiProp::AP_SCAN, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
+};
+    
+
+
 WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
 WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<WifiEvent, WifiCmd>(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000);
+  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "Merckx2";
   wifi_password = S(WIFI_PASS);
 }
@@ -76,7 +108,27 @@ void WifiActor::on_timer(int timer_id)
       wifi_msg.fill(esp_netif);
       emit(WifiEvent{.serdes = PublishSerdes{.payload = wifi_msg}});
     }
+  } else if ( timer_id == _timer_publish_props) {
+    INFO("Timer 2 : Publishing WiFi properties info");
+    if (_wifi_connected)
+    {
+      INFO("Publishing WiFi properties info");
+      publish_props_info();
+    }
+  } else {
+    INFO("Unknown timer id: %d", timer_id);
   }
+}
+
+Res WifiActor::publish_props_info()
+{
+  if (!_wifi_connected)
+  {
+    return Res::Err(ENOTCONN, "Not connected to WiFi");
+  }
+  emit(WifiEvent{.prop_info = PublishSerdes{.payload = info_props_wifi[_prop_counter]}});
+  _prop_counter = (_prop_counter + 1) % (sizeof(info_props_wifi) / sizeof(InfoProp));
+  return Res::Ok();
 }
 
 WifiActor::~WifiActor()
@@ -147,25 +199,6 @@ Res WifiActor::wifi_init_sta(void)
   INFO("Connecting to WiFi network...");
   return Res::Ok();
 }
-
-InfoProp info_props_wifi[] = {
-    InfoProp(0, "mac_address", "MAC Address", PropType::PROP_STR,
-             PropMode::PROP_READ),
-    InfoProp(1, "ip_address", "IP Address", PropType::PROP_STR,
-             PropMode::PROP_READ),
-    InfoProp(2, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(3, "netmask", "Netmask", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(4, "dns", "DNS", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(5, "ssid", "SSID", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(6, "channel", "Channel", PropType::PROP_UINT, PropMode::PROP_READ),
-    InfoProp(7, "rssi", "RSSI", PropType::PROP_SINT, PropMode::PROP_READ),
-    InfoProp(8, "encryption", "Encryption", PropType::PROP_STR,
-             PropMode::PROP_READ),
-    InfoProp(9, "wifi_mode", "Wifi Mode", PropType::PROP_UINT,
-             PropMode::PROP_READ),
-    InfoProp(10, "ap_scan", "AP Scan", PropType::PROP_ARRAY,
-             PropMode::PROP_READ),
-};
 
 Res WifiMsg::serialize(Serializer &ser)
 {
