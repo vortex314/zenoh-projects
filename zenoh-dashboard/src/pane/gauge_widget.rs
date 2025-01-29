@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::value::Value;
 
-use super::{PaneWidget, PubSub};
+use super::{find_inner_rectangle, PaneWidget, PubSub};
 
 const RADIUS: f32 = 100.0;
 const THICKNESS: f32 = 10.0;
@@ -69,7 +69,6 @@ impl PaneWidget for GaugeWidget {
         ui.horizontal(|ui| {
             ui.label("Start:");
             ui.add(egui::DragValue::new(&mut self.start));
-            ui.label(self.value.to_string());
         });
         ui.horizontal(|ui| {
             ui.label("Unit:");
@@ -221,7 +220,7 @@ fn draw_filler_arc(
     let mut points = fill_arc(center, radius, start_angle, end_angle);
     painter.add(Shape::line(points, Stroke::new(thickness, Color32::BLUE)));
 }
-
+/* 
 fn find_inner_rectangle(rect: Rect, rectangle_ratio_y_vs_x: f32) -> Rect {
     let mut inner_rect = rect;
     if rect.width() * rectangle_ratio_y_vs_x > rect.height() {
@@ -233,7 +232,7 @@ fn find_inner_rectangle(rect: Rect, rectangle_ratio_y_vs_x: f32) -> Rect {
         inner_rect.min.y = rect.max.y - height;
     }
     inner_rect
-}
+}*/
 
 fn map_value_to_angle(value: f32, min: f32, max: f32) -> f32 {
     map_range(value, min, max, -PI, 0.0)

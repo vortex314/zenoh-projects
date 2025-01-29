@@ -5,6 +5,8 @@ use egui::{Margin, TextEdit};
 use egui_tiles::UiResponse;
 use log::*;
 use serde::{Deserialize, Serialize};
+
+use super::find_inner_rectangle;
 const MARGIN: f32 = 5.0;
 
 
@@ -39,7 +41,9 @@ impl PaneWidget for TextWidget {
                 bottom: MARGIN,
             };
         let s = format!("{}{}{}",self.prefix, self.text,self.suffix );
-        let text_height = rect.height() * 0.8;
+
+        let rct = find_inner_rectangle(rect, 2.5/ s.len() as f32  ) ;
+        let text_height = rct.height() * 0.8;
 
         ui.put(
             rect,
@@ -68,7 +72,7 @@ impl PaneWidget for TextWidget {
     }
 
     fn process_data(&mut self, topic: String, value: &Value)  {
-        info!("TextWidget process_data {} {:?}", topic, value);
+        debug!("TextWidget process_data {} {:?}", topic, value);
         self.text = format!("{}", value);
     }
 }

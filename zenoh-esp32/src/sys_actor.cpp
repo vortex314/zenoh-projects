@@ -6,7 +6,7 @@ SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<SysEvent, SysCmd>(stack_size, name, priority, queue_depth)
 {
     _timer_publish = timer_repetitive(1000);
-    _timer_publish_props = timer_repetitive(5000);
+ //   _timer_publish_props = timer_repetitive(5000);
 }
 
 void SysActor::on_cmd(SysCmd &cmd)

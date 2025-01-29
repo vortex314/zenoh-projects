@@ -165,6 +165,14 @@ impl Value {
             _ => None,
         }
     }
+    pub fn keys(&self) -> Option<Vec<String>> {
+        match self {
+            Value::MapStr(map) => Some(map.keys().cloned().collect()),
+            Value::MapIdx(map) => Some(map.keys().map(|k| k.to_string()).collect()),
+            Value::List(list) => Some((0..list.len()).map(|i| i.to_string()).collect()),
+            _ => None,
+        }
+    }
 }
 
 impl Display for Value {

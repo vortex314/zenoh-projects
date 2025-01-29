@@ -27,7 +27,7 @@ ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t
     : Actor<ZenohEvent, ZenohCmd>(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000);       // timer for publishing properties
-  _timer_publish_props = timer_repetitive(5000); // timer for publishing properties
+//  _timer_publish_props = timer_repetitive(5000); // timer for publishing properties
   prefix("device");                              // default prefix
 }
 

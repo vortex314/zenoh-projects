@@ -1,4 +1,4 @@
-use egui::{include_image, ImageSource, Sense};
+use egui::{include_image, ImageSource, Rect, Sense};
 use egui_tiles::UiResponse;
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
@@ -18,6 +18,12 @@ pub struct EndPoint {
     topic: String,
     field: String,
     lua_filter: String,
+}
+
+impl ToString for EndPoint {
+    fn to_string(&self) -> String {
+        format!("{}.{}", self.topic, self.field)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -156,6 +162,10 @@ pub struct Pane {
     pub title: String,
     src: Vec<EndPoint>,
     widget: Widget,
+    #[serde(skip)]
+    value: Value,
+    #[serde(skip)]
+    fields: Vec<String>,
 }
 
 impl Pane {
@@ -165,6 +175,8 @@ impl Pane {
             title: "Pane".to_string(),
             src: Vec::new(),
             widget,
+            value: Value::Null,
+            fields: Vec::new(),
         }
     }
     pub fn retain(&self) -> bool {
@@ -176,11 +188,11 @@ impl Pane {
     }
 }
 
-fn get_topic(ui: &mut egui::Ui, selected_value: &mut String) {
+fn get_topic(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize) {
     let options = possible_topics();
-    egui::ComboBox::from_label("Select a topic ")
+    egui::ComboBox::from_label(format!("Topic {}", cnt))
         .selected_text(selected_value.as_str())
-        .width(150.0)
+        .width(100.0)
         .show_ui(ui, |ui| {
             for option in options {
                 ui.selectable_value::<String>(selected_value, option.clone(), option);
@@ -188,7 +200,19 @@ fn get_topic(ui: &mut egui::Ui, selected_value: &mut String) {
         });
 }
 
-fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
+fn get_field(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize,fields : &Vec<String>) {
+    let options = possible_topics();
+    egui::ComboBox::from_label(format!("Field {}", cnt))
+        .selected_text(selected_value.as_str())
+        .width(100.0)
+        .show_ui(ui, |ui| {
+            for option in fields {
+                ui.selectable_value::<String>(selected_value, option.clone(), option);
+            }
+        });
+}
+
+fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>,fields : &Vec<String>) {
     ui.horizontal(|ui| {
         ui.label("Source topics");
         if ui.button("+").clicked() {
@@ -200,18 +224,18 @@ fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
         }
     });
     let mut ep_to_remove = None;
+    let mut cnt = 0;
     for ep in src.iter_mut() {
-        if ui.button("-").clicked() {
-            ep_to_remove = Some(ep.clone());
-        }
         ui.horizontal(|ui| {
-            ui.label("Topic");
-            get_topic(ui, &mut ep.topic);
-            ui.label("Field");
-            ui.text_edit_singleline(&mut ep.field);
+            if ui.button("-").clicked() {
+                ep_to_remove = Some(ep.clone());
+            }
+            get_topic(ui, &mut ep.topic, cnt);
+            get_field(ui, &mut ep.field, cnt,fields);
+            cnt += 1;
         });
-        ui.label("Lua filter");
-        ui.text_edit_multiline(&mut ep.lua_filter);
+        // ui.label("Lua filter");
+        // ui.text_edit_multiline(&mut ep.lua_filter);
     }
     if let Some(ep) = ep_to_remove {
         src.retain(|e| e != &ep);
@@ -235,7 +259,11 @@ impl PaneWidget for Pane {
         );
         resp.context_menu(|ui| {
             get_title(ui, &mut self.title);
-            get_endpoints(ui, &mut self.src);
+            get_endpoints(ui, &mut self.src,&self.fields);
+            self.title = self.src.iter().fold("".to_string(), |acc, ep| {
+                format!("{} {}", acc, ep.to_string())
+            });
+            ui.label(self.value.to_string());
             button_bar(ui).map(|icon| {
                 info!("Selected icon {:?}", icon);
                 self.widget = match icon {
@@ -277,11 +305,34 @@ impl PaneWidget for Pane {
             .iter()
             .filter(|ep| ep.topic == topic)
             .map(|ep| {
-                debug!("Processing data for topic {} [{}]{:?} {:?}", topic,ep.field, value.get(&ep.field),value);
-                value
-                    .get(&ep.field)
-                    .map(|v| self.widget.process_data(topic.clone(), &v));
+                debug!(
+                    "Processing data for topic {} [{}]{:?} {:?}",
+                    topic,
+                    ep.field,
+                    value.get(&ep.field),
+                    value
+                );
+                value.get(&ep.field).map(|v| {
+                    self.value = v.clone();
+                    self.widget.process_data(topic.clone(), &v)
+                });
             })
             .collect::<Vec<_>>();
+        value.keys().map(|keys| {
+            self.fields = keys;
+        });
     }
+}
+
+pub fn find_inner_rectangle(rect: Rect, rectangle_ratio_y_vs_x: f32) -> Rect {
+    let mut inner_rect = rect;
+    if rect.width() * rectangle_ratio_y_vs_x > rect.height() {
+        let width = rect.height() / rectangle_ratio_y_vs_x;
+        inner_rect.min.x = rect.center().x - width / 2.0;
+        inner_rect.max.x = rect.center().x + width / 2.0;
+    } else {
+        let height = rect.width() * rectangle_ratio_y_vs_x;
+        inner_rect.min.y = rect.max.y - height;
+    }
+    inner_rect
 }

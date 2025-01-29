@@ -97,11 +97,11 @@ void Ps4Actor::on_start()
     timer.process = timer_handler;
     timer.context = this;
 
-    btstack_run_loop_set_timer_handler(&timer, timer_handler);
-    btstack_run_loop_set_timer(&timer, INTERVAL_MS);
+ //   btstack_run_loop_set_timer_handler(&timer, timer_handler);
+ //   btstack_run_loop_set_timer(&timer, INTERVAL_MS);
 
     // Add timer to run loop
-    btstack_run_loop_add_timer(&timer);
+ //   btstack_run_loop_add_timer(&timer);
     // Does not return.
     btstack_run_loop_execute(); // Blocking call, no timers will be triggered.No cmd will be processed.
 }
