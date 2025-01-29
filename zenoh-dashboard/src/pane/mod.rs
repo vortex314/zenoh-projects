@@ -12,6 +12,8 @@ mod null_widget;
 pub use null_widget::NullWidget;
 mod gauge_widget;
 pub use gauge_widget::GaugeWidget;
+mod plot_widget;
+pub use plot_widget::PlotWidget;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EndPoint {
@@ -125,6 +127,7 @@ pub enum Widget {
     StatusWidget(StatusWidget),
     NullWidget(NullWidget),
     GaugeWidget(GaugeWidget),
+    PlotWidget(PlotWidget),
 }
 
 impl PaneWidget for Widget {
@@ -134,6 +137,7 @@ impl PaneWidget for Widget {
             Widget::StatusWidget(sw) => sw.show(ui),
             Widget::NullWidget(nw) => nw.show(ui),
             Widget::GaugeWidget(gw) => gw.show(ui),
+            Widget::PlotWidget(pw) => pw.show(ui),
         }
     }
 
@@ -143,6 +147,7 @@ impl PaneWidget for Widget {
             Widget::StatusWidget(sw) => sw.context_menu(ui),
             Widget::NullWidget(nw) => nw.context_menu(ui),
             Widget::GaugeWidget(gw) => gw.context_menu(ui),
+            Widget::PlotWidget(pw) => pw.context_menu(ui),
         }
     }
 
@@ -152,6 +157,7 @@ impl PaneWidget for Widget {
             Widget::StatusWidget(sw) => sw.process_data(topic, value),
             Widget::NullWidget(nw) => nw.process_data(topic, value),
             Widget::GaugeWidget(gw) => gw.process_data(topic, value),
+            Widget::PlotWidget(pw) => pw.process_data(topic, value),
         }
     }
 }
@@ -190,7 +196,8 @@ impl Pane {
 
 fn get_topic(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize) {
     let options = possible_topics();
-    egui::ComboBox::from_label(format!("Topic {}", cnt))
+    ui.label("Topic");
+    egui::ComboBox::from_id_salt(format!("topic{}", cnt))
         .selected_text(selected_value.as_str())
         .width(100.0)
         .show_ui(ui, |ui| {
@@ -200,19 +207,20 @@ fn get_topic(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize) {
         });
 }
 
-fn get_field(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize,fields : &Vec<String>) {
-    let options = possible_topics();
-    egui::ComboBox::from_label(format!("Field {}", cnt))
+fn get_field(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize, fields: &Vec<String>) {
+    let fields  = fields.clone();
+    ui.label("Field");
+    egui::ComboBox::from_id_salt(format!("field{}", cnt))
         .selected_text(selected_value.as_str())
         .width(100.0)
         .show_ui(ui, |ui| {
-            for option in fields {
-                ui.selectable_value::<String>(selected_value, option.clone(), option);
+            for field in fields {
+                ui.selectable_value::<String>(selected_value, field.clone(), field);
             }
         });
 }
 
-fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>,fields : &Vec<String>) {
+fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>, fields: &Vec<String>) {
     ui.horizontal(|ui| {
         ui.label("Source topics");
         if ui.button("+").clicked() {
@@ -223,21 +231,21 @@ fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>,fields : &Vec<String
             });
         }
     });
-    let mut ep_to_remove = None;
+    let mut ep_to_remove = Vec::new();
     let mut cnt = 0;
     for ep in src.iter_mut() {
         ui.horizontal(|ui| {
             if ui.button("-").clicked() {
-                ep_to_remove = Some(ep.clone());
+                ep_to_remove.push(ep.clone());
             }
             get_topic(ui, &mut ep.topic, cnt);
-            get_field(ui, &mut ep.field, cnt,fields);
+            get_field(ui, &mut ep.field, cnt, fields);
             cnt += 1;
         });
         // ui.label("Lua filter");
         // ui.text_edit_multiline(&mut ep.lua_filter);
     }
-    if let Some(ep) = ep_to_remove {
+    for ep in ep_to_remove {
         src.retain(|e| e != &ep);
     }
 }
@@ -252,14 +260,14 @@ fn get_title(ui: &mut egui::Ui, title: &mut String) {
 impl PaneWidget for Pane {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
         let mut button_rect = ui.max_rect();
-        button_rect.max.y = button_rect.min.y + 20.0;
+        button_rect.max.y = button_rect.min.y + 15.0;
         let resp = ui.put(
             button_rect,
             egui::Button::new(self.title()).sense(egui::Sense::drag()), //             .fill(THEME.title_background_color),
         );
         resp.context_menu(|ui| {
             get_title(ui, &mut self.title);
-            get_endpoints(ui, &mut self.src,&self.fields);
+            get_endpoints(ui, &mut self.src, &self.fields);
             self.title = self.src.iter().fold("".to_string(), |acc, ep| {
                 format!("{} {}", acc, ep.to_string())
             });
@@ -268,7 +276,7 @@ impl PaneWidget for Pane {
                 info!("Selected icon {:?}", icon);
                 self.widget = match icon {
                     IconEvent::Gauge => Widget::GaugeWidget(GaugeWidget::new()),
-                    IconEvent::Graph => Widget::StatusWidget(StatusWidget::new()),
+                    IconEvent::Graph => Widget::PlotWidget(PlotWidget::new()),
                     IconEvent::Progress => Widget::StatusWidget(StatusWidget::new()),
                     IconEvent::Text => Widget::TextWidget(TextWidget::new()),
                     IconEvent::Label => Widget::NullWidget(NullWidget::new()),
@@ -319,7 +327,9 @@ impl PaneWidget for Pane {
             })
             .collect::<Vec<_>>();
         value.keys().map(|keys| {
-            self.fields = keys;
+            if self.fields.len() != keys.len() {
+                self.fields = keys;
+            }
         });
     }
 }
