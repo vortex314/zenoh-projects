@@ -1,3 +1,5 @@
+use log::error;
+
 
 pub struct FileStorage {
     path : String,
@@ -28,7 +30,7 @@ impl eframe::Storage for FileStorage {
     fn set_string(&mut self, _key: &str, value: String) {
         match self.save(&value) {
             Ok(_) => (),
-            Err(e) => eprintln!("Error saving data: {}", e),
+            Err(e) => error!("Error saving data: {}", e),
         }
     }
 

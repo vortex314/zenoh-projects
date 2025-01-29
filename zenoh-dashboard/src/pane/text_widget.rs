@@ -1,10 +1,12 @@
 use crate::pane::PaneWidget;
 use crate::value::Value;
 
-use egui::TextEdit;
+use egui::{Margin, TextEdit};
 use egui_tiles::UiResponse;
 use log::*;
 use serde::{Deserialize, Serialize};
+const MARGIN: f32 = 5.0;
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TextWidget {
@@ -28,7 +30,24 @@ impl TextWidget {
 
 impl PaneWidget for TextWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+        let rect = ui.available_rect_before_wrap();
+        let rect = rect
+            - Margin {
+                left: MARGIN,
+                right: MARGIN,
+                top: MARGIN,
+                bottom: MARGIN,
+            };
         let s = format!("{}{}{}",self.prefix, self.text,self.suffix );
+        let text_height = rect.height() * 0.8;
+
+        ui.put(
+            rect,
+            egui::Label::new(
+                egui::RichText::new(s.clone())
+                    .size(text_height)
+                    .color(egui::Color32::BLUE),
+            ));
         ui.label(s.clone());
         egui_tiles::UiResponse::None
     }

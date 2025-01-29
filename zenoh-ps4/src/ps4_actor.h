@@ -37,7 +37,7 @@ typedef enum Ps4Props {
   BUTTON_CIRCLE,
   BUTTON_TRIANGLE,
 
-  BUTTON_LEFT_SHOULDER,
+  BUTTON_LEFT_SHOULDER, // 8
   BUTTON_RIGHT_SHOULDER,
   BUTTON_LEFT_TRIGGER,
   BUTTON_RIGHT_TRIGGER,
@@ -45,16 +45,16 @@ typedef enum Ps4Props {
   BUTTON_RIGHT_JOYSTICK,
   BUTTON_SHARE,
 
-  STICK_LEFT_X,
+  STICK_LEFT_X, // 15
   STICK_LEFT_Y,
   STICK_RIGHT_X,
   STICK_RIGHT_Y,
 
-  GYRO_X,
+  GYRO_X, // 19
   GYRO_Y,
   GYRO_Z,
 
-  ACCEL_X,
+  ACCEL_X, // 22
   ACCEL_Y,
   ACCEL_Z,
 
@@ -113,36 +113,36 @@ struct Ps4Msg : public Serializable
   {
     ser.reset();
     ser.array_begin();
-    ser.serialize(button_left);
+    ser.serialize(button_left); //0
     ser.serialize(button_right);
     ser.serialize(button_up);
     ser.serialize(button_down);
 
-    ser.serialize(button_square);
+    ser.serialize(button_square); // 4
     ser.serialize(button_cross);
     ser.serialize(button_circle);
     ser.serialize(button_triangle);
 
-    ser.serialize(button_left_sholder);
+    ser.serialize(button_left_sholder); // 8
     ser.serialize(button_right_sholder);
     ser.serialize(button_left_trigger);
     ser.serialize(button_right_trigger);
 
-    ser.serialize(button_left_joystick);
+    ser.serialize(button_left_joystick); // 12
     ser.serialize(button_right_joystick);
 
-    ser.serialize(button_share);
-    ser.serialize(axis_lx);
+    ser.serialize(button_share); // 14
+    ser.serialize(axis_lx); // 15
     ser.serialize(axis_ly);
     ser.serialize(axis_rx);
     ser.serialize(axis_ry);
-    ser.serialize(gyro_x);
+    ser.serialize(gyro_x); // 19
     ser.serialize(gyro_y);
     ser.serialize(gyro_z);
-    ser.serialize(accel_x);
+    ser.serialize(accel_x); // 22
     ser.serialize(accel_y);
     ser.serialize(accel_z);
-    ser.serialize(rumble);
+    ser.serialize(rumble); // 25
     ser.serialize(led_rgb);
     return ser.array_end();
   }
