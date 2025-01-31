@@ -151,6 +151,14 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn get_opt(&self, key:&Option<String>) -> Option<&Value> {
+        match key {
+            Some(key) => self.get(key.as_str()),
+            None => Some(self),
+        }
+    }
+
     pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
             Value::MapIdx(map) => {

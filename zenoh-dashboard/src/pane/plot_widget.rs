@@ -56,6 +56,7 @@ impl PlotWidget {
         if self.data.len() >= self.max_points {
             self.data.pop_front();
         }
+       // info!("Adding point: {} {}", current_time, value);
         self.data.push_back([current_time, value]);
 
         // Remove points outside the time window
@@ -74,8 +75,8 @@ impl PaneWidget for PlotWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
         let x_axis_formatter = |value: egui_plot::GridMark, _range: &std::ops::RangeInclusive<f64>| {
             let value = value.value;
-            let time = UNIX_EPOCH + Duration::from_millis(value as u64);
-            let datetime = chrono::DateTime::<chrono::Utc>::from(time);
+            let time = UNIX_EPOCH + Duration::from_secs_f64(value );
+            let datetime = chrono::DateTime::<chrono::Local>::from(time);
             datetime.format("%H:%M:%S").to_string()
         };
         Plot::new("realtime_plot")

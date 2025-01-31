@@ -9,7 +9,7 @@ egui_plot = "0.30.0"
 egui_tiles = "*"
 egui_extras={ version="0.30.0",features=["all_loaders"]}
 
-eframe ={ version = "0.30.0", features = ["ron","serde","persistence"] }
+eframe ={ version = "0.30.0", features = ["serde","persistence"] }
 zenoh = { version = "1.1.0"}
 tokio = { version = "1.0.0", features = ["full"] }
 env_logger = "0.11.6"
@@ -20,6 +20,7 @@ minicbor = { version = "0.25.1",default-features = false, features = ["alloc","h
 chrono = "0.4.39"
 serde_json = "1.0.68"
 serde_derive = "1.0.130"
+mlua = { version = "0.10.3",default-features = false, features = ["lua54","vendored"] }
 
 [features]
 default = ["serde"]
