@@ -58,7 +58,7 @@ async fn main() -> Result<(), eframe::Error> {
             }
 
             let tree_clone = app.tree.clone();
-            let registry_clone = app.registry.clone();
+            let _registry_clone = app.registry.clone();
             let mut actor_zenoh: ZenohActor = ZenohActor::new();
 
             actor_zenoh.add_listener(move |_event| match _event {

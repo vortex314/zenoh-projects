@@ -5,6 +5,8 @@ use std::fmt::Formatter;
 use anyhow::Result;
 use anyhow::anyhow;
 use minicbor::{data::Token, Decoder};
+use mlua::IntoLua;
+use mlua::IntoLuaMulti;
 
 #[derive(Debug,Clone)]
 pub enum Value {
@@ -227,5 +229,37 @@ impl Display for Value {
 impl Default for Value {
     fn default() -> Self {
         Value::Null
+    }
+}
+
+impl IntoLua for Value {
+    fn into_lua(self, lua: &mlua::Lua) -> mlua::Result<mlua::Value> {
+        match self {
+            Value::MapStr(map) => {
+                let table = lua.create_table()?;
+                for (key, value) in map {
+                    table.set(key, value)?;
+                }
+                Ok(mlua::Value::Table(table))
+            }
+            Value::MapIdx(map) => {
+                let table = lua.create_table()?;
+                for (key, value) in map {
+                    table.set(key, value)?;
+                }
+                Ok(mlua::Value::Table(table))
+            }
+            Value::List(list) => {
+                let table = lua.create_table()?;
+                for (i, value) in list.into_iter().enumerate() {
+                    table.set(i + 1, value)?;
+                }
+                Ok(mlua::Value::Table(table))
+            }
+            Value::String(s) => Ok(mlua::Value::String(lua.create_string(&s)?)),
+            Value::Number(n) => Ok(mlua::Value::Number(n)),
+            Value::Bool(b) => Ok(mlua::Value::Boolean(b)),
+            Value::Null => Ok(mlua::Value::Nil),
+        }
     }
 }

@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
+use anyhow::{Context, Result};
 use egui::{include_image, ImageSource, Rect, Sense};
 use egui_tiles::UiResponse;
 use log::{debug, info};
-use mlua::Error;
+use mlua::{Error, IntoLua};
 use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 use crate::{shared::get_possible_endpoints, value::Value};
 mod text_widget;
@@ -221,21 +221,28 @@ impl Pane {
         self.title.clone()
     }
 
-    pub fn process_lua(&mut self, topic: &String, value: &Value) -> Result<Value> {
+
+
+    pub fn process_lua(&mut self, _topic: &String, value: &Value) -> Result<Value> {
         if self.lua_code == None {
             return Ok(value.clone());
         }
         if self.lua.is_none() {
-            let mut lua = mlua::Lua::new();
-            lua.load(self.lua_code.as_ref().unwrap());
+            let lua = mlua::Lua::new();
+            if lua.load(self.lua_code.as_ref().unwrap()).exec().is_err() {
+                info!("Error in lua code");
+                return Ok(value.clone());
+            }
             self.lua = Some(lua);
         }
-        let _r:Option<Result<Value>> = self.lua.as_ref().map(|lua| {
-            let process_data: mlua::Function = lua.globals().get("process_data")?;
-            let result: String = process_data.call(value.as_f64())?;
-            Ok(Value::String(result))
-        });
-        Ok(value.clone())
+        let r = self.lua
+            .as_ref()
+            .map(|lua| {
+                let process_data: mlua::Function = lua.globals().get("process_data")?;
+                let result: String = process_data.call(value.clone().into_lua(lua))?;
+                Ok(Value::String(result))
+            });
+        r.unwrap_or(Ok(value.clone()))
     }
 }
 
@@ -283,7 +290,7 @@ fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
     });
     let mut ep_to_remove = Vec::new();
     let mut cnt = 0;
-    for mut ep in src.iter_mut() {
+    for ep in src.iter_mut() {
         ui.horizontal(|ui| {
             if ui.button("-").clicked() {
                 ep_to_remove.push(ep.clone());
@@ -355,8 +362,8 @@ impl PaneWidget for Pane {
     }
 
     fn process_data(&mut self, topic: String, value: &Value) {
-        let _ = self
-            .src
+        let endpoints = self.src.clone();
+        let _ = endpoints
             .iter()
             .filter(|ep| ep.topic == topic)
             .map(|ep| {
@@ -368,9 +375,23 @@ impl PaneWidget for Pane {
                     value
                 );
                 value.get_opt(&ep.field).map(|v| {
-                    self.process_lua(&topic,v);
-                    self.value = v.clone();
-                    self.widget.process_data(topic.clone(), &v)
+                    if self
+                        .process_lua(&topic, v)
+                        .map(|v2| {
+                            let v1 = v2.clone();
+                            match v1 {
+                                Value::String(s) => {
+                                    info!("Processed value {:?} to widget ", s)
+                                }
+                                _ => {}
+                            };
+                            info!("Processed value {} {:?} to widget ", topic, v2);
+                            self.widget.process_data(topic.clone(), &v2)
+                        })
+                        .is_err()
+                    {
+                        info!("Error in lua code");
+                    };
                 });
             })
             .collect::<Vec<_>>();
