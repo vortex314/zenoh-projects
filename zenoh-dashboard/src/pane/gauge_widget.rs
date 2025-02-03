@@ -217,7 +217,7 @@ fn draw_filler_arc(
     end_angle: f32,
 ) {
     let thickness = radius * 0.2; // 20% of radius
-    let mut points = fill_arc(center, radius, start_angle, end_angle);
+    let  points = fill_arc(center, radius, start_angle, end_angle);
     painter.add(Shape::line(points, Stroke::new(thickness, Color32::BLUE)));
 }
 /* 

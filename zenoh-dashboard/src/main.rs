@@ -19,6 +19,7 @@ mod value;
 use pane::PaneWidget;
 use pane::TextWidget;
 use shared::on_shared;
+use shared::update_with_value;
 use shared::FieldInfo;
 use value::Value;
 mod actor_zenoh;
@@ -63,9 +64,9 @@ async fn main() -> Result<(), eframe::Error> {
             actor_zenoh.add_listener(move |_event| match _event {
                 actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                     let r = Value::from_cbor(payload.to_vec());
-                    registry_add_topic(topic.clone());
                     if let Ok(value) = r {
                         debug!(" RXD {} :{} ", topic, value);
+                        update_with_value(topic,&value);
 
                         let _ = tree_clone.lock().map(|mut tree_clone| {
                             for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
@@ -99,25 +100,49 @@ async fn main() -> Result<(), eframe::Error> {
     )
 }
 
-fn registry_add_topic(topic: String) {
+fn registry_add_topic(topic: &String,value:&Value) {
     on_shared(|shared| {
-        if shared.registry.contains_key(&topic) {
+        if shared.values.contains_key(topic) {
             return;
         }
-        shared.registry.insert(
-            topic.clone(),
-            Vec::new(),
-        );
+        let mut fields = Vec::new();
+        match value {
+            Value::MapIdx(map) => {
+                for (idx, (key, value)) in map.iter().enumerate() {
+                    let field = FieldInfo {
+                        idx,
+                        name: key.to_string(),
+                        desc: "".to_string(),
+                        last_value: value.to_string(),
+                    };
+                    fields.push(field);
+                }
+            }
+            Value::MapStr(map) => {
+                for (idx, (key, value)) in map.iter().enumerate() {
+                    let field = FieldInfo {
+                        idx,
+                        name: key.to_string(),
+                        desc: "".to_string(),
+                        last_value: value.to_string(),
+                    };
+                    fields.push(field);
+                }
+            }
+            _ => {
+                let field = FieldInfo {
+                    idx: 0,
+                    name: "".to_string(),
+                    desc: "".to_string(),
+                    last_value: value.to_string(),
+                };
+                fields.push(field);
+            }
+        }
+       
     });
 }
 
-fn registry_add_field(topic: String, field: FieldInfo) {
-    on_shared(|shared| {
-        if let Some(fields) = shared.registry.get_mut(&topic) {
-            fields.push(field);
-        }
-    });
-}
 
 struct TreeBehavior {
     simplification_options: egui_tiles::SimplificationOptions,

@@ -1,9 +1,13 @@
+use std::str::FromStr;
+
 use egui::{include_image, ImageSource, Rect, Sense};
 use egui_tiles::UiResponse;
 use log::{debug, info};
+use mlua::Error;
 use serde::{Deserialize, Serialize};
+use anyhow::Result;
 
-use crate::{shared::possible_topics, value::Value};
+use crate::{shared::get_possible_endpoints, value::Value};
 mod text_widget;
 pub use text_widget::TextWidget;
 mod status_widget;
@@ -19,12 +23,34 @@ pub use plot_widget::PlotWidget;
 pub struct EndPoint {
     topic: String,
     field: Option<String>,
-    lua_filter: Option<String>,
 }
 
 impl ToString for EndPoint {
     fn to_string(&self) -> String {
-        format!("{}.{}", self.topic, self.field.clone().unwrap_or("".to_string()))
+        self.field
+            .as_ref()
+            .map(|f| format!("{}.{}", self.topic, f))
+            .unwrap_or(self.topic.clone())
+    }
+}
+
+impl FromStr for EndPoint {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('.').collect();
+        if parts.len() == 1 {
+            Ok(EndPoint {
+                topic: parts[0].to_string(),
+                field: None,
+            })
+        } else if parts.len() == 2 {
+            Ok(EndPoint {
+                topic: parts[0].to_string(),
+                field: Some(parts[1].to_string()),
+            })
+        } else {
+            Err("Invalid endpoint".to_string())
+        }
     }
 }
 
@@ -167,11 +193,12 @@ pub struct Pane {
     retain: bool,
     pub title: String,
     src: Vec<EndPoint>,
+    lua_code: Option<String>,
     widget: Widget,
     #[serde(skip)]
     value: Value,
     #[serde(skip)]
-    fields: Vec<String>,
+    lua: Option<mlua::Lua>,
 }
 
 impl Pane {
@@ -180,9 +207,10 @@ impl Pane {
             retain: true,
             title: "Pane".to_string(),
             src: Vec::new(),
+            lua_code: None,
             widget,
             value: Value::Null,
-            fields: Vec::new(),
+            lua: None,
         }
     }
     pub fn retain(&self) -> bool {
@@ -192,38 +220,44 @@ impl Pane {
     pub fn title(&self) -> String {
         self.title.clone()
     }
+
+    pub fn process_lua(&mut self, topic: &String, value: &Value) -> Result<Value> {
+        if self.lua_code == None {
+            return Ok(value.clone());
+        }
+        if self.lua.is_none() {
+            let mut lua = mlua::Lua::new();
+            lua.load(self.lua_code.as_ref().unwrap());
+            self.lua = Some(lua);
+        }
+        let _r:Option<Result<Value>> = self.lua.as_ref().map(|lua| {
+            let process_data: mlua::Function = lua.globals().get("process_data")?;
+            let result: String = process_data.call(value.as_f64())?;
+            Ok(Value::String(result))
+        });
+        Ok(value.clone())
+    }
 }
 
-fn get_topic(ui: &mut egui::Ui, selected_value: &mut String, cnt: usize) {
-    let options = possible_topics();
+fn get_endpoint(ui: &mut egui::Ui, endpoint: &EndPoint, cnt: usize) -> Option<EndPoint> {
+    let mut options = get_possible_endpoints();
+    options.sort();
     ui.label("Topic");
+    let mut selected_value = endpoint.to_string();
     egui::ComboBox::from_id_salt(format!("topic{}", cnt))
-        .selected_text(selected_value.as_str())
+        .selected_text(selected_value.to_string())
         .width(100.0)
         .show_ui(ui, |ui| {
             for option in options {
-                ui.selectable_value::<String>(selected_value, option.clone(), option);
+                ui.selectable_value::<String>(&mut selected_value, option.clone(), option);
             }
         });
-}
-
-fn get_opt_field(ui: &mut egui::Ui, selected_value: &mut Option<String>, cnt: usize, fields: &Vec<String>) {
-    let fields  = fields.clone();
-    ui.label("Field");
-    let mut sel_value =selected_value.clone().unwrap_or("".to_string());
-    egui::ComboBox::from_id_salt(format!("field{}", cnt))
-        .selected_text(sel_value.as_str())
-        .width(100.0)
-        .show_ui(ui, |ui| {
-            for field in fields {
-                ui.selectable_value::<String>(&mut sel_value, field.clone(), field);
-            }
-        });
-        if sel_value.len() == 0 {
-            *selected_value = None;
-        } else {
-            *selected_value = Some(sel_value);
-        }
+    info!(
+        "Selected value {:?} {:?}",
+        selected_value,
+        EndPoint::from_str(&selected_value).ok()
+    );
+    EndPoint::from_str(&selected_value).ok()
 }
 
 fn get_lua_filter(ui: &mut egui::Ui, lua_filter: &mut Option<String>) {
@@ -237,29 +271,24 @@ fn get_lua_filter(ui: &mut egui::Ui, lua_filter: &mut Option<String>) {
     }
 }
 
-fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>, fields: &Vec<String>) {
+fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
     ui.horizontal(|ui| {
         ui.label("Source topics");
         if ui.button("+").clicked() {
             src.push(EndPoint {
                 topic: "topic".to_string(),
                 field: None,
-                lua_filter: None,
             });
         }
     });
     let mut ep_to_remove = Vec::new();
     let mut cnt = 0;
-    for ep in src.iter_mut() {
+    for mut ep in src.iter_mut() {
         ui.horizontal(|ui| {
             if ui.button("-").clicked() {
                 ep_to_remove.push(ep.clone());
             }
-            get_topic(ui, &mut ep.topic, cnt);
-            get_opt_field(ui, &mut ep.field, cnt, fields);
-            if ui.button("Lua ...").clicked() {
-                get_lua_filter(ui, &mut ep.lua_filter);
-            }
+            get_endpoint(ui, ep, cnt).map(|e| *ep = e);
             cnt += 1;
         });
         // ui.label("Lua filter");
@@ -287,7 +316,8 @@ impl PaneWidget for Pane {
         );
         resp.context_menu(|ui| {
             get_title(ui, &mut self.title);
-            get_endpoints(ui, &mut self.src, &self.fields);
+            get_endpoints(ui, &mut self.src);
+            get_lua_filter(ui, &mut self.lua_code);
             ui.label(self.value.to_string());
             button_bar(ui).map(|icon| {
                 info!("Selected icon {:?}", icon);
@@ -338,16 +368,12 @@ impl PaneWidget for Pane {
                     value
                 );
                 value.get_opt(&ep.field).map(|v| {
+                    self.process_lua(&topic,v);
                     self.value = v.clone();
                     self.widget.process_data(topic.clone(), &v)
                 });
             })
             .collect::<Vec<_>>();
-        value.keys().map(|keys| {
-            if self.fields.len() != keys.len() {
-                self.fields = keys;
-            }
-        });
     }
 }
 

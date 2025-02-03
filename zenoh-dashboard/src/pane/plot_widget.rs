@@ -27,8 +27,6 @@ pub struct PlotWidget {
     max: f64,
     #[serde(skip)]
     data: VecDeque<[f64; 2]>,
-    #[serde(skip)]
-    time: f64,
 }
 
 pub fn get_current_time() -> f64 {
@@ -44,7 +42,6 @@ impl PlotWidget {
             max_points: 1000,
             min: 0.0,
             max: 100.0,
-            time: 0.0,
             data: VecDeque::new(),
             time_window: 100.0,
         }
@@ -62,7 +59,7 @@ impl PlotWidget {
         // Remove points outside the time window
         let cutoff_time = current_time - self.time_window;
         while let Some(point) = self.data.front() {
-            if point[0] < cutoff_time {
+            if point[0] < cutoff_time || self.data.len() > self.max_points {
                 self.data.pop_front();
             } else {
                 break;
@@ -79,15 +76,13 @@ impl PaneWidget for PlotWidget {
             let datetime = chrono::DateTime::<chrono::Local>::from(time);
             datetime.format("%H:%M:%S").to_string()
         };
+        let min_x = self.data.front().map(|point| point[0]).unwrap_or(get_current_time()-1000.0);
+        let max_x = self.data.back().map(|point| point[0]).unwrap_or(get_current_time());
         Plot::new("realtime_plot")
-            //  .view_aspect(2.0)
-            //  .auto_bounds_y()
-            //  .auto_bounds_x()
-            //    .auto_bounds()
             .include_y(self.min)
             .include_y(self.max)
-            .include_x(get_current_time())
-            .include_x(get_current_time() - self.time_window)
+            .include_x(min_x)
+            .include_x(max_x)
             .show_axes([true, true])
             .x_axis_formatter(x_axis_formatter) // Apply custom x-axis formatter
             .show(ui, |plot_ui| {

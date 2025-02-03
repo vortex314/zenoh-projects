@@ -20,7 +20,7 @@ minicbor = { version = "0.25.1",default-features = false, features = ["alloc","h
 chrono = "0.4.39"
 serde_json = "1.0.68"
 serde_derive = "1.0.130"
-mlua = { version = "0.10.3",default-features = false, features = ["lua54","vendored"] }
+mlua = { version = "0.10.3",default-features = false, features = ["lua54","vendored","send"] }
 
 [features]
 default = ["serde"]
