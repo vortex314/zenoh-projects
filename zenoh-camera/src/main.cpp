@@ -10,6 +10,7 @@
 #include <zenoh_actor.h>
 #include <sys_actor.h>
 #include <led_actor.h>
+#include <camera_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -22,6 +23,7 @@ ZenohActor zenoh_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
+CameraActor camera_actor("camera", 9000, 40, 5);
 
 Log logger;
 
@@ -56,9 +58,9 @@ extern "C" void app_main()
   ESP_ERROR_CHECK(ret);
 
   esp_wifi_set_ps(WIFI_PS_NONE);
-  esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
+  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
-  zenoh_actor.prefix("lm1"); // set the zenoh prefix to src/lm1 and destination subscriber dst/lm1/ **
+  zenoh_actor.prefix("cam1"); // set the zenoh prefix to src/cam1 and destination subscriber dst/cam1/ **
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
@@ -73,15 +75,16 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("src/lm1/wifi", event.serdes);
-                      zenoh_publish("info/lm1/wifi",event.prop_info); });
+                      { zenoh_publish("src/cam1/wifi", event.serdes);
+                      zenoh_publish("info/cam1/wifi",event.prop_info); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("src/lm1/sys", event.serdes); 
-                     zenoh_publish("info/lm1/sys",event.prop_info); });
+                     { zenoh_publish("src/cam1/sys", event.serdes); 
+                     zenoh_publish("info/cam1/sys",event.prop_info); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("src/lm1/zenoh", event.serdes); 
-                       zenoh_publish("info/lm1/zenoh",event.prop_info);
-                       });
+                       { zenoh_publish("src/cam1/zenoh", event.serdes); 
+                       zenoh_publish("info/cam1/zenoh",event.prop_info); });
+  camera_actor.on_event([&](CameraEvent event)
+                        { zenoh_publish("src/cam1/camera", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
@@ -89,13 +92,13 @@ extern "C" void app_main()
     if (event.publish) {
       PublishBytes pub = *event.publish;
       CborDeserializer des(pub.payload.data(), pub.payload.size());
-      if (pub.topic == "sys") {
+      if (pub.topic == "dst/cam1/sys") {
         auto msg = deserialize<SysMsg>(pub.payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes { msg.value() }});  
-      } else if ( pub.topic == "wifi") {
+      } else if ( pub.topic == "dst/cam1/wifi") {
         auto msg = deserialize<WifiMsg>(pub.payload);
         if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( pub.topic == "zenoh") {
+      } else if ( pub.topic == "dst/cam1/zenoh") {
         auto msg = deserialize<ZenohMsg>(pub.payload);
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
       } else {
@@ -105,12 +108,12 @@ extern "C" void app_main()
 
   // one thread to rule them all, in the hope to save some memory
   // wifi_actor.start();
+  actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
   actor_thread.add_actor(zenoh_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
   actor_thread.start();
-
 
   // log heap size, monitoring thread in main, we could exit also
   while (true)

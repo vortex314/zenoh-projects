@@ -5,6 +5,7 @@ use std::fmt::Formatter;
 use anyhow::Result;
 use anyhow::anyhow;
 use minicbor::{data::Token, Decoder};
+use mlua::FromLua;
 use mlua::IntoLua;
 use mlua::IntoLuaMulti;
 
@@ -260,6 +261,46 @@ impl IntoLua for Value {
             Value::Number(n) => Ok(mlua::Value::Number(n)),
             Value::Bool(b) => Ok(mlua::Value::Boolean(b)),
             Value::Null => Ok(mlua::Value::Nil),
+        }
+    }
+}
+
+impl FromLua for Value {
+    fn from_lua(value: mlua::Value, lua: &mlua::Lua) -> mlua::Result<Value> {
+        match value {
+            mlua::Value::Table(table) => {
+                let mut map_str = HashMap::new();
+                let mut map_idx = HashMap::new();
+                let mut list = Vec::new();
+                let mut is_map_str = true;
+                for pair in table.pairs::<mlua::Value, mlua::Value>() {
+                    let (key, value) = pair?;
+                    if let mlua::Value::String(key) = key {
+                        if let Ok(idx) = key.to_str()?.parse::<usize>() {
+                            map_idx.insert(idx, Value::from_lua(value, lua)?);
+                            is_map_str = false;
+                        } else {
+                            map_str.insert(key.to_str()?.to_string(), Value::from_lua(value, lua)?);
+                        }
+                    } else {
+                        list.push(Value::from_lua(value, lua)?);
+                    }
+                }
+                if is_map_str {
+                    Ok(Value::MapStr(map_str))
+                } else {
+                    Ok(Value::MapIdx(map_idx))
+                }
+            }
+            mlua::Value::String(s) => Ok(Value::String(s.to_str()?.to_string())),
+            mlua::Value::Number(n) => Ok(Value::Number(n)),
+            mlua::Value::Boolean(b) => Ok(Value::Bool(b)),
+            mlua::Value::Nil => Ok(Value::Null),
+            _ => Err(mlua::Error::FromLuaConversionError {
+                from: value.type_name(),
+                to: "Value".to_string(),
+                message: Some("unsupported type".to_string()),
+            }),
         }
     }
 }

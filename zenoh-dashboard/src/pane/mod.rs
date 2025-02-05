@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use egui::{include_image, ImageSource, Rect, Sense};
 use egui_tiles::UiResponse;
 use log::{debug, info};
-use mlua::{Error, IntoLua};
+use mlua::{Error, Function, IntoLua};
 use serde::{Deserialize, Serialize};
 
 use crate::{shared::get_possible_endpoints, value::Value};
@@ -229,18 +229,21 @@ impl Pane {
         }
         if self.lua.is_none() {
             let lua = mlua::Lua::new();
-            if lua.load(self.lua_code.as_ref().unwrap()).exec().is_err() {
+            /*if lua.load(self.lua_code.as_ref().unwrap()).exec().is_err() {
                 info!("Error in lua code");
                 return Ok(value.clone());
-            }
+            }*/
             self.lua = Some(lua);
         }
         let r = self.lua
             .as_ref()
             .map(|lua| {
-                let process_data: mlua::Function = lua.globals().get("process_data")?;
-                let result: String = process_data.call(value.clone().into_lua(lua))?;
-                Ok(Value::String(result))
+                let func: Function = lua.load(self.lua_code.unwrap()).eval().context("Error in lua code")?;
+                let result: Result<Value> = func.call(value.clone()).context("Error in lua code")?;
+    //            let process_data: mlua::Function = lua.globals().get("process_data")?;
+    //            let result: String = process_data.call(value.clone().into_lua(lua))?;
+    //            Ok(Value::String(result))
+                result
             });
         r.unwrap_or(Ok(value.clone()))
     }
