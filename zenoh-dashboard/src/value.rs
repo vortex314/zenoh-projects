@@ -6,6 +6,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use minicbor::{data::Token, Decoder};
 use mlua::FromLua;
+use mlua::FromLuaMulti;
 use mlua::IntoLua;
 use mlua::IntoLuaMulti;
 

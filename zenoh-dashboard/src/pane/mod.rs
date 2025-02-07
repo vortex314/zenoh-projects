@@ -238,15 +238,15 @@ impl Pane {
         let r = self.lua
             .as_ref()
             .map(|lua| {
-                let func: Function = lua.load(self.lua_code.unwrap()).eval().context("Error in lua code")?;
-                let result: Result<Value> = func.call(value.clone()).context("Error in lua code")?;
+                let func:Function  = lua.load(self.lua_code.as_ref().unwrap()).eval().unwrap();
+                let result = func.call::<Value>(value.clone());
     //            let process_data: mlua::Function = lua.globals().get("process_data")?;
     //            let result: String = process_data.call(value.clone().into_lua(lua))?;
     //            Ok(Value::String(result))
                 result
             });
-        r.unwrap_or(Ok(value.clone()))
-    }
+        Ok(r.unwrap() ?)
+        }
 }
 
 fn get_endpoint(ui: &mut egui::Ui, endpoint: &EndPoint, cnt: usize) -> Option<EndPoint> {

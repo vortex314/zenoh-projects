@@ -461,7 +461,7 @@ Res WifiActor::scan()
   int ap_index = 0;
   for (int i = 0; i < number; i++)
   {
-    INFO("Channel %d SSID '%s' RSSI %d %s %s %",
+    INFO("Channel %d SSID '%s' RSSI %d %s %s %s %s",
          ap_info[i].primary,
          ap_info[i].ssid,
          ap_info[i].rssi, authmode_to_str(ap_info[i].authmode),
