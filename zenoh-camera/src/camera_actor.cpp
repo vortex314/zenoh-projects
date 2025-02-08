@@ -23,7 +23,7 @@ esp32_camera:
 */
 #define CAM_PIN_PWDN 32  // power down
 #define CAM_PIN_RESET -1 // software reset will be performed
-#define CAM_PIN_XCLK -1  // external clock
+#define CAM_PIN_XCLK 0  // external clock
 #define CAM_PIN_SIOD 26  // SDA
 #define CAM_PIN_SIOC 27  // SCL
 
@@ -39,9 +39,13 @@ esp32_camera:
 #define CAM_PIN_HREF 23
 #define CAM_PIN_PCLK 22
 
-void process_image(int width, int height, int format, uint8_t *data, size_t len)
+void CameraActor::process_image(int width, int height, int format, uint8_t *data, size_t len)
 {
     INFO("Processing image: %dx%d, format=%d, len=%d", width, height, format, len);
+    _camera_msg.image = Bytes(data, data + len);
+    _camera_msg.light = std::nullopt;
+    PublishSerdes serdes(_camera_msg);
+    emit(CameraEvent{.serdes = serdes});
 }
 
 Res CameraActor::camera_init()
@@ -100,7 +104,7 @@ CameraActor::CameraActor(const char *name, size_t stack_size, int priority, size
         .pin_href = CAM_PIN_HREF,
         .pin_pclk = CAM_PIN_PCLK,
 
-        .xclk_freq_hz = 20000000, // EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode
+        .xclk_freq_hz = 16000000, // EXPERIMENTAL: Set to 16MHz on ESP32-S2 or ESP32-S3 to enable EDMA mode, was 20_000_000
         .ledc_timer = LEDC_TIMER_0,
         .ledc_channel = LEDC_CHANNEL_0,
 
@@ -109,11 +113,12 @@ CameraActor::CameraActor(const char *name, size_t stack_size, int priority, size
 
         .jpeg_quality = 12,                  // 0-63, for OV series camera sensors, lower number means higher quality
         .fb_count = 1,                       // When jpeg mode is used, if fb_count more than one, the driver will work in continuous mode.
+        .fb_location = CAMERA_FB_IN_PSRAM,   // CAMERA_FB_IN_RAM or CAMERA_FB_IN_PSRAM
         .grab_mode = CAMERA_GRAB_WHEN_EMPTY, // CAMERA_GRAB_LATEST. Sets when buffers should be filled
                                              //     .fb_location = CAMERA_FB_IN_PSRAM,   // CAMERA_FB_IN_RAM or CAMERA_FB_IN_PSRAM
                                              //     .sccb_i2c_port = I2C_NUM_0,          // I2C port number
+
     };
-    camera_init();
 }
 
 void CameraActor::on_cmd(CameraCmd &cmd)
@@ -125,11 +130,26 @@ void CameraActor::on_timer(int id)
     if (id == _timer_publish)
     {
         INFO("Timer 1 : Publishing Camera properties");
-        camera_capture();
+        auto r = camera_capture();
+        if (r.is_err())
+        {
+            ERROR("Camera capture failed: [%d] %s",r.rc(), r.msg().c_str());
+        }
     }
     else
     {
         INFO("Unknown timer id: %d", id);
+    }
+}
+
+void CameraActor::on_start(void)
+{
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    INFO("Starting Camera actor");
+    Res r = camera_init();
+    if (r.is_err())
+    {
+        ERROR("Camera init failed:[%d] %s",r.rc(), r.msg().c_str());
     }
 }
 

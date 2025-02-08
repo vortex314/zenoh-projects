@@ -24,6 +24,7 @@ SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 CameraActor camera_actor("camera", 9000, 40, 5);
+Thread camera_thread("camera", 9000, 40, 23, Cpu::CPU0);
 
 Log logger;
 
@@ -108,7 +109,9 @@ extern "C" void app_main()
 
   // one thread to rule them all, in the hope to save some memory
   // wifi_actor.start();
-  actor_thread.add_actor(camera_actor);
+  camera_thread.add_actor(camera_actor);
+  camera_thread.start();
+  //actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
   actor_thread.add_actor(zenoh_actor);
   actor_thread.add_actor(sys_actor);
@@ -134,7 +137,7 @@ void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
     serializable.serialize(ser);
 
     assert(buffer.size() > 0);
-    assert(buffer.size() < 1024);
+//    assert(buffer.size() < 1024);
 
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
     // pulse led when we publish

@@ -36,8 +36,10 @@ public:
     ~CameraActor();
     void on_cmd(CameraCmd &cmd);
     void on_timer(int timer_id);
+    void on_start( void );
     Res camera_init();
     Res camera_capture();
+    void process_image(int width, int height, int format, uint8_t *data, size_t len);
 
 private:
     int _timer_publish = -1;
