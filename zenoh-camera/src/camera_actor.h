@@ -8,6 +8,9 @@
 #include "esp_camera.h"
 // #include <map>
 
+#define CAMERA_MODEL_AI_THINKER
+#define LED_FLASH GPIO_NUM_4
+
 struct CameraMsg : public Serializable
 {
     std::optional<Bytes> image = std::nullopt;
@@ -25,7 +28,8 @@ struct CameraEvent
 
 struct CameraCmd
 {
-    std::optional<PublishSerdes> serdes = std::nullopt;
+//    std::optional<PublishSerdes> serdes = std::nullopt;
+    std::optional<CameraMsg> msg = std::nullopt;
 };
 
 class CameraActor : public Actor<CameraEvent, CameraCmd>
@@ -43,6 +47,7 @@ public:
 
 private:
     int _timer_publish = -1;
+    bool _light = false;
     CameraMsg _camera_msg;
     Bytes _image;
     camera_config_t _camera_config;

@@ -2,6 +2,10 @@
 #include <driver/gpio.h>
 #include <soc/gpio_num.h>
 
+#ifndef GPIO_LED
+#define GPIO_LED GPIO_NUM_2
+#endif
+
 enum LedAction {
     LED_ON,
     LED_OFF,
@@ -19,7 +23,7 @@ struct LedEvent {
     std::optional<LedAction> action = std::nullopt;
 };  
 
-#define GPIO_LED GPIO_NUM_2
+
 
 class LedActor : public Actor<LedEvent, LedCmd> {
     typedef enum State {

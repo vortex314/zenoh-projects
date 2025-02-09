@@ -73,6 +73,24 @@ impl PaneWidget for TextWidget {
 
     fn process_data(&mut self, topic: String, value: &Value)  {
         debug!("TextWidget process_data {} {:?}", topic, value);
-        self.text = format!("{}", value);
+        match value {
+            Value::String(s) => {
+                self.text = s.clone();
+            }
+            Value::Number(n) => {
+                self.text = format!("{}", n);
+            }
+
+ 
+            Value::Bool(b) => {
+                self.text = format!("{}", b);
+            }
+            Value::Null => {
+                self.text = "-".to_string();
+            }
+            _ => {
+                self.text = "no text".to_string();
+            }
+        }
     }
 }

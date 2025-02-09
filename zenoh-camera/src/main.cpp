@@ -102,7 +102,10 @@ extern "C" void app_main()
       } else if ( pub.topic == "dst/cam1/zenoh") {
         auto msg = deserialize<ZenohMsg>(pub.payload);
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
-      } else {
+      } else if ( pub.topic == "dst/cam1/camera") {
+        auto msg = deserialize<CameraMsg>(pub.payload);
+        if ( msg ) camera_actor.tell(new CameraCmd{.msg = msg.value()});
+      }else {
         INFO("Received Zenoh unknown event");
       }
     } });

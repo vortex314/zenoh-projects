@@ -16,6 +16,7 @@ pub enum Value {
     MapIdx(HashMap<usize, Value>),
     List(Vec<Value>),
     String(String),
+    Bytes(Vec<u8>),
     Number(f64),
     Bool(bool),
     Null,
@@ -56,6 +57,10 @@ impl Value {
             Token::Bool(b) => Ok(Value::Bool(*b)),
             Token::String(s) => Ok(Value::String(s.to_string())),
             Token::Null => Ok(Value::Null),
+            Token::Bytes(bytes) => {
+                let vec = bytes.iter().map(|b| *b).collect();
+                Ok(Value::Bytes(vec))
+            },
             _ => Err(anyhow!("Unsupported other token type {:?} ", token)),
         }
     }
@@ -220,9 +225,10 @@ impl Display for Value {
                 }
                 write!(f, "]")
             }
-            Value::String(s) => write!(f, "\"{}\"", s),
+            Value::String(s) => write!(f, "[{}]", s.len()),
             Value::Number(n) => write!(f, "{}", n),
             Value::Bool(b) => write!(f, "{}", b),
+            Value::Bytes(bytes) => write!(f, "[{}]", bytes.len()),
             Value::Null => write!(f, "null"),
         }
     }
@@ -261,6 +267,7 @@ impl IntoLua for Value {
             Value::String(s) => Ok(mlua::Value::String(lua.create_string(&s)?)),
             Value::Number(n) => Ok(mlua::Value::Number(n)),
             Value::Bool(b) => Ok(mlua::Value::Boolean(b)),
+            Value::Bytes(bytes) => Ok(mlua::Value::String(lua.create_string(&bytes)?)),
             Value::Null => Ok(mlua::Value::Nil),
         }
     }

@@ -21,5 +21,6 @@
     "files.exclude": {
         "**/.git/objects/**": true,
         "**/target/**": true
-    }
+    },
+    "terminal.integrated.scrollback": 100000,
 }

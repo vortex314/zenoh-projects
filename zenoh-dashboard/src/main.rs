@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use eframe::egui;
+use eframe::egui::{self, Ui, widget_text::WidgetText};
 use egui_tiles::{Tile, TileId, Tiles};
 use egui_extras::install_image_loaders;
 mod pane;
@@ -65,7 +65,12 @@ async fn main() -> Result<(), eframe::Error> {
                 actor_zenoh::ZenohEvent::Publish { topic, payload } => {
                     let r = Value::from_cbor(payload.to_vec());
                     if let Ok(value) = r {
-                        debug!(" RXD {} :{} ", topic, value);
+                        let s:String = value.to_string();
+                        if  s.len() > 100 {
+                            debug!(" RXD {} :{} ", topic, &s[0..100]);
+                        } else {
+                            debug!(" RXD {} :{} ", topic, s);
+                        }
                         update_with_value(topic,&value);
 
                         let _ = tree_clone.lock().map(|mut tree_clone| {
@@ -79,7 +84,7 @@ async fn main() -> Result<(), eframe::Error> {
                             }
                         });
                     } else {
-                        error!("Error decoding payload from topic {}", topic);
+                        error!("Error decoding payload from topic {} [{}] : {}", topic,payload.len(),r.err().unwrap());
                     }
                 }
                 _ => {}
@@ -213,7 +218,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         pane.show(ui)
     }
 
-    fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::WidgetText {
+    fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::widget_text::WidgetText {
         format!("View {}", pane.title()).into()
     }
 
@@ -241,11 +246,11 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
     // ---
     // Settings:
 
-    fn tab_bar_height(&self, _style: &egui::Style) -> f32 {
+    fn tab_bar_height(&self, _style: &egui::style::Style) -> f32 {
         self.tab_bar_height
     }
 
-    fn gap_width(&self, _style: &egui::Style) -> f32 {
+    fn gap_width(&self, _style: &egui::style::Style) -> f32 {
         self.gap_width
     }
 

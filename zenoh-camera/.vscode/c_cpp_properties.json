@@ -382,6 +382,7 @@
                 "BOARD_HAS_PSRAM",
                 "WIFI_SSID=Merckx2",
                 "WIFI_PASS=LievenMarletteEwoutRonald",
+                "GPIO_LED=GPIO_NUM_33",
                 "__GLIBCXX_ASSERTIONS",
                 "ZENOH_ESPIDF",
                 "Z_FEATURE_LINK_UDP_MULTICAST=1",

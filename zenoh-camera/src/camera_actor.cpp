@@ -23,7 +23,7 @@ esp32_camera:
 */
 #define CAM_PIN_PWDN 32  // power down
 #define CAM_PIN_RESET -1 // software reset will be performed
-#define CAM_PIN_XCLK 0  // external clock
+#define CAM_PIN_XCLK 0   // external clock
 #define CAM_PIN_SIOD 26  // SDA
 #define CAM_PIN_SIOC 27  // SCL
 
@@ -43,7 +43,7 @@ void CameraActor::process_image(int width, int height, int format, uint8_t *data
 {
     INFO("Processing image: %dx%d, format=%d, len=%d", width, height, format, len);
     _camera_msg.image = Bytes(data, data + len);
-    _camera_msg.light = std::nullopt;
+    _camera_msg.light = _light;
     PublishSerdes serdes(_camera_msg);
     emit(CameraEvent{.serdes = serdes});
 }
@@ -56,6 +56,9 @@ Res CameraActor::camera_init()
         gpio_set_direction((gpio_num_t)CAM_PIN_PWDN, GPIO_MODE_OUTPUT);
         gpio_set_level((gpio_num_t)CAM_PIN_PWDN, 0);
     }
+
+    gpio_set_direction(LED_FLASH, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_FLASH, 0);
 
     // initialize the camera
     CHECK(esp_camera_init(&_camera_config));
@@ -83,7 +86,7 @@ CameraActor::CameraActor() : CameraActor("sys", 4096, 5, 5) {}
 
 CameraActor::CameraActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<CameraEvent, CameraCmd>(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(1000);
+    _timer_publish = timer_repetitive(100);
 
     _camera_config = {
         .pin_pwdn = CAM_PIN_PWDN,
@@ -123,6 +126,18 @@ CameraActor::CameraActor(const char *name, size_t stack_size, int priority, size
 
 void CameraActor::on_cmd(CameraCmd &cmd)
 {
+    INFO("Received Camera command");
+    if (cmd.msg)
+    {
+        if (cmd.msg.value().light)
+        {
+            gpio_set_level(LED_FLASH, cmd.msg.value().light.value());
+        }
+        else
+        {
+            ERROR("Unknown Camera command");
+        }
+    }
 }
 
 void CameraActor::on_timer(int id)
@@ -133,7 +148,7 @@ void CameraActor::on_timer(int id)
         auto r = camera_capture();
         if (r.is_err())
         {
-            ERROR("Camera capture failed: [%d] %s",r.rc(), r.msg().c_str());
+            ERROR("Camera capture failed: [%d] %s", r.rc(), r.msg().c_str());
         }
     }
     else
@@ -149,7 +164,7 @@ void CameraActor::on_start(void)
     Res r = camera_init();
     if (r.is_err())
     {
-        ERROR("Camera init failed:[%d] %s",r.rc(), r.msg().c_str());
+        ERROR("Camera init failed:[%d] %s", r.rc(), r.msg().c_str());
     }
 }
 

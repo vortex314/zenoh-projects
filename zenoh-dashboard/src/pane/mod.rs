@@ -18,6 +18,8 @@ mod gauge_widget;
 pub use gauge_widget::GaugeWidget;
 mod plot_widget;
 pub use plot_widget::PlotWidget;
+mod image_widget;
+pub use image_widget::ImageWidget;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EndPoint {
@@ -73,7 +75,7 @@ const GAUGE_ICON: ImageSource<'_> = include_image!("../../assets/gauge.png");
 const GRAPH_ICON: ImageSource<'_> = include_image!("../../assets/graph.png");
 const PROGRESS_ICON: ImageSource<'_> = include_image!("../../assets/progress.png");
 const TEXT_ICON: ImageSource<'_> = include_image!("../../assets/text.png");
-const LABEL_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
+const IMAGE_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
 
 #[derive(Debug)]
 enum IconEvent {
@@ -82,6 +84,7 @@ enum IconEvent {
     Progress,
     Text,
     Label,
+    Image,
 }
 
 fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
@@ -134,14 +137,14 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
         }
         if ui
             .add(
-                egui::Image::new(LABEL_ICON)
+                egui::Image::new(IMAGE_ICON)
                     .max_width(20.0)
                     .rounding(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
         {
-            event = Some(IconEvent::Label);
+            event = Some(IconEvent::Image);
         }
     });
     event
@@ -154,6 +157,7 @@ pub enum Widget {
     NullWidget(NullWidget),
     GaugeWidget(GaugeWidget),
     PlotWidget(PlotWidget),
+    ImageWidget(ImageWidget),
 }
 
 impl PaneWidget for Widget {
@@ -164,6 +168,7 @@ impl PaneWidget for Widget {
             Widget::NullWidget(nw) => nw.show(ui),
             Widget::GaugeWidget(gw) => gw.show(ui),
             Widget::PlotWidget(pw) => pw.show(ui),
+            Widget::ImageWidget(iw) => iw.show(ui),
         }
     }
 
@@ -174,6 +179,7 @@ impl PaneWidget for Widget {
             Widget::NullWidget(nw) => nw.context_menu(ui),
             Widget::GaugeWidget(gw) => gw.context_menu(ui),
             Widget::PlotWidget(pw) => pw.context_menu(ui),
+            Widget::ImageWidget(iw) => iw.context_menu(ui),
         }
     }
 
@@ -184,6 +190,7 @@ impl PaneWidget for Widget {
             Widget::NullWidget(nw) => nw.process_data(topic, value),
             Widget::GaugeWidget(gw) => gw.process_data(topic, value),
             Widget::PlotWidget(pw) => pw.process_data(topic, value),
+            Widget::ImageWidget(iw) => iw.process_data(topic, value),
         }
     }
 }
@@ -337,6 +344,7 @@ impl PaneWidget for Pane {
                     IconEvent::Progress => Widget::StatusWidget(StatusWidget::new()),
                     IconEvent::Text => Widget::TextWidget(TextWidget::new()),
                     IconEvent::Label => Widget::NullWidget(NullWidget::new()),
+                    IconEvent::Image => Widget::ImageWidget(ImageWidget::new()),
                 };
             });
             ui.separator();
@@ -383,12 +391,13 @@ impl PaneWidget for Pane {
                         .map(|v2| {
                             let v1 = v2.clone();
                             match v1 {
-                                Value::String(s) => {
-                                    info!("Processed value {:?} to widget ", s)
+                                Value::Bytes(bytes) => {
+                                    info!("Processed value {} [{}] to widget ", topic, bytes.len());
                                 }
-                                _ => {}
+                                _ => {
+                                    info!("Processed value {} {} to widget ", topic, &v1);
+                                }
                             };
-                            info!("Processed value {} {:?} to widget ", topic, v2);
                             self.widget.process_data(topic.clone(), &v2)
                         })
                         .is_err()
