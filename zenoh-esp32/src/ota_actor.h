@@ -1,6 +1,7 @@
 #include <actor.h>
 #include <driver/gpio.h>
 #include <soc/gpio_num.h>
+#include <esp_ota_ops.h>
 
 #ifndef GPIO_LED
 #define GPIO_LED GPIO_NUM_2
@@ -8,9 +9,9 @@
 
 struct OtaMsg : public Serializable
 {
-    std::optional offset;
+    std::optional<uint32_t> offset;
     std::optional<Bytes> image = std::nullopt;
-    std::optional<int> rc = std::nullopt;
+    std::optional<int32_t> rc = std::nullopt;
     std::optional<std::string> message = std::nullopt;
 
     Res serialize(Serializer &ser);
@@ -19,7 +20,7 @@ struct OtaMsg : public Serializable
 
 struct OtaEvent
 {
-    std::optional<OtaMsg> msg = std::nullopt;
+    std::optional<PublishSerdes> serdes = std::nullopt;
 };
 
 struct OtaCmd
@@ -38,4 +39,5 @@ public:
     void on_cmd(OtaCmd &cmd);
     void on_timer(int timer_id);
     void on_start();
+    Res flash(const uint8_t *data, size_t size);
 };

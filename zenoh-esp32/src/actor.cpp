@@ -221,7 +221,7 @@ void Thread::step()
             min_sleep_msec = actor->sleep_time();
         }
     }
-    QueueSetMemberHandle_t queue = xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
+    /* QueueSetMemberHandle_t queue = */xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
     for (auto actor : _actors)
     {
         actor->handle_all_cmd();

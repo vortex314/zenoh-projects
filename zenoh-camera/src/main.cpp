@@ -90,7 +90,7 @@ extern "C" void app_main()
   camera_actor.on_event([&](CameraEvent event)
                         { zenoh_publish("src/cam1/camera", event.serdes); });
   ota_actor.on_event([&](OtaEvent event)
-                        { zenoh_publish("src/cam1/ota", event.msg); });
+                        { zenoh_publish("src/cam1/ota", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
@@ -127,6 +127,7 @@ extern "C" void app_main()
   actor_thread.add_actor(zenoh_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
+  actor_thread.add_actor(ota_actor);
   actor_thread.start();
 
   // log heap size, monitoring thread in main, we could exit also
