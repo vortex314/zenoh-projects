@@ -11,6 +11,7 @@
 #include <sys_actor.h>
 #include <led_actor.h>
 #include <camera_actor.h>
+#include <ota_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -22,7 +23,9 @@ WifiActor wifi_actor("wifi", 9000, 40, 5);
 ZenohActor zenoh_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
+OtaActor ota_actor("ota", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
+
 CameraActor camera_actor("camera", 9000, 40, 5);
 Thread camera_thread("camera", 9000, 40, 23, Cpu::CPU0);
 
@@ -86,6 +89,8 @@ extern "C" void app_main()
                        zenoh_publish("info/cam1/zenoh",event.prop_info); });
   camera_actor.on_event([&](CameraEvent event)
                         { zenoh_publish("src/cam1/camera", event.serdes); });
+  ota_actor.on_event([&](OtaEvent event)
+                        { zenoh_publish("src/cam1/ota", event.msg); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
@@ -105,6 +110,9 @@ extern "C" void app_main()
       } else if ( pub.topic == "dst/cam1/camera") {
         auto msg = deserialize<CameraMsg>(pub.payload);
         if ( msg ) camera_actor.tell(new CameraCmd{.msg = msg.value()});
+      } else if ( pub.topic == "dst/cam1/ota") {
+        auto msg = deserialize<OtaMsg>(pub.payload);
+        if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
       }else {
         INFO("Received Zenoh unknown event");
       }

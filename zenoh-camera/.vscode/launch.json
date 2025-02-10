@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "/home/lieven/workspace/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
+            "executable": "/Users/mg61dd/Developer/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
             "projectEnvName": "zenoh-camera",
-            "toolchainBinDir": "/home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/bin",
+            "toolchainBinDir": "/Users/mg61dd/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -25,18 +25,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "/home/lieven/workspace/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
+            "executable": "/Users/mg61dd/Developer/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
             "projectEnvName": "zenoh-camera",
-            "toolchainBinDir": "/home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/bin",
+            "toolchainBinDir": "/Users/mg61dd/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "/home/lieven/workspace/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
+            "executable": "/Users/mg61dd/Developer/zenoh-projects/zenoh-camera/.pio/build/zenoh-camera/firmware.elf",
             "projectEnvName": "zenoh-camera",
-            "toolchainBinDir": "/home/lieven/.platformio/packages/toolchain-xtensa-esp-elf/bin",
+            "toolchainBinDir": "/Users/mg61dd/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }
