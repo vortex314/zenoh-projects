@@ -7840,7 +7840,10 @@ name = "zenoh-ota"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
+ "env_logger",
+ "log",
  "tokio",
  "zenoh",
 ]

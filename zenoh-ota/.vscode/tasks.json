@@ -20,7 +20,7 @@
                 "--key",
                 "firmware/update",
                 "--binary",
-                "../zenoh-camera/.pio/build/esp32dev/firmware.bin"
+                "../zenoh-camera/.pio/build/zenoh-camera/firmware.bin"
             ],
             "group": {
                 "kind": "build",

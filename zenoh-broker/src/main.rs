@@ -19,26 +19,27 @@ use zenoh::{bytes::Encoding, key_expr::KeyExpr, session, Config};
 mod common;
 
 use common::CommonArgs;
+use anyhow::Result;
 
 mod logger;
 use logger::init;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initiate logging
     //  zenoh::init_log_from_env_or("info");
     zenoh::init_log_from_env_or("debug");
     logger::init();
 
-    let config = Config::from_file("./config.json5").unwrap();
+    let config = Config::from_file("./config.json5")?;
 
-    let key_expr = KeyExpr::try_from("src/lm1/ps4").unwrap();
+    let key_expr = KeyExpr::try_from("src/lm1/ps4")?;
 
     info!("Opening session...");
-    let session = zenoh::open(config).await.unwrap();
+    let session = zenoh::open(config).await?;
 
     println!("Declaring Subscriber on '{}'...", &key_expr);
-    let subscriber = session.declare_subscriber(&key_expr).await.unwrap();
+    let subscriber = session.declare_subscriber(&key_expr).await?;
 
     println!("Press CTRL-C to quit...");
     let mut counter = 0;
@@ -75,6 +76,7 @@ async fn main() {
             info!(" router = {}", router);
         }*/
     }
+    Ok(())
 }
 
 #[derive(clap::Parser, Clone, PartialEq, Eq, Hash, Debug)]
