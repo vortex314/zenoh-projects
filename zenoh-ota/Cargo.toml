@@ -1,0 +1,11 @@
+[package]
+name = "zenoh-ota"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zenoh = "1.2.1"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+
