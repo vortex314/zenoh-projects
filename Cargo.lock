@@ -7845,7 +7845,9 @@ dependencies = [
  "env_logger",
  "log",
  "tokio",
+ "walkdir",
  "zenoh",
+ "zenoh-config",
 ]
 
 [[package]]

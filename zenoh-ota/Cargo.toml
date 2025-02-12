@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-zenoh = "1.2.1"
+zenoh = { version = "1.2.1" }
+zenoh-config = { version = "1.2.1"  }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
 log  = { version="*" }
 chrono = "0.4.39"                                        # for time
 env_logger = "0.11.6"
+walkdir = "2.3.2"                                        # for directory traversal  
