@@ -101,10 +101,8 @@ void WifiActor::on_timer(int timer_id)
 {
   if (timer_id == _timer_publish)
   {
-    INFO("Timer 1 : Publishing WiFi properties");
     if (_wifi_connected)
     {
-      INFO("Publishing WiFi properties");
       wifi_msg.fill(esp_netif);
       emit(WifiEvent{.serdes = PublishSerdes{.payload = wifi_msg}});
     }

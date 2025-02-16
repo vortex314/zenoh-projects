@@ -111,6 +111,7 @@ extern "C" void app_main()
         auto msg = deserialize<CameraMsg>(pub.payload);
         if ( msg ) camera_actor.tell(new CameraCmd{.msg = msg.value()});
       } else if ( pub.topic == "dst/cam1/ota") {
+        INFO("Received OTA message");
         auto msg = deserialize<OtaMsg>(pub.payload);
         if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
       }else {

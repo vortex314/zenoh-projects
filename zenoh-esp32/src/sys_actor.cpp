@@ -28,7 +28,6 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        INFO("Timer 1 : Publishing Sys properties");
         publish_props();
     } else if ( id == _timer_publish_props) {
         INFO("Timer 2 : Publishing Sys properties info");

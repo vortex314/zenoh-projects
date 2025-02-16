@@ -18,9 +18,9 @@
                 "--release",
                 "--",
                 "--key",
-                "firmware/update",
+                "dst/esp1/ota",
                 "--binary",
-                "../zenoh-camera/.pio/build/zenoh-camera/firmware.bin"
+                "../zenoh-esp32/.pio/build/esp1/firmware.bin"
             ],
             "group": {
                 "kind": "build",

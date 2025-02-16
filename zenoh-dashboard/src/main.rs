@@ -91,7 +91,10 @@ async fn main() -> Result<(), eframe::Error> {
             });
 
             tokio::spawn(async move {
-                actor_zenoh.run().await;
+                let r = actor_zenoh.run().await;
+                if let Err(e) = r {
+                    error!("Error running zenoh actor: {}", e);
+                }
             });
 
             install_image_loaders(&_cc.egui_ctx);

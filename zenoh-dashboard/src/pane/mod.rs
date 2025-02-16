@@ -392,10 +392,10 @@ impl PaneWidget for Pane {
                             let v1 = v2.clone();
                             match v1 {
                                 Value::Bytes(bytes) => {
-                                    info!("Processed value {} [{}] to widget ", topic, bytes.len());
+                                    debug!("Processed value {} [{}] to widget ", topic, bytes.len());
                                 }
                                 _ => {
-                                    info!("Processed value {} {} to widget ", topic, &v1);
+                                    debug!("Processed value {} {} to widget ", topic, &v1);
                                 }
                             };
                             self.widget.process_data(topic.clone(), &v2)
