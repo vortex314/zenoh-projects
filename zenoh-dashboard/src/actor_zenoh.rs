@@ -19,7 +19,7 @@ trait Handler<T>: Send + Sync {
 pub trait Actor {
     type Cmd;
     type Event;
-    async fn run(&mut self);
+    async fn run(&mut self)-> Result<()>;
     fn sender(&self) -> Result<Sender<Self::Cmd>>;
     fn add_listener<FUNC: FnMut(&Self::Event) + 'static + Send >(&mut self, f:FUNC ) -> ();
 }
@@ -55,16 +55,16 @@ impl Actor for ZenohActor {
         self.event_handlers.push(Box::new(f));
     }
 
-    async fn run(&mut self) {
+    async fn run(&mut self) -> Result<()> {
         let config = self.config.clone().unwrap();
         zenoh::init_log_from_env_or("info");
-        let zenoh_session = zenoh::open(config).await.unwrap();
+        let zenoh_session = zenoh::open(config).await.map_err(|e| anyhow::anyhow!(e))?;
 
-    //    self.add_listener(|e|  { info!(" Received an event {:?}", e)});
+        let subscriber = zenoh_session.declare_subscriber("**")
+        .await.unwrap();
 
-
-        let subscriber = zenoh_session.declare_subscriber("**").await.unwrap();
         self.zenoh_session = Some(zenoh_session);
+
         loop {
             select! {
                 cmd = self.rx_cmd.recv() => {
@@ -99,7 +99,9 @@ impl Actor for ZenohActor {
 
 impl ZenohActor {
     pub fn new() -> Self {
-        let config = Config::from_file("./zenoh.json5").ok().unwrap();
+        //let config = Config::from_file("./zenoh.json5").ok().unwrap();
+        let mut config = Config::default();
+        config.insert_json5("mode", r#""client""#).unwrap();
 
         let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
         ZenohActor {

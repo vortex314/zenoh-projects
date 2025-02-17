@@ -41,25 +41,35 @@ typedef bool Void;
     }                               \
   }
 
-#define RET_ERRI(VAL, MSG)                       \
-  {                                              \
-    int rc = (VAL);                              \
-    if (rc < 0)                                  \
-    {                                            \
-      INFO(MSG);                                 \
-      INFO("=%d %s:%d", rc, __FILE__, __LINE__); \
-      return Res::Err(rc, MSG);                  \
-    }                                            \
+#define TR(VAL)                                                \
+  {                                                            \
+    auto r = (VAL);                                            \
+    if (r.is_err())                                            \
+    {                                                          \
+      INFO("[%d] %s:%d %s", r.rc(), __FILE__, __LINE__, #VAL); \
+      return r;                                                \
+    }                                                          \
   }
 
-  #define CHECK(VAL)                       \
-  {                                              \
-    int rc = (VAL);                              \
-    if (rc != 0)                                  \
-    {                                            \
-      ERROR("rc=%d %s:%d %s", rc, __FILE__, __LINE__,#VAL ); \
-      return Res::Err(rc, #VAL);                  \
-    }                                            \
+#define RET_ERRI(VAL, MSG)                        \
+  {                                               \
+    int rc = (VAL);                               \
+    if (rc < 0)                                   \
+    {                                             \
+      INFO(MSG);                                  \
+      INFO("[%d] %s:%d", rc, __FILE__, __LINE__); \
+      return Res::Err(rc, MSG);                   \
+    }                                             \
+  }
+
+#define CHECK(VAL)                                           \
+  {                                                          \
+    int rc = (VAL);                                          \
+    if (rc != 0)                                             \
+    {                                                        \
+      ERROR("rc=%d %s:%d %s", rc, __FILE__, __LINE__, #VAL); \
+      return Res::Err(rc, #VAL);                             \
+    }                                                        \
   }
 
 // #define Void (void())

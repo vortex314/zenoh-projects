@@ -75,7 +75,7 @@ private:
   nanocbor_value_t *get_des();
 
 public:
-  CborDeserializer(size_t size);
+//  CborDeserializer(size_t size);
   CborDeserializer(uint8_t *bytes, size_t size)
   {
     _bytes = bytes;

@@ -377,7 +377,7 @@
                 "SOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE",
                 "IDF_VER=\"5.4.0\"",
                 "ESP_PLATFORM",
-                "PLATFORMIO=60116",
+                "PLATFORMIO=60117",
                 "ARDUINO_ESP32_DEV",
                 "BOARD_HAS_PSRAM",
                 "WIFI_SSID=Merckx2",

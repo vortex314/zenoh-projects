@@ -35,7 +35,6 @@ void ZenohActor::on_timer(int id)
 {
   if (id == _timer_publish)
   {
-    INFO("Timer publish : Publishing Zenoh properties");
     publish_props();
   }
   else if (id == _timer_publish_props)
@@ -69,6 +68,7 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
           INFO("Connected to Zenoh.");
           std::string topic = _dst_prefix;
           topic += "/**";
+          INFO("==> Subscribing to topic: %s", topic.c_str());
           auto sub = declare_subscriber(topic.c_str());
           if (sub.is_err())
           {
@@ -251,6 +251,7 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   size_t len = z_bytes_len(payload);
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
+  INFO("Received message on topic '%s' ", topic.c_str());
 
   actor->emit(ZenohEvent{.publish = PublishBytes{topic, std::move(buffer)}});
 }

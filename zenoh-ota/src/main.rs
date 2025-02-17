@@ -18,7 +18,7 @@ use logger::init;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    zenoh::init_log_from_env_or("info");
+    zenoh::init_log_from_env_or("debug");
     logger::init();
 
     let r = do_ota().await;
@@ -62,7 +62,6 @@ async fn do_ota() -> Result<()> {
                 .short('b')
                 .long("binary")
                 .value_name("BINARY")
-                .default_value(".pio/build/esp32dev/firmware.bin")
                 .help("The path to the firmware binary file")
                 .required(false),
         )
@@ -78,6 +77,7 @@ async fn do_ota() -> Result<()> {
 
     // Get the Zenoh key and binary path from the arguments
     let key = matches.get_one::<String>("key").context("argument key")?;
+
     let binary_path = match matches.get_one::<String>("binary") {
         Some(binary_path) => binary_path.clone(),
         None => find_default_file()?,
@@ -88,8 +88,10 @@ async fn do_ota() -> Result<()> {
         Some(c) => Config::from_file(c).map_err(|e| anyhow::anyhow!(e))?,
         None => {
             let mut config = Config::default();
-            config.insert_json5("mode", r#""client""#).unwrap();
-    //        config.insert_json5("mode", "\"client\"").unwrap();
+    //        config.insert_json5("mode", r#""client""#).unwrap();
+            config.insert_json5("mode", "\"client\"").unwrap();
+            config.insert_json5("connect/endpoints", r#"["tcp/192.168.0.240:7447"]"#).unwrap();
+            info!("Using default Zenoh configuration: {:?}", config);
             config
         }
     };

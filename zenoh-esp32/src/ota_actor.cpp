@@ -5,7 +5,7 @@ OtaActor::OtaActor() : OtaActor("led", 4096, 5, 5) {}
 
 OtaActor::OtaActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<OtaEvent, OtaCmd>(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(1000);
+  //  _timer_publish = timer_repetitive(1000);
 }
 
 OtaActor::~OtaActor()
@@ -76,11 +76,11 @@ Res OtaMsg::serialize(Serializer &ser)
 
 Res OtaMsg::deserialize(Deserializer &des)
 {
-    des.array_begin();
-    des.deserialize(offset);
-    des.deserialize(image);
-    des.deserialize(rc);
-    des.deserialize(message);
-    des.array_end();
+    TR(des.array_begin());
+    TR(des.deserialize(offset));
+    TR(des.deserialize(image));
+    TR(des.deserialize(rc));
+    TR(des.deserialize(message));
+    TR(des.array_end());
     return Res::Ok();
 }

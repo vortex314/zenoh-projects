@@ -133,14 +133,16 @@ nanocbor_value_t *CborDeserializer::get_des()
     return &_des;
 }
 
-CborDeserializer::CborDeserializer(size_t size)
+/*CborDeserializer::CborDeserializer(size_t size)
 {
     _bytes = new uint8_t[size];
     _size = 0;
     _capacity = size;
     _state = INIT;
+}*/
+CborDeserializer::~CborDeserializer() {  
+// delete bytes only when owner of bytes
 }
-CborDeserializer::~CborDeserializer() { delete _bytes; }
 
 Res CborDeserializer::fill_buffer(Bytes &b)
 {
@@ -232,7 +234,7 @@ Res CborDeserializer::deserialize(bool &b)
 
 Res CborDeserializer::map_begin()
 {
-    RET_ERRI(nanocbor_enter_map(get_des(), &_map), "Failed to decode map");
+    CHECK(nanocbor_enter_map(get_des(), &_map));
     _state = MAP;
     return Res::Ok();
 }
@@ -244,8 +246,7 @@ Res CborDeserializer::map_end()
 }
 Res CborDeserializer::array_begin()
 {
-    RET_ERRI(nanocbor_enter_array(get_des(), &_array),
-             "Failed to decode array");
+    CHECK(nanocbor_enter_array(get_des(), &_array));
     _state = ARRAY;
     return Res::Ok();
 }
