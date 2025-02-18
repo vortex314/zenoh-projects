@@ -1,0 +1,16 @@
+
+assert failed: spinlock_acquire spinlock.h:140 (lock->count == 0)
+
+
+Backtrace: 0x4008283a:0x3ffcde80 0x400894cd:0x3ffcdea0 0x400912c1:0x3ffcdec0 0x4008a566:0x3ffcdfe0 0x4008a20d:0x3ffce010 0x400e0c10:0x3ffce030 0x4008a2e1:0x3ffce050
+  #0  0x4008283a in panic_abort at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/esp_system/panic.c:463
+  #1  0x400894cd in esp_system_abort at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/esp_system/port/esp_system_chip.c:92
+  #2  0x400912c1 in __assert_func at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/newlib/assert.c:80
+  #3  0x4008a566 in spinlock_acquire at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/esp_hw_support/include/spinlock.h:140 (discriminator 1)
+      (inlined by) xPortEnterCriticalTimeout at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:474 (discriminator 1)
+  #4  0x4008a20d in vPortEnterCritical at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/freertos/FreeRTOS-Kernel/portable/xtensa/include/freertos/portmacro.h:567
+      (inlined by) xEventGroupSetBits at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/freertos/FreeRTOS-Kernel/event_groups.c:566
+  #5  0x400e0c10 in z_task_wrapper at .pio/libdeps/esp1/zenoh-pico/src/system/espidf/system.c:62
+  #6  0x4008a2e1 in vPortTaskWrapper at /home/lieven/.platformio/packages/framework-espidf@3.50301.0/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c:134
+
+

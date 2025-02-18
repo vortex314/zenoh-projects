@@ -1,0 +1,51 @@
+Config: Config { 
+    id: 90ab19e3e3e2b0b099b6f02674289b62, 
+    metadata: Null, 
+    mode: Some(Client), 
+    connect: ConnectConfig { timeout_ms: None, endpoints: Unique([]), exit_on_failure: None, retry: None }
+
+, listen: ListenConfig 
+{ 
+    timeout_ms: None, 
+    endpoints: Dependent(ModeValues { router: Some([tcp/[::]:7447]), peer: Some([tcp/[::]:0]), client: None }), 
+    exit_on_failure: None, 
+    retry: None 
+    }
+, scouting: ScoutingConf { 
+    timeout: None, 
+    delay: None, 
+    multicast: ScoutingMulticastConf { enabled: None, address: None, interface: None, ttl: None, autoconnect: None, listen: None }, 
+    gossip: GossipConf { enabled: None, multihop: None, autoconnect: None }
+    }
+, timestamping: TimestampingConf { enabled: None, drop_future_timestamp: None }
+, queries_default_timeout: None, routing: RoutingConf { router: RouterRoutingConf { peers_failover_brokering: None }
+, peer: PeerRoutingConf { mode: None }
+ }
+, aggregation: AggregationConf { subscribers: [], publishers: [] }
+, transport: TransportConf { unicast: TransportUnicastConf { accept_timeout: 10000, accept_pending: 100, max_sessions: 1000, max_links: 1, lowlatency: false, qos: QoSUnicastConf { enabled: true }
+, compression: CompressionUnicastConf { enabled: false }
+ }
+, multicast: TransportMulticastConf { join_interval: Some(2500), max_sessions: Some(1000), qos: QoSMulticastConf { enabled: false }
+, compression: CompressionMulticastConf { enabled: false }
+ }
+, link: TransportLinkConf { protocols: None, tx: LinkTxConf { sequence_number_resolution: U32, lease: 10000, keep_alive: 4, batch_size: 65535, queue: QueueConf { size: QueueSizeConf { control: 1, real_time: 1, interactive_high: 1, interactive_low: 1, data_high: 2, data: 4, data_low: 2, background: 1 }
+, congestion_control: CongestionControlConf { wait_before_drop: 1000 }
+, batching: BatchingConf { enabled: true, time_limit: 1 }
+ }
+, threads: 1 }
+, rx: LinkRxConf { buffer_size: 65535, max_message_size: 1073741824 }
+, tls: TLSConf { root_ca_certificate: None, server_private_key: None, server_certificate: None, client_auth: None, client_private_key: None, client_certificate: None, server_name_verification: None, root_ca_certificate_base64: None, server_private_key_base64: None, server_certificate_base64: None, client_private_key_base64: None, client_certificate_base64: None }
+, unixpipe: UnixPipeConf { file_access_mask: None }
+ }
+, shared_memory: ShmConf { enabled: true }
+, auth: AuthConf { usrpwd: UsrPwdConf { user: None, password: None, dictionary_file: None }
+, pubkey: PubKeyConf { public_key_pem: None, private_key_pem: None, public_key_file: None, private_key_file: None, key_size: None, known_keys_file: None }
+ }
+ }
+, adminspace: AdminSpaceConf { enabled: false, permissions: PermissionsConf { read: true, write: false }
+ }
+, downsampling: [], access_control: AclConfig { enabled: false, default_permission: Deny, rules: None, subjects: None, policies: None }
+, plugins_loading: PluginsLoading { enabled: false, search_dirs: LibSearchDirs([Spec(LibSearchSpec { kind: CurrentExeParent, value: None }
+), Path("."), Path("~/.zenoh/lib"), Path("/opt/homebrew/lib"), Path("/usr/local/lib"), Path("/usr/lib")]) }
+, plugins: Object {}
+ }

@@ -9,19 +9,14 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "RUST_BACKTRACE": "1"
+                    "RUST_BACKTRACE": "1",
+                    "CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_DEBUG":"true"
                 }
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
             "args": [
                 "run",
                 "--release",
-                "--",
-                "--key",
-                "dst/esp1/ota",
-                "--binary",
-                "t3.txt"
-//                "../zenoh-esp32/.pio/build/esp1/firmware.bin"
             ],
             "group": {
                 "kind": "build",

@@ -7,3 +7,4 @@ do
 	cargo clean
 	cd $HERE
 done
+rm -rf */.pio

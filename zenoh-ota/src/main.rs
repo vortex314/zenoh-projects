@@ -7,8 +7,9 @@
 use anyhow::{Context, Error, Result};
 use clap::{Arg, Command};
 use log::{error, info};
+use zenoh::qos::CongestionControl;
 use zenoh_config::WhatAmI;
-use std::fs;
+use std::{fs, thread::Thread};
 use std::path::Path;
 use walkdir::WalkDir;
 use zenoh::{bytes::Encoding, key_expr::KeyExpr, session, Config};
@@ -90,7 +91,7 @@ async fn do_ota() -> Result<()> {
             let mut config = Config::default();
     //        config.insert_json5("mode", r#""client""#).unwrap();
             config.insert_json5("mode", "\"client\"").unwrap();
-            config.insert_json5("connect/endpoints", r#"["tcp/192.168.0.240:7447"]"#).unwrap();
+    //        config.insert_json5("connect/endpoints", r#"["tcp/192.168.0.240:7447"]"#).unwrap();
             info!("Using default Zenoh configuration: {:?}", config);
             config
         }
@@ -116,13 +117,18 @@ async fn do_ota() -> Result<()> {
     let session = zenoh::open(config).await.map_err(|e| anyhow::anyhow!(e))?; // Open a Zenoh session
 
     // Publish the firmware binary to the specified Zenoh key
-    info!("Publishing firmware binary to key: {}", key);
+    info!("Publishing firmware binary to key: '{}'", key);
     session
         .put(key, firmware_data)
+        .congestion_control(CongestionControl::Block)
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
+
     info!("Firmware binary published successfully!");
+    // tokio sleep 10 sec
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    info!("After sleep!");
 
     // Close the Zenoh session
     session.close().await.map_err(|e| anyhow::anyhow!(e))?;

@@ -28,9 +28,14 @@ ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t
 {
   _timer_publish = timer_repetitive(1000); // timer for publishing properties
   z_put_options_default(&put_options);
-  z_owned_encoding_t encoding = ZP_ENCODING_APPLICATION_CBOR;
-  put_options.encoding = z_move(encoding);
-  put_options.congestion_control = Z_CONGESTION_CONTROL_DROP ;
+  z_owned_encoding_t encoding;
+  z_result_t r = z_encoding_from_str(&encoding, "application/cbor"); // ZP_ENCODING_APPLICATION_CBOR;
+  if (r != Z_OK)
+  {
+    INFO("Failed to get encoding for application/cbor ");
+  }
+  //  put_options.encoding = z_move(encoding);
+  put_options.congestion_control = Z_CONGESTION_CONTROL_DROP;
   prefix("device"); // default prefix
 }
 
@@ -70,7 +75,6 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
           INFO("Connected to Zenoh.");
           std::string topic = _dst_prefix;
           topic += "/**";
-          INFO("==> Subscribing to topic: %s", topic.c_str());
           auto sub = declare_subscriber(topic.c_str());
           if (sub.is_err())
           {
@@ -107,6 +111,16 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
   }
 }
 
+void zid_to_hex(const z_id_t *id, char *hex)
+{
+  char *offset = hex;
+  for (int i = 15; i >= 0; i--)
+  {
+    sprintf(offset, "%02x", id->id[i]);
+    offset += 2;
+  }
+}
+
 Res ZenohActor::connect(void)
 {
   // Initialize Zenoh Session and other parameters
@@ -121,10 +135,39 @@ Res ZenohActor::connect(void)
   }
   // Open Zenoh session
   CHECK(z_open(&_zenoh_session, z_move(config), NULL));
+
   // Start the receive and the session lease loop for zenoh-pico
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), NULL));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL));
   _connected = true;
+  // log own zid // put after start tasks as
+  z_id_t zid = z_info_zid(z_loan(_zenoh_session));
+  z_owned_string_t z_str;
+  z_id_to_string(&zid, &z_str);
+  size_t length = z_string_len(z_loan(z_str));
+  INFO("Own ZID  : %.*s", length, z_string_data(z_loan(z_str)));
+
+  auto f1 = [](const z_id_t *id, void *arg)
+  {
+    z_owned_string_t z_str;
+    z_id_to_string(id, &z_str);
+    size_t length = z_string_len(z_loan(z_str));
+    INFO("Connected to Router : %.*s", length, z_string_data(z_loan(z_str)));
+  };
+  z_owned_closure_zid_t zid_closure;
+
+  CHECK(z_closure_zid(&zid_closure, f1, NULL, NULL));
+  CHECK(z_info_routers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
+  auto f2 = [](const z_id_t *id, void *arg)
+  {
+    z_owned_string_t z_str;
+    z_id_to_string(id, &z_str);
+    size_t length = z_string_len(z_loan(z_str));
+    INFO("Connected to Peer : %.*s", length, z_string_data(z_loan(z_str)));
+  };
+  CHECK(z_closure_zid(&zid_closure, f2, NULL, NULL));
+  CHECK(z_info_peers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
+
   return Res::Ok();
 }
 
@@ -176,7 +219,6 @@ Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
           z_declare_subscriber(z_loan(_zenoh_session), &sub, z_loan(ke),
                                z_move(callback), &opts),
           "Unable to declare subscriber for key expression");
-  INFO("OK");
   return Result<z_owned_subscriber_t>::Ok(sub);
 }
 
@@ -195,7 +237,7 @@ ZenohActor::~ZenohActor()
   z_drop(z_move(_zenoh_session));
   INFO("Zenoh session closed ");
 }
-
+/*
 Result<z_owned_publisher_t> ZenohActor::declare_publisher(const char *topic)
 {
   z_owned_publisher_t pub;
@@ -215,7 +257,7 @@ Result<z_owned_publisher_t> ZenohActor::declare_publisher(const char *topic)
   }
   INFO("OK");
   return Result<z_owned_publisher_t>::Ok(pub);
-}
+}*/
 /*
 Res ZenohActor::zenoh_publish_serializable(const char *topic,
                                            Serializable &value)
