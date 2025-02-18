@@ -10,7 +10,7 @@
 #include <zenoh_actor.h>
 #include <sys_actor.h>
 #include <led_actor.h>
-#include <camera_actor.h>
+#include <motor_actor.h>
 #include <ota_actor.h>
 #include <log.h>
 
@@ -26,8 +26,8 @@ LedActor led_actor("led", 9000, 40, 5);
 OtaActor ota_actor("ota", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 
-CameraActor camera_actor("camera", 9000, 40, 5);
-Thread camera_thread("camera", 9000, 40, 23, Cpu::CPU0);
+MotorActor motor_actor("motor", 9000, 40, 5);
+Thread motor_thread("motor_thread", 9000, 40, 23, Cpu::CPU0);
 
 Log logger;
 
@@ -64,7 +64,7 @@ extern "C" void app_main()
   esp_wifi_set_ps(WIFI_PS_NONE);
   // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
-  zenoh_actor.prefix("cam1"); // set the zenoh prefix to src/cam1 and destination subscriber dst/cam1/ **
+  zenoh_actor.prefix("mtr1"); // set the zenoh prefix to src/mtr1 and destination subscriber dst/mtr1/ **
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
@@ -79,18 +79,18 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("src/cam1/wifi", event.serdes);
-                      zenoh_publish("info/cam1/wifi",event.prop_info); });
+                      { zenoh_publish("src/mtr1/wifi", event.serdes);
+                      zenoh_publish("info/mtr1/wifi",event.prop_info); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("src/cam1/sys", event.serdes); 
-                     zenoh_publish("info/cam1/sys",event.prop_info); });
+                     { zenoh_publish("src/mtr1/sys", event.serdes); 
+                     zenoh_publish("info/mtr1/sys",event.prop_info); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("src/cam1/zenoh", event.serdes); 
-                       zenoh_publish("info/cam1/zenoh",event.prop_info); });
-  camera_actor.on_event([&](CameraEvent event)
-                        { zenoh_publish("src/cam1/camera", event.serdes); });
+                       { zenoh_publish("src/mtr1/zenoh", event.serdes); 
+                       zenoh_publish("info/mtr1/zenoh",event.prop_info); });
+  motor_actor.on_event([&](MotorEvent event)
+                        { zenoh_publish("src/mtr1/motor", event.serdes); });
   ota_actor.on_event([&](OtaEvent event)
-                        { zenoh_publish("src/cam1/ota", event.serdes); });
+                        { zenoh_publish("src/mtr1/ota", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
@@ -98,19 +98,19 @@ extern "C" void app_main()
     if (event.publish) {
       PublishBytes pub = *event.publish;
       CborDeserializer des(pub.payload.data(), pub.payload.size());
-      if (pub.topic == "dst/cam1/sys") {
+      if (pub.topic == "dst/mtr1/sys") {
         auto msg = deserialize<SysMsg>(pub.payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes { msg.value() }});  
-      } else if ( pub.topic == "dst/cam1/wifi") {
+      } else if ( pub.topic == "dst/mtr1/wifi") {
         auto msg = deserialize<WifiMsg>(pub.payload);
         if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( pub.topic == "dst/cam1/zenoh") {
+      } else if ( pub.topic == "dst/mtr1/zenoh") {
         auto msg = deserialize<ZenohMsg>(pub.payload);
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( pub.topic == "dst/cam1/camera") {
-        auto msg = deserialize<CameraMsg>(pub.payload);
-        if ( msg ) camera_actor.tell(new CameraCmd{.msg = msg.value()});
-      } else if ( pub.topic == "dst/cam1/ota") {
+      } else if ( pub.topic == "dst/mtr1/motor") {
+        auto msg = deserialize<MotorMsg>(pub.payload);
+        if ( msg ) motor_actor.tell(new MotorCmd{.msg = msg.value()});
+      } else if ( pub.topic == "dst/mtr1/ota") {
         INFO("Received OTA message");
         auto msg = deserialize<OtaMsg>(pub.payload);
         if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
@@ -121,9 +121,9 @@ extern "C" void app_main()
 
   // one thread to rule them all, in the hope to save some memory
   // wifi_actor.start();
-  camera_thread.add_actor(camera_actor);
-  camera_thread.start();
-  //actor_thread.add_actor(camera_actor);
+  motor_thread.add_actor(motor_actor);
+  motor_thread.start();
+  //actor_thread.add_actor(motor_actor);
   actor_thread.add_actor(wifi_actor);
   actor_thread.add_actor(zenoh_actor);
   actor_thread.add_actor(sys_actor);

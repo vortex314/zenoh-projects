@@ -5,13 +5,10 @@
 #include <serdes.h>
 #include "cbor.h"
 #include <vector>
-#include "esp_camera.h"
-// #include <map>
 
-#define CAMERA_MODEL_AI_THINKER
 #define LED_FLASH GPIO_NUM_4
 
-struct CameraMsg : public Serializable
+struct MotorMsg : public Serializable
 {
     std::optional<Bytes> image = std::nullopt;
     std::optional<bool> light = std::nullopt;
@@ -20,25 +17,25 @@ struct CameraMsg : public Serializable
     Res deserialize(Deserializer &des);
 };
 
-struct CameraEvent
+struct MotorEvent
 {
     std::optional<PublishSerdes> serdes = std::nullopt;
     std::optional<PublishSerdes> prop_info = std::nullopt;
 };
 
-struct CameraCmd
+struct MotorCmd
 {
 //    std::optional<PublishSerdes> serdes = std::nullopt;
-    std::optional<CameraMsg> msg = std::nullopt;
+    std::optional<MotorMsg> msg = std::nullopt;
 };
 
-class CameraActor : public Actor<CameraEvent, CameraCmd>
+class MotorActor : public Actor<MotorEvent, MotorCmd>
 {
 public:
-    CameraActor();
-    CameraActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
-    ~CameraActor();
-    void on_cmd(CameraCmd &cmd);
+    MotorActor();
+    MotorActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+    ~MotorActor();
+    void on_cmd(MotorCmd &cmd);
     void on_timer(int timer_id);
     void on_start( void );
     Res camera_init();
@@ -48,7 +45,6 @@ public:
 private:
     int _timer_publish = -1;
     bool _light = false;
-    CameraMsg _camera_msg;
+    MotorMsg _camera_msg;
     Bytes _image;
-    camera_config_t _camera_config;
 };
