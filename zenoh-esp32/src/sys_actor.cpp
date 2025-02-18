@@ -50,7 +50,7 @@ Res SysActor::publish_props()
     _sys_msg.ram_size = std::nullopt;
     _sys_msg.free_heap = esp_get_free_heap_size();
     _sys_msg.up_time = esp_timer_get_time()/1000;
-    emit(SysEvent{.serdes = PublishSerdes{.payload = _sys_msg}});
+    emit(SysEvent{.serdes = PublishSerdes(_sys_msg)});
     return Res::Ok();
 }
 
@@ -67,7 +67,7 @@ InfoProp info_props_sys_msg[8] = {
 
 Res SysActor::publish_props_info()
 {
-    emit(SysEvent{.prop_info = PublishSerdes{.payload = info_props_sys_msg[_prop_counter]}});
+    emit(SysEvent{.prop_info = PublishSerdes( info_props_sys_msg[_prop_counter])});
     _prop_counter = (_prop_counter + 1) % (sizeof(info_props_sys_msg) / sizeof(InfoProp));
     return Res::Ok();
 }

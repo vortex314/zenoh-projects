@@ -327,7 +327,9 @@ struct PublishBytes
 };
 struct PublishSerdes
 {
+    std::optional<std::string> topic;
     Serializable &payload;
+    PublishSerdes(Serializable& pl);
 };
 
 class PropertyCommon : public Serializable

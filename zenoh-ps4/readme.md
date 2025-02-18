@@ -16,13 +16,13 @@ The same message can be send to the controller for invoking rumble or activate l
 
 ## Data layout 
 ```C++
-struct Ps4Output : public Serializable
+struct Ps4Msg : public Serializable
 {
   std::optional<bool> button_left = std::nullopt;
   std::optional<bool> button_right = std::nullopt;
   std::optional<bool> button_up = std::nullopt;
   std::optional<bool> button_down = std::nullopt;
-  
+
   std::optional<bool> button_square = std::nullopt;
   std::optional<bool> button_cross = std::nullopt;
   std::optional<bool> button_circle = std::nullopt;
@@ -51,6 +51,7 @@ struct Ps4Output : public Serializable
 
   std::optional<int> rumble = std::nullopt;
   std::optional<int> led_rgb = std::nullopt;
+
 }:
 ```
 
@@ -65,3 +66,11 @@ struct Ps4Output : public Serializable
 ## tuning to get this programmed
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE 2304 -> 3120
 CONFIG_ESP_MAIN_TASK_STACK_SIZE increase
+
+## Beware here are dragons
+Changing the code can lead to instability , the racing conditions can lead to a crash in rwbt.c again.
+This rwbt.c is closed source from Espressif .
+The switching between bluetooth and wifi for the same radio is not too stable. 
+Just sending the priperty info in between , changed the timing a little bit and lead to a crash.
+
+Feedback welcome.

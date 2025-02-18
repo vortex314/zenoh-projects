@@ -26,9 +26,12 @@ ZenohActor::ZenohActor() : ZenohActor("zenoh", 4096, 5, 5) {}
 ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
     : Actor<ZenohEvent, ZenohCmd>(stack_size, name, priority, queue_depth)
 {
-  _timer_publish = timer_repetitive(1000);       // timer for publishing properties
-//  _timer_publish_props = timer_repetitive(5000); // timer for publishing properties
-  prefix("device");                              // default prefix
+  _timer_publish = timer_repetitive(1000); // timer for publishing properties
+  z_put_options_default(&put_options);
+  z_owned_encoding_t encoding = ZP_ENCODING_APPLICATION_CBOR;
+  put_options.encoding = z_move(encoding);
+  put_options.congestion_control = Z_CONGESTION_CONTROL_DROP ;
+  prefix("device"); // default prefix
 }
 
 void ZenohActor::on_timer(int id)
@@ -45,7 +48,6 @@ void ZenohActor::on_timer(int id)
   else
     INFO("Unknown timer id: %d", id);
 }
-
 
 void ZenohActor::on_cmd(ZenohCmd &cmd)
 {
@@ -264,8 +266,9 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic);
+
   CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
-  CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
+  CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &put_options));
   z_drop(z_move(payload));
   return Res::Ok();
 }
@@ -285,7 +288,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.serdes = PublishSerdes{.payload = _zenoh_msg}});
+  emit(ZenohEvent{.serdes = PublishSerdes(_zenoh_msg)});
   z_drop(z_move(z_str));
   return Res::Ok();
 }
@@ -296,7 +299,7 @@ Res ZenohActor::publish_props_info()
   {
     return Res::Err(ENOTCONN, "Not connected to Zenoh");
   }
-  emit (ZenohEvent{.prop_info = PublishSerdes{.payload = info_props_zenoh[_prop_counter]}});
+  emit(ZenohEvent{.prop_info = PublishSerdes(info_props_zenoh[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_zenoh) / sizeof(InfoProp));
   return Res::Ok();
 }

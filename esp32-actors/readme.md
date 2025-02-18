@@ -1,4 +1,6 @@
-# A collection of actors on ESP32
+# ON HOLD 
+See esp_no_std dir.
+# A collection of actors on ESP32 written in Rust
 - ESP-NOW sender/receiver
 - UART sender / receiver
 - pub/Sub actor

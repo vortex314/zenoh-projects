@@ -1,4 +1,9 @@
-
+# ON HOLD
+# trying no_std on ESP32 
+- I went back to C++ on ESP32 as there are just too many lacking libraries :
+-- Zenoh-pico has no Rust wrapper
+-- ESPIDF mcpwm has no complete Rust interface for capture
+-- I have extended my C++ on ESP32 with some Rust concepts like Result<> 
 ## system setup
 ```
 espup install

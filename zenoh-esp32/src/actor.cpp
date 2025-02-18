@@ -1,6 +1,11 @@
 
 #include <actor.h>
 
+PublishSerdes ::PublishSerdes(Serializable& pl) : payload(pl) {
+    topic = std::nullopt;
+}
+
+
 uint64_t current_time() { return esp_timer_get_time() / 1000; }
 
 Timer::Timer(bool auto_reload, bool active, uint64_t period,

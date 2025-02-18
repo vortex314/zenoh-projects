@@ -1,5 +1,14 @@
+# Teting Zenoh via Serial on ESP32 US
+- preliminary tests to validate Zenoh over serial 
+- I need to repeat these tests because results and bugs could have evolved a lot since.
+
+
 
 # Encountered bugs
+- Version of zenohd needs to be synced with zenoh-pico - otherwise failures
+- Timers inside zenoh are not matched to 100Hz resolution of FreeRTOS default timer tick
+- USB ports like /dev/ttyUSBx evolve over time when plugged an un-plugged
+- Zenoh broker side doesn't handle disconnect/reconnect correctly
 
 ## Zenohd doesn´t understand zenoh-pico
 

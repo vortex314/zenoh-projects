@@ -21,7 +21,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             OtaMsg msg;
             msg.rc = -1;
             msg.message = "Failed to flash image";
-            emit(OtaEvent{.serdes = PublishSerdes{.payload = msg}});
+            emit(OtaEvent{.serdes = PublishSerdes(msg)});
         }
     }
 }

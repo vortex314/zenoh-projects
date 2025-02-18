@@ -104,7 +104,7 @@ void WifiActor::on_timer(int timer_id)
     if (_wifi_connected)
     {
       wifi_msg.fill(esp_netif);
-      emit(WifiEvent{.serdes = PublishSerdes{.payload = wifi_msg}});
+      emit(WifiEvent{.serdes = PublishSerdes( wifi_msg)});
     }
   } else if ( timer_id == _timer_publish_props) {
     INFO("Timer 2 : Publishing WiFi properties info");
@@ -124,7 +124,7 @@ Res WifiActor::publish_props_info()
   {
     return Res::Err(ENOTCONN, "Not connected to WiFi");
   }
-  emit(WifiEvent{.prop_info = PublishSerdes{.payload = info_props_wifi[_prop_counter]}});
+  emit(WifiEvent{.prop_info = PublishSerdes( info_props_wifi[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_wifi) / sizeof(InfoProp));
   return Res::Ok();
 }

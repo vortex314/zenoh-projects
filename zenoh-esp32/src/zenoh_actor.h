@@ -96,6 +96,8 @@ private:
   ZenohMsg _zenoh_msg;
   bool _connected = false;
   z_owned_config_t config;
+  z_put_options_t put_options;
+
   std::map<std::string, z_owned_subscriber_t> _subscribers;
   std::map<std::string, z_owned_publisher_t> _publishers;
   std::map<std::string, PropertyCommon *> _properties;
