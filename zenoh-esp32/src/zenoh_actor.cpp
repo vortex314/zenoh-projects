@@ -34,7 +34,7 @@ ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t
   {
     INFO("Failed to get encoding for application/cbor ");
   }
-  //  put_options.encoding = z_move(encoding);
+  // put_options.encoding = z_move(encoding); // commenting this line out makes it work fine
   put_options.congestion_control = Z_CONGESTION_CONTROL_DROP;
   prefix("device"); // default prefix
 }
