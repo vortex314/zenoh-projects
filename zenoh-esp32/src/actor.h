@@ -150,7 +150,7 @@ template <typename EVENT, typename CMD>
 class Actor : public ThreadSupport
 {
 private:
-    std::vector<std::function<void(EVENT &)>> _handlers;
+    std::vector<std::function<void(const EVENT &)>> _handlers;
     Channel<CMD *> _cmds;
     Timers _timers;
     bool _stop_actor = false;
@@ -235,12 +235,12 @@ public:
         on_stop();
     }
 
-    void emit(EVENT event)
+    void emit(const EVENT& event)
     {
         for (auto &handler : _handlers)
             handler(event);
     }
-    void on_event(std::function<void(EVENT &)> handler)
+    void on_event(std::function<void(const EVENT &)> handler)
     {
         _handlers.push_back(handler);
     }
@@ -330,6 +330,7 @@ struct PublishSerdes
     std::optional<std::string> topic;
     Serializable &payload;
     PublishSerdes(Serializable& pl);
+    PublishSerdes(std::optional<std::string> topic,Serializable &payload);
 };
 
 class PropertyCommon : public Serializable

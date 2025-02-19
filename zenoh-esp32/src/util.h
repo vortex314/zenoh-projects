@@ -148,11 +148,17 @@ private:
   std::optional<std::string> desc;
 
 public:
-  Res(const Res &other)
+  /*Res(const Res &other)
   {
     code = other.code;
     desc = other.desc;
   }
+  constexpr Res& Res::operator=(const Res& other) {
+    Res ret;
+    ret.code = other.code;
+    ret.desc = other.desc; 
+    return ret;
+  }*/
 
   Res() { code = 0; }
 

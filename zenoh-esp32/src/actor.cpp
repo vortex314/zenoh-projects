@@ -5,6 +5,10 @@ PublishSerdes ::PublishSerdes(Serializable& pl) : payload(pl) {
     topic = std::nullopt;
 }
 
+PublishSerdes ::PublishSerdes(std::optional<std::string> topic,Serializable& pl) : topic(topic),payload(pl) {
+}
+
+
 
 uint64_t current_time() { return esp_timer_get_time() / 1000; }
 

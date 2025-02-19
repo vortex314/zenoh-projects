@@ -7,12 +7,21 @@
 #define GPIO_LED GPIO_NUM_2
 #endif
 
+typedef enum {
+    OTA_BEGIN =0,
+    OTA_END,
+    OTA_WRITE,
+
+} OtaOperation;
+
 struct OtaMsg : public Serializable
 {
+    std::optional<OtaOperation> operation;
     std::optional<uint32_t> offset;
     std::optional<Bytes> image = std::nullopt;
     std::optional<int32_t> rc = std::nullopt;
     std::optional<std::string> message = std::nullopt;
+    std::optional<std::string> reply_to = std::nullopt;
 
     Res serialize(Serializer &ser);
     Res deserialize(Deserializer &des);
@@ -31,6 +40,8 @@ struct OtaCmd
 class OtaActor : public Actor<OtaEvent, OtaCmd>
 {
     int _timer_publish = -1;
+    esp_ota_handle_t _ota_handle;
+    esp_partition_t *_update_partition;
 
 public:
     OtaActor();
@@ -40,4 +51,7 @@ public:
     void on_timer(int timer_id);
     void on_start();
     Res flash(const uint8_t *data, size_t size);
+    Res ota_begin();
+    Res ota_end();
+    Res ota_write(uint32_t offset,Bytes& bytes );
 };
