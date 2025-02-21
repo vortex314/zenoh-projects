@@ -1,4 +1,4 @@
-function process_data(data)
+function (data)
   local v = data
   local msec = v % 1000
   local sec = ( v // 1000 ) %60

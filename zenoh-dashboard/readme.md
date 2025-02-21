@@ -8,3 +8,8 @@
 ## Next steps
 - Graphs plot
 - Lua pre-processing
+
+# HOW IT SHOULD LOOK LIKE ;-) 
+
+![demo](./doc/zenoh-dashboard.jpeg)
+

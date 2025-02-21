@@ -57,7 +57,7 @@ impl Actor for ZenohActor {
 
     async fn run(&mut self) -> Result<()> {
         let config = self.config.clone().unwrap();
-        zenoh::init_log_from_env_or("info");
+        zenoh::init_log_from_env_or("debug");
         let zenoh_session = zenoh::open(config).await.map_err(|e| anyhow::anyhow!(e))?;
 
         let subscriber = zenoh_session.declare_subscriber("**")
@@ -102,6 +102,7 @@ impl ZenohActor {
         //let config = Config::from_file("./zenoh.json5").ok().unwrap();
         let mut config = Config::default();
         config.insert_json5("mode", r#""client""#).unwrap();
+        config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
 
         let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
         ZenohActor {

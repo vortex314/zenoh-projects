@@ -80,7 +80,7 @@ Res OtaActor::ota_end()
 
 Res OtaActor::ota_write(uint32_t offset, Bytes &data)
 {
-    CHECK(esp_ota_write(_ota_handle, data.data(), data.size()));
+    CHECK(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(),offset));
     return Res::Ok();
 }
 

@@ -46,7 +46,7 @@ impl PaneWidget for TextWidget {
         let text_height = rct.height() * 0.8;
 
         ui.put(
-            rect,
+            rct,
             egui::Label::new(
                 egui::RichText::new(s.clone())
                     .size(text_height)

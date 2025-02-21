@@ -171,6 +171,7 @@ async fn request(
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
+    select!()
     match subscriber.recv_async().await {
         Ok(sample) => {
             let bytes:Vec<u8> = sample.payload().slices().fold(Vec::new(), |mut b, x| { b.extend_from_slice(x); b });
