@@ -7864,6 +7864,7 @@ dependencies = [
  "chrono",
  "clap",
  "env_logger",
+ "hex",
  "log",
  "minicbor 0.26.0",
  "minicbor-derive 0.16.0",

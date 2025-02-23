@@ -5,13 +5,15 @@
 class Serializer;
 class Deserializer;
 
-class Serializable {
+class Serializable
+{
 public:
   virtual Res serialize(Serializer &ser) = 0;
   virtual Res deserialize(Deserializer &des) = 0;
 };
 
-class Serializer {
+class Serializer
+{
 public:
   virtual Res serialize(uint8_t i) = 0;
   virtual Res serialize(int8_t i) = 0;
@@ -25,16 +27,24 @@ public:
   virtual Res serialize(bool b) = 0;
   virtual Res serialize(int i) = 0;
   virtual Res serialize_null() = 0;
-  template <typename V> Res serialize(std::optional<V> value) {
-    if (value) {
+  template <typename V>
+  Res serialize(std::optional<V> value)
+  {
+    if (value)
+    {
       serialize(*value);
-    } else {
+    }
+    else
+    {
       serialize_null();
     }
     return Res::Ok();
   }
-  template <typename V> Res serialize(uint32_t idx, std::optional<V> value) {
-    if (value) {
+  template <typename V>
+  Res serialize(uint32_t idx, std::optional<V> value)
+  {
+    if (value)
+    {
       serialize(idx);
       serialize(*value);
     }
@@ -45,22 +55,27 @@ public:
   virtual Res map_begin() = 0;
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;
+  virtual Res array_begin(size_t size) = 0;
   virtual Res array_end() = 0;
   virtual Res reset() = 0;
 };
 
-typedef enum {
+typedef enum
+{
   SER_UINT,
   SER_SINT,
   SER_FLOAT,
   SER_STR,
   SER_BYTES,
   SER_ARRAY,
+  SER_ARRAY_FIXED,
   SER_MAP,
+  SER_MAP_FIXED,
   SER_END,
 } SerialType;
 
-class Deserializer {
+class Deserializer
+{
 public:
   virtual Res fill_buffer(Bytes &b) = 0;
   virtual Res deserialize(std::string &s) = 0;
@@ -76,40 +91,80 @@ public:
   virtual Res map_begin() = 0;
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;
+  virtual Res array_begin(size_t &size) = 0;
   virtual Res array_end() = 0;
   virtual Res peek_type(SerialType &type) = 0;
   virtual Res deserialize_null() = 0;
 
-  template <typename U> Res deserialize(std::optional<U> &opt) {
+  template <typename U>
+  Res deserialize(std::optional<U> &opt)
+  {
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
     return Res::Ok();
   }
 
-  template <typename U> Result<U> deserialize_type(U &u) {
-    if constexpr (std::is_same<U, int>::value) {
+  template <typename U>
+  Result<U> deserialize_type(U &u)
+  {
+    if constexpr (std::is_same<U, int>::value)
+    {
       return deserialize_int(u);
-    } else if constexpr (std::is_same<U, uint32_t>::value) {
+    }
+    else if constexpr (std::is_same<U, uint32_t>::value)
+    {
       return deserialize_uint32(u);
-    } else if constexpr (std::is_same<U, std::string>::value) {
+    }
+    else if constexpr (std::is_same<U, std::string>::value)
+    {
       return deserialize_string(u);
-    } else if constexpr (std::is_same<U, Bytes>::value) {
+    }
+    else if constexpr (std::is_same<U, Bytes>::value)
+    {
       return deserialize_bytes(u);
-    } else if constexpr (std::is_same<U, float>::value) {
+    }
+    else if constexpr (std::is_same<U, float>::value)
+    {
       return deserialize_float(u);
-    } else if constexpr (std::is_same<U, bool>::value) {
+    }
+    else if constexpr (std::is_same<U, bool>::value)
+    {
       return deserialize_bool(u);
-    } else {
+    }
+    else
+    {
       return U::deserialize(*this);
     }
     return U::deserialize(*this);
   }
 
-  Res iterate_map(std::function<Res(Deserializer &, uint32_t)> func) {
-    RET_ERR(map_begin(), "Failed to decode map");
-    SerialType type;
-    while (true) {
+  Res iterate_map(std::function<Res(Deserializer &, uint32_t)> func)
+  {
+    INFO("iterate_map");
+    SerialType map_type;
+    size_t map_size = SIZE_MAX;
+    RET_ERR(peek_type(map_type), "Failed to peek type");
+    if (map_type == SerialType::SER_MAP_FIXED)
+    {
+      INFO("Fixed map");
+      RET_ERR(array_begin(map_size), "Failed to decode map begin");
+    }
+    else if (map_type == SerialType::SER_MAP)
+    {
+      INFO("Indefinite map"); 
+      RET_ERR(map_begin(), "Failed to decode map begin");
+    }
+    else
+    {
+      ERROR("Expected map %d", map_type);
+      return Res::Err(0, "Expected map");
+    }
+
+    while (true && map_size-- > 0)
+    {
+      INFO("iterate_map loop %d", map_size);
+      SerialType type;
       RET_ERR(peek_type(type), "Failed to peek type");
       if (type == SerialType::SER_END)
         break;
@@ -117,17 +172,24 @@ public:
         return Res::Err(0, "Expected uint");
       uint32_t key;
       RET_ERR(deserialize(key), "Failed to decode key in map");
+      INFO("key %d", key);
       RET_ERR(func(*this, key), "Failed to process map entry");
     }
-    RET_ERR(map_end(), "Failed to decode map end ");
+
+    if (map_type == SerialType::SER_MAP)
+    {
+      RET_ERR(map_end(), "Failed to decode map end ");
+    }
     return Res::Ok();
   }
 };
 
-class JsonSerializer : public Serializer {
+class JsonSerializer : public Serializer
+{
 private:
   std::string _json;
-  typedef enum {
+  typedef enum
+  {
     INIT,
     MAP_0,
     MAP_N,

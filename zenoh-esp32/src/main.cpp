@@ -165,8 +165,9 @@ extern "C" void app_main()
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
       } else if ( publish_bytes->topic == "dst/esp1/ota") {
         INFO("Received OTA message [%d]", publish_bytes->payload.size());
-        deserialize<OtaMsg>(publish_bytes->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = msg});return 0;};
-    //    if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
+        // deserialize<OtaMsg>(publish_bytes->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = msg});return 0;};
+         auto msg = deserialize<OtaMsg>(publish_bytes->payload);  
+       if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
       } else {
         INFO("Received Zenoh unknown event");
       }
@@ -189,7 +190,7 @@ extern "C" void app_main()
 }
 
 // re-entrant function to publish a serializable object
-// 
+//
 void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
 {
   if (serdes)

@@ -12,10 +12,10 @@
                     "RUST_BACKTRACE": "1"
                 }
             },
-            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "command": "cargo", // note: full path to the cargo
             "args": [
                 "run",
-                "--release",
+//                "--release",
                 "--",
                 "--key",
                 "dst/esp1/ota",

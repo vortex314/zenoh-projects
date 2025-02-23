@@ -103,11 +103,19 @@ Res CborSerializer::map_end()
 Res CborSerializer::array_begin()
 {
     RET_ERRI(nanocbor_fmt_array_indefinite(&_enc), "Failed to encode array");
+    _state = ARRAY;
+    return Res::Ok();
+}
+Res CborSerializer::array_begin(size_t count)
+{
+    RET_ERRI(nanocbor_fmt_array(&_enc, count), "Failed to encode array");
+    _state = ARRAY_FIXED;
     return Res::Ok();
 }
 Res CborSerializer::array_end()
 {
-    RET_ERRI(nanocbor_fmt_end_indefinite(&_enc), "Failed to encode array");
+    if (_state == ARRAY)
+        RET_ERRI(nanocbor_fmt_end_indefinite(&_enc), "Failed to encode array");
     return Res::Ok();
 }
 Res CborSerializer::serialize_null()
@@ -115,7 +123,6 @@ Res CborSerializer::serialize_null()
     RET_ERRI(nanocbor_fmt_null(&_enc), "Failed to encode null");
     return Res::Ok();
 }
-
 
 Res CborSerializer::serialize(Serializable &value) { return value.serialize(*this); }
 
@@ -128,6 +135,7 @@ nanocbor_value_t *CborDeserializer::get_des()
     case MAP:
         return &_map;
     case ARRAY:
+    case ARRAY_FIXED:
         return &_array;
     }
     return &_des;
@@ -140,8 +148,9 @@ nanocbor_value_t *CborDeserializer::get_des()
     _capacity = size;
     _state = INIT;
 }*/
-CborDeserializer::~CborDeserializer() {  
-// delete bytes only when owner of bytes
+CborDeserializer::~CborDeserializer()
+{
+    // delete bytes only when owner of bytes
 }
 
 Res CborDeserializer::fill_buffer(Bytes &b)
@@ -250,6 +259,12 @@ Res CborDeserializer::array_begin()
     _state = ARRAY;
     return Res::Ok();
 }
+Res CborDeserializer::array_begin(size_t &count)
+{
+    CHECK(nanocbor_enter_array(get_des(), &_array));
+    _state = ARRAY_FIXED;
+    return Res::Ok();
+}
 Res CborDeserializer::array_end()
 {
     nanocbor_leave_container(get_des(), &_array);
@@ -277,16 +292,31 @@ Res CborDeserializer::peek_type(SerialType &serial_type)
         serial_type = SerialType::SER_BYTES;
         break;
     case NANOCBOR_TYPE_ARR:
-        serial_type = SerialType::SER_ARRAY;
+        serial_type = SerialType::SER_ARRAY_FIXED;
         break;
     case NANOCBOR_TYPE_MAP:
-        serial_type = SerialType::SER_MAP;
+        serial_type = SerialType::SER_MAP_FIXED;
         break;
     case NANOCBOR_ERR_END:
         serial_type = SerialType::SER_END;
         break;
     default:
-        return Res::Err(0, "Unknown type");
+    {
+        uint8_t b = *(uint8_t *)(get_des()->cur);
+        INFO(" found %x", b);
+        if (b == 0x9F)
+        {
+            serial_type = SerialType::SER_ARRAY;
+        }
+        else if (b == 0xBF)
+        {
+            serial_type = SerialType::SER_MAP;
+        }
+        else
+        {
+            return Res::Err(-1, "Unknown type");
+        }
+    }
     }
     return Res::Ok();
 }

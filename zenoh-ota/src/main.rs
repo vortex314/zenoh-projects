@@ -165,13 +165,12 @@ async fn request(
 ) -> Result<OtaMsg> {
     info!("Publishing OTA begin message to key: '{}':{:?}", request_topic, request);
     let request_bytes = to_vec(&request)?;
+    info!("Request bytes: {}", hex::encode(&request_bytes));    
     session
         .put(request_topic, request_bytes)
         .congestion_control(CongestionControl::Block)
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
-
-    select!()
     match subscriber.recv_async().await {
         Ok(sample) => {
             let bytes:Vec<u8> = sample.payload().slices().fold(Vec::new(), |mut b, x| { b.extend_from_slice(x); b });

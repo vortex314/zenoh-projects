@@ -14,22 +14,28 @@ OtaActor::~OtaActor()
 
 void OtaActor::on_cmd(OtaCmd &cmd)
 {
+    INFO("on_cmd");
     Res result;
     if (cmd.msg)
     {
+        INFO("cmd.msg");
         OtaMsg &msg = cmd.msg.value();
         if (msg.operation)
         {
+            INFO("msg.operation %d", msg.operation.value());
             if (msg.operation.value() == OTA_BEGIN)
             {
+                INFO("OTA_BEGIN");
                 result = ota_begin();
             }
             else if (msg.operation.value() == OTA_END)
             {
+                INFO("OTA_END");
                 result = ota_end();
             }
             else if (msg.operation.value() == OTA_WRITE && msg.offset && msg.image)
             {
+                INFO("OTA_WRITE offset %d [%d]", msg.offset.value(), msg.image.value().size());
                 result = ota_write(msg.offset.value(), msg.image.value());
             }
             else
@@ -114,29 +120,42 @@ Res OtaActor::flash(const uint8_t *data, size_t size)
 
 Res OtaMsg::serialize(Serializer &ser)
 {
-    ser.array_begin();
-    ser.serialize((std::optional<uint32_t>)operation);
-    ser.serialize(offset);
-    ser.serialize(image);
-    ser.serialize(rc);
-    ser.serialize(message);
-    ser.serialize(reply_to);
-    ser.array_end();
+    int idx=0;
+    ser.reset();
+    ser.map_begin();
+    ser.serialize(idx++, (std::optional<uint32_t>)operation);
+    ser.serialize(idx++, offset);
+    ser.serialize(idx++, image);
+    ser.serialize(idx++, rc);
+    ser.serialize(idx++, message);
+    ser.serialize(idx++, reply_to);
+    ser.map_end();
     return Res::Ok();
 }
 
 Res OtaMsg::deserialize(Deserializer &des)
 {
-    TR(des.array_begin());
-    std::optional<uint32_t> op;
-    TR(des.deserialize(op));
-    if (op)
-        operation = (OtaOperation)op.value();
-    TR(des.deserialize(offset));
-    TR(des.deserialize(image));
-    TR(des.deserialize(rc));
-    TR(des.deserialize(message));
-    TR(des.deserialize(reply_to));
-    TR(des.array_end());
+    INFO("OtaMsg::deserialize");
+    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res {
+        INFO("key %d", key);
+        switch (key)
+        {
+        case 0:
+            return d.deserialize((std::optional<uint32_t>&)operation);
+        case 1:
+            return d.deserialize(offset);
+        case 2:
+            return d.deserialize(image);
+        case 3:
+            return d.deserialize(rc);
+        case 4:
+            return d.deserialize(message);
+        case 5:
+            return d.deserialize(reply_to);
+        default:
+            return Res::Err(-1, "Unknown key");
+        }
+    });
+    
     return Res::Ok();
 }

@@ -354,6 +354,7 @@
                 "__GLIBCXX_ASSERTIONS",
                 "ZENOH_ESPIDF",
                 "CONFIG_TCPIP_LWIP=1",
+                "CONFIG_LWIP_IP4_REASSEMBLY=y",
                 "ZENOH_ESPIDF",
                 "ZENOH_ESPIDF",
                 ""

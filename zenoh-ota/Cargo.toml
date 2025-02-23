@@ -18,4 +18,13 @@ minicbor = {version = "0.26.0", default-features = false, features = [
   "alloc",
   "half",
 ]}
-minicbor-derive = {version = "0.16.0", default-features = false}                              # for CBOR encoding/decoding   
+minicbor-derive = {version = "0.16.0", default-features = false}      
+hex = "0.4"                        # for CBOR encoding/decoding 
+
+[profile.dev]
+incremental = true
+lto="off"
+
+[profile.release]
+incremental = true
+lto="off"

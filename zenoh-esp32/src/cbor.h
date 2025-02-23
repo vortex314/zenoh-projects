@@ -17,10 +17,10 @@ private:
   typedef enum
   {
     INIT,
-    MAP_0,
-    MAP_N,
-    ARRAY_0,
-    ARRAY_N,
+    MAP,
+
+    ARRAY,
+    ARRAY_FIXED,
   } State;
   State _state;
   static void append_func(nanocbor_encoder_t *enc, void *ctx, const uint8_t *data, size_t len);
@@ -45,6 +45,7 @@ public:
   Res map_begin();
   Res map_end();
   Res array_begin();
+  Res array_begin(size_t count);
   Res array_end();
   Res serialize_null();
 
@@ -70,12 +71,13 @@ private:
     INIT,
     MAP,
     ARRAY,
+    ARRAY_FIXED,
   } State;
   State _state;
   nanocbor_value_t *get_des();
 
 public:
-//  CborDeserializer(size_t size);
+  //  CborDeserializer(size_t size);
   CborDeserializer(uint8_t *bytes, size_t size)
   {
     _bytes = bytes;
@@ -100,6 +102,7 @@ public:
   Res map_begin();
   Res map_end();
   Res array_begin();
+  Res array_begin(size_t &count);
   Res array_end();
   Res peek_type(SerialType &serial_type);
   Res deserialize_null();

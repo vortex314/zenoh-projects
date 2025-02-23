@@ -8,6 +8,8 @@
 #include <vector>
 #include <log.h>
 
+#include "esp_err.h"
+
 // #include <ArduinoJson.h>
 
 typedef std::vector<uint8_t> Bytes;
@@ -49,6 +51,16 @@ typedef bool Void;
       INFO("[%d] %s:%d %s", r.rc(), __FILE__, __LINE__, #VAL); \
       return r;                                                \
     }                                                          \
+  }
+
+#define T_ESP(VAL)                                                                       \
+  {                                                                                      \
+    auto r = (VAL);                                                                      \
+    if (r != ESP_OK)                                                                     \
+    {                                                                                    \
+      INFO("[%d] %s:%d %s = %s ", r.rc(), __FILE__, __LINE__, #VAL, esp_err_to_name(r)); \
+      return r;                                                                          \
+    }                                                                                    \
   }
 
 #define RET_ERRI(VAL, MSG)                        \
@@ -156,7 +168,7 @@ public:
   constexpr Res& Res::operator=(const Res& other) {
     Res ret;
     ret.code = other.code;
-    ret.desc = other.desc; 
+    ret.desc = other.desc;
     return ret;
   }*/
 
