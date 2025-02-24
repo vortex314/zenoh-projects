@@ -88,6 +88,7 @@ public:
   virtual Res deserialize(float &f) = 0;
   virtual Res deserialize(Bytes &bytes) = 0;
   virtual Res deserialize(bool &b) = 0;
+  virtual Res skip_next() = 0;
   virtual Res map_begin() = 0;
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;

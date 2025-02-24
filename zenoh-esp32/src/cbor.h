@@ -99,6 +99,8 @@ public:
   Res deserialize(Bytes &bytes);
   Res deserialize(float &f);
   Res deserialize(bool &b);
+  Res skip_next();
+
   Res map_begin();
   Res map_end();
   Res array_begin();

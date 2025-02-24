@@ -153,7 +153,8 @@ Res OtaMsg::deserialize(Deserializer &des)
         case 5:
             return d.deserialize(reply_to);
         default:
-            return Res::Err(-1, "Unknown key");
+            INFO("unknown key %d",key);
+            return d.skip_next();
         }
     });
     

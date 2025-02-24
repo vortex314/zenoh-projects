@@ -241,6 +241,11 @@ Res CborDeserializer::deserialize(bool &b)
     return Res::Ok();
 }
 
+Res CborDeserializer::skip_next() {
+    CHECK(nanocbor_skip(get_des()));
+    return Res::Ok();
+}
+
 Res CborDeserializer::map_begin()
 {
     CHECK(nanocbor_enter_map(get_des(), &_map));
