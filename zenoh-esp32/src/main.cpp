@@ -32,6 +32,7 @@ void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
 template <typename T>
 std::optional<T> deserialize(Bytes bytes)
 {
+  INFO("Deserializing %d bytes", bytes.size());
   CborDeserializer des(bytes.data(), bytes.size());
   T obj;
   if (obj.deserialize(des).is_ok())

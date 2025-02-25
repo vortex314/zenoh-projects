@@ -152,7 +152,7 @@ CborDeserializer::~CborDeserializer()
 {
     // delete bytes only when owner of bytes
 }
-
+/*
 Res CborDeserializer::fill_buffer(Bytes &b)
 {
     if (b.size() > _capacity)
@@ -164,7 +164,7 @@ Res CborDeserializer::fill_buffer(Bytes &b)
     _state = INIT;
     nanocbor_decoder_init(get_des(), _bytes, _size);
     return Res::Ok();
-}
+}*/
 
 Res CborDeserializer::deserialize(uint8_t &i)
 {

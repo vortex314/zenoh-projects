@@ -87,7 +87,7 @@ public:
   };
   ~CborDeserializer();
 
-  Res fill_buffer(Bytes &b);
+  // Res fill_buffer(Bytes &b);
   Res deserialize(uint8_t &i);
   Res deserialize(int8_t &i);
 

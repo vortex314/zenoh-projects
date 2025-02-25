@@ -62,12 +62,12 @@ public:
 
 typedef enum
 {
-  SER_UINT,
+  SER_UINT=0,
   SER_SINT,
   SER_FLOAT,
   SER_STR,
   SER_BYTES,
-  SER_ARRAY,
+  SER_ARRAY=5,
   SER_ARRAY_FIXED,
   SER_MAP,
   SER_MAP_FIXED,
@@ -77,7 +77,7 @@ typedef enum
 class Deserializer
 {
 public:
-  virtual Res fill_buffer(Bytes &b) = 0;
+ // virtual Res fill_buffer(Bytes &b) = 0;
   virtual Res deserialize(std::string &s) = 0;
   virtual Res deserialize(uint8_t &i) = 0;
   virtual Res deserialize(int8_t &i) = 0;
