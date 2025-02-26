@@ -19,7 +19,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
     if (cmd.msg)
     {
         INFO("cmd.msg");
-        OtaMsg &msg = cmd.msg.value();
+        OtaMsg& msg = cmd.msg.value();
         if (msg.operation)
         {
             INFO("msg.operation %d", msg.operation.value());

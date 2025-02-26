@@ -30,7 +30,7 @@ Log logger;
 void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
 
 template <typename T>
-std::optional<T> deserialize(Bytes bytes)
+std::optional<T> deserialize(Bytes &bytes)
 {
   INFO("Deserializing %d bytes", bytes.size());
   CborDeserializer des(bytes.data(), bytes.size());
@@ -40,6 +40,11 @@ std::optional<T> deserialize(Bytes bytes)
   ERROR("Failed to deserialize object ");
   return std::nullopt;
 }
+
+/* template <typename T> 
+std::optional<T> filter(std::function<bool(&T)> filter) {
+  if ( filter()) 
+}*/
 
 template <typename T, typename U>
 std::optional<U> map(std::optional<T> t, std::function<U(T)> f)
@@ -77,7 +82,7 @@ std::optional<U> operator<<(std::optional<T> t, std::function<U(T)> &f)
 }
 
 template <typename T, typename F>
-auto operator|(const std::optional<T> &opt, F &&func)
+auto operator>>=(const std::optional<T> &opt, F &&func)
     -> std::optional<std::invoke_result_t<F, T>>
 {
   // If the optional has a value, apply the function to it and wrap the result in an optional
@@ -153,23 +158,26 @@ extern "C" void app_main()
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
-      auto publish_bytes = event.publish;
-      CborDeserializer des(publish_bytes->payload.data(), publish_bytes->payload.size());
-      if (publish_bytes->topic == "dst/esp1/sys") {
-        auto msg = deserialize<SysMsg>(publish_bytes->payload);
+
+      if (event.publish->topic == "dst/esp1/sys") {
+        auto msg = deserialize<SysMsg>(event.publish->payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
-      } else if ( publish_bytes->topic == "dst/esp1/wifi") {
-        auto msg = deserialize<WifiMsg>(publish_bytes->payload);
-        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( publish_bytes->topic == "dst/esp1/zenoh") {
-        auto msg = deserialize<ZenohMsg>(publish_bytes->payload);
-        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( publish_bytes->topic == "dst/esp1/ota") {
-        INFO("Received OTA message [%d]", publish_bytes->payload.size());
-        // deserialize<OtaMsg>(publish_bytes->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = msg});return 0;};
-         auto msg = deserialize<OtaMsg>(publish_bytes->payload);  
-       if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
-      } else {
+      } 
+      else if ( event.publish->topic == "dst/esp1/wifi") {
+        auto msg = deserialize<WifiMsg>(event.publish->payload);
+        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
+      } 
+      else if ( event.publish->topic == "dst/esp1/zenoh") {
+        auto msg = deserialize<ZenohMsg>(event.publish->payload);
+        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
+      } 
+      else if ( event.publish->topic == "dst/esp1/ota") {
+        INFO("Received OTA message [%d]", event.publish->payload.size());
+        deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = std::move(msg)});};
+     //    auto msg = deserialize<OtaMsg>(event.publish->payload);  
+     //    if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
+      } 
+      else {
         INFO("Received Zenoh unknown event");
       }
     } });
@@ -201,8 +209,10 @@ void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
     auto &serializable = serdes.value().payload;
     serializable.serialize(ser);
 
-    assert(buffer.size() > 0);
-    //    assert(buffer.size() < 1024);
+    if (serdes.value().topic)
+    {
+      topic = serdes.value().topic.value().c_str();
+    };
 
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
     // pulse led when we publish
