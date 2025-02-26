@@ -47,6 +47,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             reply.rc = result.rc();
             reply.message = result.msg();
             reply.offset = msg.offset;
+            reply.operation = msg.operation;
             emit(OtaEvent{.serdes = PublishSerdes(msg.reply_to, reply)});
         }
     }
@@ -69,8 +70,8 @@ Res OtaActor::ota_begin()
         ERROR("Unable to get next OTA partition");
         return Res::Err(EBADF, "Unable to get next OTA partition");
     }
-    INFO("Writing firmware to partition: %s", _update_partition->label);
-    CHECK(esp_ota_begin(_update_partition, OTA_SIZE_UNKNOWN, &_ota_handle));
+//    INFO("Writing firmware to partition: %s", _update_partition->label);
+    CHECK_ESP(esp_ota_begin(_update_partition, OTA_SIZE_UNKNOWN, &_ota_handle));
     return Res::Ok();
 }
 
@@ -79,14 +80,14 @@ Res OtaActor::ota_end()
     CHECK(esp_ota_end(_ota_handle));
 
     // Set the new firmware as bootable
-    CHECK(esp_ota_set_boot_partition(_update_partition));
+    CHECK_ESP(esp_ota_set_boot_partition(_update_partition));
     INFO("OTA update successful, restarting...");
     esp_restart();
 }
 
 Res OtaActor::ota_write(uint32_t offset, Bytes &data)
 {
-    CHECK(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(),offset));
+    CHECK_ESP(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(),offset));
     return Res::Ok();
 }
 

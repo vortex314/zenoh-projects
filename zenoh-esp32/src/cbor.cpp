@@ -133,6 +133,7 @@ nanocbor_value_t *CborDeserializer::get_des()
     case INIT:
         return &_des;
     case MAP:
+    case MAP_FIXED:
         return &_map;
     case ARRAY:
     case ARRAY_FIXED:
@@ -252,12 +253,20 @@ Res CborDeserializer::map_begin()
     _state = MAP;
     return Res::Ok();
 }
+Res CborDeserializer::map_begin(size_t& count)
+{
+    CHECK(nanocbor_enter_map(get_des(), &_map));
+    _state = MAP_FIXED;
+    return Res::Ok();
+}
 Res CborDeserializer::map_end()
 {
     nanocbor_leave_container(get_des(), &_map);
     _state = INIT;
     return Res::Ok();
 }
+
+
 Res CborDeserializer::array_begin()
 {
     CHECK(nanocbor_enter_array(get_des(), &_array));

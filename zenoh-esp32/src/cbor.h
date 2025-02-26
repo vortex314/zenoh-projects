@@ -70,6 +70,7 @@ private:
   {
     INIT,
     MAP,
+    MAP_FIXED,
     ARRAY,
     ARRAY_FIXED,
   } State;
@@ -102,6 +103,7 @@ public:
   Res skip_next();
 
   Res map_begin();
+  Res map_begin(size_t &count);
   Res map_end();
   Res array_begin();
   Res array_begin(size_t &count);
@@ -122,5 +124,17 @@ public:
     return Res::Ok();
   }
 };
+
+template <typename T>
+std::optional<T> cbor_deserialize(Bytes &bytes)
+{
+  INFO("Deserializing %d bytes", bytes.size());
+  CborDeserializer des(bytes.data(), bytes.size());
+  T obj;
+  if (obj.deserialize(des).is_ok())
+    return obj;
+  ERROR("Failed to deserialize object ");
+  return std::nullopt;
+}
 
 #endif

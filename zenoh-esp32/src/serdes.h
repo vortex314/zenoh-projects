@@ -90,6 +90,7 @@ public:
   virtual Res deserialize(bool &b) = 0;
   virtual Res skip_next() = 0;
   virtual Res map_begin() = 0;
+  virtual Res map_begin(size_t& size) = 0;
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;
   virtual Res array_begin(size_t &size) = 0;
@@ -142,14 +143,14 @@ public:
 
   Res iterate_map(std::function<Res(Deserializer &, uint32_t)> func)
   {
-    INFO("iterate_map");
+//    INFO("iterate_map");
     SerialType map_type;
     size_t map_size = SIZE_MAX;
     RET_ERR(peek_type(map_type), "Failed to peek type");
     if (map_type == SerialType::SER_MAP_FIXED)
     {
-      INFO("Fixed map");
-      RET_ERR(array_begin(map_size), "Failed to decode map begin");
+//      INFO("Fixed map");
+      RET_ERR(map_begin(map_size), "Failed to decode map begin");
     }
     else if (map_type == SerialType::SER_MAP)
     {
@@ -164,7 +165,7 @@ public:
 
     while (true && map_size-- > 0)
     {
-      INFO("iterate_map loop %d", map_size);
+      INFO("iterate_map loop %u", map_size);
       SerialType type;
       RET_ERR(peek_type(type), "Failed to peek type");
       if (type == SerialType::SER_END)
@@ -173,7 +174,7 @@ public:
         return Res::Err(0, "Expected uint");
       uint32_t key;
       RET_ERR(deserialize(key), "Failed to decode key in map");
-      INFO("key %d", key);
+  //    INFO("key %d", key);
       RET_ERR(func(*this, key), "Failed to process map entry");
     }
 
@@ -199,5 +200,7 @@ private:
   } State;
   State _state;
 };
+
+
 
 #endif

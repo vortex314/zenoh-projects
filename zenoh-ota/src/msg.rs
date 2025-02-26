@@ -81,7 +81,7 @@ struct OtaMsg : public Serializable
 };
 */
 
-#[derive(Decode,Encode,Debug, Clone)]
+#[derive(Decode,Encode,Debug, Clone,PartialEq)]
 #[cbor(index_only)]
 pub enum OtaOperation {
     #[n(0)] OtaBegin = 0,

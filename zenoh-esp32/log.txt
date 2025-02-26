@@ -1,0 +1,1038 @@
+I 00:57:28.555 |        main.cpp: 158 |  free heap size: 195808 biggest block : 110592 
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+ets Jun  8 2016 00:22:57
+
+rst:0x10 (RTCWDT_RTC_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7176
+load:0x40078000,len:15564
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080638
+I (31) boot: ESP-IDF 5.3.1 2nd stage bootloader
+I (31) boot: compile time Feb 26 2025 19:57:20
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v0.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (44) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 4MB
+I (53) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (62) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00005000
+I (77) boot:  1 otadata          OTA data         01 00 0000e000 00002000
+I (84) boot:  2 app0             OTA app          00 10 00010000 00170000
+I (91) boot:  3 coredump         Unknown data     01 03 00180000 00020000
+I (99) boot: End of partition table
+I (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=2354ch (144716) map
+I (161) esp_image: segment 1: paddr=00033574 vaddr=3ffb0000 size=0400ch ( 16396) load
+I (168) esp_image: segment 2: paddr=00037588 vaddr=40080000 size=08a90h ( 35472) load
+I (182) esp_image: segment 3: paddr=00040020 vaddr=400d0020 size=a6448h (681032) map
+I (415) esp_image: segment 4: paddr=000e6470 vaddr=40088a90 size=0e918h ( 59672) load
+I (451) boot: Loaded app from partition at offset 0x10000
+I (451) boot: Disabling RNG early entropy source...
+I (463) cpu_start: Multicore app
+I (471) cpu_start: Pro cpu start user code
+I (471) cpu_start: cpu freq: 160000000 Hz
+I (471) app_init: Application information:
+I (474) app_init: Project name:     zenoh-lib
+I (479) app_init: App version:      6d5def7
+I (484) app_init: Compile time:     Feb 26 2025 19:54:55
+I (490) app_init: ELF file SHA256:  465fa4935...
+I (495) app_init: ESP-IDF:          5.3.1
+I (500) efuse_init: Min chip rev:     v0.0
+I (505) efuse_init: Max chip rev:     v3.99 
+I (510) efuse_init: Chip rev:         v0.0
+I (515) heap_init: Initializing. RAM available for dynamic allocation:
+I (522) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (528) heap_init: At 3FFB96F8 len 00026908 (154 KiB): DRAM
+I (534) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (540) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (547) heap_init: At 400973A8 len 00008C58 (35 KiB): IRAM
+I (555) spi_flash: detected chip: gd
+I (557) spi_flash: flash io: dio
+I 00:00:00.009 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.013 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.019 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.024 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.030 |         actor.h:  29 | Channel created [5][4]
+I (590) main_task: Started on CPU0
+I (600) main_task: Calling app_main()
+I 00:00:00.071 |       actor.cpp: 179 |  starting Thread actors on core 0 
+I 00:00:00.072 |       actor.cpp: 243 | starting Thread actors
+I (640) wifi:wifi driver task: 3ffc402c, prio:23, stack:6656, core=0
+I (650) wifi:wifi firmware version: ccaebfa
+I (650) wifi:wifi certification version: v7.0
+I (650) wifi:config NVS flash: enabled
+I (650) wifi:config nano formating: disabled
+I (650) wifi:Init data frame dynamic rx buffer num: 32
+I (660) wifi:Init static rx mgmt buffer num: 5
+I (660) wifi:Init management short buffer num: 32
+I (670) wifi:Init dynamic tx buffer num: 32
+I (670) wifi:Init static rx buffer size: 1600
+I (680) wifi:Init static rx buffer num: 10
+I (680) wifi:Init dynamic rx buffer num: 32
+I (680) wifi_init: rx ba win: 6
+I (690) wifi_init: accept mbox: 6
+I (690) wifi_init: tcpip mbox: 32
+I (690) wifi_init: udp mbox: 6
+I (700) wifi_init: tcp mbox: 6
+I (700) wifi_init: tcp tx win: 5760
+I (710) wifi_init: tcp rx win: 5760
+I (710) wifi_init: tcp mss: 1440
+I (710) wifi_init: WiFi IRAM OP enabled
+I (720) wifi_init: WiFi RX IRAM OP enabled
+I (720) phy_init: phy_version 4830,54550f7,Jun 20 2024,14:22:08
+I (810) wifi:mode : sta (24:0a:c4:81:e0:38)
+I (810) wifi:enable tsf
+I 00:00:00.266 |  wifi_actor.cpp: 143 | WiFi STA started
+I (820) wifi:new:<1,0>, old:<1,0>, ap:<255,255>, sta:<1,0>, prof:1, snd_ch_cfg:0x0
+I (820) wifi:state: init -> auth (0xb0)
+I (830) wifi:state: auth -> assoc (0x0)
+I (830) wifi:state: assoc -> run (0x10)
+I (840) wifi:<ba-add>idx:0 (ifx:0, 00:23:cd:19:fc:f5), tid:0, ssn:0, winSize:64
+I (840) wifi:connected with Merckx2, aid = 1, channel 1, BW20, bssid = 00:23:cd:19:fc:f5
+I (850) wifi:security: WPA2-PSK, phy: bgn, rssi: -36
+I (850) wifi:pm start, type: 1
+
+I (850) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
+I (860) wifi:AP's beacon interval = 102400 us, DTIM period = 1
+I 00:00:00.356 |  wifi_actor.cpp: 454 | Max AP number ap_info can hold = 10
+I 00:00:00.357 |  wifi_actor.cpp: 457 | Total APs scanned = 0, actual AP number ap_info holds = 0
+I 00:00:00.361 |  wifi_actor.cpp: 477 | Highest RSSI = -128, AP index = 0
+I 00:00:00.368 |  wifi_actor.cpp:  74 | Scanned SSID: 
+W (920) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2
+I 00:00:00.383 |  wifi_actor.cpp: 197 | Connecting to WiFi network...
+I (1260) wifi:<ba-add>idx:1 (ifx:0, 00:23:cd:19:fc:f5), tid:6, ssn:0, winSize:64
+I (2370) esp_netif_handlers: sta ip: 192.168.0.247, mask: 255.255.255.0, gw: 192.168.0.1
+I 00:00:01.820 |  wifi_actor.cpp: 160 | WiFi STA got IP address
+I 00:00:01.847 | zenoh_actor.cpp: 148 | Own ZID  : 19caceb4dc2834133b3852f2f82fe181
+I 00:00:01.848 | zenoh_actor.cpp: 155 | Connected to Router : d02cc75d4067811cc77d673dc3e6c85e
+I 00:00:01.853 | zenoh_actor.cpp:  75 | Connected to Zenoh.
+I 00:00:01.858 | zenoh_actor.cpp: 213 | Declaring subscriber for 'dst/esp1/**'...
+I 00:00:05.067 |        main.cpp: 158 |  free heap size: 195764 biggest block : 110592 
+I 00:00:10.067 |        main.cpp: 158 |  free heap size: 195764 biggest block : 110592 
+I 00:00:15.067 |        main.cpp: 158 |  free heap size: 195764 biggest block : 110592 
+I 00:00:20.067 |        main.cpp: 158 |  free heap size: 195756 biggest block : 110592 
+I 00:00:25.067 |        main.cpp: 158 |  free heap size: 195764 biggest block : 110592 
+I 00:00:30.067 |        main.cpp: 158 |  free heap size: 195764 biggest block : 110592 
+I 00:00:30.067 |        main.cpp: 158 |  free heap size: 195652 biggest block : 110592 
+I 00:00:35.069 |        main.cpp: 158 |  free heap size: 195660 biggest block : 110592 
+I 00:00:38.861 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:00:38.862 |        main.cpp: 136 | Received OTA message [42]
+I 00:00:38.864 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:00:38.869 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:00:38.875 |        serdes.h: 168 | iterate_map loop -2
+I 00:00:38.880 |   ota_actor.cpp: 141 | key 0
+I 00:00:38.884 |        serdes.h: 168 | iterate_map loop -3
+I 00:00:38.889 |   ota_actor.cpp: 141 | key 5
+I 00:00:38.894 |        serdes.h: 168 | iterate_map loop -4
+I 00:00:38.899 |   ota_actor.cpp:  17 | on_cmd
+I 00:00:38.903 |   ota_actor.cpp:  21 | cmd.msg
+I 00:00:38.907 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:00:38.912 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:00:40.083 |        main.cpp: 158 |  free heap size: 195500 biggest block : 110592 
+
+abort() was called at PC 0x400d7a18 on core 0
+
+
+Backtrace: 0x4008283a:0x3ffbf450 0x400894cd:0x3ffbf470 0x40091185:0x3ffbf490 0x400d7a18:0x3ffbf500 0x400d7c95:0x3ffbf530 0x400d7d57:0x3ffbf670 0x400d2b81:0x3ffbf6a0 0x400d2bed:0x3ffbf6c0 0x4008a2e1:0x3ffbf6e0
+
+
+
+
+ELF file SHA256: 06766abe2
+
+Rebooting...
+ets Jun  8 2016 00:22:57
+
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7176
+load:0x40078000,len:15564
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080638
+I (31) boot: ESP-IDF 5.3.1 2nd stage bootloader
+I (31) boot: compile time Feb 26 2025 23:14:12
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v0.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (44) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 4MB
+I (53) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (62) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00005000
+I (76) boot:  1 otadata          OTA data         01 00 0000e000 00002000
+I (84) boot:  2 app0             OTA app          00 10 00010000 00140000
+I (91) boot:  3 app1             OTA app          00 11 00150000 00140000
+I (99) boot:  4 spiffs           Unknown data     01 82 00290000 00160000
+I (106) boot:  5 coredump         Unknown data     01 03 003f0000 00010000
+I (114) boot: End of partition table
+I (118) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=2354ch (144716) map
+I (176) esp_image: segment 1: paddr=00033574 vaddr=3ffb0000 size=0400ch ( 16396) load
+I (183) esp_image: segment 2: paddr=00037588 vaddr=40080000 size=08a90h ( 35472) load
+I (197) esp_image: segment 3: paddr=00040020 vaddr=400d0020 size=a6448h (681032) map
+I (430) esp_image: segment 4: paddr=000e6470 vaddr=40088a90 size=0e918h ( 59672) load
+I (466) boot: Loaded app from partition at offset 0x10000
+I (466) boot: Disabling RNG early entropy source...
+I (478) cpu_start: Multicore app
+I (486) cpu_start: Pro cpu start user code
+I (486) cpu_start: cpu freq: 160000000 Hz
+I (486) app_init: Application information:
+I (489) app_init: Project name:     zenoh-lib
+I (494) app_init: App version:      6d5def7-dirty
+I (500) app_init: Compile time:     Feb 26 2025 23:11:28
+I (506) app_init: ELF file SHA256:  06766abe2...
+I (511) app_init: ESP-IDF:          5.3.1
+I (516) efuse_init: Min chip rev:     v0.0
+I (520) efuse_init: Max chip rev:     v3.99 
+I (525) efuse_init: Chip rev:         v0.0
+I (530) heap_init: Initializing. RAM available for dynamic allocation:
+I (537) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (543) heap_init: At 3FFB96F8 len 00026908 (154 KiB): DRAM
+I (550) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (556) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (562) heap_init: At 400973A8 len 00008C58 (35 KiB): IRAM
+I (570) spi_flash: detected chip: gd
+I (573) spi_flash: flash io: dio
+I 00:00:00.009 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.013 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.019 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.024 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.030 |         actor.h:  29 | Channel created [5][4]
+I (606) main_task: Started on CPU0
+I (616) main_task: Calling app_main()
+I 00:00:00.071 |       actor.cpp: 179 |  starting Thread actors on core 0 
+I 00:00:00.072 |       actor.cpp: 243 | starting Thread actors
+I (656) wifi:wifi driver task: 3ffc409c, prio:23, stack:6656, core=0
+I (666) wifi:wifi firmware version: ccaebfa
+I (666) wifi:wifi certification version: v7.0
+I (666) wifi:config NVS flash: enabled
+I (666) wifi:config nano formating: disabled
+I (666) wifi:Init data frame dynamic rx buffer num: 32
+I (676) wifi:Init static rx mgmt buffer num: 5
+I (676) wifi:Init management short buffer num: 32
+I (686) wifi:Init dynamic tx buffer num: 32
+I (686) wifi:Init static rx buffer size: 1600
+I (696) wifi:Init static rx buffer num: 10
+I (696) wifi:Init dynamic rx buffer num: 32
+I (696) wifi_init: rx ba win: 6
+I (706) wifi_init: accept mbox: 6
+I (706) wifi_init: tcpip mbox: 32
+I (706) wifi_init: udp mbox: 6
+I (716) wifi_init: tcp mbox: 6
+I (716) wifi_init: tcp tx win: 5760
+I (726) wifi_init: tcp rx win: 5760
+I (726) wifi_init: tcp mss: 1440
+I (726) wifi_init: WiFi IRAM OP enabled
+I (736) wifi_init: WiFi RX IRAM OP enabled
+I (736) phy_init: phy_version 4830,54550f7,Jun 20 2024,14:22:08
+I (826) wifi:mode : sta (24:0a:c4:81:e0:38)
+I (826) wifi:enable tsf
+I 00:00:00.265 |  wifi_actor.cpp: 143 | WiFi STA started
+I (836) wifi:new:<1,0>, old:<1,0>, ap:<255,255>, sta:<1,0>, prof:1, snd_ch_cfg:0x0
+I (836) wifi:state: init -> auth (0xb0)
+I (846) wifi:state: auth -> assoc (0x0)
+I (856) wifi:state: assoc -> run (0x10)
+I (856) wifi:<ba-add>idx:0 (ifx:0, 00:23:cd:19:fc:f5), tid:0, ssn:0, winSize:64
+I (866) wifi:connected with Merckx2, aid = 1, channel 1, BW20, bssid = 00:23:cd:19:fc:f5
+I (866) wifi:security: WPA2-PSK, phy: bgn, rssi: -38
+I (876) wifi:pm start, type: 1
+
+I (876) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
+I 00:00:00.356 |  wifi_actor.cpp: 454 | Max AP number ap_info can hold = 10
+I 00:00:00.357 |  wifi_actor.cpp: 457 | Total APs scanned = 0, actual AP number ap_info holds = 0
+I 00:00:00.361 |  wifi_actor.cpp: 477 | Highest RSSI = -128, AP index = 0
+I 00:00:00.368 |  wifi_actor.cpp:  74 | Scanned SSID: 
+W (936) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2
+I 00:00:00.383 |  wifi_actor.cpp: 197 | Connecting to WiFi network...
+I (956) wifi:AP's beacon interval = 102400 us, DTIM period = 1
+I (1276) wifi:<ba-add>idx:1 (ifx:0, 00:23:cd:19:fc:f5), tid:6, ssn:0, winSize:64
+I (2386) esp_netif_handlers: sta ip: 192.168.0.247, mask: 255.255.255.0, gw: 192.168.0.1
+I 00:00:01.819 |  wifi_actor.cpp: 160 | WiFi STA got IP address
+I 00:00:01.843 | zenoh_actor.cpp: 148 | Own ZID  : f1e11c2e2bc0ee7f20e2b7bdc2bd0489
+I 00:00:01.844 | zenoh_actor.cpp: 155 | Connected to Router : d02cc75d4067811cc77d673dc3e6c85e
+I 00:00:01.849 | zenoh_actor.cpp:  75 | Connected to Zenoh.
+I 00:00:01.854 | zenoh_actor.cpp: 213 | Declaring subscriber for 'dst/esp1/**'...
+I 00:00:05.067 |        main.cpp: 158 |  free heap size: 195640 biggest block : 110592 
+I 00:00:10.067 |        main.cpp: 158 |  free heap size: 195660 biggest block : 110592 
+I 00:00:15.067 |        main.cpp: 158 |  free heap size: 195652 biggest block : 110592 
+I 00:00:20.067 |        main.cpp: 158 |  free heap size: 195660 biggest block : 110592 
+I 00:13:20.828 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:25.838 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:30.850 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:35.848 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:40.848 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:45.858 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:50.858 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:13:55.868 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:00.879 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:05.879 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:10.889 |        main.cpp: 158 |  free heap size: 195364 biggest block : 110592 
+I 00:14:15.889 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:20.889 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:25.899 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:30.899 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:35.924 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:40.917 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:45.919 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:50.930 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:14:55.929 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+I 00:15:00.929 |        main.cpp: 158 |  free heap size: 195592 biggest block : 110592 
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7176
+load:0x40078000,len:15564
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080638
+I (31) boot: ESP-IDF 5.3.1 2nd stage bootloader
+I (31) boot: compile time Feb 26 2025 23:14:12
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v0.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 4MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00005000
+I (76) boot:  1 otadata          OTA data         01 00 0000e000 00002000
+I (84) boot:  2 app0             OTA app          00 10 00010000 00140000
+I (91) boot:  3 app1             OTA app          00 11 00150000 00140000
+I (99) boot:  4 spiffs           Unknown data     01 82 00290000 00160000
+I (106) boot:  5 coredump         Unknown data     01 03 003f0000 00010000
+I (114) boot: End of partition table
+I (118) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=2354ch (144716) map
+I (176) esp_image: segment 1: paddr=00033574 vaddr=3ffb0000 size=0400ch ( 16396) load
+I (182) esp_image: segment 2: paddr=00037588 vaddr=40080000 size=08a90h ( 35472) load
+I (196) esp_image: segment 3: paddr=00040020 vaddr=400d0020 size=a6448h (681032) map
+I (430) esp_image: segment 4: paddr=000e6470 vaddr=40088a90 size=0e918h ( 59672) load
+I (465) boot: Loaded app from partition at offset 0x10000
+I (465) boot: Disabling RNG early entropy source...
+I (478) cpu_start: Multicore app
+I (486) cpu_start: Pro cpu start user code
+I (486) cpu_start: cpu freq: 160000000 Hz
+I (486) app_init: Application information:
+I (489) app_init: Project name:     zenoh-lib
+I (494) app_init: App version:      6d5def7-dirty
+I (499) app_init: Compile time:     Feb 26 2025 23:11:28
+I (505) app_init: ELF file SHA256:  2f249d575...
+I (511) app_init: ESP-IDF:          5.3.1
+I (515) efuse_init: Min chip rev:     v0.0
+I (520) efuse_init: Max chip rev:     v3.99 
+I (525) efuse_init: Chip rev:         v0.0
+I (530) heap_init: Initializing. RAM available for dynamic allocation:
+I (537) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (543) heap_init: At 3FFB96F8 len 00026908 (154 KiB): DRAM
+I (549) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (556) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (562) heap_init: At 400973A8 len 00008C58 (35 KiB): IRAM
+I (570) spi_flash: detected chip: gd
+I (573) spi_flash: flash io: dio
+I 00:00:00.009 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.013 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.019 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.024 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.030 |         actor.h:  29 | Channel created [5][4]
+I (605) main_task: Started on CPU0
+I (615) main_task: Calling app_main()
+I 00:00:00.071 |       actor.cpp: 179 |  starting Thread actors on core 0 
+I 00:00:00.072 |       actor.cpp: 243 | starting Thread actors
+I (655) wifi:wifi driver task: 3ffc409c, prio:23, stack:6656, core=0
+I (665) wifi:wifi firmware version: ccaebfa
+I (665) wifi:wifi certification version: v7.0
+I (665) wifi:config NVS flash: enabled
+I (665) wifi:config nano formating: disabled
+I (665) wifi:Init data frame dynamic rx buffer num: 32
+I (675) wifi:Init static rx mgmt buffer num: 5
+I (675) wifi:Init management short buffer num: 32
+I (685) wifi:Init dynamic tx buffer num: 32
+I (685) wifi:Init static rx buffer size: 1600
+I (695) wifi:Init static rx buffer num: 10
+I (695) wifi:Init dynamic rx buffer num: 32
+I (695) wifi_init: rx ba win: 6
+I (705) wifi_init: accept mbox: 6
+I (705) wifi_init: tcpip mbox: 32
+I (705) wifi_init: udp mbox: 6
+I (715) wifi_init: tcp mbox: 6
+I (715) wifi_init: tcp tx win: 5760
+I (725) wifi_init: tcp rx win: 5760
+I (725) wifi_init: tcp mss: 1440
+I (725) wifi_init: WiFi IRAM OP enabled
+I (735) wifi_init: WiFi RX IRAM OP enabled
+I (735) phy_init: phy_version 4830,54550f7,Jun 20 2024,14:22:08
+I (825) wifi:mode : sta (24:0a:c4:81:e0:38)
+I (825) wifi:enable tsf
+I 00:00:00.267 |  wifi_actor.cpp: 143 | WiFi STA started
+I (835) wifi:new:<1,0>, old:<1,0>, ap:<255,255>, sta:<1,0>, prof:1, snd_ch_cfg:0x0
+I (835) wifi:state: init -> auth (0xb0)
+I (845) wifi:state: auth -> assoc (0x0)
+I (845) wifi:state: assoc -> run (0x10)
+I (855) wifi:<ba-add>idx:0 (ifx:0, 00:23:cd:19:fc:f5), tid:0, ssn:0, winSize:64
+I (865) wifi:connected with Merckx2, aid = 1, channel 1, BW20, bssid = 00:23:cd:19:fc:f5
+I (865) wifi:security: WPA2-PSK, phy: bgn, rssi: -35
+I (865) wifi:pm start, type: 1
+
+I (865) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
+I (875) wifi:AP's beacon interval = 102400 us, DTIM period = 1
+I 00:00:00.356 |  wifi_actor.cpp: 454 | Max AP number ap_info can hold = 10
+I 00:00:00.357 |  wifi_actor.cpp: 457 | Total APs scanned = 0, actual AP number ap_info holds = 0
+I 00:00:00.361 |  wifi_actor.cpp: 477 | Highest RSSI = -128, AP index = 0
+I 00:00:00.368 |  wifi_actor.cpp:  74 | Scanned SSID: 
+W (935) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2
+I 00:00:00.383 |  wifi_actor.cpp: 197 | Connecting to WiFi network...
+I (1275) wifi:<ba-add>idx:1 (ifx:0, 00:23:cd:19:fc:f5), tid:6, ssn:0, winSize:64
+I (2385) esp_netif_handlers: sta ip: 192.168.0.247, mask: 255.255.255.0, gw: 192.168.0.1
+I 00:00:01.820 |  wifi_actor.cpp: 160 | WiFi STA got IP address
+I 00:00:01.848 | zenoh_actor.cpp: 148 | Own ZID  : 905846b2fbefcb5903b1eb98fd8e34ac
+I 00:00:01.849 | zenoh_actor.cpp: 155 | Connected to Router : d02cc75d4067811cc77d673dc3e6c85e
+I 00:00:01.853 | zenoh_actor.cpp:  75 | Connected to Zenoh.
+I 00:00:01.859 | zenoh_actor.cpp: 213 | Declaring subscriber for 'dst/esp1/**'...
+I 00:00:05.067 |        main.cpp: 158 |  free heap size: 195672 biggest block : 110592 
+I 00:00:10.067 |        main.cpp: 158 |  free heap size: 195672 biggest block : 110592 
+I 00:00:15.067 |        main.cpp: 158 |  free heap size: 195660 biggest block : 110592 
+I 00:00:20.067 |        main.cpp: 158 |  free heap size: 195672 biggest block : 110592 
+I 00:00:25.067 |        main.cpp: 158 |  free heap size: 195660 biggest block : 110592 
+I 00:00:30.067 |        main.cpp: 158 |  free heap size: 195672 biggest block : 110592 
+I 00:00:33.277 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:00:33.278 |        main.cpp: 136 | Received OTA message [42]
+I 00:00:33.279 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:00:33.285 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:00:33.290 |        serdes.h: 168 | iterate_map loop -2
+I 00:00:33.296 |   ota_actor.cpp: 141 | key 0
+I 00:00:33.300 |        serdes.h: 168 | iterate_map loop -3
+I 00:00:33.305 |   ota_actor.cpp: 141 | key 5
+I 00:00:33.309 |        serdes.h: 168 | iterate_map loop -4
+I 00:00:33.315 |   ota_actor.cpp:  17 | on_cmd
+I 00:00:33.319 |   ota_actor.cpp:  21 | cmd.msg
+I 00:00:33.323 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:00:33.328 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:00:33.925 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:00:33.927 |        main.cpp: 136 | Received OTA message [1835]
+I 00:00:33.928 |          cbor.h: 131 | Deserializing 1835 bytes
+I 00:00:33.934 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:00:33.939 |        serdes.h: 168 | iterate_map loop -2
+I 00:00:33.945 |   ota_actor.cpp: 141 | key 0
+I 00:00:33.949 |        serdes.h: 168 | iterate_map loop -3
+I 00:00:33.954 |   ota_actor.cpp: 141 | key 2
+I 00:00:33.958 |        cbor.cpp: 225 | Failed to decode bytes
+I 00:00:33.964 |        cbor.cpp: 225 | [-2] src/cbor.cpp:225
+I 00:00:33.969 |   ota_actor.cpp:  17 | on_cmd
+I 00:00:33.973 |   ota_actor.cpp:  21 | cmd.msg
+I 00:00:33.977 |   ota_actor.cpp:  25 | msg.operation 2
+I 00:00:33.982 |   ota_actor.cpp:  43 |  invalid message 
+I 00:00:35.071 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:00:40.076 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:00:45.081 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:00:50.078 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:00:55.081 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:00.086 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:05.091 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:10.096 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:15.101 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:20.106 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:25.121 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:30.117 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:35.121 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:40.136 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:45.141 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:50.146 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:01:55.152 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:00.147 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:05.152 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:10.148 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:15.162 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:20.157 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:25.167 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:30.167 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:35.192 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:40.197 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:45.202 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:50.198 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:02:55.203 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:00.207 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:05.212 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:10.207 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:03:15.221 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:20.217 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:25.242 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:30.247 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:35.252 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:40.257 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:45.262 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:50.257 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:03:55.262 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:00.257 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:05.282 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:10.287 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:15.294 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:20.297 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:25.302 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:30.307 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:35.312 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:40.307 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:45.312 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:50.307 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:04:55.333 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:00.326 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:05.331 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:10.327 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:15.341 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:20.337 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:25.362 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:30.357 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:35.358 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:40.358 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:45.368 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:50.369 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:05:55.379 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:00.379 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:05.389 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:10.389 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:15.404 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:20.399 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:06:25.409 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:30.409 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:35.418 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:40.427 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:45.434 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:50.429 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:06:55.439 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:07:00.452 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:05.455 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:10.450 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:15.464 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:20.460 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:25.475 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:30.470 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:35.484 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:40.490 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:07:45.495 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:50.490 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:07:55.504 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:00.500 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:05.516 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:10.521 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:15.526 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:20.542 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:25.546 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:30.552 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:35.546 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:40.550 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:45.556 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:50.561 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:08:55.566 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:00.570 |        main.cpp: 158 |  free heap size: 195176 biggest block : 110592 
+I 00:09:05.576 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:10.581 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:15.596 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:20.602 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:25.596 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:30.599 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:35.606 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:40.621 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:45.626 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:50.631 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:09:55.627 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:00.631 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:05.647 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:10.652 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:15.656 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:20.661 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:25.666 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:30.671 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:35.676 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:40.682 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:45.686 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:50.692 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:10:55.696 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:00.702 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:05.707 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:10.713 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:15.708 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:20.712 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:25.707 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:30.724 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:35.717 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:40.743 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:45.738 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:50.752 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:11:55.748 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:00.765 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:05.758 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:10.758 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:15.758 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:20.768 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:25.768 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:12:30.779 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:35.780 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:40.795 |        main.cpp: 158 |  free heap size: 195416 biggest block : 110592 
+I 00:12:45.798 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:50.804 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:12:55.800 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:13:00.813 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:13:05.810 |        main.cpp: 158 |  free heap size: 195644 biggest block : 110592 
+I 00:13:10.825 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:15.830 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:20.838 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:25.841 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:30.847 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:35.854 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:40.847 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:45.872 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:50.877 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:13:55.883 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:00.887 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:05.893 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:10.897 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:15.904 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:20.897 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:25.897 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:30.897 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:35.922 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:40.918 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:45.922 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:50.917 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:14:55.942 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:00.937 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:05.938 |        main.cpp: 158 |  free heap size: 195208 biggest block : 110592 
+I 00:15:10.938 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:15.952 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:20.958 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:25.966 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:30.967 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:35.968 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:40.968 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+I 00:15:45.978 |        main.cpp: 158 |  free heap size: 195436 biggest block : 110592 
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7176
+load:0x40078000,len:15564
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080638
+I (31) boot: ESP-IDF 5.3.1 2nd stage bootloader
+I (31) boot: compile time Feb 26 2025 23:14:12
+I (31) boot: Multicore bootloader
+I (35) boot: chip revision: v0.0
+I (39) boot.esp32: SPI Speed      : 40MHz
+I (43) boot.esp32: SPI Mode       : DIO
+I (48) boot.esp32: SPI Flash Size : 4MB
+I (52) boot: Enabling RNG early entropy source...
+I (58) boot: Partition Table:
+I (61) boot: ## Label            Usage          Type ST Offset   Length
+I (69) boot:  0 nvs              WiFi data        01 02 00009000 00005000
+I (76) boot:  1 otadata          OTA data         01 00 0000e000 00002000
+I (84) boot:  2 app0             OTA app          00 10 00010000 00140000
+I (91) boot:  3 app1             OTA app          00 11 00150000 00140000
+I (99) boot:  4 spiffs           Unknown data     01 82 00290000 00160000
+I (106) boot:  5 coredump         Unknown data     01 03 003f0000 00010000
+I (114) boot: End of partition table
+I (118) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=2354ch (144716) map
+I (176) esp_image: segment 1: paddr=00033574 vaddr=3ffb0000 size=0400ch ( 16396) load
+I (182) esp_image: segment 2: paddr=00037588 vaddr=40080000 size=08a90h ( 35472) load
+I (196) esp_image: segment 3: paddr=00040020 vaddr=400d0020 size=a6448h (681032) map
+I (430) esp_image: segment 4: paddr=000e6470 vaddr=40088a90 size=0e918h ( 59672) load
+I (465) boot: Loaded app from partition at offset 0x10000
+I (465) boot: Disabling RNG early entropy source...
+I (477) cpu_start: Multicore app
+I (486) cpu_start: Pro cpu start user code
+I (486) cpu_start: cpu freq: 160000000 Hz
+I (486) app_init: Application information:
+I (489) app_init: Project name:     zenoh-lib
+I (494) app_init: App version:      6d5def7-dirty
+I (499) app_init: Compile time:     Feb 26 2025 23:11:28
+I (505) app_init: ELF file SHA256:  2f249d575...
+I (511) app_init: ESP-IDF:          5.3.1
+I (515) efuse_init: Min chip rev:     v0.0
+I (520) efuse_init: Max chip rev:     v3.99 
+I (525) efuse_init: Chip rev:         v0.0
+I (530) heap_init: Initializing. RAM available for dynamic allocation:
+I (537) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM
+I (543) heap_init: At 3FFB96F8 len 00026908 (154 KiB): DRAM
+I (549) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM
+I (556) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM
+I (562) heap_init: At 400973A8 len 00008C58 (35 KiB): IRAM
+I (570) spi_flash: detected chip: gd
+I (573) spi_flash: flash io: dio
+I 00:00:00.009 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.013 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.019 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.024 |         actor.h:  29 | Channel created [5][4]
+I 00:00:00.030 |         actor.h:  29 | Channel created [5][4]
+I (605) main_task: Started on CPU0
+I (615) main_task: Calling app_main()
+I 00:00:00.071 |       actor.cpp: 179 |  starting Thread actors on core 0 
+I 00:00:00.072 |       actor.cpp: 243 | starting Thread actors
+I (655) wifi:wifi driver task: 3ffc409c, prio:23, stack:6656, core=0
+I (665) wifi:wifi firmware version: ccaebfa
+I (665) wifi:wifi certification version: v7.0
+I (665) wifi:config NVS flash: enabled
+I (665) wifi:config nano formating: disabled
+I (665) wifi:Init data frame dynamic rx buffer num: 32
+I (675) wifi:Init static rx mgmt buffer num: 5
+I (675) wifi:Init management short buffer num: 32
+I (685) wifi:Init dynamic tx buffer num: 32
+I (685) wifi:Init static rx buffer size: 1600
+I (695) wifi:Init static rx buffer num: 10
+I (695) wifi:Init dynamic rx buffer num: 32
+I (695) wifi_init: rx ba win: 6
+I (705) wifi_init: accept mbox: 6
+I (705) wifi_init: tcpip mbox: 32
+I (705) wifi_init: udp mbox: 6
+I (715) wifi_init: tcp mbox: 6
+I (715) wifi_init: tcp tx win: 5760
+I (725) wifi_init: tcp rx win: 5760
+I (725) wifi_init: tcp mss: 1440
+I (725) wifi_init: WiFi IRAM OP enabled
+I (735) wifi_init: WiFi RX IRAM OP enabled
+I (735) phy_init: phy_version 4830,54550f7,Jun 20 2024,14:22:08
+I (825) wifi:mode : sta (24:0a:c4:81:e0:38)
+I (825) wifi:enable tsf
+I 00:00:00.265 |  wifi_actor.cpp: 143 | WiFi STA started
+I (835) wifi:new:<1,0>, old:<1,0>, ap:<255,255>, sta:<1,0>, prof:1, snd_ch_cfg:0x0
+I (835) wifi:state: init -> auth (0xb0)
+I (845) wifi:state: auth -> assoc (0x0)
+I (845) wifi:state: assoc -> run (0x10)
+I (845) wifi:<ba-add>idx:0 (ifx:0, 00:23:cd:19:fc:f5), tid:0, ssn:0, winSize:64
+I (855) wifi:connected with Merckx2, aid = 1, channel 1, BW20, bssid = 00:23:cd:19:fc:f5
+I (865) wifi:security: WPA2-PSK, phy: bgn, rssi: -35
+I (865) wifi:pm start, type: 1
+
+I (865) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us
+I (895) wifi:AP's beacon interval = 102400 us, DTIM period = 1
+I 00:00:00.356 |  wifi_actor.cpp: 454 | Max AP number ap_info can hold = 10
+I 00:00:00.357 |  wifi_actor.cpp: 457 | Total APs scanned = 0, actual AP number ap_info holds = 0
+I 00:00:00.361 |  wifi_actor.cpp: 477 | Highest RSSI = -128, AP index = 0
+I 00:00:00.368 |  wifi_actor.cpp:  74 | Scanned SSID: 
+W (935) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2
+I 00:00:00.383 |  wifi_actor.cpp: 197 | Connecting to WiFi network...
+I (1155) wifi:<ba-add>idx:1 (ifx:0, 00:23:cd:19:fc:f5), tid:6, ssn:0, winSize:64
+I (2375) esp_netif_handlers: sta ip: 192.168.0.247, mask: 255.255.255.0, gw: 192.168.0.1
+I 00:00:01.810 |  wifi_actor.cpp: 160 | WiFi STA got IP address
+I 00:00:01.847 | zenoh_actor.cpp: 148 | Own ZID  : af6859f33336f2352f55cac1f7c77dbf
+I 00:00:01.848 | zenoh_actor.cpp: 155 | Connected to Router : d02cc75d4067811cc77d673dc3e6c85e
+I 00:00:01.852 | zenoh_actor.cpp:  75 | Connected to Zenoh.
+I 00:00:01.858 | zenoh_actor.cpp: 213 | Declaring subscriber for 'dst/esp1/**'...
+I 00:00:05.068 |        main.cpp: 158 |  free heap size: 195472 biggest block : 110592 
+I 00:00:06.170 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:00:06.171 |        main.cpp: 136 | Received OTA message [42]
+I 00:00:06.173 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:00:06.178 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:00:06.184 |        serdes.h: 168 | iterate_map loop -2
+I 00:00:06.189 |   ota_actor.cpp: 141 | key 0
+I 00:00:06.193 |        serdes.h: 168 | iterate_map loop -3
+I 00:00:06.198 |   ota_actor.cpp: 141 | key 5
+I 00:00:06.203 |        serdes.h: 168 | iterate_map loop -4
+I 00:00:06.208 |   ota_actor.cpp:  17 | on_cmd
+I 00:00:06.212 |   ota_actor.cpp:  21 | cmd.msg
+I 00:00:06.216 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:00:06.221 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:00:06.716 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:00:06.717 |        main.cpp: 136 | Received OTA message [1837]
+I 00:00:06.719 |          cbor.h: 131 | Deserializing 1837 bytes
+I 00:00:06.724 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:00:06.730 |        serdes.h: 168 | iterate_map loop -2
+I 00:00:06.735 |   ota_actor.cpp: 141 | key 0
+I 00:00:06.739 |        serdes.h: 168 | iterate_map loop -3
+I 00:00:06.744 |   ota_actor.cpp: 141 | key 1
+I 00:00:06.748 |        serdes.h: 168 | iterate_map loop -4
+I 00:00:06.754 |   ota_actor.cpp: 141 | key 2
+I 00:00:06.758 |        cbor.cpp: 225 | Failed to decode bytes
+I 00:00:06.763 |        cbor.cpp: 225 | [-2] src/cbor.cpp:225
+I 00:00:06.769 |   ota_actor.cpp:  17 | on_cmd
+I 00:00:06.773 |   ota_actor.cpp:  21 | cmd.msg
+I 00:00:06.777 |   ota_actor.cpp:  25 | msg.operation 2
+I 00:00:06.782 |   ota_actor.cpp:  43 |  invalid message 
+I 00:00:10.067 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:15.067 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:20.067 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:25.067 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:30.067 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:35.070 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:40.076 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:45.080 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:50.085 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:00:55.078 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:00.080 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:05.081 |        main.cpp: 158 |  free heap size: 195376 biggest block : 110592 
+I 00:01:10.096 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:15.101 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:20.108 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:25.111 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:30.116 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:35.117 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:40.117 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:45.127 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:50.127 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:01:55.142 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:02:00.147 |        main.cpp: 158 |  free heap size: 195604 biggest block : 110592 
+I 00:02:05.153 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:10.157 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:15.157 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:20.157 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:25.167 |        main.cpp: 158 |  free heap size: 195396 biggest block : 110592 
+I 00:02:30.177 |        main.cpp: 158 |  free heap size: 195396 biggest block : 110592 
+I 00:02:35.177 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:40.177 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:45.202 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:50.197 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:02:55.204 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:00.197 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:05.207 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:10.207 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:15.217 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:20.217 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:25.233 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:30.227 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:35.237 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:40.237 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:45.247 |        main.cpp: 158 |  free heap size: 195396 biggest block : 110592 
+I 00:03:50.247 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:03:55.258 |        main.cpp: 158 |  free heap size: 195396 biggest block : 110592 
+I 00:04:00.267 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:05.273 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:10.268 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:15.278 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:20.278 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:25.288 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:30.288 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:35.298 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:40.298 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:45.314 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:50.308 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:04:55.318 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:05:00.328 |        main.cpp: 158 |  free heap size: 195624 biggest block : 110592 
+I 00:05:02.312 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:05:02.313 |        main.cpp: 136 | Received OTA message [42]
+I 00:05:02.314 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:05:02.320 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:05:02.326 |        serdes.h: 168 | iterate_map loop -2
+I 00:05:02.331 |   ota_actor.cpp: 141 | key 0
+I 00:05:02.335 |        serdes.h: 168 | iterate_map loop -3
+I 00:05:02.340 |   ota_actor.cpp: 141 | key 5
+I 00:05:02.344 |        serdes.h: 168 | iterate_map loop -4
+I 00:05:02.350 |   ota_actor.cpp:  17 | on_cmd
+I 00:05:02.353 |   ota_actor.cpp:  21 | cmd.msg
+I 00:05:02.358 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:05:02.363 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:05:02.848 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:05:02.849 |        main.cpp: 136 | Received OTA message [2096]
+I 00:05:02.851 |          cbor.h: 131 | Deserializing 2096 bytes
+I 00:05:02.857 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:05:02.862 |        serdes.h: 168 | iterate_map loop -2
+I 00:05:02.867 |   ota_actor.cpp: 141 | key 0
+I 00:05:02.871 |        serdes.h: 168 | iterate_map loop -3
+I 00:05:02.877 |   ota_actor.cpp: 141 | key 1
+I 00:05:02.881 |        serdes.h: 168 | iterate_map loop -4
+I 00:05:02.886 |   ota_actor.cpp: 141 | key 2
+I 00:05:02.890 |        cbor.cpp: 225 | Failed to decode bytes
+I 00:05:02.896 |        cbor.cpp: 225 | [-2] src/cbor.cpp:225
+I 00:05:02.901 |   ota_actor.cpp:  17 | on_cmd
+I 00:05:02.905 |   ota_actor.cpp:  21 | cmd.msg
+I 00:05:02.910 |   ota_actor.cpp:  25 | msg.operation 2
+I 00:05:02.915 |   ota_actor.cpp:  43 |  invalid message 
+I 00:05:05.329 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:10.329 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:15.339 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:20.339 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:25.353 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:30.349 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:35.360 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:40.368 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:05:45.374 |        main.cpp: 158 |  free heap size: 195348 biggest block : 110592 
+I 00:05:50.369 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:05:55.385 |        main.cpp: 158 |  free heap size: 195564 biggest block : 110592 
+I 00:06:00.379 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:06:05.396 |        main.cpp: 158 |  free heap size: 195564 biggest block : 110592 
+I 00:06:10.400 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:06:15.403 |        main.cpp: 158 |  free heap size: 195564 biggest block : 110592 
+I 00:06:20.400 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:06:25.411 |        main.cpp: 158 |  free heap size: 195564 biggest block : 110592 
+I 00:06:30.421 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:06:35.421 |        main.cpp: 158 |  free heap size: 195568 biggest block : 110592 
+I 00:06:40.428 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:06:45.433 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:06:50.441 |        main.cpp: 158 |  free heap size: 195348 biggest block : 110592 
+I 00:06:55.441 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:07:00.461 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:07:05.465 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:07:10.460 |        main.cpp: 158 |  free heap size: 195576 biggest block : 110592 
+I 00:07:13.890 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:07:13.891 |        main.cpp: 136 | Received OTA message [42]
+I 00:07:13.893 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:07:13.898 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:07:13.904 |        serdes.h: 168 | iterate_map loop -2
+I 00:07:13.909 |   ota_actor.cpp: 141 | key 0
+I 00:07:13.913 |        serdes.h: 168 | iterate_map loop -3
+I 00:07:13.918 |   ota_actor.cpp: 141 | key 5
+I 00:07:13.922 |        serdes.h: 168 | iterate_map loop -4
+I 00:07:13.928 |   ota_actor.cpp:  17 | on_cmd
+I 00:07:13.932 |   ota_actor.cpp:  21 | cmd.msg
+I 00:07:13.936 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:07:13.941 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:07:14.415 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:07:14.416 |        main.cpp: 136 | Received OTA message [2096]
+I 00:07:14.417 |          cbor.h: 131 | Deserializing 2096 bytes
+I 00:07:14.423 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:07:14.429 |        serdes.h: 168 | iterate_map loop -2
+I 00:07:14.434 |   ota_actor.cpp: 141 | key 0
+I 00:07:14.438 |        serdes.h: 168 | iterate_map loop -3
+I 00:07:14.443 |   ota_actor.cpp: 141 | key 1
+I 00:07:14.447 |        serdes.h: 168 | iterate_map loop -4
+I 00:07:14.453 |   ota_actor.cpp: 141 | key 2
+I 00:07:14.457 |        cbor.cpp: 225 | Failed to decode bytes
+I 00:07:14.462 |        cbor.cpp: 225 | [-2] src/cbor.cpp:225
+I 00:07:14.468 |   ota_actor.cpp:  17 | on_cmd
+I 00:07:14.472 |   ota_actor.cpp:  21 | cmd.msg
+I 00:07:14.476 |   ota_actor.cpp:  25 | msg.operation 2
+I 00:07:14.481 |   ota_actor.cpp:  43 |  invalid message 
+I 00:07:15.460 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:07:20.460 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:07:25.476 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:07:30.482 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:07:35.485 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:07:40.491 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:07:45.496 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:07:50.499 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:07:55.506 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:00.511 |        main.cpp: 158 |  free heap size: 195300 biggest block : 110592 
+I 00:08:05.527 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:10.532 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:15.537 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:08:20.542 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:25.547 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:30.551 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:35.557 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:40.562 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:45.557 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:50.564 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:08:55.557 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:00.582 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:05.587 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:10.592 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:09:15.587 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:20.587 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:25.587 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:30.602 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:09:35.597 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:40.622 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:45.627 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:09:50.632 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:09:55.628 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:10:00.628 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:05.636 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:10:10.642 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:10:15.638 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:20.648 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:10:25.648 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:30.658 |        main.cpp: 158 |  free heap size: 195528 biggest block : 110592 
+I 00:10:35.658 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:40.668 |        main.cpp: 158 |  free heap size: 195300 biggest block : 110592 
+I 00:10:45.669 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:50.679 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:10:55.678 |        main.cpp: 158 |  free heap size: 195296 biggest block : 110592 
+I 00:11:00.689 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:11:05.689 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:10.699 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:15.700 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:11:20.710 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:25.710 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:30.726 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:11:35.740 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:40.745 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:11:45.750 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:50.755 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:11:55.748 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:00.755 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:05.750 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:12:10.765 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:15.771 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:20.775 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:25.792 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:12:30.796 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:35.801 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:12:40.806 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:12:45.811 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:50.816 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:12:55.821 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:13:00.826 |        main.cpp: 158 |  free heap size: 195520 biggest block : 110592 
+I 00:13:05.831 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:13:10.836 |        main.cpp: 158 |  free heap size: 195524 biggest block : 110592 
+I 00:13:15.841 |        main.cpp: 158 |  free heap size: 195516 biggest block : 110592 
+I 00:13:20.185 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:13:20.186 |        main.cpp: 136 | Received OTA message [42]
+I 00:13:20.188 |          cbor.h: 131 | Deserializing 42 bytes
+I 00:13:20.193 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:13:20.199 |        serdes.h: 168 | iterate_map loop -2
+I 00:13:20.204 |   ota_actor.cpp: 141 | key 0
+I 00:13:20.208 |        serdes.h: 168 | iterate_map loop -3
+I 00:13:20.213 |   ota_actor.cpp: 141 | key 5
+I 00:13:20.217 |        serdes.h: 168 | iterate_map loop -4
+I 00:13:20.223 |   ota_actor.cpp:  17 | on_cmd
+I 00:13:20.227 |   ota_actor.cpp:  21 | cmd.msg
+I 00:13:20.231 |   ota_actor.cpp:  25 | msg.operation 0
+I 00:13:20.236 |   ota_actor.cpp:  28 | OTA_BEGIN
+I 00:13:20.695 | zenoh_actor.cpp: 298 | Received message on topic 'dst/esp1/ota' 
+I 00:13:20.696 |        main.cpp: 136 | Received OTA message [1072]
+I 00:13:20.697 |          cbor.h: 131 | Deserializing 1072 bytes
+I 00:13:20.703 |   ota_actor.cpp: 139 | OtaMsg::deserialize
+I 00:13:20.709 |        serdes.h: 168 | iterate_map loop -2
+I 00:13:20.714 |   ota_actor.cpp: 141 | key 0
+I 00:13:20.718 |        serdes.h: 168 | iterate_map loop -3
+I 00:13:20.723 |   ota_actor.cpp: 141 | key 1
+I 00:13:20.727 |        serdes.h: 168 | iterate_map loop -4
+I 00:13:20.733 |   ota_actor.cpp: 141 | key 2
+I 00:13:20.737 |        cbor.cpp: 225 | Failed to decode bytes
+I 00:13:20.742 |        cbor.cpp: 225 | [-2] src/cbor.cpp:225
+I 00:13:20.748 |   ota_actor.cpp:  17 | on_cmd
+I 00:13:20.752 |   ota_actor.cpp:  21 | cmd.msg
+I 00:13:20.756 |   ota_actor.cpp:  25 | msg.operation 2
+I 00:13:20.761 |   ota_actor.cpp:  43 |  invalid message 
+I 00:13:20.846 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:13:25.851 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:13:30.847 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:13:35.852 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:13:40.847 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:13:45.862 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:13:50.866 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:13:55.869 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:00.867 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:14:05.877 |        main.cpp: 158 |  free heap size: 195248 biggest block : 110592 
+I 00:14:10.878 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:15.887 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:20.887 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:14:25.897 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:30.906 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:35.907 |        main.cpp: 158 |  free heap size: 195472 biggest block : 110592 
+I 00:14:40.907 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:14:45.917 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:14:50.918 |        main.cpp: 158 |  free heap size: 195472 biggest block : 110592 
+I 00:14:55.928 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:15:00.928 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:15:05.938 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:15:10.938 |        main.cpp: 158 |  free heap size: 195472 biggest block : 110592 
+I 00:15:15.948 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 
+I 00:15:20.948 |        main.cpp: 158 |  free heap size: 195468 biggest block : 110592 
+I 00:15:25.959 |        main.cpp: 158 |  free heap size: 195476 biggest block : 110592 

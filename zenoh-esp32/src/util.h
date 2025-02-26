@@ -84,6 +84,17 @@ typedef bool Void;
     }                                                        \
   }
 
+#define CHECK_ESP(VAL)                                                       \
+  {                                                                          \
+    esp_err_t rc = (VAL);                                                    \
+    if (rc != ESP_OK)                                                        \
+    {                                                                        \
+      const char *erc_str = esp_err_to_name(rc);                             \
+      ERROR("rc=%d:%s %s:%d %s", rc, erc_str, __FILE__, __LINE__, #VAL); \
+      return Res::Err(rc, erc_str);                                          \
+    }                                                                        \
+  }
+
 // #define Void (void())
 
 template <typename T = void>
@@ -156,8 +167,8 @@ public:
 class Res
 {
 private:
-  uint32_t code;
-  std::optional<std::string> desc;
+  uint32_t _rc;
+  std::optional<std::string> _msg;
 
 public:
   /*Res(const Res &other)
@@ -172,41 +183,41 @@ public:
     return ret;
   }*/
 
-  Res() { code = 0; }
+  Res() { _rc = 0; }
 
   static Res Ok()
   {
     Res res;
-    res.code = 0;
+    res._rc = 0;
     return res;
   }
   static Res Err(uint32_t code, std::string desc)
   {
     Res res;
-    res.code = code;
-    res.desc = desc;
+    res._rc = code;
+    res._msg = desc;
     return res;
   }
 
-  bool is_ok() { return code == 0; }
-  bool is_err() { return code != 0; }
-  uint32_t rc() { return code; }
+  bool is_ok() { return _rc == 0; }
+  bool is_err() { return _rc != 0; }
+  uint32_t rc() { return _rc; }
   std::string msg()
   {
-    if (code)
+    if (_rc==0)
     {
       return std::string("NO error");
     }
     else
     {
-      return desc.value();
+      return _msg.value();
     }
   }
   Res on_err(std::function<Res(uint32_t, std::string)> f)
   {
     if (is_err())
     {
-      return f(code, desc.value());
+      return f(_rc, _msg.value());
     }
     else
     {
@@ -221,7 +232,7 @@ public:
     }
     else
     {
-      return Res::Err(code, desc.value());
+      return Res::Err(_rc, _msg.value());
     }
   }
 };
