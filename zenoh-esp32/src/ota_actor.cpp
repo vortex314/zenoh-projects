@@ -5,7 +5,7 @@ OtaActor::OtaActor() : OtaActor("led", 4096, 5, 5) {}
 
 OtaActor::OtaActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<OtaEvent, OtaCmd>(stack_size, name, priority, queue_depth)
 {
-    //  _timer_publish = timer_repetitive(1000);
+    _timer_publish = timer_repetitive(5000);
 }
 
 OtaActor::~OtaActor()
@@ -19,7 +19,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
     if (cmd.msg)
     {
         INFO("cmd.msg");
-        OtaMsg& msg = cmd.msg.value();
+        OtaMsg &msg = cmd.msg.value();
         if (msg.operation)
         {
             INFO("msg.operation %d", msg.operation.value());
@@ -55,7 +55,10 @@ void OtaActor::on_cmd(OtaCmd &cmd)
 
 void OtaActor::on_timer(int timer_id)
 {
-    INFO("timer_id %d not handled", timer_id);
+    const esp_partition_t *part = esp_ota_get_running_partition();
+    OtaMsg event;
+    event.partition_label = part->label;
+    emit(OtaEvent{.serdes = PublishSerdes(event)});
 }
 
 void OtaActor::on_start()
@@ -70,7 +73,7 @@ Res OtaActor::ota_begin()
         ERROR("Unable to get next OTA partition");
         return Res::Err(EBADF, "Unable to get next OTA partition");
     }
-//    INFO("Writing firmware to partition: %s", _update_partition->label);
+    //    INFO("Writing firmware to partition: %s", _update_partition->label);
     CHECK_ESP(esp_ota_begin(_update_partition, OTA_SIZE_UNKNOWN, &_ota_handle));
     return Res::Ok();
 }
@@ -87,7 +90,7 @@ Res OtaActor::ota_end()
 
 Res OtaActor::ota_write(uint32_t offset, Bytes &data)
 {
-    CHECK_ESP(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(),offset));
+    CHECK_ESP(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(), offset));
     return Res::Ok();
 }
 
@@ -121,7 +124,7 @@ Res OtaActor::flash(const uint8_t *data, size_t size)
 
 Res OtaMsg::serialize(Serializer &ser)
 {
-    int idx=0;
+    int idx = 0;
     ser.reset();
     ser.map_begin();
     ser.serialize(idx++, (std::optional<uint32_t>)operation);
@@ -130,6 +133,7 @@ Res OtaMsg::serialize(Serializer &ser)
     ser.serialize(idx++, rc);
     ser.serialize(idx++, message);
     ser.serialize(idx++, reply_to);
+    ser.serialize(idx++, partition_label);
     ser.map_end();
     return Res::Ok();
 }
@@ -137,7 +141,8 @@ Res OtaMsg::serialize(Serializer &ser)
 Res OtaMsg::deserialize(Deserializer &des)
 {
     INFO("OtaMsg::deserialize");
-    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res {
+    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
+                    {
         INFO("key %d", key);
         switch (key)
         {
@@ -156,8 +161,7 @@ Res OtaMsg::deserialize(Deserializer &des)
         default:
             INFO("unknown key %d",key);
             return d.skip_next();
-        }
-    });
-    
+        } });
+
     return Res::Ok();
 }

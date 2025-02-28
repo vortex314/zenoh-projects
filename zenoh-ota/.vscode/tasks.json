@@ -20,8 +20,8 @@
                 "--key",
                 "dst/esp1/ota",
                 "--binary",
-                "t3.txt"
-//                "../zenoh-esp32/.pio/build/esp1/firmware.bin"
+//                "t3.txt"
+                "../zenoh-esp32/.pio/build/esp1/firmware.bin"
             ],
             "group": {
                 "kind": "build",

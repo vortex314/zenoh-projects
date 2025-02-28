@@ -6,10 +6,11 @@
 
 use anyhow::{Context, Error, Result};
 use clap::{Arg, Command};
-use log::{error, info};
+use log::{debug, error, info};
 use minicbor::{to_vec, Encode};
 use std::path::Path;
 use std::{fs, thread::Thread};
+use tokio::time;
 use walkdir::WalkDir;
 use zenoh::handlers::FifoChannelHandler;
 use zenoh::pubsub::Subscriber;
@@ -99,7 +100,13 @@ async fn do_ota() -> Result<()> {
             let mut config = Config::default();
             //        config.insert_json5("mode", r#""client""#).unwrap();
             config.insert_json5("mode", "\"client\"").unwrap();
-            //        config.insert_json5("connect/endpoints", r#"["tcp/192.168.0.240:7447"]"#).unwrap();
+            config
+                .insert_json5("connect/endpoints", r#"["tcp/limero.ddns.net:7447"]"#)
+                .unwrap();
+            config
+                .insert_json5("scouting/multicast/enabled", "false")
+                .unwrap();
+
             //         info!("Using default Zenoh configuration: {:?}", config);
             config
         }
@@ -141,7 +148,7 @@ async fn do_ota() -> Result<()> {
 
     let subscriber = session.declare_subscriber(reply_topic).await.unwrap();
 
-    info!("Declared subscriber for key: '{}'", key);
+    info!("Declared subscriber for key: '{}'", reply_topic);
 
     let mut ota_msg = OtaMsg::default();
     ota_msg.operation = Some(OtaOperation::OtaBegin);
@@ -149,7 +156,7 @@ async fn do_ota() -> Result<()> {
 
     // Publish the OTA begin message to the specified Zenoh key
 
-    let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg).await?;
+    let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg, 5).await?;
 
     if reply.operation.unwrap() != OtaOperation::OtaBegin && reply.rc != Some(0) {
         return Err(anyhow::anyhow!(
@@ -158,34 +165,37 @@ async fn do_ota() -> Result<()> {
         ));
     }
 
-    let block_size = 512;
+    let block_size = 2000;
     let blocks = firmware_data.len() / block_size;
-    info!("Sending OTA data in {} blocks of 1024 bytes", blocks);
+    info!(
+        "Sending OTA data in {} blocks of {} bytes",
+        blocks, block_size
+    );
 
-    for i in 0..blocks {
-        let offset = i * block_size;
-        let mut size = block_size;
-        if i == blocks - 1 {
-            size = firmware_data.len() - i * block_size;
-        }
+    for i in 0..=blocks {
         let begin = i * block_size;
-        let end = begin + size;
-        let slice = &firmware_data[offset..end];
+        let mut end = begin + block_size;
+        if end > firmware_data.len() {
+            end = firmware_data.len()
+        }
+        let slice = &firmware_data[begin..end];
 
         info!(
-            "Sending OTA data chunk: {} bytes at offset: {}",
-            1024, offset
+            "Sending OTA data chunk: {}..{} - [{}]",
+            begin,
+            end,
+            end - begin
         );
         let mut ota_msg = OtaMsg::default();
         ota_msg.operation = Some(OtaOperation::OtaWrite);
-        ota_msg.offset = Some(offset as u32);
+        ota_msg.offset = Some(begin as u32);
         ota_msg.image = Some(slice.to_vec());
         ota_msg.reply_to = Some(reply_topic.to_string());
-        let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg).await?;
+        let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg, 3).await?;
         if reply.operation != Some(OtaOperation::OtaWrite) && reply.rc != Some(0) {
             return Err(anyhow::anyhow!(
                 "Expected OTA data ack, got: {:?}",
-                reply.operation
+                reply.message.unwrap()
             ));
         }
     }
@@ -195,10 +205,11 @@ async fn do_ota() -> Result<()> {
     ota_msg.reply_to = Some(reply_topic.to_string());
 
     // Publish the OTA begin message to the specified Zenoh key
+    info!(" Sending OtaEnd ");
 
-    let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg).await?;
+    let reply = request(session.clone(), &subscriber, key.to_string(), ota_msg, 1).await?;
 
-    if reply.operation != Some(OtaOperation::OtaBegin) && reply.rc != Some(0) {
+    if reply.operation != Some(OtaOperation::OtaEnd) && reply.rc != Some(0) {
         return Err(anyhow::anyhow!(
             "Expected OTA begin ack, got: {:?}",
             reply.operation
@@ -215,28 +226,41 @@ async fn request(
     subscriber: &Subscriber<FifoChannelHandler<Sample>>,
     request_topic: String,
     request: OtaMsg,
+    trials: u32,
 ) -> Result<OtaMsg> {
-    info!(
-        "Publishing OTA begin message to key: '{}':{:?}",
+    debug!(
+        "Publishing OTA  message to key: '{}':{:?}",
         request_topic, request.operation
     );
-    let request_bytes = to_vec(&request)?;
-    info!("Request bytes: [{}]", request_bytes.len());
-    session
-        .put(request_topic, request_bytes)
-        .congestion_control(CongestionControl::Block)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-    match subscriber.recv_async().await {
-        Ok(sample) => {
-            let bytes: Vec<u8> = sample.payload().slices().fold(Vec::new(), |mut b, x| {
-                b.extend_from_slice(x);
-                b
-            });
-            let reply = minicbor::decode::<OtaMsg>(bytes.as_slice())?;
-            info!("Received OTA reply message: {:?}", reply);
-            Ok(reply)
+
+    for i in 0..trials {
+        let request_bytes = to_vec(&request)?;
+        info!("Request bytes: [{:02X?}]", request_bytes);
+        session
+            .put(request_topic.clone(), request_bytes)
+            .congestion_control(CongestionControl::Block)
+            .await
+            .map_err(|e| anyhow::anyhow!(e))?;
+        tokio::select! {
+            _ = time::sleep(time::Duration::from_secs(1)) =>{
+
+            },
+            sample = subscriber.recv_async() =>  {
+                match sample {
+                Ok(sample) => {
+                    let bytes: Vec<u8> = sample.payload().slices().fold(Vec::new(), |mut b, x| {
+                        b.extend_from_slice(x);
+                        b
+                    });
+                    let reply = minicbor::decode::<OtaMsg>(bytes.as_slice())?;
+                    info!("Received OTA reply message: {:?}", reply);
+                    return Ok(reply)
+                }
+                Err(e) => {},
+            }
         }
-        Err(e) => Err(anyhow::anyhow!(e)),
+        }
+        if  i+1 < trials { info!(" Retry ......................... {}",i+1);};
     }
+    Err(Error::msg("failed after retries"))
 }

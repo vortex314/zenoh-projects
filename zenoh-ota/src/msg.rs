@@ -96,7 +96,7 @@ pub struct OtaMsg {
     pub operation: Option<OtaOperation>,
     #[n(1)]
     pub offset: Option<u32>,
-    #[n(2)]
+    #[cbor(n(2), with = "minicbor::bytes")]
     pub image: Option<Vec<u8>>,
     #[n(3)]
     pub rc: Option<i32>,
@@ -104,4 +104,19 @@ pub struct OtaMsg {
     pub message: Option<String>,
     #[n(5)]
     pub reply_to: Option<String>,
+}
+
+impl OtaMsg {
+
+    fn begin(reply_to : String )->Self {
+        OtaMsg { operation: Some(OtaOperation::OtaBegin) , reply_to:Some(reply_to), ..Default::default() }
+    }
+
+    fn write(offset :u32, data : Vec<u8> , reply_to:String ) -> Self {
+        OtaMsg { operation: Some(OtaOperation::OtaWrite) , offset : Some(offset), image:Some(data) ,reply_to:Some(reply_to), ..Default::default() }
+    }
+
+    fn end(reply_to : String )->Self {
+        OtaMsg { operation: Some(OtaOperation::OtaEnd) , reply_to:Some(reply_to), ..Default::default() }
+    }
 }

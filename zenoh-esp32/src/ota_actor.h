@@ -22,6 +22,7 @@ struct OtaMsg : public Serializable
     std::optional<int32_t> rc = std::nullopt;
     std::optional<std::string> message = std::nullopt;
     std::optional<std::string> reply_to = std::nullopt;
+    std::optional<std::string> partition_label = std::nullopt;
 
     Res serialize(Serializer &ser);
     Res deserialize(Deserializer &des);
