@@ -165,7 +165,7 @@ async fn do_ota() -> Result<()> {
         ));
     }
 
-    let block_size = 2000;
+    let block_size = 1024;
     let blocks = firmware_data.len() / block_size;
     info!(
         "Sending OTA data in {} blocks of {} bytes",
@@ -235,12 +235,13 @@ async fn request(
 
     for i in 0..trials {
         let request_bytes = to_vec(&request)?;
-        info!("Request bytes: [{:02X?}]", request_bytes);
+        info!("Request bytes: '{}' => [{}]",request_topic, request_bytes.len()); // {:02X?}
         session
             .put(request_topic.clone(), request_bytes)
             .congestion_control(CongestionControl::Block)
             .await
             .map_err(|e| anyhow::anyhow!(e))?;
+
         tokio::select! {
             _ = time::sleep(time::Duration::from_secs(1)) =>{
 

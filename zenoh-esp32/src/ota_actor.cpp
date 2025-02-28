@@ -14,15 +14,12 @@ OtaActor::~OtaActor()
 
 void OtaActor::on_cmd(OtaCmd &cmd)
 {
-    INFO("on_cmd");
     Res result;
     if (cmd.msg)
     {
-        INFO("cmd.msg");
         OtaMsg &msg = cmd.msg.value();
         if (msg.operation)
         {
-            INFO("msg.operation %d", msg.operation.value());
             if (msg.operation.value() == OTA_BEGIN)
             {
                 INFO("OTA_BEGIN");
@@ -94,7 +91,7 @@ Res OtaActor::ota_write(uint32_t offset, Bytes &data)
     return Res::Ok();
 }
 
-Res OtaActor::flash(const uint8_t *data, size_t size)
+/*Res OtaActor::flash(const uint8_t *data, size_t size)
 {
     const esp_partition_t *update_partition = esp_ota_get_next_update_partition(NULL);
     if (update_partition == NULL)
@@ -120,7 +117,7 @@ Res OtaActor::flash(const uint8_t *data, size_t size)
     CHECK(esp_ota_set_boot_partition(update_partition));
     INFO("OTA update successful, restarting...");
     esp_restart();
-}
+}*/
 
 Res OtaMsg::serialize(Serializer &ser)
 {
@@ -140,10 +137,10 @@ Res OtaMsg::serialize(Serializer &ser)
 
 Res OtaMsg::deserialize(Deserializer &des)
 {
-    INFO("OtaMsg::deserialize");
+  //  INFO("OtaMsg::deserialize");
     des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
                     {
-        INFO("key %d", key);
+    //    INFO("key %d", key);
         switch (key)
         {
         case 0:

@@ -257,6 +257,7 @@ Res CborDeserializer::map_begin(size_t& count)
 {
     CHECK(nanocbor_enter_map(get_des(), &_map));
     _state = MAP_FIXED;
+    count = ((size_t) (&_map)->remaining) / 2;
     return Res::Ok();
 }
 Res CborDeserializer::map_end()

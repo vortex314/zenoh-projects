@@ -51,7 +51,7 @@ public:
     void on_cmd(OtaCmd &cmd);
     void on_timer(int timer_id);
     void on_start();
-    Res flash(const uint8_t *data, size_t size);
+ //   Res flash(const uint8_t *data, size_t size);
     Res ota_begin();
     Res ota_end();
     Res ota_write(uint32_t offset,Bytes& bytes );

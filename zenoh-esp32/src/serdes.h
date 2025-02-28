@@ -62,12 +62,12 @@ public:
 
 typedef enum
 {
-  SER_UINT=0,
+  SER_UINT = 0,
   SER_SINT,
   SER_FLOAT,
   SER_STR,
   SER_BYTES,
-  SER_ARRAY=5,
+  SER_ARRAY = 5,
   SER_ARRAY_FIXED,
   SER_MAP,
   SER_MAP_FIXED,
@@ -77,7 +77,7 @@ typedef enum
 class Deserializer
 {
 public:
- // virtual Res fill_buffer(Bytes &b) = 0;
+  // virtual Res fill_buffer(Bytes &b) = 0;
   virtual Res deserialize(std::string &s) = 0;
   virtual Res deserialize(uint8_t &i) = 0;
   virtual Res deserialize(int8_t &i) = 0;
@@ -90,7 +90,7 @@ public:
   virtual Res deserialize(bool &b) = 0;
   virtual Res skip_next() = 0;
   virtual Res map_begin() = 0;
-  virtual Res map_begin(size_t& size) = 0;
+  virtual Res map_begin(size_t &size) = 0;
   virtual Res map_end() = 0;
   virtual Res array_begin() = 0;
   virtual Res array_begin(size_t &size) = 0;
@@ -143,18 +143,18 @@ public:
 
   Res iterate_map(std::function<Res(Deserializer &, uint32_t)> func)
   {
-//    INFO("iterate_map");
+    //    INFO("iterate_map");
     SerialType map_type;
-    size_t map_size = SIZE_MAX;
+    size_t map_size = 1000;
+    size_t count = 0;
     RET_ERR(peek_type(map_type), "Failed to peek type");
     if (map_type == SerialType::SER_MAP_FIXED)
     {
-//      INFO("Fixed map");
       RET_ERR(map_begin(map_size), "Failed to decode map begin");
+  //    INFO("map size %u", map_size);
     }
     else if (map_type == SerialType::SER_MAP)
     {
-      INFO("Indefinite map"); 
       RET_ERR(map_begin(), "Failed to decode map begin");
     }
     else
@@ -163,9 +163,8 @@ public:
       return Res::Err(0, "Expected map");
     }
 
-    while (true && map_size-- > 0)
+    while (true && (count++ < map_size))
     {
-      INFO("iterate_map loop %u", map_size);
       SerialType type;
       RET_ERR(peek_type(type), "Failed to peek type");
       if (type == SerialType::SER_END)
@@ -174,7 +173,6 @@ public:
         return Res::Err(0, "Expected uint");
       uint32_t key;
       RET_ERR(deserialize(key), "Failed to decode key in map");
-  //    INFO("key %d", key);
       RET_ERR(func(*this, key), "Failed to process map entry");
     }
 
@@ -200,7 +198,5 @@ private:
   } State;
   State _state;
 };
-
-
 
 #endif

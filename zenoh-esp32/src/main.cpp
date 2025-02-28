@@ -29,7 +29,6 @@ Log logger;
 
 void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
 
-
 template <typename T, typename U>
 std::optional<U> map(std::optional<T> t, std::function<U(T)> f)
 {
@@ -52,7 +51,6 @@ void operator>>(std::optional<T> t, F f)
   }
 }
 
-
 template <typename T, typename F>
 auto operator>>=(const std::optional<T> &opt, F &&func)
     -> std::optional<std::invoke_result_t<F, T>>
@@ -65,8 +63,6 @@ auto operator>>=(const std::optional<T> &opt, F &&func)
   // Otherwise, return an empty optional
   return std::nullopt;
 }
-
-
 
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -119,7 +115,6 @@ extern "C" void app_main()
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
-
       if (event.publish->topic == "dst/esp1/sys") {
         auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
@@ -133,10 +128,7 @@ extern "C" void app_main()
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
       } 
       else if ( event.publish->topic == "dst/esp1/ota") {
-        INFO("Received OTA message [%d]", event.publish->payload.size());
         cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = std::move(msg)});};
-     //    auto msg = deserialize<OtaMsg>(event.publish->payload);  
-     //    if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
       } 
       else {
         INFO("Received Zenoh unknown event");
