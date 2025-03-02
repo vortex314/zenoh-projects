@@ -86,7 +86,7 @@ CameraActor::CameraActor() : CameraActor("sys", 4096, 5, 5) {}
 
 CameraActor::CameraActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<CameraEvent, CameraCmd>(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(100);
+    _timer_publish = timer_repetitive(1000);
 
     _camera_config = {
         .pin_pwdn = CAM_PIN_PWDN,

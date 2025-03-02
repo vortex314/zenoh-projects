@@ -352,6 +352,7 @@ impl PaneWidget for Pane {
             ui.separator();
             ui.horizontal(|ui| {
                 if ui.button("Ok").clicked() {
+                    self.title = self.src.iter().map(|ep| ep.to_string()).collect::<Vec<String>>().join(" ");
                     ui.close_menu();
                 };
                 if ui.button("Delete").clicked() {

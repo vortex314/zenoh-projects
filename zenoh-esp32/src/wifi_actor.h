@@ -64,11 +64,12 @@ public:
   void on_timer(int timer_id);
   void on_start();
   Res net_init();
-  Res wifi_init_sta(void);
+  Res wifi_set_config(const char* ssid, const char* password);
   Res publish_props_info();
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
   Res scan();
+  Res connect();
   std::string wifi_ssid;
   std::string wifi_password;
   int channel;

@@ -5,6 +5,15 @@
 #include <wifi_actor.h>
 #include <esp_mac.h>
 
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+#include "esp_wifi.h"
+#include "esp_log.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include "regex.h"
+
 #ifndef WIFI_PASS
 #error "WIFI_PASS not defined"
 #endif
@@ -18,8 +27,9 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-typedef enum WifiProp {
-  MAC_ADDRESS=0,
+typedef enum WifiProp
+{
+  MAC_ADDRESS = 0,
   IP_ADDRESS,
   GATEWAY,
   NETMASK,
@@ -32,8 +42,7 @@ typedef enum WifiProp {
   AP_SCAN
 } WifiProp;
 
-
-  InfoProp info_props_wifi[11] = {
+InfoProp info_props_wifi[11] = {
     InfoProp(WifiProp::MAC_ADDRESS, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(WifiProp::IP_ADDRESS, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(WifiProp::GATEWAY, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
@@ -46,26 +55,24 @@ typedef enum WifiProp {
     InfoProp(WifiProp::WIFI_MODE, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
     InfoProp(WifiProp::AP_SCAN, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
 };
-    
-
 
 WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
 WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<WifiEvent, WifiCmd>(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000);
-//  _timer_publish_props = timer_repetitive(5000);
-  wifi_ssid = "Merckx2";
+  //  _timer_publish_props = timer_repetitive(5000);
+  wifi_ssid = "";
   wifi_password = S(WIFI_PASS);
 }
 
 void WifiActor::on_start()
 {
-  if (net_init().is_err())
+  /*if (net_init().is_err())
   {
     ERROR("Failed to init net");
     return;
-  }
+  }*/
   while (true)
   {
     auto r = scan();
@@ -80,11 +87,20 @@ void WifiActor::on_start()
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
   }
-  wifi_ssid = S(WIFI_SSID);
-  wifi_password = S(WIFI_PASS);
-  if (wifi_init_sta().is_err())
+
+  if (wifi_ssid.empty())
   {
-    INFO("Failed to init wifi");
+    INFO("Set default SSID : %s", S(WIFI_SSID));
+    wifi_ssid = S(WIFI_SSID);
+  }
+  else
+  {
+    INFO("Set strongest SSID : %s", wifi_ssid.c_str());
+  }
+  auto r = connect();
+  if (r.is_err())
+  {
+    INFO("Failed to connect to WiFi %d:%s", r.rc(), r.msg().c_str());
     return;
   }
 }
@@ -104,16 +120,20 @@ void WifiActor::on_timer(int timer_id)
     if (_wifi_connected)
     {
       wifi_msg.fill(esp_netif);
-      emit(WifiEvent{.serdes = PublishSerdes( wifi_msg)});
+      emit(WifiEvent{.serdes = PublishSerdes(wifi_msg)});
     }
-  } else if ( timer_id == _timer_publish_props) {
+  }
+  else if (timer_id == _timer_publish_props)
+  {
     INFO("Timer 2 : Publishing WiFi properties info");
     if (_wifi_connected)
     {
       INFO("Publishing WiFi properties info");
       publish_props_info();
     }
-  } else {
+  }
+  else
+  {
     INFO("Unknown timer id: %d", timer_id);
   }
 }
@@ -124,7 +144,7 @@ Res WifiActor::publish_props_info()
   {
     return Res::Err(ENOTCONN, "Not connected to WiFi");
   }
-  emit(WifiEvent{.prop_info = PublishSerdes( info_props_wifi[_prop_counter])});
+  emit(WifiEvent{.prop_info = PublishSerdes(info_props_wifi[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_wifi) / sizeof(InfoProp));
   return Res::Ok();
 }
@@ -164,39 +184,36 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   }
 }
 
-Res WifiActor::net_init(void)
+/*Res WifiActor::net_init(void)
 {
-  CHECK(esp_netif_init());
-  CHECK(esp_event_loop_create_default());
+  CHECK_ESP(esp_netif_init());
+  CHECK_ESP(esp_event_loop_create_default());
   esp_netif = esp_netif_create_default_wifi_sta();
   assert(esp_netif);
   wifi_init_config_t config = WIFI_INIT_CONFIG_DEFAULT();
-  CHECK(esp_wifi_init(&config));
+  CHECK_ESP(esp_wifi_init(&config));
 
-  CHECK(esp_event_handler_instance_register(
+  CHECK_ESP(esp_event_handler_instance_register(
       WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, this, &handler_any_id));
-  CHECK(esp_event_handler_instance_register(
+  CHECK_ESP(esp_event_handler_instance_register(
       IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, this, &handler_got_ip));
-  CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  CHECK(esp_wifi_start());
+  CHECK_ESP(esp_wifi_set_mode(WIFI_MODE_STA));
+  CHECK_ESP(esp_wifi_start());
   return Res::Ok();
-}
+}*/
 
-Res WifiActor::wifi_init_sta(void)
+/*Res WifiActor::wifi_set_config(const char* wifi_ssid, const char *wifi_password)
 {
   wifi_config_t wifi_config;
   bzero(&wifi_config, sizeof(wifi_config));
-  strcpy((char *)wifi_config.sta.ssid, wifi_ssid.c_str());
-  strcpy((char *)wifi_config.sta.password, wifi_password.c_str());
+  strcpy((char *)wifi_config.sta.ssid, wifi_ssid);
+  strcpy((char *)wifi_config.sta.password, wifi_password);
 
-  DEBUG("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
+  INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
         wifi_config.sta.password);
-  // CHECK(esp_wifi_stop());
-  CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  // CHECK(esp_wifi_start());
-  INFO("Connecting to WiFi network...");
+  CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   return Res::Ok();
-}
+}*/
 
 Res WifiMsg::serialize(Serializer &ser)
 {
@@ -266,27 +283,6 @@ std::string ip4addr_to_str(esp_ip4_addr_t *ip)
            ip_parts[2], ip_parts[3]);
   return buf;
 }
-
-/* Scan Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-
-/*
-    This example shows how to scan for available set of APs.
-*/
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "esp_wifi.h"
-#include "esp_log.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include "regex.h"
 
 #define DEFAULT_SCAN_LIST_SIZE 10
 
@@ -413,47 +409,44 @@ static const char *group_cipher_to_str(int group_cipher)
   }
 }
 
-#ifdef USE_CHANNEL_BITMAPassert
-static void array_2_channel_bitmap(const uint8_t channel_list[], const uint8_t channel_list_size, wifi_scan_config_t *scan_config)
-{
-
-  for (uint8_t i = 0; i < channel_list_size; i++)
-  {
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    uint8_t channel = channel_list[i];
-    scan_config->channel_bitmap.ghz_2_channels |= (1 << channel);
-  }
-}
-#endif /*USE_CHANNEL_BITMAP*/
-
 /* Initialize Wi-Fi as sta and set scan method */
 Res WifiActor::scan()
 {
+
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+  esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+  assert(sta_netif);
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_start());
 
   uint16_t number = DEFAULT_SCAN_LIST_SIZE;
   wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
   uint16_t ap_count = 0;
   memset(ap_info, 0, sizeof(ap_info));
 
-#ifdef USE_CHANNEL_BITMAP
-  wifi_scan_config_t *scan_config = (wifi_scan_config_t *)calloc(1, sizeof(wifi_scan_config_t));
-  if (!scan_config)
-  {
-    ESP_LOGE(TAG, "Memory Allocation for scan config failed!");
-    return;
-  }
-  array_2_channel_bitmap(channel_list, CHANNEL_LIST_SIZE, scan_config);
-  esp_wifi_scan_start(scan_config, true);
-  free(scan_config);
+  wifi_scan_config_t scan_config;
+  memset(&scan_config, 0, sizeof(scan_config));
+  scan_config.bssid = NULL;
+  scan_config.channel = 0;
+  scan_config.show_hidden = true;
+  scan_config.scan_type = WIFI_SCAN_TYPE_ACTIVE;
+  scan_config.scan_time.active.min = 100;
+  scan_config.scan_time.active.max = 200;
+  scan_config.scan_time.passive = 0;
+  scan_config.home_chan_dwell_time = WIFI_SCAN_HOME_CHANNEL_DWELL_DEFAULT_TIME;
 
-#else
-  CHECK(esp_wifi_scan_start(NULL, true));
-#endif /*USE_CHANNEL_BITMAP*/
+
+  CHECK_ESP(esp_wifi_scan_start(&scan_config, true));
 
   INFO("Max AP number ap_info can hold = %u", number);
-  CHECK(esp_wifi_scan_get_ap_num(&ap_count));
-  CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+  CHECK_ESP(esp_wifi_scan_get_ap_num(&ap_count));
+  CHECK_ESP(esp_wifi_scan_get_ap_records(&number, ap_info));
   INFO("Total APs scanned = %u, actual AP number ap_info holds = %u", ap_count, number);
   int8_t rssi_highest = -128;
   int ap_index = 0;
@@ -474,7 +467,34 @@ Res WifiActor::scan()
       ap_index = i;
     }
   }
-  INFO("Highest RSSI = %d, AP index = %d", rssi_highest, ap_index);
   wifi_ssid = std::string((const char *)ap_info[ap_index].ssid);
+  ESP_ERROR_CHECK(esp_wifi_scan_stop());
+  ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
+  ESP_ERROR_CHECK(esp_wifi_stop());
+  ESP_ERROR_CHECK(esp_wifi_deinit());
+  return Res::Ok();
+}
+
+Res WifiActor::connect()
+{
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  CHECK_ESP(esp_wifi_init(&cfg));
+
+  wifi_config_t wifi_config;
+  bzero(&wifi_config, sizeof(wifi_config));
+  strcpy((char *)wifi_config.sta.ssid, wifi_ssid.c_str());
+  strcpy((char *)wifi_config.sta.password, wifi_password.c_str());
+  INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
+       wifi_config.sta.password);
+  CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+
+
+  CHECK_ESP(esp_wifi_set_mode(WIFI_MODE_STA));
+  esp_event_handler_instance_register(
+      WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, this, &handler_any_id);
+  esp_event_handler_instance_register(
+      IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, this, &handler_got_ip);
+  CHECK_ESP(esp_wifi_start());
+
   return Res::Ok();
 }
