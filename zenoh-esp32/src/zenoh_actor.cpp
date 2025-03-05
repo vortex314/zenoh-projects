@@ -11,7 +11,7 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-InfoProp info_props_zenoh[] = {
+/*InfoProp info_props_zenoh[] = {
     InfoProp(0, "zid", "Zenoh ID", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(1, "what_am_i", "What am I", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(2, "peers", "Peers", PropType::PROP_STR, PropMode::PROP_READ),
@@ -19,7 +19,7 @@ InfoProp info_props_zenoh[] = {
     InfoProp(4, "routers", "Routers", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(5, "connect", "Connect", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(6, "listen", "Listen", PropType::PROP_STR, PropMode::PROP_READ),
-};
+};*/
 
 ZenohActor::ZenohActor() : ZenohActor("zenoh", 4096, 5, 5) {}
 
@@ -44,11 +44,6 @@ void ZenohActor::on_timer(int id)
   if (id == _timer_publish)
   {
     publish_props();
-  }
-  else if (id == _timer_publish_props)
-  {
-    INFO("Timer publish_props : Publishing Zenoh properties info");
-    publish_props_info();
   }
   else
     INFO("Unknown timer id: %d", id);
@@ -335,7 +330,7 @@ Res ZenohActor::publish_props()
   return Res::Ok();
 }
 
-Res ZenohActor::publish_props_info()
+/*Res ZenohActor::publish_props_info()
 {
   if (!_connected)
   {
@@ -344,7 +339,7 @@ Res ZenohActor::publish_props_info()
   emit(ZenohEvent{.prop_info = PublishSerdes(info_props_zenoh[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_zenoh) / sizeof(InfoProp));
   return Res::Ok();
-}
+}*/
 
 //============================================================
 //============================================================
@@ -354,15 +349,15 @@ Res ZenohActor::publish_props_info()
 
 Res ZenohMsg::serialize(Serializer &ser)
 {
-  int idx = 0;
+//  int idx = 0;
   ser.reset();
   ser.map_begin();
-  ser.serialize(idx++, zid);
-  ser.serialize(idx++, what_am_i);
-  ser.serialize(idx++, peers);
-  ser.serialize(idx++, prefix);
-  ser.serialize(idx++, routers);
-  ser.serialize(idx++, connect);
+  ser.serialize("zid", zid);
+  ser.serialize("role", what_am_i);
+  ser.serialize("peer", peers);
+  ser.serialize("prfx", prefix);
+  ser.serialize("rout", routers);
+  ser.serialize("conn", connect);
   return ser.map_end();
 }
 

@@ -50,6 +50,16 @@ public:
     }
     return Res::Ok();
   }
+  template <typename V>
+  Res serialize(const char* name, std::optional<V> value)
+  {
+    if (value)
+    {
+      serialize(name);
+      serialize(*value);
+    }
+    return Res::Ok();
+  }
   Res serialize(Serializable &value) { return value.serialize(*this); }
 
   virtual Res map_begin() = 0;

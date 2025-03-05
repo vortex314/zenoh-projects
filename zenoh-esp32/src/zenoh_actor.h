@@ -77,7 +77,7 @@ public:
 
   Res zenoh_publish(const char *topic, const Bytes &value);
   Res publish_props();
-  Res publish_props_info();
+//  Res publish_props_info();
 
   void zenoh_subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);

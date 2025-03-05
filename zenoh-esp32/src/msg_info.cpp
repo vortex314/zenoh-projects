@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+/*
 
 Res InfoTopic::serialize(Serializer &ser) {
   RET_ERR(ser.map_begin(), "Failed to encode map");
@@ -35,7 +36,6 @@ Res InfoTopic::deserialize(Deserializer &des) {
   });
   return Res::Ok();
 }
-
 
 
 
@@ -97,3 +97,4 @@ Res InfoProp::deserialize(Deserializer &des) {
   });
   return Res::Ok();
 }
+*/

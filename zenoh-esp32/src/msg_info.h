@@ -41,7 +41,7 @@ typedef enum PropType {
 #define PROP_DESC_KEY 2
 #define PROP_TYPE_KEY 3
 #define PROP_MODE_KEY 4
-
+/*
 class InfoProp : public Serializable{
 public:
   std::optional<uint32_t> id;
@@ -58,5 +58,5 @@ public:
   Res deserialize(Deserializer &des) ;
 
 };
-
+*/
 #endif

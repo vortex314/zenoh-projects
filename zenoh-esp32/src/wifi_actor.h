@@ -29,7 +29,7 @@ struct WifiMsg : public Serializable
   Res serialize(Serializer &ser);
   Res deserialize(Deserializer &des);
   Res fill(esp_netif_t *esp_netif);
-  const InfoProp *info(int idx);
+//  const InfoProp *info(int idx);
 };
 
 typedef enum
@@ -65,7 +65,7 @@ public:
   void on_start();
   Res net_init();
   Res wifi_set_config(const char* ssid, const char* password);
-  Res publish_props_info();
+//  Res publish_props_info();
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);
   Res scan();

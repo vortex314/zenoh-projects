@@ -42,7 +42,7 @@ typedef enum WifiProp
   AP_SCAN
 } WifiProp;
 
-InfoProp info_props_wifi[11] = {
+/*InfoProp info_props_wifi[11] = {
     InfoProp(WifiProp::MAC_ADDRESS, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(WifiProp::IP_ADDRESS, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(WifiProp::GATEWAY, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
@@ -54,7 +54,7 @@ InfoProp info_props_wifi[11] = {
     InfoProp(WifiProp::ENCRYPTION, "encryption", "Encryption", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(WifiProp::WIFI_MODE, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
     InfoProp(WifiProp::AP_SCAN, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
-};
+};*/
 
 WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
@@ -129,7 +129,7 @@ void WifiActor::on_timer(int timer_id)
     if (_wifi_connected)
     {
       INFO("Publishing WiFi properties info");
-      publish_props_info();
+//      publish_props_info();
     }
   }
   else
@@ -138,7 +138,7 @@ void WifiActor::on_timer(int timer_id)
   }
 }
 
-Res WifiActor::publish_props_info()
+/*Res WifiActor::publish_props_info()
 {
   if (!_wifi_connected)
   {
@@ -147,7 +147,7 @@ Res WifiActor::publish_props_info()
   emit(WifiEvent{.prop_info = PublishSerdes(info_props_wifi[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_wifi) / sizeof(InfoProp));
   return Res::Ok();
-}
+}*/
 
 WifiActor::~WifiActor()
 {
@@ -217,20 +217,20 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
 
 Res WifiMsg::serialize(Serializer &ser)
 {
-  uint32_t idx = 0;
+ // uint32_t idx = 0;
   ser.reset();
   ser.map_begin();
-  ser.serialize(idx++, mac_address);
-  ser.serialize(idx++, ip_address);
-  ser.serialize(idx++, gateway);
-  ser.serialize(idx++, netmask);
-  ser.serialize(idx++, dns);
-  ser.serialize(idx++, ssid);
-  ser.serialize(idx++, channel);
-  ser.serialize(idx++, rssi);
-  ser.serialize(idx++, encryption);
-  ser.serialize(idx++, wifi_mode);
-  ser.serialize(idx++, ap_scan);
+  ser.serialize("mac", mac_address);
+  ser.serialize("ip", ip_address);
+  ser.serialize("gtw", gateway);
+  ser.serialize("mask", netmask);
+  ser.serialize("dns", dns);
+  ser.serialize("ssid", ssid);
+  ser.serialize("chnl", channel);
+  ser.serialize("rssi", rssi);
+  ser.serialize("encr", encryption);
+  ser.serialize("mode", wifi_mode);
+  ser.serialize("ap", ap_scan);
   return ser.map_end();
 }
 Res WifiMsg::deserialize(Deserializer &des)
@@ -256,12 +256,12 @@ Res WifiMsg::fill(esp_netif_t *esp_netif)
   return Res::Ok();
 }
 
-const InfoProp *WifiMsg::info(int idx)
+/*const InfoProp *WifiMsg::info(int idx)
 {
   if (idx >= sizeof(info_props_wifi) / sizeof(InfoProp))
     return nullptr;
   return &info_props_wifi[idx];
-}
+}*/
 
 /*
 

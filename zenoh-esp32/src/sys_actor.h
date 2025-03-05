@@ -54,7 +54,7 @@ public:
   void on_cmd(SysCmd &cmd);
   void on_timer(int timer_id);
   Res publish_props();
-  Res publish_props_info();
+//  Res publish_props_info();
 
 private:
   void init_properties();

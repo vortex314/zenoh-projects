@@ -29,9 +29,6 @@ void SysActor::on_timer(int id)
     if (id == _timer_publish)
     {
         publish_props();
-    } else if ( id == _timer_publish_props) {
-        INFO("Timer 2 : Publishing Sys properties info");
-        publish_props_info();
     } else {
         INFO("Unknown timer id: %d", id);
     }
@@ -53,7 +50,7 @@ Res SysActor::publish_props()
     emit(SysEvent{.serdes = PublishSerdes(_sys_msg)});
     return Res::Ok();
 }
-
+/*
 InfoProp info_props_sys_msg[8] = {
     InfoProp(0, "cpu", "CPU", PropType::PROP_STR, PropMode::PROP_READ),
     InfoProp(1, "clock", "Clock in Hz", PropType::PROP_UINT, PropMode::PROP_READ),
@@ -70,20 +67,20 @@ Res SysActor::publish_props_info()
     emit(SysEvent{.prop_info = PublishSerdes( info_props_sys_msg[_prop_counter])});
     _prop_counter = (_prop_counter + 1) % (sizeof(info_props_sys_msg) / sizeof(InfoProp));
     return Res::Ok();
-}
+}*/
 
 Res SysMsg::serialize(Serializer &ser)
 {
     int idx = 0;
     ser.reset();
     ser.map_begin();
-    ser.serialize(idx++, cpu);
-    ser.serialize(idx++, clock);
-    ser.serialize(idx++, flash_size);
-    ser.serialize(idx++, ram_size);
-    ser.serialize(idx++, free_heap);
-    ser.serialize(idx++, up_time);
-    ser.serialize(idx++, log_message);
+    ser.serialize("cpu", cpu);
+    ser.serialize("clck", clock);
+    ser.serialize("flsh", flash_size);
+    ser.serialize("RAM", ram_size);
+    ser.serialize("heap", free_heap);
+    ser.serialize("up", up_time);
+    ser.serialize("log", log_message);
     ser.map_end();
     return ser.serialize(idx++, state);
 }

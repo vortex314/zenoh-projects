@@ -9,11 +9,12 @@ use std::{
 use image::ImageReader;
 
 use anyhow::Result;
-use egui::{ColorImage, Context, Image, ImageSource};
+use egui::{ColorImage, Context, Image, ImageSource, TextureHandle};
 use egui_plot::{Line, Plot, PlotPoints};
 use egui_tiles::UiResponse;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 
 use crate::value::Value;
 
@@ -26,16 +27,31 @@ enum Status {
     Error,
 }
 
+struct TextureSafe {
+    active : Mutex<Option<TextureHandle>>
+}
+
+impl TextureSafe {
+    fn new() -> Self {
+        TextureSafe { active : Mutex::new(None)}
+    }
+
+    async fn switch(&self,texture_handle:TextureHandle  ) {
+        let p = active.get_mut();
+        *p = Some(texture_handle);
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct ImageWidget {
     #[serde(skip)]
     data: Option<Vec<u8>>,
     #[serde(skip)]
-    texture: Option<egui::TextureHandle>,
+    texture: Arc<Mutex<Option<egui::TextureHandle>>>,
     #[serde(skip)]
-    ctx : Option<Context>,
+    ctx: Option<Context>,
     #[serde(skip)]
-    last_update : Option<Instant>,
+    last_update: Option<Instant>,
 }
 
 impl std::fmt::Debug for ImageWidget {
@@ -109,23 +125,28 @@ impl PaneWidget for ImageWidget {
 
     fn process_data(&mut self, _topic: String, _value: &Value) {
         let too_soon = self.last_update.map(|last_update| {
-             if last_update.elapsed() < Duration::from_secs(1) {
+            if last_update.elapsed() < Duration::from_secs(1) {
                 debug!("ImageWidget received data too soon, dropping it");
                 return true;
-             } else   {
-                 return false;
-             }
+            } else {
+                return false;
+            }
         });
         if too_soon.unwrap_or(false) {
             return;
         }
-        
+
+        let th = self.texture.clone();
+
+        tokio::spawn(async move {
+        });
+
         match _value {
             Value::Bytes(bytes) => {
                 debug!("ImageWidget received image data [{}]", bytes.len());
                 self.data = Some(bytes.clone());
                 if let Some(ctx) = self.ctx.as_ref() {
-                    let _  = decode_bytes_to_texture(ctx, bytes).map(|texture| {
+                    let _ = decode_bytes_to_texture(ctx, bytes).map(|texture| {
                         self.texture = Some(texture);
                     });
                 }

@@ -112,24 +112,24 @@ struct Ps4Msg : public Serializable
   Res serialize(Serializer &ser) override
   {
     ser.reset();
-    ser.array_begin();
-    ser.serialize(button_left); //0
-    ser.serialize(button_right);
-    ser.serialize(button_up);
-    ser.serialize(button_down);
+    ser.map_begin();
+    ser.serialize("blw",button_left); //0
+    ser.serialize("ble",button__right);
+    ser.serialize("bln",button_up);
+    ser.serialize("bls",button_down);
 
-    ser.serialize(button_square); // 4
-    ser.serialize(button_cross);
-    ser.serialize(button_circle);
-    ser.serialize(button_triangle);
+    ser.serialize("brw",button_square); // 4
+    ser.serialize("brs",button_cross);
+    ser.serialize("bre",button_circle);
+    ser.serialize("brn",button_triangle);
 
-    ser.serialize(button_left_sholder); // 8
-    ser.serialize(button_right_sholder);
-    ser.serialize(button_left_trigger);
-    ser.serialize(button_right_trigger);
+    ser.serialize("bsl",button_left_sholder); // 8
+    ser.serialize("bsr",button_right_sholder);
+    ser.serialize("btl",button_left_trigger);
+    ser.serialize("btr",button_right_trigger);
 
-    ser.serialize(button_left_joystick); // 12
-    ser.serialize(button_right_joystick);
+    ser.serialize("bjl",button_left_joystick); // 12
+    ser.serialize("bjr",button_right_joystick);
 
     ser.serialize(button_share); // 14
     ser.serialize(axis_lx); // 15
