@@ -85,7 +85,7 @@ extern "C" void app_main()
   esp_wifi_set_ps(WIFI_PS_NONE);
   // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
-  zenoh_actor.prefix("esp1"); // set the zenoh prefix to src/esp1 and destination subscriber dst/esp1/ **
+  zenoh_actor.prefix("esp2"); // set the zenoh prefix to src/esp2 and destination subscriber dst/esp2/ **
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
@@ -100,34 +100,34 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("src/esp1/wifi", event.serdes);
-                      zenoh_publish("info/esp1/wifi",event.prop_info); });
+                      { zenoh_publish("src/esp2/wifi", event.serdes);
+                      zenoh_publish("info/esp2/wifi",event.prop_info); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("src/esp1/sys", event.serdes); 
-                     zenoh_publish("info/esp1/sys",event.prop_info); });
+                     { zenoh_publish("src/esp2/sys", event.serdes); 
+                     zenoh_publish("info/esp2/sys",event.prop_info); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("src/esp1/zenoh", event.serdes); 
-                       zenoh_publish("info/esp1/zenoh",event.prop_info); });
+                       { zenoh_publish("src/esp2/zenoh", event.serdes); 
+                       zenoh_publish("info/esp2/zenoh",event.prop_info); });
   ota_actor.on_event([&](OtaEvent event)
-                     { zenoh_publish("src/esp1/ota", event.serdes); });
+                     { zenoh_publish("src/esp2/ota", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
-      if (event.publish->topic == "dst/esp1/sys") {
+      if (event.publish->topic == "dst/esp2/sys") {
         auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
       } 
-      else if ( event.publish->topic == "dst/esp1/wifi") {
+      else if ( event.publish->topic == "dst/esp2/wifi") {
         auto msg = cbor_deserialize<WifiMsg>(event.publish->payload);
         if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
       } 
-      else if ( event.publish->topic == "dst/esp1/zenoh") {
+      else if ( event.publish->topic == "dst/esp2/zenoh") {
         auto msg = cbor_deserialize<ZenohMsg>(event.publish->payload);
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
       } 
-      else if ( event.publish->topic == "dst/esp1/ota") {
+      else if ( event.publish->topic == "dst/esp2/ota") {
         cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = std::move(msg)});};
       } 
       else {
