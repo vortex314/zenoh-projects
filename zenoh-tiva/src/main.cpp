@@ -1,4 +1,4 @@
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <zenoh-pico.h>
 
 // put function declarations here:
