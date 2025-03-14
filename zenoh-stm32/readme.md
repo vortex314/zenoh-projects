@@ -42,3 +42,8 @@ manual change config.h
 ```
 
 # Adapt extra_script.py
+
+https://controllerstech.com/stm32-uart-1-configure-uart-transmit-data/
+
+# Adapt 
+https://controllerstech.com/stm32-uart-1-configure-uart-transmit-data/

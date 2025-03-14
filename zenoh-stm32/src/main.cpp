@@ -1,7 +1,9 @@
-#include <Arduino.h>
 #include <zenoh-pico.h>
-
+#include <sys.h>
 // put function declarations here:
+
+Log logger;
+
 
 #define MODE "peer"
 #define LOCATOR "serial/UART_1#baudrate=115200"
@@ -23,16 +25,15 @@ char *buf = (char *)malloc(256);
     z_result_t res = (expr);                            \
     if (res != Z_OK)                                    \
     {                                                   \
-      Serial.printf("Error: " #expr " rc: %d \n", res); \
+      INFO("Error: " #expr " rc: %d \n", res); \
       LOOP_FOREVER;                                     \
     }                                                   \
   }
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("\nZenoh-Pico Publisher Example");
-  delay(1000);
+  INFO("\nZenoh-Pico Publisher Example");
+  z_sleep_ms(1000);
 
   z_result_t res;
   z_owned_config_t config;
@@ -40,25 +41,25 @@ void setup()
   zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_MODE_KEY, MODE);
   zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_CONNECT_KEY, LOCATOR);
 
-  Serial.print("Opening Zenoh Session...");
-  delay(1000);
+  INFO("Opening Zenoh Session...");
+  z_sleep_ms(1000);
 
   Z_CHECK(z_open(&zenoh_session, z_config_move(&config), NULL));
-  delay(1000);
-  Serial.println("Done!");
+  z_sleep_ms(1000);
+  INFO("Done!\n");
 
   z_owned_publisher_t pub;
   z_view_keyexpr_t ke;
   res = z_view_keyexpr_from_str(&ke, keyexpr);
   if (res != Z_OK)
   {
-    Serial.printf("%s is not a valid key expression\n", keyexpr);
+    INFO("%s is not a valid key expression\n", keyexpr);
     LOOP_FOREVER;
   }
   res = z_declare_publisher(z_session_loan(&zenoh_session), &pub, z_view_keyexpr_loan(&ke), NULL);
   if (res != Z_OK)
   {
-    Serial.printf("Unable to declare publisher for key expression!\n");
+    INFO("Unable to declare publisher for key expression!\n");
     LOOP_FOREVER;
   }
 }
@@ -72,7 +73,7 @@ void loop()
     if (z_clock_elapsed_ms(&now) > 1000)
     {
       snprintf(buf, 256, "[%4d] %s", idx, value);
-      Serial.printf("Putting Data ('%s': '%s')...\n", keyexpr, buf);
+      INFO("Putting Data ('%s': '%s')...\n", keyexpr, buf);
 
       // Create payload
       z_owned_bytes_t payload;
@@ -92,7 +93,14 @@ void loop()
     z_publisher_drop(z_publisher_move(&pub));
     z_session_drop(z_session_move(&s));
     free(buf);
-    Serial.println(" Hello world ");
+    printfln(" Hello world ");
     delay(1000);
     */
+}
+
+int main() {
+  setup();
+  while(1){
+    loop();
+  }
 }
