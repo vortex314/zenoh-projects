@@ -1,5 +1,5 @@
 {
-    "name": "stm32_spl",
+    "name": "stm32_stm32cube",
     "version": "0.1",
     "description": "stm32_spl bridge zenoh",
     "keywords": [

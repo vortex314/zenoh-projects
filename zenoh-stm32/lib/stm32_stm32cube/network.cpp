@@ -366,7 +366,7 @@ z_result_t _z_open_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin, u
 }
 
 z_result_t _z_open_serial_from_dev(_z_sys_net_socket_t *sock, char *dev, uint32_t baudrate) {
-    uint8_t uart = 255;
+    int uart = 0;
 
  if (strcmp(dev, "UART_1") == 0) {
         uart = 1;
@@ -375,6 +375,7 @@ z_result_t _z_open_serial_from_dev(_z_sys_net_socket_t *sock, char *dev, uint32_
         uart = 2;
 
     } else {
+        panic_handler("Invalid UART device");
         return _Z_ERR_GENERIC;
     }
 
@@ -397,6 +398,8 @@ z_result_t _z_listen_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin,
     (void)(rxpin);
     (void)(baudrate);
 
+    panic_handler("Serial listen from pins not supported yet");
+
     // @TODO: To be implemented
     ret = _Z_ERR_GENERIC;
 
@@ -408,6 +411,8 @@ z_result_t _z_listen_serial_from_dev(_z_sys_net_socket_t *sock, char *dev, uint3
     (void)(sock);
     (void)(dev);
     (void)(baudrate);
+
+    panic_handler("Serial listen from device not supported yet");
 
     // @TODO: To be implemented
     ret = _Z_ERR_GENERIC;
@@ -425,7 +430,7 @@ size_t _z_read_serial_internal(const _z_sys_net_socket_t sock, uint8_t *header, 
     size_t rb = 0;
     for (size_t i = 0; i < _Z_SERIAL_MAX_COBS_BUF_SIZE; i++) {
         while (sock._serial->available() < 1) {
-            z_sleep_ms(1);  // FIXME: Yield by sleeping.
+            return SIZE_MAX; // FIXME: Yield by sleeping.
         }
         raw_buf[i] = sock._serial->read();
         rb = rb + (size_t)1;

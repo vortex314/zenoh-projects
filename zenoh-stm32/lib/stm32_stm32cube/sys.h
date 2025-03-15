@@ -8,9 +8,19 @@
 #include "stm32f4xx_hal_rcc.h"
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_usart.h"
+#include <util.h>
+
+extern "C" void panic_handler(const char *msg);
+Res<int> sys_init();
 
 class HardwareSerial
 {
+private:
+    UART_HandleTypeDef *huart;
+    int _uart;
+    uint8_t rx_buffer[2];
+    std::vector<uint8_t> rx_data;
+
 public:
     HardwareSerial(int);
     int begin(uint32_t baudrate);
@@ -19,6 +29,7 @@ public:
     int write(uint8_t *, size_t);
     int available();
     uint8_t read();
+    int rx_isr();
 };
 
 void delay(size_t msec);
@@ -88,5 +99,7 @@ extern Log logger;
         if (logger._level <= Log::L_ERROR)                                              \
             logger.tfl("E", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
     }
-
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define PANIC(msg) { ERROR("PANIC: " msg); panic_handler(msg); }
 #endif

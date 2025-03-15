@@ -51,6 +51,7 @@ void *z_malloc(size_t size) {
 
 void *z_realloc(void *ptr, size_t size) {
     // Not implemented by the platform
+    panic_handler("z_realloc not implemented");
     return NULL;
 }
 
@@ -132,8 +133,8 @@ z_result_t z_sleep_s(size_t time) {
 /*------------------ Instant ------------------*/
 void __z_clock_gettime(z_clock_t *ts) {
     uint64_t m = millis();
-    ts->tv_sec = m / (uint64_t)1000000;
-    ts->tv_nsec = (m % (uint64_t)1000000) * (uint64_t)1000;
+    ts->tv_sec = m / (uint64_t)1000;
+    ts->tv_nsec = (m % (uint64_t)1000) * (uint64_t)1000000000;
 }
 
 z_clock_t z_clock_now(void) {
@@ -191,7 +192,7 @@ void z_clock_advance_s(z_clock_t *clock, unsigned long duration) { clock->tv_sec
 /*------------------ Time ------------------*/
 z_time_t z_time_now(void) {
     z_time_t now;
-  //  gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
     return now;
 }
 
@@ -205,7 +206,7 @@ const char *z_time_now_as_str(char *const buf, unsigned long buflen) {
 
 unsigned long z_time_elapsed_us(z_time_t *time) {
     z_time_t now;
- //   gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
 
     unsigned long elapsed = (1000000 * (now.tv_sec - time->tv_sec) + (now.tv_usec - time->tv_usec));
     return elapsed;
@@ -213,7 +214,7 @@ unsigned long z_time_elapsed_us(z_time_t *time) {
 
 unsigned long z_time_elapsed_ms(z_time_t *time) {
     z_time_t now;
-//    gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
 
     unsigned long elapsed = (1000 * (now.tv_sec - time->tv_sec) + (now.tv_usec - time->tv_usec) / 1000);
     return elapsed;
@@ -221,7 +222,7 @@ unsigned long z_time_elapsed_ms(z_time_t *time) {
 
 unsigned long z_time_elapsed_s(z_time_t *time) {
     z_time_t now;
-//    gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
 
     unsigned long elapsed = now.tv_sec - time->tv_sec;
     return elapsed;
@@ -229,7 +230,7 @@ unsigned long z_time_elapsed_s(z_time_t *time) {
 
 z_result_t _z_get_time_since_epoch(_z_time_since_epoch *t) {
     z_time_t now;
- //   gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
     t->secs = now.tv_sec;
     t->nanos = now.tv_usec * 1000;
     return 0;

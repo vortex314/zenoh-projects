@@ -32,7 +32,8 @@ char *buf = (char *)malloc(256);
 
 void setup()
 {
-  INFO("\nZenoh-Pico Publisher Example");
+
+  INFO("Zenoh-Pico Publisher Example");
   z_sleep_ms(1000);
 
   z_result_t res;
@@ -46,7 +47,7 @@ void setup()
 
   Z_CHECK(z_open(&zenoh_session, z_config_move(&config), NULL));
   z_sleep_ms(1000);
-  INFO("Done!\n");
+  INFO("Done!");
 
   z_owned_publisher_t pub;
   z_view_keyexpr_t ke;
@@ -99,8 +100,12 @@ void loop()
 }
 
 int main() {
+  if ( sys_init().is_err() ) {
+    panic_handler("sys_init failed");
+  }
   setup();
-  while(1){
+  while (1) {
     loop();
   }
+  return 0;
 }
