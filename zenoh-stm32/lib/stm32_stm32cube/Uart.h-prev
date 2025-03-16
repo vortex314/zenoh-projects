@@ -1,0 +1,53 @@
+/*
+ * Uart.h
+ *
+ *  Created on: Nov 21, 2021
+ *      Author: lieven
+ */
+
+#ifndef SRC_UART_H_
+#define SRC_UART_H_
+
+#include <errno.h>
+#include <stdint.h>
+#include <stm32f401xe.h>
+#include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_dma.h>
+#include "stm32f4xx_hal_rcc.h"
+#include "stm32f4xx_hal_gpio.h"
+#include "stm32f4xx_hal_usart.h"
+#include <util.h>
+
+// #define FRAME_MAX 128
+#define COBS_SEPARATOR 0x00
+
+DMA_HandleTypeDef hdma_usart2_rx;
+DMA_HandleTypeDef hdma_usart2_tx;
+
+class Uart
+{
+    static const size_t FRAME_MAX = 128;
+
+    UART_HandleTypeDef _huart;
+
+    std::vector<uint8_t> _frameRxd;
+    bool _frame_complete = false;
+    size_t _wrPtr, _rdPtr;
+
+public:
+    uint8_t rxBuffer[FRAME_MAX];
+    volatile bool crcDMAdone;
+    uint32_t _txdOverflow = 0;
+    uint32_t _rxdOverflow = 0;
+
+    Uart(UART_HandleTypeDef *huart);
+    bool init();
+    void rxdIrq(UART_HandleTypeDef *huart);
+    void rxdByte(uint8_t);
+    int sendBytes(const uint8_t *, size_t, int retries);
+    void sendFrame(const std::vector<uint8_t> &bs, int retries);
+};
+
+extern "C" void uartSendBytes(uint8_t *, size_t, uint32_t retries);
+
+#endif /* SRC_UART_H_ */

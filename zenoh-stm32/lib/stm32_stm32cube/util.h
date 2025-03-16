@@ -8,7 +8,7 @@
 #include <functional>
 
 extern "C" void panic_handler(const char *msg);
-
+typedef std::vector<uint8_t> Bytes;
 
 template <typename T>
 class Opt : std::optional<T>

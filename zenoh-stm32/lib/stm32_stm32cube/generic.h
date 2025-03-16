@@ -41,7 +41,7 @@ typedef struct timeval z_time_t;
 typedef struct IPAddress IPAddress;    // Forward declaration to be used in __z_net_iptcp_addr_t
 typedef struct WiFiClient WiFiClient;  // Forward declaration to be used in _z_sys_net_socket_t
 typedef struct WiFiUDP WiFiUDP;        // Forward declaration to be used in _z_sys_net_socket_t
-typedef struct HardwareSerial HardwareSerial;    // Forward declaration to be used in _z_sys_net_socket_t
+typedef struct Serial Serial;    // Forward declaration to be used in _z_sys_net_socket_t
 
 typedef struct {
     union {
@@ -52,7 +52,7 @@ typedef struct {
         WiFiUDP *_udp;  // As pointer to cross the boundary between C and C++
 #endif
 #if Z_FEATURE_LINK_SERIAL == 1
-        HardwareSerial *_serial;
+        Serial *_serial;
 #endif
         bool _err;
     };

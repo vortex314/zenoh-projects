@@ -29,8 +29,11 @@ public:
     int write(uint8_t *, size_t);
     int available();
     uint8_t read();
-    int rx_isr();
+    int rx_isr(UART_HandleTypeDef *huart);
+    void rx_byte(uint8_t);
 };
+
+
 
 void delay(size_t msec);
 void delayMicroseconds(size_t usec);

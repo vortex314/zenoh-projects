@@ -1,5 +1,6 @@
 #include <zenoh-pico.h>
 #include <sys.h>
+#include <Serial.h>
 // put function declarations here:
 
 Log logger;
@@ -9,7 +10,7 @@ Log logger;
 #define LOCATOR "serial/UART_1#baudrate=115200"
 z_owned_session_t zenoh_session;
 z_owned_publisher_t pub;
-const char *keyexpr = "demo/example/zenoh-pico-pub";
+const char *keyexpr = "src/stm32/zenoh-pico";
 int MAX_COUNT = 2147483647; // max int value by default
 const char *value = "Pub from Pico!";
 char *buf = (char *)malloc(256);
@@ -34,19 +35,27 @@ void setup()
 {
 
   INFO("Zenoh-Pico Publisher Example");
-  z_sleep_ms(1000);
+  z_sleep_ms(100);
 
   z_result_t res;
-  z_owned_config_t config;
-  z_config_default(&config);
-  zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_MODE_KEY, MODE);
-  zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_CONNECT_KEY, LOCATOR);
+  while (true) {
+    z_owned_config_t config;
+    z_owned_session_t zenoh_session;
 
-  INFO("Opening Zenoh Session...");
-  z_sleep_ms(1000);
-
-  Z_CHECK(z_open(&zenoh_session, z_config_move(&config), NULL));
-  z_sleep_ms(1000);
+    z_config_default(&config);
+    zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_MODE_KEY, MODE);
+    zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_CONNECT_KEY, LOCATOR);
+  
+    INFO("Opening Zenoh Session...");
+  
+    if (z_open(&zenoh_session, z_config_move(&config), NULL)==0 ) break;
+    else {
+      INFO("Failed to open session, retrying...");
+      z_sleep_ms(1000);
+    }
+  }
+  INFO(" Zenoh Session Opened!");
+  z_sleep_ms(100);
   INFO("Done!");
 
   z_owned_publisher_t pub;
@@ -103,6 +112,8 @@ int main() {
   if ( sys_init().is_err() ) {
     panic_handler("sys_init failed");
   }
+  Serial2.begin(115200);
+  Serial1.begin(115200);
   setup();
   while (1) {
     loop();

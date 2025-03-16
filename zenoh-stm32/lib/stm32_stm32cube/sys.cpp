@@ -1,39 +1,34 @@
 #include <sys.h>
 #include <cassert>
 #include <util.h>
+#include <stdarg.h>
 
 #include <stm32f4xx.h>
 #include "stm32f4xx_hal_rcc.h"
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_usart.h"
 
-UART_HandleTypeDef *huart2 = NULL;
-UART_HandleTypeDef *huart1 = NULL;
-HardwareSerial *Serial1 = NULL;
-HardwareSerial *Serial2 = NULL;
+#include <Serial.h>
+
+
 // redirect printf to UART2
 extern "C" int _write(int file, char *ptr, int len)
 {
-    if (huart1 != NULL)
-    {
-        HAL_UART_Transmit(huart2, (uint8_t *)ptr, len, HAL_MAX_DELAY);
-    }
+    Serial2.write((uint8_t *)ptr, len);
     return len;
 }
-// general failure -> stall 
-extern "C" void panic_handler(const char* msg){
+// general failure -> stall
+extern "C" void panic_handler(const char *msg)
+{
     __disable_irq();
     while (1)
     {
     }
 }
 
-
 void GPIO_Config(USART_TypeDef *usart);
 void SystemClock_Config(void);
-Res<UART_HandleTypeDef *> USART_Config(USART_TypeDef *usart);
-extern "C" void USART1_IRQHandler(void);
-extern "C" void USART2_IRQHandler(void);
+
 
 // replace weak systick handler
 extern "C" void SysTick_Handler(void)
@@ -48,7 +43,7 @@ Res<int> sys_init()
     // Configure the system clock
     SystemClock_Config();
     // Configure the GPIO
-    GPIO_Config(USART1);
+ /*   GPIO_Config(USART1);
     GPIO_Config(USART2);
     // Configure the USART
     USART_Config(USART1).and_then([&](UART_HandleTypeDef *uart)
@@ -57,16 +52,17 @@ Res<int> sys_init()
     USART_Config(USART2).and_then([&](UART_HandleTypeDef *uart)
                                   { huart2 = uart; });
     Serial1 = new HardwareSerial(1);
-    Serial2 = new HardwareSerial(2);
+    Serial2 = new HardwareSerial(2);*/
     return res.ok(0);
 }
-
+/*
 HardwareSerial::HardwareSerial(int uart)
 {
     if (uart == 1)
     {
         huart = huart1;
-        if (HAL_UART_Receive_IT(huart1, rx_buffer, 1))
+        auto r = HAL_UART_Receive_IT(huart1, rx_buffer, 1);
+        if (r != HAL_OK)
         {
             PANIC("HAL_UART_Receive_IT failed");
         }
@@ -74,7 +70,8 @@ HardwareSerial::HardwareSerial(int uart)
     else if (uart == 2)
     {
         huart = huart2;
-        if (HAL_UART_Receive_IT(huart2, rx_buffer, 1))
+        auto r = HAL_UART_Receive_IT(huart2, rx_buffer, 1);
+        if (r != HAL_OK)
         {
             PANIC("HAL_UART_Receive_IT failed");
         }
@@ -97,14 +94,18 @@ int HardwareSerial::end()
     return 0;
 }
 int HardwareSerial::flush() { return -1; }
+*/
+
+/*
 int HardwareSerial::write(uint8_t *bytes, size_t length)
 {
-    INFO("HardwareSerial::write");
+    INFO("HardwareSerial::write [%lu] [ %s]", length, bytes_to_hex(bytes,length).c_str());
     return (int)HAL_UART_Transmit(huart1, bytes, length, HAL_MAX_DELAY);
 }
-int HardwareSerial::available() { return -1; }
-uint8_t HardwareSerial::read() { return -1; }
 
+int HardwareSerial::available() { return rx_data.size(); }
+uint8_t HardwareSerial::read() { return -1; }
+*/
 void delay(size_t msec)
 {
     uint64_t start = millis();
@@ -215,7 +216,7 @@ void SystemClock_Config(void)
         PANIC("HAL_RCC_ClockConfig failed");
     }
 }
-
+/*
 Res<UART_HandleTypeDef *> USART_Config(USART_TypeDef *usart)
 {
     // Enable USART2 clock
@@ -227,7 +228,6 @@ Res<UART_HandleTypeDef *> USART_Config(USART_TypeDef *usart)
     }
     if (usart == USART1)
     {
-        __HAL_RCC_USART1_CLK_ENABLE();
     }
     // Configure USART2
     huart->Instance = usart;
@@ -268,27 +268,18 @@ void GPIO_Config(USART_TypeDef *usart)
     }
     if (usart == USART1)
     {
-        // USART1 GPIO Configuration
-        // PA9     ------> USART1_TX
-        // PA10     ------> USART1_RX
-        GPIO_InitTypeDef GPIO_InitStruct = {0};
-        // Enable GPIOA clock
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        // Configure PA.9 (USART1_TX), PA.10 (USART1_RX)
-        GPIO_InitStruct.Pin = GPIO_PIN_9 | GPIO_PIN_10;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_PULLUP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
     }
 }
 
 int HardwareSerial::rx_isr()
 {
     rx_data.push_back(rx_buffer[0]);
+    if (rx_data.size() > 255)
+    {
+        rx_data.clear();
+    }
     HAL_UART_Transmit(huart1, Serial1->rx_buffer, 1, HAL_MAX_DELAY);
-
     // Restart UART reception in interrupt mode
     HAL_UART_Receive_IT(huart1, Serial1->rx_buffer, 1);
     return 0;
@@ -314,3 +305,4 @@ extern "C" void USART2_IRQHandler(void)
     if (huart2 != NULL)
         HAL_UART_IRQHandler(huart2);
 }
+        */
