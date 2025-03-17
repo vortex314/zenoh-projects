@@ -12,7 +12,7 @@
 
 extern "C" void panic_handler(const char *msg);
 Res<int> sys_init();
-
+/*
 class HardwareSerial
 {
 private:
@@ -33,7 +33,7 @@ public:
     void rx_byte(uint8_t);
 };
 
-
+*/
 
 void delay(size_t msec);
 void delayMicroseconds(size_t usec);
@@ -82,6 +82,7 @@ static constexpr const char *past_last_slash(cstr str)
         })
 extern Log logger;
 
+#if ZENOH_DEBUG==3
 #define INFO(fmt, ...)                                                                  \
     {                                                                                   \
         if (logger._level <= Log::L_INFO)                                               \
@@ -105,4 +106,12 @@ extern Log logger;
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 #define PANIC(msg) { ERROR("PANIC: " msg); panic_handler(msg); }
+#else
+#define INFO(fmt, ...) {}
+#define WARN(fmt, ...) {}
+#define DEBUG(fmt, ...) {}
+#define ERROR(fmt, ...)  {}
+#define PANIC(msg) { panic_handler("fatal ");}
+#endif
+
 #endif

@@ -26,10 +26,7 @@ extern "C" void panic_handler(const char *msg)
     }
 }
 
-void GPIO_Config(USART_TypeDef *usart);
 void SystemClock_Config(void);
-
-
 // replace weak systick handler
 extern "C" void SysTick_Handler(void)
 {
@@ -42,70 +39,9 @@ Res<int> sys_init()
     HAL_Init();
     // Configure the system clock
     SystemClock_Config();
-    // Configure the GPIO
- /*   GPIO_Config(USART1);
-    GPIO_Config(USART2);
-    // Configure the USART
-    USART_Config(USART1).and_then([&](UART_HandleTypeDef *uart)
-                                  { huart1 = uart; });
-    // Start UART reception in interrupt mode
-    USART_Config(USART2).and_then([&](UART_HandleTypeDef *uart)
-                                  { huart2 = uart; });
-    Serial1 = new HardwareSerial(1);
-    Serial2 = new HardwareSerial(2);*/
     return res.ok(0);
 }
-/*
-HardwareSerial::HardwareSerial(int uart)
-{
-    if (uart == 1)
-    {
-        huart = huart1;
-        auto r = HAL_UART_Receive_IT(huart1, rx_buffer, 1);
-        if (r != HAL_OK)
-        {
-            PANIC("HAL_UART_Receive_IT failed");
-        }
-    }
-    else if (uart == 2)
-    {
-        huart = huart2;
-        auto r = HAL_UART_Receive_IT(huart2, rx_buffer, 1);
-        if (r != HAL_OK)
-        {
-            PANIC("HAL_UART_Receive_IT failed");
-        }
-    }
-    else
-    {
-        PANIC("Invalid UART device");
-    }
-    rx_data.reserve(256);
-}
 
-int HardwareSerial::begin(uint32_t baudrate)
-{
-    INFO("baudrate set %u", baudrate);
-    return 0;
-}
-int HardwareSerial::end()
-{
-    INFO("HardwareSerial::end");
-    return 0;
-}
-int HardwareSerial::flush() { return -1; }
-*/
-
-/*
-int HardwareSerial::write(uint8_t *bytes, size_t length)
-{
-    INFO("HardwareSerial::write [%lu] [ %s]", length, bytes_to_hex(bytes,length).c_str());
-    return (int)HAL_UART_Transmit(huart1, bytes, length, HAL_MAX_DELAY);
-}
-
-int HardwareSerial::available() { return rx_data.size(); }
-uint8_t HardwareSerial::read() { return -1; }
-*/
 void delay(size_t msec)
 {
     uint64_t start = millis();
@@ -216,93 +152,3 @@ void SystemClock_Config(void)
         PANIC("HAL_RCC_ClockConfig failed");
     }
 }
-/*
-Res<UART_HandleTypeDef *> USART_Config(USART_TypeDef *usart)
-{
-    // Enable USART2 clock
-    UART_HandleTypeDef *huart = (UART_HandleTypeDef *)malloc(sizeof(UART_HandleTypeDef));
-    Res<UART_HandleTypeDef *> res;
-    if (usart == USART2)
-    {
-        __HAL_RCC_USART2_CLK_ENABLE();
-    }
-    if (usart == USART1)
-    {
-    }
-    // Configure USART2
-    huart->Instance = usart;
-    huart->Init.BaudRate = 115200;
-    huart->Init.WordLength = UART_WORDLENGTH_8B;
-    huart->Init.StopBits = UART_STOPBITS_1;
-    huart->Init.Parity = UART_PARITY_NONE;
-    huart->Init.Mode = UART_MODE_TX_RX;
-    huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart->Init.OverSampling = UART_OVERSAMPLING_16;
-    HAL_StatusTypeDef r = HAL_UART_Init(huart);
-    if (r != HAL_OK)
-    {
-        free(huart);
-        return res.err(Error{r, "HAL_UART_Init failed"});
-    }
-    return res.ok(huart);
-}
-
-void GPIO_Config(USART_TypeDef *usart)
-{
-
-    if (usart == USART2)
-    {
-        // USART2 GPIO Configuration
-        // PA2     ------> USART2_TX
-        // PA3     ------> USART2_RX
-        GPIO_InitTypeDef GPIO_InitStruct = {0};
-        // Enable GPIOA clock
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        // Configure PA.2 (USART2_TX), PA.3 (USART2_RX)
-        GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_PULLUP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    }
-    if (usart == USART1)
-    {
-
-    }
-}
-
-int HardwareSerial::rx_isr()
-{
-    rx_data.push_back(rx_buffer[0]);
-    if (rx_data.size() > 255)
-    {
-        rx_data.clear();
-    }
-    HAL_UART_Transmit(huart1, Serial1->rx_buffer, 1, HAL_MAX_DELAY);
-    // Restart UART reception in interrupt mode
-    HAL_UART_Receive_IT(huart1, Serial1->rx_buffer, 1);
-    return 0;
-}
-
-// UART Receive Complete Callback
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        Serial1->rx_isr();
-    }
-}
-
-extern "C" void USART1_IRQHandler(void)
-{
-    if (huart1 != NULL)
-        HAL_UART_IRQHandler(huart1);
-}
-
-extern "C" void USART2_IRQHandler(void)
-{
-    if (huart2 != NULL)
-        HAL_UART_IRQHandler(huart2);
-}
-        */
