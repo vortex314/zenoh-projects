@@ -1,7 +1,12 @@
 # Adapting Zenoh Pico for a new platform
+- Minimal changes needed in zenoh-pico to support an extra platform
+- keep platform specific include file , system.cpp and network.cpp out of the zenoh-pico source tree
+- Clone the zenoh-pico git locally and apply the below mentioned changes
+- Point platformio to the right platform-framework library for zenoh
+- Include the platform specific include into the build
 
 ## Adapt zenoh-pico/system/common/platform.h
-- force include of an external 
+- force include of an external platform specific file
 ```
 #else
 #include "generic.h"
@@ -88,8 +93,14 @@ build_unflags =
 	-std=gnu++11
 ```
 
-# Adapt 
-https://controllerstech.com/stm32-uart-1-configure-uart-transmit-data/
+## Other changes
+- network.cpp only implements serial an that is abstracted in an Arduino alike Serial1,Serial2 
+- Trying for a single thread approach first, so Serial calls should be non-blocking ( DMA based )
+- read returns no data , until COBS buffer complete
+
+# Target
+- have a zenoh use with 2 entry points : Zenoh::setup and std::optional<Msg> Zenoh::loop(std::optional<Msg>) 
+
 
 ## References 
 - [Description of STM32F4 HAL and low-layer drivers](https://www.st.com/content/ccc/resource/technical/document/user_manual/2f/71/ba/b8/75/54/47/cf/DM00105879.pdf/files/DM00105879.pdf/jcr:content/translations/en.DM00105879.pdf)
