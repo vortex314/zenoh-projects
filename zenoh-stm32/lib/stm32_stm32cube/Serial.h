@@ -42,7 +42,7 @@ public:
     UART_HandleTypeDef huart;
     DMA_HandleTypeDef hdma_usart_rx;
     DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[2];
+    uint8_t rx_dma_buffer[128];
     volatile bool dma_done = true;
     uint32_t _rxdOverflow = 0;
 
@@ -77,7 +77,7 @@ public:
     UART_HandleTypeDef huart;
     DMA_HandleTypeDef hdma_usart_rx;
     DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[2];
+    uint8_t rx_dma_buffer[128];
     volatile bool dma_done = true;
     uint32_t _rxdOverflow = 0;
 

@@ -5,7 +5,6 @@
 
 Log logger;
 
-
 #define MODE "peer"
 #define LOCATOR "serial/UART_1#baudrate=115200"
 z_owned_session_t zenoh_session;
@@ -21,37 +20,41 @@ char *buf = (char *)malloc(256);
     ;                \
   }
 
-#define Z_CHECK(expr)                                   \
-  {                                                     \
-    z_result_t res = (expr);                            \
-    if (res != Z_OK)                                    \
-    {                                                   \
+#define Z_CHECK(expr)                          \
+  {                                            \
+    z_result_t res = (expr);                   \
+    if (res != Z_OK)                           \
+    {                                          \
       INFO("Error: " #expr " rc: %d \n", res); \
-      LOOP_FOREVER;                                     \
-    }                                                   \
+      LOOP_FOREVER;                            \
+    }                                          \
   }
 
 void setup()
 {
 
-  INFO("Zenoh-Pico Publisher Example");
-  z_sleep_ms(100);
+  INFO("Zenoh-Pico Publisher Example " __DATE__ " " __TIME__);
 
   z_result_t res;
-  while (true) {
-    z_owned_config_t config;
-    z_owned_session_t zenoh_session;
+  while (true)
+  {
+    z_owned_config_t* config = new z_owned_config_t;
+    z_owned_session_t* zenoh_session= new z_owned_session_t;
 
-    z_config_default(&config);
-    zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_MODE_KEY, MODE);
-    zp_config_insert(z_config_loan_mut(&config), Z_CONFIG_CONNECT_KEY, LOCATOR);
-  
+    z_config_default(config);
+    zp_config_insert(z_config_loan_mut(config), Z_CONFIG_MODE_KEY, MODE);
+    zp_config_insert(z_config_loan_mut(config), Z_CONFIG_CONNECT_KEY, LOCATOR);
+
     INFO("Opening Zenoh Session...");
-  
-    if (z_open(&zenoh_session, z_config_move(&config), NULL)==0 ) break;
-    else {
+
+    if (z_open(zenoh_session, z_config_move(config), NULL) == 0)
+    {
+      break;
+    }
+    else
+    {
       INFO("Failed to open session, retrying...");
-      z_sleep_ms(1000);
+      z_sleep_ms(10000);
     }
   }
   INFO(" Zenoh Session Opened!");
@@ -72,14 +75,16 @@ void setup()
     INFO("Unable to declare publisher for key expression!\n");
     LOOP_FOREVER;
   }
+  INFO("Publisher declared for key expression: %s\n", keyexpr);
 }
 
 void loop()
 {
 
-  z_clock_t now = z_clock_now();
   for (int idx = 0; idx < MAX_COUNT;)
   {
+    INFO("Looping...");
+    z_clock_t now = z_clock_now();
     if (z_clock_elapsed_ms(&now) > 1000)
     {
       snprintf(buf, 256, "[%4d] %s", idx, value);
@@ -105,17 +110,20 @@ void loop()
     free(buf);
     printfln(" Hello world ");
     delay(1000);
-    */
+    */ 
 }
 
-int main() {
-  if ( sys_init().is_err() ) {
+int main()
+{
+  if (sys_init().is_err())
+  {
     panic_handler("sys_init failed");
   }
-  Serial2.begin(115200);
+  Serial2.begin(921600);
   Serial1.begin(115200);
   setup();
-  while (1) {
+  while (1)
+  {
     loop();
   }
   return 0;

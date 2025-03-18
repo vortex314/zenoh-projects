@@ -43,8 +43,8 @@ Res<int> sys_init()
 
 void delay(size_t msec)
 {
-    uint64_t start = millis();
-    while (millis() - start < msec)
+    volatile uint64_t start = millis();
+    while (millis()  < start + msec)
     {
     }
 }

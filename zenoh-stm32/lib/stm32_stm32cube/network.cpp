@@ -497,6 +497,14 @@ extern "C"
                 break;
             }
         }
+        char buf[256];
+        char *pt=buf;;
+        for (size_t i = 0; i < rb; i++)
+        {
+            sprintf(pt, "%02X ", raw_buf[i]);
+            pt += 3;
+        }
+        _Z_DEBUG("Read %lu bytes [%s]", rb, buf);
 
         uint8_t *tmp_buf = (uint8_t *)z_malloc(_Z_SERIAL_MFS_SIZE);
         size_t ret = _z_serial_msg_deserialize(raw_buf, rb, ptr, len, header, tmp_buf, _Z_SERIAL_MFS_SIZE);
