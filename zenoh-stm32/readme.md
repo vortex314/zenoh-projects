@@ -1,3 +1,5 @@
+# PROJECT PAUSED : waiting for peer serial capability in zenoh pico
+
 # Adapting Zenoh Pico for a new platform
 - Minimal changes needed in zenoh-pico to support an extra platform
 - keep platform specific include file , system.cpp and network.cpp out of the zenoh-pico source tree

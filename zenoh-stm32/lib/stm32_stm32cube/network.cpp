@@ -433,7 +433,7 @@ extern "C"
 
         if (sock->_serial != NULL)
         {
-  //          sock->_serial->begin(baudrate);
+            //          sock->_serial->begin(baudrate);
             sock->_serial->flush();
         }
         else
@@ -476,8 +476,8 @@ extern "C"
 
     void _z_close_serial(_z_sys_net_socket_t *sock)
     {
-   //     sock->_serial->end();
-  //      delete sock->_serial;
+        //     sock->_serial->end();
+        //      delete sock->_serial;
     }
 
     size_t _z_read_serial_internal(const _z_sys_net_socket_t sock, uint8_t *header, uint8_t *ptr, size_t len)
@@ -516,6 +516,8 @@ extern "C"
 
         if (ret == SIZE_MAX)
         {
+            z_free(raw_buf);
+            z_free(tmp_buf);
             return ret;
         }
 

@@ -33,7 +33,6 @@ class Serial1 : public Serial
     size_t _wrPtr = 0;
     uint8_t rx_buffer[2];
     std::vector<uint8_t> rx_data;
-    uint32_t _rxdOverflow = 0;
     uint32_t _txdOverflow = 0;
     uint8_t tx_dma_buffer[128];
     bool _frame_complete = false;
@@ -43,8 +42,10 @@ public:
     UART_HandleTypeDef huart;
     DMA_HandleTypeDef hdma_usart_rx;
     DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[128];
+    uint8_t rx_dma_buffer[2];
     volatile bool crcDMAdone = true;
+    uint32_t _rxdOverflow = 0;
+
 
 
 public:
@@ -66,7 +67,6 @@ class Serial2 : public Serial
     size_t _wrPtr = 0;
     uint8_t rx_buffer[2];
     std::vector<uint8_t> rx_data;
-    uint32_t _rxdOverflow = 0;
     uint32_t _txdOverflow = 0;
     uint8_t dma_buffer[128];
     uint8_t tx_dma_buffer[128];
@@ -77,8 +77,10 @@ public:
     UART_HandleTypeDef huart;
     DMA_HandleTypeDef hdma_usart_rx;
     DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[128];
+    uint8_t rx_dma_buffer[2];
     volatile bool crcDMAdone = true;
+    uint32_t _rxdOverflow = 0;
+
 
 public:
     int begin(uint32_t baudrate);

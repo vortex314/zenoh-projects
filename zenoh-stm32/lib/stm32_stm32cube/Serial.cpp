@@ -52,7 +52,28 @@ int Serial1::begin(uint32_t baudrate)
     __HAL_LINKDMA(&huart, hdmatx, hdma_usart_tx);
     HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
-
+    /*
+        // Configure DMA for USART2 RX
+        hdma_usart_rx.Instance = DMA2_Stream5;
+        hdma_usart_rx.Init.Channel = DMA_CHANNEL_4;
+        hdma_usart_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        hdma_usart_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+        hdma_usart_rx.Init.MemInc = DMA_MINC_ENABLE;
+        hdma_usart_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        hdma_usart_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+        hdma_usart_rx.Init.Mode = DMA_NORMAL;
+        hdma_usart_rx.Init.Priority = DMA_PRIORITY_HIGH;
+        hdma_usart_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+        HAL_DMA_Init(&hdma_usart_rx);
+        if (r != HAL_OK)
+        {
+            return r;
+        }
+        __HAL_DMA_ENABLE_IT(&hdma_usart_rx, DMA_IT_RXNE);
+        __HAL_LINKDMA(&huart, hdmarx, hdma_usart_rx);
+        HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(DMA2_Stream5_IRQn);
+    */
     // Enable USART1 clock
     __HAL_RCC_USART1_CLK_ENABLE();
     __USART1_CLK_ENABLE();
@@ -70,13 +91,13 @@ int Serial1::begin(uint32_t baudrate)
     {
         return r;
     };
+    // interrupt for transmission complete or half complete
+    __HAL_DMA_ENABLE_IT(&hdma_usart_tx, DMA_IT_TC | DMA_IT_HT);
+    __HAL_UART_ENABLE_IT(&huart, USART_IT_RXNE);
+
     HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
-
-    __HAL_DMA_ENABLE_IT(&hdma_usart_tx, DMA_IT_TC | DMA_IT_HT);
-    __HAL_UART_ENABLE_IT(&huart, UART_IT_IDLE);
-
-    HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
+    //    HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
     return 0;
 }
 
@@ -126,6 +147,7 @@ void Serial1::rx_byte(uint8_t c)
 {
     if (c == COBS_SEPARATOR)
     {
+        _frameRxd.push_back(c);
         _frame_complete = true;
     }
     else
@@ -151,6 +173,8 @@ uint8_t Serial1::read()
 {
     uint8_t c = _frameRxd[0];
     _frameRxd.erase(_frameRxd.begin());
+    if (_frameRxd.size() == 0)
+        _frame_complete = false;
     return c;
 }
 
@@ -202,10 +226,28 @@ int Serial2::begin(uint32_t baudrate)
     {
         return r;
     }
-    __HAL_LINKDMA(&huart, hdmatx, hdma_usart_tx);
     HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
-
+    /*
+        // Configure DMA for USART2 RX
+        hdma_usart_rx.Instance = DMA1_Stream5;
+        hdma_usart_rx.Init.Channel = DMA_CHANNEL_4;
+        hdma_usart_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        hdma_usart_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+        hdma_usart_rx.Init.MemInc = DMA_MINC_ENABLE;
+        hdma_usart_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        hdma_usart_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+        hdma_usart_rx.Init.Mode = DMA_NORMAL;
+        hdma_usart_rx.Init.Priority = DMA_PRIORITY_HIGH;
+        hdma_usart_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+        r = HAL_DMA_Init(&hdma_usart_rx);
+        if (r != HAL_OK)
+        {
+            return r;
+        }
+        HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+        */
     // Enable USART2 clock
     __HAL_RCC_USART2_CLK_ENABLE();
     __USART2_CLK_ENABLE();
@@ -223,13 +265,18 @@ int Serial2::begin(uint32_t baudrate)
     {
         return r;
     };
+
+    __HAL_LINKDMA(&huart, hdmatx, hdma_usart_tx);
+    //   __HAL_LINKDMA(&huart, hdmarx, hdma_usart_rx);
+
+
+    __HAL_DMA_ENABLE_IT(&hdma_usart_tx, DMA_IT_TC | DMA_IT_HT);
+    __HAL_UART_ENABLE_IT(&huart, UART_IT_RXNE);
+
     HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-    __HAL_DMA_ENABLE_IT(&hdma_usart_tx, DMA_IT_TC | DMA_IT_HT);
-    __HAL_UART_ENABLE_IT(&huart, UART_IT_IDLE);
-
-    HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
+    //   HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
     return 0;
 }
 
@@ -340,20 +387,34 @@ extern "C" void UART_IDLECallback(UART_HandleTypeDef *huart)
 extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
-        HAL_UART_Receive_DMA(huart, Serial1.rx_dma_buffer, sizeof(Serial1.rx_dma_buffer));
+    {
+        Serial1.rx_byte(huart->Instance->DR);
+        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+    }
     if (huart->Instance == USART2)
-        HAL_UART_Receive_DMA(huart, Serial2.rx_dma_buffer, sizeof(Serial2.rx_dma_buffer));
+    {
+        Serial1.rx_byte(huart->Instance->DR);
+        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+    }
 }
 
 // get first half of buffer, to be ready before buffer full
 extern "C" void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
-        Serial1.rx_isr();
+    {
+        Serial1.rx_byte(huart->Instance->DR);
+        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+    }
     if (huart->Instance == USART2)
-        Serial2.rx_isr();
+    {
+        Serial1.rx_byte(huart->Instance->DR);
+        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+    }
 }
-
+/*extern "C" void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+}*/
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
@@ -364,7 +425,17 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    PANIC("UART Error")
+    volatile uint32_t rc = huart->ErrorCode;
+
+    if (huart->Instance == USART1) // clear error flags
+    {
+        if (rc & HAL_UART_ERROR_ORE)
+        {
+            Serial1._rxdOverflow++;
+            __HAL_UART_CLEAR_OREFLAG(huart);
+            //            HAL_UART_Receive_DMA(huart, Serial1.rx_dma_buffer, sizeof(Serial1.rx_dma_buffer));
+        }
+    }
 }
 
 extern "C" void UART_DMAError(DMA_HandleTypeDef *hdma)
@@ -380,15 +451,24 @@ extern "C" void DMADoneCallback(DMA_HandleTypeDef *hdma)
         Serial2.crcDMAdone = true;
 }
 
-/* This function handles DMA1 stream6 global interrupt. */
 extern "C" void DMA2_Stream7_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&Serial1.hdma_usart_tx);
 }
 
+extern "C" void DMA2_Stream5_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&Serial1.hdma_usart_rx);
+}
+
 extern "C" void DMA1_Stream6_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&Serial2.hdma_usart_tx);
+}
+
+extern "C" void DMA1_Stream5_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&Serial2.hdma_usart_rx);
 }
 
 extern "C" void DMA_IRQHandler()
@@ -399,12 +479,10 @@ extern "C" void DMA_IRQHandler()
 
 extern "C" void USART2_IRQHandler(void)
 {
-    if (Serial2.huart.Instance == USART2)
-        HAL_UART_IRQHandler(&Serial2.huart); // calls HAL_UART_TxCpltCallback
+    HAL_UART_IRQHandler(&Serial2.huart); // calls HAL_UART_TxCpltCallback
 }
 
 extern "C" void USART1_IRQHandler(void)
 {
-    if (Serial1.huart.Instance == USART1)
-        HAL_UART_IRQHandler(&Serial1.huart);
+    HAL_UART_IRQHandler(&Serial1.huart);
 }
