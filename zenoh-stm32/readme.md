@@ -107,3 +107,4 @@ build_unflags =
 ## References 
 - [Description of STM32F4 HAL and low-layer drivers](https://www.st.com/content/ccc/resource/technical/document/user_manual/2f/71/ba/b8/75/54/47/cf/DM00105879.pdf/files/DM00105879.pdf/jcr:content/translations/en.DM00105879.pdf)
 - [Description of STM32F37xx/38xx Standard Peripheral Library](https://www.st.com/resource/en/user_manual/um1565-description-of-stm32f37xx38xx-standard-peripheral-library-stmicroelectronics.pdf)
+- [stm32 uart irq and idel line ](https://deepbluembedded.com/stm32-uart-receive-unknown-length-idle-line-detection-examples/)

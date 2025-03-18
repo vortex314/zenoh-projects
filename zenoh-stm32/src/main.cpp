@@ -12,7 +12,7 @@ z_owned_session_t zenoh_session;
 z_owned_publisher_t pub;
 const char *keyexpr = "src/stm32/zenoh-pico";
 int MAX_COUNT = 2147483647; // max int value by default
-const char *value = "Pub from Pico!";
+const char *value = "Pub from STM32 !";
 char *buf = (char *)malloc(256);
 
 #define LOOP_FOREVER \

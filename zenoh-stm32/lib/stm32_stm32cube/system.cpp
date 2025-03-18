@@ -32,7 +32,6 @@ uint64_t z_random_u64(void) {
     ret |= z_random_u32();
     ret = ret << 32;
     ret |= z_random_u32();
-
     return ret;
 }
 
@@ -44,20 +43,16 @@ void z_random_fill(void *buf, size_t len) {
 
 /*------------------ Memory ------------------*/
 void *z_malloc(size_t size) {
-    // return pvPortMalloc(size); // FIXME: Further investigation is required to understand
-    //        why pvPortMalloc or pvPortMallocAligned are failing
     return malloc(size);
 }
 
 void *z_realloc(void *ptr, size_t size) {
     // Not implemented by the platform
-    panic_handler("z_realloc not implemented");
+    PANIC("z_realloc not implemented");
     return NULL;
 }
 
 void z_free(void *ptr) {
-    // vPortFree(ptr); // FIXME: Further investigation is required to understand
-    //        why vPortFree or vPortFreeAligned are failing
     return free(ptr);
 }
 

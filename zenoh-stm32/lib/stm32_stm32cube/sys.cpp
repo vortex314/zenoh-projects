@@ -5,21 +5,11 @@
 
 #include <stm32f4xx.h>
 #include "stm32f4xx_hal_rcc.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_usart.h"
 
-#include <Serial.h>
-
-
-// redirect printf to UART2
-extern "C" int _write(int file, char *ptr, int len)
-{
-    Serial2.write((uint8_t *)ptr, len);
-    return len;
-}
 // general failure -> stall
 extern "C" void panic_handler(const char *msg)
 {
+    volatile const char* m = msg;
     __disable_irq();
     while (1)
     {
@@ -28,10 +18,19 @@ extern "C" void panic_handler(const char *msg)
 
 void SystemClock_Config(void);
 // replace weak systick handler
+static uint64_t __tick_count=0;
+
 extern "C" void SysTick_Handler(void)
 {
     HAL_IncTick();
+    __tick_count++;
 }
+
+uint64_t millis()
+{
+    return __tick_count;
+}
+
 
 Res<int> sys_init()
 {
@@ -53,16 +52,7 @@ void delayMicroseconds(size_t usec)
 {
     PANIC("delayMicroseconds not implemented");
 }
-uint64_t millis()
-{
-    static uint64_t ms = 0;
-    uint64_t t = HAL_GetTick();
-    if (t < ms)
-    {
-        ms += 0x100000000;
-    }
-    return ms + t;
-}
+
 
 #include <sys.h>
 extern "C"
@@ -74,7 +64,6 @@ extern "C"
 Log::Log()
 {
     _level = Level::L_INFO;
-    txBusy = false;
 }
 // log the file and line
 Log &Log::logf(const char *format, ...)
@@ -112,7 +101,6 @@ Log &Log::tfl(const char *lvl, const char *file, const uint32_t line)
 void Log::flush()
 {
     printf("\r\n");
-    txBusy = false;
 }
 
 //==================================================================

@@ -12,28 +12,6 @@
 
 extern "C" void panic_handler(const char *msg);
 Res<int> sys_init();
-/*
-class HardwareSerial
-{
-private:
-    UART_HandleTypeDef *huart;
-    int _uart;
-    uint8_t rx_buffer[2];
-    std::vector<uint8_t> rx_data;
-
-public:
-    HardwareSerial(int);
-    int begin(uint32_t baudrate);
-    int end();
-    int flush();
-    int write(uint8_t *, size_t);
-    int available();
-    uint8_t read();
-    int rx_isr(UART_HandleTypeDef *huart);
-    void rx_byte(uint8_t);
-};
-
-*/
 
 void delay(size_t msec);
 void delayMicroseconds(size_t usec);
@@ -53,7 +31,6 @@ public:
     Level _level = L_INFO;
 
     Log();
-    bool txBusy = false;
     Log &tfl(const char *lvl, const char *file, const uint32_t line);
     Log &logf(const char *fmt, ...);
     void flush();

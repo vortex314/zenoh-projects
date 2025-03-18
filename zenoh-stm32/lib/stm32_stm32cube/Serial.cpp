@@ -3,6 +3,14 @@
 class Serial1 Serial1;
 class Serial2 Serial2;
 
+
+// redirect printf to UART2
+extern "C" int _write(int file, char *ptr, int len)
+{
+    Serial2.write((uint8_t *)ptr, len);
+    return len;
+}
+
 std::string bytes_to_hex(uint8_t *bytes, size_t length)
 {
     std::string s;
@@ -97,6 +105,7 @@ int Serial1::begin(uint32_t baudrate)
 
     HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
+    HAL_UART_Receive_IT(&huart, rx_dma_buffer, 2);
     //    HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
     return 0;
 }
@@ -106,14 +115,14 @@ int Serial1::write(uint8_t *data, size_t length)
     std::string s = bytes_to_hex(data, length);
     INFO("Serial1::write [%lu] [ %s]", length, s.c_str());
 
-    if (!crcDMAdone)
+    if (!dma_done)
     {
         _txdOverflow++;
         return EOVERFLOW;
     }
     for (size_t i = 0; i < length; i++)
         tx_dma_buffer[i] = data[i];
-    crcDMAdone = false;
+    dma_done = false;
     if (HAL_UART_Transmit_DMA(&huart, tx_dma_buffer, length) != HAL_OK)
     {
         _txdOverflow++;
@@ -275,6 +284,7 @@ int Serial2::begin(uint32_t baudrate)
 
     HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
+    HAL_UART_Receive_IT(&huart, rx_dma_buffer, 1);
 
     //   HAL_UART_Receive_DMA(&huart, rx_dma_buffer, sizeof(rx_dma_buffer));
     return 0;
@@ -285,14 +295,14 @@ int Serial2::write(uint8_t *data, size_t length)
 
     //    return (int)HAL_UART_Transmit(&huart, data, length, HAL_MAX_DELAY);
 
-    if (!crcDMAdone)
+    if (!dma_done)
     {
         _txdOverflow++;
         return EOVERFLOW;
     }
     for (size_t i = 0; i < length; i++)
         tx_dma_buffer[i] = data[i];
-    crcDMAdone = false;
+    dma_done = false;
     if (HAL_UART_Transmit_DMA(&huart, tx_dma_buffer, length) != HAL_OK)
     {
         _txdOverflow++;
@@ -389,12 +399,12 @@ extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1)
     {
         Serial1.rx_byte(huart->Instance->DR);
-        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+        HAL_UART_Receive_IT(huart, Serial1.rx_dma_buffer, 1);
     }
     if (huart->Instance == USART2)
     {
         Serial1.rx_byte(huart->Instance->DR);
-        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+        HAL_UART_Receive_IT(huart, Serial2.rx_dma_buffer, 1);
     }
 }
 
@@ -404,12 +414,12 @@ extern "C" void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1)
     {
         Serial1.rx_byte(huart->Instance->DR);
-        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+        HAL_UART_Receive_IT(huart, Serial1.rx_dma_buffer, 1);
     }
     if (huart->Instance == USART2)
     {
         Serial1.rx_byte(huart->Instance->DR);
-        __HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+        HAL_UART_Receive_IT(huart, Serial2.rx_dma_buffer, 1);
     }
 }
 /*extern "C" void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
@@ -418,9 +428,9 @@ extern "C" void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
-        Serial1.crcDMAdone = true;
+        Serial1.dma_done = true;
     if (huart->Instance == USART2)
-        Serial2.crcDMAdone = true;
+        Serial2.dma_done = true;
 }
 
 extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
@@ -446,9 +456,9 @@ extern "C" void UART_DMAError(DMA_HandleTypeDef *hdma)
 extern "C" void DMADoneCallback(DMA_HandleTypeDef *hdma)
 {
     if (hdma->Instance == DMA2_Stream7)
-        Serial1.crcDMAdone = true;
+        Serial1.dma_done = true;
     if (hdma->Instance == DMA1_Stream6)
-        Serial2.crcDMAdone = true;
+        Serial2.dma_done = true;
 }
 
 extern "C" void DMA2_Stream7_IRQHandler(void)
