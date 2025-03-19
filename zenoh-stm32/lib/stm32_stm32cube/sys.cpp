@@ -10,6 +10,7 @@
 extern "C" void panic_handler(const char *msg)
 {
     volatile const char* m = msg;
+    (void)m;
     __disable_irq();
     while (1)
     {
