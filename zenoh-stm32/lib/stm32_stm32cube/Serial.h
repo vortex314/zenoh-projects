@@ -11,6 +11,7 @@
 #include "stm32f4xx_hal_usart.h"
 #include <util.h>
 #include <sys.h>
+#include <CircBuf.h>
 
 #define COBS_SEPARATOR 0x00
 #define FRAME_MAX 256
@@ -26,29 +27,23 @@ public:
     virtual uint8_t read() = 0;
 };
 
-class Serial1 : public Serial
+class HardwareSerial : public Serial
 {
-
-    size_t _rdPtr = 0;
-    size_t _wrPtr = 0;
-    uint8_t rx_buffer[2];
-    std::vector<uint8_t> rx_data;
-    uint32_t _txdOverflow = 0;
-    uint8_t tx_dma_buffer[128];
-    bool _frame_complete = false;
-    std::vector<uint8_t> _frameRxd;
 
 public:
     UART_HandleTypeDef huart;
-    DMA_HandleTypeDef hdma_usart_rx;
-    DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[128];
-    volatile bool dma_done = true;
+    uint32_t _txdOverflow = 0;
     uint32_t _rxdOverflow = 0;
-
-
+    CircBuf _rxBuffer;
+    CircBuf _txBuffer;
+    USART_TypeDef* _usart;
+    uint8_t sbuf[4];
+    size_t sbuf_cnt=0;
+    uint8_t rbuf[4];
+    size_t rbuf_cnt=0;
 
 public:
+    HardwareSerial(USART_TypeDef* usart) : _rxBuffer(512), _txBuffer(512), _usart(usart) {}
     int begin(uint32_t baudrate);
     int end();
     int flush();
@@ -56,45 +51,11 @@ public:
     int available();
     uint8_t read();
 
-    void rx_isr();
-    void rx_byte(uint8_t c);
+    void isr_txd_done();
+    void isr_rxd(uint16_t cnt);
 };
 
-class Serial2 : public Serial
-{
-
-    size_t _rdPtr = 0;
-    size_t _wrPtr = 0;
-    uint8_t rx_buffer[2];
-    std::vector<uint8_t> rx_data;
-    uint32_t _txdOverflow = 0;
-    uint8_t dma_buffer[128];
-    uint8_t tx_dma_buffer[128];
-    bool _frame_complete = false;
-    std::vector<uint8_t> _frameRxd;
-
-public:
-    UART_HandleTypeDef huart;
-    DMA_HandleTypeDef hdma_usart_rx;
-    DMA_HandleTypeDef hdma_usart_tx;
-    uint8_t rx_dma_buffer[128];
-    volatile bool dma_done = true;
-    uint32_t _rxdOverflow = 0;
-
-
-public:
-    int begin(uint32_t baudrate);
-    int end();
-    int flush();
-    int write(uint8_t *, size_t);
-    int available();
-    uint8_t read();
-
-    void rx_isr();
-    void rx_byte(uint8_t c);
-};
-
-extern class Serial1 Serial1;
-extern class Serial2 Serial2;
+extern class HardwareSerial Serial1;
+extern class HardwareSerial Serial2;
 
 #endif /* _SERIAL_H_ */

@@ -414,7 +414,7 @@ extern "C"
 #include "zenoh-pico/utils/pointers.h"
 #include "Serial.h"
 
-#define READ_TIMEOUT 10
+#define READ_TIMEOUT 100
     /*------------------ Serial sockets ------------------*/
     z_result_t _z_open_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin, uint32_t rxpin, uint32_t baudrate)
     {
@@ -487,7 +487,7 @@ extern "C"
         uint8_t *raw_buf = (uint8_t *)z_malloc(_Z_SERIAL_MAX_COBS_BUF_SIZE);
         size_t rb = 0;
         uint64_t start = millis();
-        for (size_t i = 0; i < _Z_SERIAL_MAX_COBS_BUF_SIZE; i++)
+        while (true)
         {
             if ((millis() - start) > READ_TIMEOUT) // timeout
             {
@@ -501,25 +501,25 @@ extern "C"
                     break;
                 }
             }
-            if (sock._serial->available())
+            while (sock._serial->available())
             {
-                raw_buf[i] = sock._serial->read();
+                raw_buf[rb] = sock._serial->read();
                 rb = rb + (size_t)1;
-                if (raw_buf[i] == (uint8_t)0x00)
+                if (raw_buf[rb] == (uint8_t)0x00)
                 {
-                    break;
+                    if (rb > 1)
+                        break;
+                    else
+                        rb = 0;
                 }
             }
+            if (rb >= _Z_SERIAL_MAX_COBS_BUF_SIZE)
+            {
+                break;
+            }
         }
-        char buf[256];
-        char *pt = buf;
-        ;
-        for (size_t i = 0; i < rb; i++)
-        {
-            sprintf(pt, "%02X ", raw_buf[i]);
-            pt += 3;
-        }
-        _Z_DEBUG("Read %u bytes [%s]", rb, buf);
+
+        INFO("Rxd [%u]", rb);
 
         uint8_t *tmp_buf = (uint8_t *)z_malloc(_Z_SERIAL_MFS_SIZE);
         size_t ret = _z_serial_msg_deserialize(raw_buf, rb, ptr, len, header, tmp_buf, _Z_SERIAL_MFS_SIZE);
