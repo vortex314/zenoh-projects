@@ -10,6 +10,7 @@
 //#include "base.h"
 #include <stdint.h>
 #include <errno.h>
+#include <sys.h>
 
 #define POW 4
 #define CIRCBUF_SIZE (1<<POW)

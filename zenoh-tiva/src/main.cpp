@@ -107,7 +107,7 @@ void loop()
 int main()
 {
   sys_init();
-  Serial1.begin(921600);
+  Serial1.begin(115200);
   Serial0.begin(115200);
   setup();
   while (1)

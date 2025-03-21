@@ -16,6 +16,9 @@
 #define COBS_SEPARATOR 0x00
 #define FRAME_MAX 256
 
+std::string bytes_to_hex(uint8_t *bytes, size_t length);
+
+
 class Serial
 {
 public:
@@ -27,7 +30,7 @@ public:
     virtual uint8_t read() = 0;
 };
 
-#define SHORT_BUF_SIZE 16 
+#define SHORT_BUF_SIZE 256
 
 class HardwareSerial : public Serial
 {
@@ -39,13 +42,14 @@ public:
     CircBuf _rxBuffer;
     CircBuf _txBuffer;
     USART_TypeDef* _usart;
-    uint8_t _sbuf[SHORT_BUF_SIZE];
+    uint8_t _sbuf[32];
 //    size_t _sbuf_cnt=0;
-    uint8_t _rbuf[SHORT_BUF_SIZE];
+    uint8_t _rbuf[512];
+    uint32_t _rbuf_offset=0;
 //    size_t _rbuf_cnt=0;
 
 public:
-    HardwareSerial(USART_TypeDef* usart) : _rxBuffer(512), _txBuffer(512), _usart(usart) {}
+    HardwareSerial(USART_TypeDef* usart) : _rxBuffer(1024), _txBuffer(1024), _usart(usart) {}
     int begin(uint32_t baudrate);
     int end();
     int flush();

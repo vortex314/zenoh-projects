@@ -5,10 +5,12 @@
 
 Log logger;
 
-#define MODE "peer"
+#define MODE "client"
 #define LOCATOR "serial/UART_1#baudrate=115200"
 z_owned_session_t *zenoh_session;
 z_owned_publisher_t pub;
+z_view_keyexpr_t ke;
+
 const char *keyexpr = "src/stm32/zenoh-pico";
 int MAX_COUNT = 2147483647; // max int value by default
 const char *value = "Pub from STM32 !";
@@ -61,7 +63,6 @@ void setup()
   z_sleep_ms(100);
   INFO("Done!");
 
-  z_view_keyexpr_t ke;
   res = z_view_keyexpr_from_str(&ke, keyexpr);
   if (res != Z_OK)
   {
@@ -84,16 +85,17 @@ void loop()
   delay(1000);
 
   snprintf(buf, 256, "[%4d] %s", idx++, value);
-  INFO("Putting Data ('%s': '%s')...\n", keyexpr, buf);
+  INFO("Putting Data ('%s': '%s')", keyexpr, buf);
 
   // Create payload
   z_owned_bytes_t payload;
   z_bytes_copy_from_str(&payload, buf);
 
-  z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL);
+  // z_publisher_put(z_publisher_loan(&pub), , NULL);
+  z_put(z_session_loan(zenoh_session),  z_view_keyexpr_loan(&ke),z_bytes_move(&payload), NULL);
   zp_read(z_session_loan(zenoh_session), NULL);
   zp_send_keep_alive(z_session_loan(zenoh_session), NULL);
-  zp_send_join(z_session_loan(zenoh_session), NULL);
+ // zp_send_join(z_session_loan(zenoh_session), NULL);
 
   /*
     z_publisher_drop(z_publisher_move(&pub));
@@ -105,10 +107,11 @@ void loop()
 }
 
 int main()
+
 {
   if (sys_init().is_err())
     panic_handler("sys_init failed");
-  Serial2.begin(921600);
+  Serial2.begin(115200);
   Serial1.begin(115200);
   setup();
   while (1)

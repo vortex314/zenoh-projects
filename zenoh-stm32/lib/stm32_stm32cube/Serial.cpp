@@ -79,7 +79,7 @@ int HardwareSerial::begin(uint32_t baudrate)
         return r;
     };
     __HAL_UART_ENABLE_IT(&huart, USART_IT_TC | USART_IT_IDLE | USART_IT_RXNE);
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) / 2);
 
     if (_usart == USART1)
     {
@@ -98,11 +98,11 @@ int HardwareSerial::write(uint8_t *data, size_t length)
 {
     if (_usart == USART1)
     {
-        INFO("Txd [%d]", length);
+        INFO("Txd [%d] [%s]", length,bytes_to_hex(data, length).c_str());
     }
 
     bool was_empty = _txBuffer.size() == 0;
-    for (size_t i = 0; i < length ; i++)
+    for (size_t i = 0; i < length; i++)
     {
         if (_txBuffer.write(data[i]) != 0)
         {
@@ -132,14 +132,12 @@ void HardwareSerial::isr_txd_done()
 // split into PPP frames
 void HardwareSerial::isr_rxd(uint16_t size) // ISR !
 {
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
     for (size_t i = 0; i < size; i++)
     {
         _rxBuffer.write(_rbuf[i]);
     }
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
 }
-
-
 
 int HardwareSerial::available()
 {
@@ -176,21 +174,6 @@ int HardwareSerial::flush()
 }
 //=====================================================================================================
 //=====================================================================================================
-
-// restart DMA as first before getting data when buffer overflows.
-/* extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        Serial1.isr_rxd(huart->Instance->DR);
-        HAL_UART_Receive_IT(huart, Serial1.rbuf, sizeof(Serial1.rbuf));
-    }
-    else if (huart->Instance == USART2)
-    {
-        Serial2.isr_rxd(huart->Instance->DR);
-        HAL_UART_Receive_IT(huart, Serial2.rbuf, sizeof(Serial2.rbuf));
-    }
-}*/
 
 extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -237,16 +220,17 @@ extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 extern "C" void USART2_IRQHandler(void)
 {
-    // stm32cube doesn't handle this condition correctly 
+    // stm32cube doesn't handle this condition correctly
     if (READ_REG(Serial2.huart.Instance->SR) & USART_SR_ORE)
     {
         __HAL_UART_CLEAR_OREFLAG(&Serial2.huart);
     }
-    HAL_UART_IRQHandler(&Serial2.huart);}
+    HAL_UART_IRQHandler(&Serial2.huart);
+}
 
 extern "C" void USART1_IRQHandler(void)
 {
-    // stm32cube doesn't handle this condition correctly 
+    // stm32cube doesn't handle this condition correctly
     if (READ_REG(Serial1.huart.Instance->SR) & USART_SR_ORE)
     {
         __HAL_UART_CLEAR_OREFLAG(&Serial1.huart);

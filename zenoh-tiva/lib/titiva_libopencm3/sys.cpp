@@ -101,10 +101,15 @@ void Log::flush()
     printf("\r\n");
 }
 
+#include <libopencm3/lm4f/systemcontrol.h>
+#include <libopencm3/lm4f/gpio.h>
+#include <libopencm3/lm4f/uart.h>
+#include <libopencm3/lm4f/nvic.h>
+
 //==================================================================
 void SystemClock_Config(void)
 {
-   
+    gpio_enable_ahb_aperture();
 }
 
 void *__dso_handle = 0;

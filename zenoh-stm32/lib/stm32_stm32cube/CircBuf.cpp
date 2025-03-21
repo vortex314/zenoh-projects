@@ -24,19 +24,19 @@ CircBuf::~CircBuf() { delete[] start; }
 
 int CircBuf::write(uint8_t b)
 {
-    if (space()>1)
+    if (space() > 1)
     {
         start[writePos++ % limit] = b;
         return 0;
     }
-    return ENOSPC;
+    return -ENOSPC;
 }
 
 int CircBuf::read()
 {
     if (hasData())
         return start[readPos++ % limit];
-    return -1;
+    PANIC("CircBuf underflow");
 }
 
 uint32_t CircBuf::size() { return writePos - readPos; }

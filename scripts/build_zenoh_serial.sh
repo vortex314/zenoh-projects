@@ -33,13 +33,12 @@ case $CHOICE in
             cargo build -j 3 --release --all-targets --no-default-features --features transport_tcp,transport_serial
             ;;
 esac
-done
 exit
 
 git checkout 1.2.1
 cargo build --release  --all-targets --no-default-features --features transport_tcp,transport_serial
 
-cargo build --release  --bin zenohd --example z_sub --features transport_tcp,transport_serial
+cargo build --release  --bin zenohd --example z_sub --features transport_tcp --features transport_serial
 
 248
 
