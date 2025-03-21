@@ -27,6 +27,8 @@ public:
     virtual uint8_t read() = 0;
 };
 
+#define SHORT_BUF_SIZE 16 
+
 class HardwareSerial : public Serial
 {
 
@@ -37,10 +39,10 @@ public:
     CircBuf _rxBuffer;
     CircBuf _txBuffer;
     USART_TypeDef* _usart;
-    uint8_t sbuf[4];
-    size_t sbuf_cnt=0;
-    uint8_t rbuf[4];
-    size_t rbuf_cnt=0;
+    uint8_t _sbuf[SHORT_BUF_SIZE];
+//    size_t _sbuf_cnt=0;
+    uint8_t _rbuf[SHORT_BUF_SIZE];
+//    size_t _rbuf_cnt=0;
 
 public:
     HardwareSerial(USART_TypeDef* usart) : _rxBuffer(512), _txBuffer(512), _usart(usart) {}

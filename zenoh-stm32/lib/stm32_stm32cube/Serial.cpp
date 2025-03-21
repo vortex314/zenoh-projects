@@ -64,8 +64,6 @@ int HardwareSerial::begin(uint32_t baudrate)
         return -1;
     }
 
-    // Enable USART1 clock
-
     // Configure USART1
     huart.Instance = _usart;
     huart.Init.BaudRate = baudrate;
@@ -81,7 +79,7 @@ int HardwareSerial::begin(uint32_t baudrate)
         return r;
     };
     __HAL_UART_ENABLE_IT(&huart, USART_IT_TC | USART_IT_IDLE | USART_IT_RXNE);
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, rbuf, sizeof(rbuf));
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
 
     if (_usart == USART1)
     {
@@ -100,12 +98,11 @@ int HardwareSerial::write(uint8_t *data, size_t length)
 {
     if (_usart == USART1)
     {
-       // std::string s = bytes_to_hex(data, length);
         INFO("Txd [%d]", length);
     }
 
     bool was_empty = _txBuffer.size() == 0;
-    for (size_t i = 0; i < length; i++)
+    for (size_t i = 0; i < length ; i++)
     {
         if (_txBuffer.write(data[i]) != 0)
         {
@@ -122,17 +119,14 @@ int HardwareSerial::write(uint8_t *data, size_t length)
 
 void HardwareSerial::isr_txd_done()
 {
-    sbuf_cnt = 0;
-    for (size_t i = 0; i < sizeof(sbuf); i++)
+    int sbuf_cnt = 0;
+    for (size_t i = 0; i < sizeof(_sbuf) && _txBuffer.hasData(); i++)
     {
-        if (_txBuffer.size() == 0)
-        {
-            break;
-        }
-        sbuf[i] = _txBuffer.read();
+        _sbuf[i] = _txBuffer.read();
         sbuf_cnt++;
     }
-    HAL_UART_Transmit_IT(&huart, sbuf, sbuf_cnt);
+    if (sbuf_cnt)
+        HAL_UART_Transmit_IT(&huart, _sbuf, sbuf_cnt);
 }
 
 // split into PPP frames
@@ -140,18 +134,12 @@ void HardwareSerial::isr_rxd(uint16_t size) // ISR !
 {
     for (size_t i = 0; i < size; i++)
     {
-        _rxBuffer.write(rbuf[i]);
+        _rxBuffer.write(_rbuf[i]);
     }
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, rbuf, sizeof(rbuf));
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
 }
 
-extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    if (huart->Instance == USART1)
-        Serial1.isr_rxd(Size);
-    if (huart->Instance == USART2)
-        Serial2.isr_rxd(Size);
-}
+
 
 int HardwareSerial::available()
 {
@@ -190,7 +178,7 @@ int HardwareSerial::flush()
 //=====================================================================================================
 
 // restart DMA as first before getting data when buffer overflows.
-extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+/* extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
     {
@@ -202,6 +190,14 @@ extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         Serial2.isr_rxd(huart->Instance->DR);
         HAL_UART_Receive_IT(huart, Serial2.rbuf, sizeof(Serial2.rbuf));
     }
+}*/
+
+extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+    if (huart->Instance == USART1)
+        Serial1.isr_rxd(Size);
+    if (huart->Instance == USART2)
+        Serial2.isr_rxd(Size);
 }
 
 extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
@@ -211,7 +207,7 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     else if (huart->Instance == USART2)
         Serial2.isr_txd_done();
 }
-
+// not sure the below is of any help
 extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     volatile uint32_t rc = huart->ErrorCode;
@@ -241,14 +237,17 @@ extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 extern "C" void USART2_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&Serial2.huart); // calls HAL_UART_TxCpltCallback
-}
+    // stm32cube doesn't handle this condition correctly 
+    if (READ_REG(Serial2.huart.Instance->SR) & USART_SR_ORE)
+    {
+        __HAL_UART_CLEAR_OREFLAG(&Serial2.huart);
+    }
+    HAL_UART_IRQHandler(&Serial2.huart);}
 
 extern "C" void USART1_IRQHandler(void)
 {
-    uint32_t isrflags = READ_REG(Serial1.huart.Instance->SR);
-    uint32_t errorflags = (isrflags & (uint32_t)(USART_SR_PE | USART_SR_FE | USART_SR_ORE | USART_SR_NE));
-    if (errorflags & USART_SR_ORE)
+    // stm32cube doesn't handle this condition correctly 
+    if (READ_REG(Serial1.huart.Instance->SR) & USART_SR_ORE)
     {
         __HAL_UART_CLEAR_OREFLAG(&Serial1.huart);
     }

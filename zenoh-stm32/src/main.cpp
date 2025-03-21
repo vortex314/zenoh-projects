@@ -61,7 +61,6 @@ void setup()
   z_sleep_ms(100);
   INFO("Done!");
 
-  z_owned_publisher_t pub;
   z_view_keyexpr_t ke;
   res = z_view_keyexpr_from_str(&ke, keyexpr);
   if (res != Z_OK)
@@ -80,25 +79,22 @@ void setup()
 
 void loop()
 {
+  static int idx = 0;
+  INFO("Looping...");
+  delay(1000);
 
-  for (int idx = 0; idx < MAX_COUNT;)
-  {
-    INFO("Looping...");
-    delay(1000);
+  snprintf(buf, 256, "[%4d] %s", idx++, value);
+  INFO("Putting Data ('%s': '%s')...\n", keyexpr, buf);
 
-    snprintf(buf, 256, "[%4d] %s", idx, value);
-    INFO("Putting Data ('%s': '%s')...\n", keyexpr, buf);
+  // Create payload
+  z_owned_bytes_t payload;
+  z_bytes_copy_from_str(&payload, buf);
 
-    // Create payload
-    z_owned_bytes_t payload;
-    z_bytes_copy_from_str(&payload, buf);
+  z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL);
+  zp_read(z_session_loan(zenoh_session), NULL);
+  zp_send_keep_alive(z_session_loan(zenoh_session), NULL);
+  zp_send_join(z_session_loan(zenoh_session), NULL);
 
-    z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL);
-    ++idx;
-    zp_read(z_session_loan(zenoh_session), NULL);
-    zp_send_keep_alive(z_session_loan(zenoh_session), NULL);
-    zp_send_join(z_session_loan(zenoh_session), NULL);
-  }
   /*
     z_publisher_drop(z_publisher_move(&pub));
     z_session_drop(z_session_move(&s));
@@ -111,9 +107,7 @@ void loop()
 int main()
 {
   if (sys_init().is_err())
-  {
     panic_handler("sys_init failed");
-  }
   Serial2.begin(921600);
   Serial1.begin(115200);
   setup();
