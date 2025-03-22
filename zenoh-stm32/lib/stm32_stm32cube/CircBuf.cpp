@@ -22,6 +22,19 @@ void CircBuf::clear()
 
 CircBuf::~CircBuf() { delete[] start; }
 
+int CircBuf::write(uint8_t *b, uint32_t len)
+{
+    if (space() >= len)
+    {
+        for (uint32_t i = 0; i < len; i++)
+        {
+            start[writePos++ % limit] = b[i];
+        }
+        return 0;
+    }
+    return -ENOSPC;
+}
+
 int CircBuf::write(uint8_t b)
 {
     if (space() > 1)

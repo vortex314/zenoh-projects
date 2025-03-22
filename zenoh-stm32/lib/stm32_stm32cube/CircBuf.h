@@ -26,6 +26,7 @@ public:
 	CircBuf(uint32_t size);
 	~CircBuf();
 	int write(uint8_t b);
+	int write(uint8_t*,uint32_t);
 	int read();
 	bool hasSpace();
 	bool hasSpace(uint32_t size);

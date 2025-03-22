@@ -88,7 +88,7 @@ int HardwareSerial::begin(uint32_t baudrate)
     }
     if (_usart == USART2)
     {
-        HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+        HAL_NVIC_SetPriority(USART2_IRQn, 1, 0);
         HAL_NVIC_EnableIRQ(USART2_IRQn);
     }
     return 0;
@@ -98,45 +98,41 @@ int HardwareSerial::write(uint8_t *data, size_t length)
 {
     if (_usart == USART1)
     {
-        INFO("Txd [%d] [%s]", length,bytes_to_hex(data, length).c_str());
+        INFO("Txd [%d] [%s]", length, bytes_to_hex(data, length).c_str());
     }
 
-    bool was_empty = _txBuffer.size() == 0;
-    for (size_t i = 0; i < length; i++)
+    if (_txBuffer.write(data, length) != 0)
     {
-        if (_txBuffer.write(data[i]) != 0)
-        {
-            _txdOverflow++;
-            return EOVERFLOW;
-        }
+        _txdOverflow++;
+        return EOVERFLOW;
     }
-    if (was_empty)
-    {
-        isr_txd_done();
-    }
+
+    isr_txd_done();
     return 0;
 }
 
 void HardwareSerial::isr_txd_done()
 {
-    int sbuf_cnt = 0;
-    for (size_t i = 0; i < sizeof(_sbuf) && _txBuffer.hasData(); i++)
+    if (huart.gState == HAL_UART_STATE_READY) // if not already transmitting
     {
-        _sbuf[i] = _txBuffer.read();
-        sbuf_cnt++;
+        if (_txBuffer.hasData())
+        {
+            int sbuf_cnt = 0;
+            for (size_t i = 0; i < sizeof(_sbuf) && _txBuffer.hasData(); i++)
+            {
+                _sbuf[i] = _txBuffer.read();
+                sbuf_cnt++;
+            }
+            HAL_UART_Transmit_IT(&huart, _sbuf, sbuf_cnt);
+        }
     }
-    if (sbuf_cnt)
-        HAL_UART_Transmit_IT(&huart, _sbuf, sbuf_cnt);
 }
 
 // split into PPP frames
 void HardwareSerial::isr_rxd(uint16_t size) // ISR !
 {
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf));
-    for (size_t i = 0; i < size; i++)
-    {
-        _rxBuffer.write(_rbuf[i]);
-    }
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) / 2);
+    _rxBuffer.write(_rbuf, size);
 }
 
 int HardwareSerial::available()

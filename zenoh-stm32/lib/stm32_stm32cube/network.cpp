@@ -420,7 +420,7 @@ extern "C"
 
 extern "C"
 {
-#define READ_TIMEOUT 100
+#define READ_TIMEOUT 20
     /*------------------ Serial sockets ------------------*/
     z_result_t _z_open_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin, uint32_t rxpin, uint32_t baudrate)
     {
@@ -517,6 +517,7 @@ extern "C"
                 }
                 else
                 {           // drop noise
+                    INFO("Rxd [%u] marker : %s [%s]", rb, found_marker ? "true" : "false", bytes_to_hex(raw_buf, rb).c_str());
                     rb = 0;
                     found_marker = false;
                 }

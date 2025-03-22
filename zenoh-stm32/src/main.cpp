@@ -111,8 +111,15 @@ int main()
 {
   if (sys_init().is_err())
     panic_handler("sys_init failed");
-  Serial2.begin(115200);
+  Serial2.begin(921600);
   Serial1.begin(115200);
+  uint32_t count=0;
+  while ( Serial1.available())
+  {
+    Serial1.read();
+    count++;
+  }
+  INFO("Read %d bytes from Serial1", count);
   setup();
   while (1)
   {
