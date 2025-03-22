@@ -5,17 +5,17 @@
 
 Log logger;
 
-#define MODE "client"
+#define MODE "peer"
 #define LOCATOR "serial/UART_1#baudrate=115200"
-const char *keyexpr = "src/stm32/zenoh-pico";
-const char* sub_keyexpr="src/**";
+const char *pub_topic = "src/stm32/zenoh-pico";
+const char* sub_topic="src/**";
 const char *value = "Pub from STM32 !";
 z_owned_session_t *zenoh_session;
-z_owned_publisher_t pub;
-z_view_keyexpr_t ke;
-z_view_keyexpr_t sub_ke;
+z_owned_publisher_t publisher;
+z_view_keyexpr_t pub_keyexpr;
+z_view_keyexpr_t sub_keyexpr;
 z_owned_closure_sample_t callback;
-z_owned_subscriber_t sub;
+z_owned_subscriber_t subscriber;
 
 
 char *buf = (char *)malloc(256);
@@ -81,28 +81,28 @@ void setup()
   z_sleep_ms(100);
   INFO("Done!");
 
-  res = z_view_keyexpr_from_str(&ke, keyexpr);
+  res = z_view_keyexpr_from_str(&pub_keyexpr, pub_topic);
   if (res != Z_OK)
   {
-    INFO("%s is not a valid key expression\n", keyexpr);
+    INFO("%s is not a valid key expression\n", pub_topic);
     LOOP_FOREVER;
   }
-  res = z_declare_publisher(z_session_loan(zenoh_session), &pub, z_view_keyexpr_loan(&ke), NULL);
+  res = z_declare_publisher(z_session_loan(zenoh_session), &publisher, z_view_keyexpr_loan(&pub_keyexpr), NULL);
   if (res != Z_OK)
   {
     INFO("Unable to declare publisher for key expression!\n");
     LOOP_FOREVER;
   }
-  INFO("Publisher declared for key expression: %s\n", keyexpr);
+  INFO("Publisher declared for key expression: %s\n", pub_topic);
 
   z_closure_sample(&callback, data_handler, NULL, NULL);
-  printf("Declaring Subscriber on '%s'...\n", sub_keyexpr);
+  printf("Declaring Subscriber on '%s'...\n", sub_topic);
 
-  if (z_view_keyexpr_from_str(&sub_ke, keyexpr) < 0) {
+  if (z_view_keyexpr_from_str(&sub_keyexpr, sub_topic) < 0) {
       ERROR("%s is not a valid key expression", sub_keyexpr);
       LOOP_FOREVER;
     }
-  if (z_declare_subscriber(z_session_loan(zenoh_session), &sub, z_view_keyexpr_loan(&sub_ke), z_closure_sample_move(&callback), NULL) < 0) {
+  if (z_declare_subscriber(z_session_loan(zenoh_session), &subscriber, z_view_keyexpr_loan(&sub_keyexpr), z_closure_sample_move(&callback), NULL) < 0) {
       ERROR("Unable to declare subscriber");
       LOOP_FOREVER;
     }
@@ -115,14 +115,18 @@ void loop()
   delay(1000);
 
   snprintf(buf, 256, "[%4d] %s", idx++, value);
-  INFO("Putting Data ('%s': '%s')", keyexpr, buf);
+  INFO("Putting Data ('%s': '%s')", pub_topic, buf);
 
   // Create payload
   z_owned_bytes_t payload;
   z_bytes_copy_from_str(&payload, buf);
 
   // z_publisher_put(z_publisher_loan(&pub), , NULL);
-  z_put(z_session_loan(zenoh_session),  z_view_keyexpr_loan(&ke),z_bytes_move(&payload), NULL);
+  z_put_options_t *put_opts = new z_put_options_t;
+  bzero(put_opts, sizeof(z_put_options_t));
+  put_opts->congestion_control = Z_CONGESTION_CONTROL_BLOCK;
+
+  z_put(z_session_loan(zenoh_session),  z_view_keyexpr_loan(&pub_keyexpr),z_bytes_move(&payload), put_opts);
   zp_read(z_session_loan(zenoh_session), NULL);
   zp_send_keep_alive(z_session_loan(zenoh_session), NULL);
  // zp_send_join(z_session_loan(zenoh_session), NULL);
