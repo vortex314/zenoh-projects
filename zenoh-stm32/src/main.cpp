@@ -7,13 +7,17 @@ Log logger;
 
 #define MODE "client"
 #define LOCATOR "serial/UART_1#baudrate=115200"
+const char *keyexpr = "src/stm32/zenoh-pico";
+const char* sub_keyexpr="src/**";
+const char *value = "Pub from STM32 !";
 z_owned_session_t *zenoh_session;
 z_owned_publisher_t pub;
 z_view_keyexpr_t ke;
+z_view_keyexpr_t sub_ke;
+z_owned_closure_sample_t callback;
+z_owned_subscriber_t sub;
 
-const char *keyexpr = "src/stm32/zenoh-pico";
-int MAX_COUNT = 2147483647; // max int value by default
-const char *value = "Pub from STM32 !";
+
 char *buf = (char *)malloc(256);
 
 #define LOOP_FOREVER \
@@ -31,6 +35,20 @@ char *buf = (char *)malloc(256);
       LOOP_FOREVER;                            \
     }                                          \
   }
+
+  uint32_t msg_nb = 0;
+
+  void data_handler(z_loaned_sample_t *sample, void *ctx) {
+    (void)(ctx);
+    z_view_string_t keystr;
+    z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
+    z_owned_string_t value;
+    z_bytes_to_string(z_sample_payload(sample), &value);
+    printf(">> [Subscriber] Received ('%.*s': '%.*s')\n", (int)z_string_len(z_view_string_loan(&keystr)),
+           z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
+    z_string_drop(z_string_move(&value));
+    msg_nb++;
+}
 
 void setup()
 {
@@ -76,6 +94,18 @@ void setup()
     LOOP_FOREVER;
   }
   INFO("Publisher declared for key expression: %s\n", keyexpr);
+
+  z_closure_sample(&callback, data_handler, NULL, NULL);
+  printf("Declaring Subscriber on '%s'...\n", sub_keyexpr);
+
+  if (z_view_keyexpr_from_str(&sub_ke, keyexpr) < 0) {
+      ERROR("%s is not a valid key expression", sub_keyexpr);
+      LOOP_FOREVER;
+    }
+  if (z_declare_subscriber(z_session_loan(zenoh_session), &sub, z_view_keyexpr_loan(&sub_ke), z_closure_sample_move(&callback), NULL) < 0) {
+      ERROR("Unable to declare subscriber");
+      LOOP_FOREVER;
+    }
 }
 
 void loop()
