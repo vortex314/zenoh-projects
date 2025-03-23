@@ -45,7 +45,7 @@ void data_handler(z_loaned_sample_t *sample, void *ctx)
   z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
   z_owned_string_t value;
   z_bytes_to_string(z_sample_payload(sample), &value);
-  printf(">> [Subscriber] Received ('%.*s': '%.*s')\n", (int)z_string_len(z_view_string_loan(&keystr)),
+  INFO(">> [Subscriber] Received ('%.*s': '%.*s')", (int)z_string_len(z_view_string_loan(&keystr)),
          z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
   z_string_drop(z_string_move(&value));
   msg_nb++;
@@ -130,7 +130,7 @@ void loop()
   static int idx = 0;
   INFO("Looping...");
   print_heap_info();
-  delay(1000);
+  delay(100);
 
   snprintf(buf, 256, "[%4d] %s", idx++, value);
   INFO("Putting Data ('%s': '%s')", pub_topic, buf);

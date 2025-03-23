@@ -39,8 +39,14 @@ int HardwareSerial::begin(uint32_t baudrate)
         /* We need a brief delay before we can access UART config registers */
         __asm__("nop");
     }
-    else if (_usart == UART1)
+    else if (_usart == UART2)
     {
+        // PD_7 as TX and PD_6 as RX
+        periph_clock_enable(RCC_GPIOD);
+        gpio_mode_setup(GPIOD, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6 | GPIO7);
+        gpio_set_af(GPIOD, GPIO_AF7, GPIO6 | GPIO7);
+        periph_clock_enable(RCC_UART2);
+        __asm__("nop");
         
     }
     else
