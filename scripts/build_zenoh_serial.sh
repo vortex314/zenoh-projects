@@ -24,7 +24,7 @@ CHOICE=$(dialog --clear \
 clear
 case $CHOICE in
         1)
-            cargo build --release  --bin zenohd --example z_sub --features transport_tcp,transport_serial
+            cargo build --release  --bin zenohd --example z_sub --no-default-features --features transport_tcp --features transport_serial
             ;;
         2)
             cargo build --release  --all-targets --no-default-features --features transport_tcp,transport_serial

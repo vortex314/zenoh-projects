@@ -41,9 +41,16 @@ void z_random_fill(void *buf, size_t len) {
     }
 }
 
+size_t total_heap_used = 0;
+
+
 /*------------------ Memory ------------------*/
 void *z_malloc(size_t size) {
-    return malloc(size);
+    void *ptr = malloc(size);
+    if (ptr) {
+        total_heap_used += size;
+    }
+    return ptr;
 }
 
 void *z_realloc(void *ptr, size_t size) {
@@ -53,8 +60,10 @@ void *z_realloc(void *ptr, size_t size) {
 }
 
 void z_free(void *ptr) {
-    return free(ptr);
-}
+    if (ptr) {
+     //   total_heap_used -= malloc_usable_size(ptr);
+        free(ptr);
+    }}
 
 #if Z_FEATURE_MULTI_THREAD == 1
 #include <FreeRTOS.h>

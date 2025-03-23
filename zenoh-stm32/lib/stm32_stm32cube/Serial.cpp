@@ -78,8 +78,8 @@ int HardwareSerial::begin(uint32_t baudrate)
     {
         return r;
     };
-    __HAL_UART_ENABLE_IT(&huart, USART_IT_TC | USART_IT_IDLE | USART_IT_RXNE);
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) / 2);
+    __HAL_UART_ENABLE_IT(&huart, USART_IT_TC | USART_IT_IDLE | USART_IT_RXNE );
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) );
 
     if (_usart == USART1)
     {
@@ -131,7 +131,7 @@ void HardwareSerial::isr_txd_done()
 // split into PPP frames
 void HardwareSerial::isr_rxd(uint16_t size) // ISR !
 {
-    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) / 2);
+    HAL_UARTEx_ReceiveToIdle_IT(&huart, _rbuf, sizeof(_rbuf) );
     _rxBuffer.write(_rbuf, size);
 }
 

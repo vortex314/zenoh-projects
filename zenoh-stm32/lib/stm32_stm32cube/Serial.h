@@ -44,12 +44,12 @@ public:
     USART_TypeDef* _usart;
     uint8_t _sbuf[32];
 //    size_t _sbuf_cnt=0;
-    uint8_t _rbuf[512];
+    uint8_t _rbuf[256];
     uint32_t _rbuf_offset=0;
 //    size_t _rbuf_cnt=0;
 
 public:
-    HardwareSerial(USART_TypeDef* usart) : _rxBuffer(1024), _txBuffer(1024), _usart(usart) {}
+    HardwareSerial(USART_TypeDef* usart) : _rxBuffer(256), _txBuffer(256), _usart(usart) {}
     int begin(uint32_t baudrate);
     int end();
     int flush();
