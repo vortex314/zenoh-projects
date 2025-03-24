@@ -22,21 +22,34 @@ void CircBuf::clear()
 
 CircBuf::~CircBuf() { delete[] start; }
 
+int CircBuf::write(uint8_t *b, uint32_t len)
+{
+    if (space() >= len)
+    {
+        for (uint32_t i = 0; i < len; i++)
+        {
+            start[writePos++ % limit] = b[i];
+        }
+        return 0;
+    }
+    return -ENOSPC;
+}
+
 int CircBuf::write(uint8_t b)
 {
-    if (space()>1)
+    if (space() > 1)
     {
         start[writePos++ % limit] = b;
         return 0;
     }
-    return ENOSPC;
+    return -ENOSPC;
 }
 
 int CircBuf::read()
 {
     if (hasData())
         return start[readPos++ % limit];
-    return -1;
+    PANIC("CircBuf underflow");
 }
 
 uint32_t CircBuf::size() { return writePos - readPos; }

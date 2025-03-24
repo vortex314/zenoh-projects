@@ -1,17 +1,23 @@
 #include <zenoh-pico.h>
 #include <sys.h>
 #include <Serial.h>
+#include <malloc.h>
 // put function declarations here:
 
 Log logger;
 
-#define MODE "peer"
-#define LOCATOR "serial/UART_1#baudrate=115200"
+#define MODE "client"
+#define LOCATOR "serial/UART_2#baudrate=115200"
+const char *pub_topic = "src/tiva/zenoh-pico";
+const char *sub_topic = "dst/tiva/**";
+const char *value = "Pub from tiva !";
 z_owned_session_t *zenoh_session;
-z_owned_publisher_t pub;
-const char *keyexpr = "src/stm32/zenoh-pico";
-int MAX_COUNT = 2147483647; // max int value by default
-const char *value = "Pub from STM32 !";
+z_owned_publisher_t publisher;
+z_view_keyexpr_t pub_keyexpr;
+z_view_keyexpr_t sub_keyexpr;
+z_owned_closure_sample_t callback;
+z_owned_subscriber_t subscriber;
+
 char *buf = (char *)malloc(256);
 
 #define LOOP_FOREVER \
@@ -29,6 +35,21 @@ char *buf = (char *)malloc(256);
       LOOP_FOREVER;                            \
     }                                          \
   }
+
+uint32_t msg_nb = 0;
+
+void data_handler(z_loaned_sample_t *sample, void *ctx)
+{
+  (void)(ctx);
+  z_view_string_t keystr;
+  z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
+  z_owned_string_t value;
+  z_bytes_to_string(z_sample_payload(sample), &value);
+  INFO(">> [Subscriber] Received ('%.*s': '%.*s')", (int)z_string_len(z_view_string_loan(&keystr)),
+         z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
+  z_string_drop(z_string_move(&value));
+  msg_nb++;
+}
 
 void setup()
 {
@@ -61,40 +82,73 @@ void setup()
   z_sleep_ms(100);
   INFO("Done!");
 
-  z_view_keyexpr_t ke;
-  res = z_view_keyexpr_from_str(&ke, keyexpr);
+  res = z_view_keyexpr_from_str(&pub_keyexpr, pub_topic);
   if (res != Z_OK)
   {
-    INFO("%s is not a valid key expression\n", keyexpr);
+    INFO("%s is not a valid key expression\n", pub_topic);
     LOOP_FOREVER;
   }
-  res = z_declare_publisher(z_session_loan(zenoh_session), &pub, z_view_keyexpr_loan(&ke), NULL);
+  res = z_declare_publisher(z_session_loan(zenoh_session), &publisher, z_view_keyexpr_loan(&pub_keyexpr), NULL);
   if (res != Z_OK)
   {
     INFO("Unable to declare publisher for key expression!\n");
     LOOP_FOREVER;
   }
-  INFO("Publisher declared for key expression: %s\n", keyexpr);
+  INFO("Publisher declared for key expression: %s\n", pub_topic);
+
+  if (z_closure_sample(&callback, data_handler, NULL, NULL))
+  {
+    ERROR("z_closure_sample fails");
+    LOOP_FOREVER;
+  }
+  printf("Declaring Subscriber on '%s'...\n", sub_topic);
+
+  if (z_view_keyexpr_from_str(&sub_keyexpr, sub_topic) < 0)
+  {
+    ERROR("%s is not a valid key expression", sub_keyexpr);
+    LOOP_FOREVER;
+  }
+  if (z_declare_subscriber(z_session_loan(zenoh_session), &subscriber, z_view_keyexpr_loan(&sub_keyexpr), z_closure_sample_move(&callback), NULL) < 0)
+  {
+    ERROR("Unable to declare subscriber");
+    LOOP_FOREVER;
+  }
+}
+
+extern char _end;      // Start of heap
+extern char _estack;   // End of heap
+extern char *__brkval; // Current heap pointer
+
+void print_heap_info()
+{
+  struct mallinfo mi = mallinfo();
+  INFO("Free heap: %d bytes / %d bytes", mi.fordblks, mi.arena);
 }
 
 void loop()
 {
   static int idx = 0;
   INFO("Looping...");
-  delay(1000);
+  print_heap_info();
+  delay(100);
 
   snprintf(buf, 256, "[%4d] %s", idx++, value);
-  INFO("Putting Data ('%s': '%s')...\n", keyexpr, buf);
+  INFO("Putting Data ('%s': '%s')", pub_topic, buf);
 
   // Create payload
   z_owned_bytes_t payload;
   z_bytes_copy_from_str(&payload, buf);
 
-  z_publisher_put(z_publisher_loan(&pub), z_bytes_move(&payload), NULL);
+  // z_publisher_put(z_publisher_loan(&pub), , NULL);
+  z_put_options_t *put_opts = new z_put_options_t;
+  bzero(put_opts, sizeof(z_put_options_t));
+  put_opts->congestion_control = Z_CONGESTION_CONTROL_BLOCK;
+
+  z_put(z_session_loan(zenoh_session), z_view_keyexpr_loan(&pub_keyexpr), z_bytes_move(&payload), put_opts);
   zp_read(z_session_loan(zenoh_session), NULL);
   zp_send_keep_alive(z_session_loan(zenoh_session), NULL);
-  zp_send_join(z_session_loan(zenoh_session), NULL);
-
+  // zp_send_join(z_session_loan(zenoh_session), NULL);
+  z_free(put_opts);
   /*
     z_publisher_drop(z_publisher_move(&pub));
     z_session_drop(z_session_move(&s));
@@ -105,9 +159,10 @@ void loop()
 }
 
 int main()
+
 {
-  sys_init();
-  Serial1.begin(115200);
+sys_init();
+  Serial2.begin(115200);
   Serial0.begin(115200);
   setup();
   while (1)

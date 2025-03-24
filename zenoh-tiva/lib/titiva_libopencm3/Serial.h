@@ -54,10 +54,10 @@ public:
     uint8_t read();
 
     void isr_txd_done();
-    void isr_rxd(uint16_t cnt);
+    void isr_rxd(uint8_t data);
 };
 
 extern class HardwareSerial Serial0;
-extern class HardwareSerial Serial1;
+extern class HardwareSerial Serial2;
 
 #endif /* _SERIAL_H_ */

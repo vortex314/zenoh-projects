@@ -20,7 +20,6 @@ static uint64_t __tick_count=0;
 
 extern "C" void SysTick_Handler(void)
 {
-    
     __tick_count++;
 }
 
@@ -32,8 +31,6 @@ uint64_t millis()
 
 void sys_init()
 {
-
-   
     // Configure the system clock
     SystemClock_Config();
 }

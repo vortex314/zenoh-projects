@@ -427,13 +427,13 @@ extern "C"
     {
         (void)baudrate;
         sock->_serial = NULL;
-        if (strcmp(dev, "UART_1") == 0)
+        if (strcmp(dev, "UART_0") == 0)
         {
             sock->_serial = &Serial0;
         }
         else if (strcmp(dev, "UART_2") == 0)
         {
-            sock->_serial = &Serial1;
+            sock->_serial = &Serial2;
         }
 
         if (sock->_serial != NULL)
