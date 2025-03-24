@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <util.h>
 
+#include <libopencm3/cm3/systick.h>
+
 extern "C" void panic_handler(const char *msg);
 void sys_init();
 
@@ -24,6 +26,8 @@ public:
     Level _level = L_INFO;
 
     Log();
+    static void time(char* buf, unsigned long buflen);
+
     Log &tfl(const char *lvl, const char *file, const uint32_t line);
     Log &logf(const char *fmt, ...);
     void flush();

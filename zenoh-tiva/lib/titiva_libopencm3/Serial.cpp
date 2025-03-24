@@ -3,7 +3,7 @@
 class HardwareSerial Serial0(UART0);
 class HardwareSerial Serial2(UART2); // UART1 connected to USB CDC port
 
-// redirect printf to UART2
+// redirect printf to UART0 == USB CDC port
 extern "C" int _write(int file, char *ptr, int len)
 {
     (void)file;
@@ -63,39 +63,30 @@ int HardwareSerial::begin(uint32_t baudrate)
     /* Gimme and RX interrupt */
     uart_enable_rx_interrupt(_usart);
     uart_enable_tx_interrupt(_usart);
-    switch (_usart ) {
-        case UART0 : {
-            nvic_enable_irq(NVIC_UART0_IRQ);
-            break;
-        }
-        case UART2 : {
-            nvic_enable_irq(NVIC_UART2_IRQ);
-            break;
-        }
+    switch (_usart)
+    {
+    case UART0:
+    {
+        nvic_enable_irq(NVIC_UART0_IRQ);
+        break;
+    }
+    case UART2:
+    {
+        nvic_enable_irq(NVIC_UART2_IRQ);
+        break;
+    }
     }
     return 0;
 }
 
 int HardwareSerial::write(uint8_t *data, size_t length)
 {
-    if (_usart == UART2)
+if ( _txBuffer.write(data, length) )
     {
-        //       INFO("Txd [%d]", length);
+        _txdOverflow++;
+        return EOVERFLOW;
     }
-
-    bool was_empty = _txBuffer.size() == 0;
-    for (size_t i = 0; i < length; i++)
-    {
-        if (_txBuffer.write(data[i]) != 0)
-        {
-            _txdOverflow++;
-            return EOVERFLOW;
-        }
-    }
-    if (was_empty)
-    {
-        isr_txd_done();
-    }
+    isr_txd_done();
     return 0;
 }
 
@@ -153,7 +144,27 @@ extern "C" void uart0_isr(void)
     {
         Serial0.isr_txd_done();
         irq_clear |= UART_INT_TX;
-    } 
+    }
 
     uart_clear_interrupt_flag(UART0, (uart_interrupt_flag)irq_clear);
+}
+
+extern "C" void uart2_isr(void)
+{
+    uint8_t rx;
+    uint32_t irq_clear = 0;
+
+    if (uart_is_interrupt_source(UART2, UART_INT_RX))
+    {
+        rx = uart_recv(UART2);
+        Serial2.isr_rxd(rx);
+        irq_clear |= UART_INT_RX;
+    }
+    else if (uart_is_interrupt_source(UART2, UART_INT_TX))
+    {
+        Serial2.isr_txd_done();
+        irq_clear |= UART_INT_TX;
+    }
+
+    uart_clear_interrupt_flag(UART2, (uart_interrupt_flag)irq_clear);
 }

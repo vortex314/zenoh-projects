@@ -46,7 +46,7 @@ void data_handler(z_loaned_sample_t *sample, void *ctx)
   z_owned_string_t value;
   z_bytes_to_string(z_sample_payload(sample), &value);
   INFO(">> [Subscriber] Received ('%.*s': '%.*s')", (int)z_string_len(z_view_string_loan(&keystr)),
-         z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
+       z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
   z_string_drop(z_string_move(&value));
   msg_nb++;
 }
@@ -159,9 +159,8 @@ void loop()
 }
 
 int main()
-
 {
-sys_init();
+  sys_init();
   Serial2.begin(115200);
   Serial0.begin(115200);
   setup();

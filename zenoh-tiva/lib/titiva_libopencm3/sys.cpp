@@ -18,7 +18,7 @@ void SystemClock_Config(void);
 // replace weak systick handler
 static uint64_t __tick_count=0;
 
-extern "C" void SysTick_Handler(void)
+extern "C" void sys_tick_handler(void)
 {
     __tick_count++;
 }
@@ -79,18 +79,20 @@ void Log::setLevel(Level level)
 
 Log &Log::tfl(const char *lvl, const char *file, const uint32_t line)
 {
-    uint64_t msec = 0;
+    char time_buffer[30];
+    time(time_buffer,30);
+    printf("%c %s | %15.15s:%4u | ", lvl[0],time_buffer,file, (unsigned int)line);
+    return *this;
+}
+
+void Log::time(char* buf,unsigned long buflen)
+{
+    uint64_t msec = millis();
     uint32_t sec = msec / 1000;
     uint32_t min = sec / 60;
     uint32_t hr = min / 60;
     uint32_t ms = msec % 1000;
-    printf("%s %2.2d:%2.2d:%2.2d.%3.3d | %15.15s:%4u | ", lvl,
-           (int)hr % 24,
-           (int)min % 60,
-           (int)sec % 60,
-           (int)ms,
-           file, (unsigned int)line);
-    return *this;
+    snprintf(buf,buflen,"%2.2lu:%2.2lu:%2.2lu.%3.3lu",hr%24,min%60,sec%60,ms);
 }
 
 void Log::flush()
@@ -107,6 +109,10 @@ void Log::flush()
 void SystemClock_Config(void)
 {
     gpio_enable_ahb_aperture();
+    systick_set_reload(72000000 / 1000);  // 72MHz CPU → 1ms tick
+    systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
+    systick_counter_enable();
+    systick_interrupt_enable();
 }
 
 void *__dso_handle = 0;
