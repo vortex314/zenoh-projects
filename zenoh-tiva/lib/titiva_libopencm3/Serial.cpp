@@ -1,7 +1,8 @@
 #include "Serial.h"
 
-class HardwareSerial Serial0(UART0);
-class HardwareSerial Serial2(UART2); // UART1 connected to USB CDC port
+class HardwareSerial Serial0(UART0); // UART0 connected to USB CDC port
+class HardwareSerial Serial3(UART3);
+class HardwareSerial Serial2(UART2);
 
 // redirect printf to UART0 == USB CDC port
 extern "C" int _write(int file, char *ptr, int len)
@@ -40,16 +41,36 @@ int HardwareSerial::begin(uint32_t baudrate)
     {
         // PD7 as TX and PD6 as RX
         periph_clock_enable(RCC_GPIOD);
-        gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO7);
-        gpio_mode_setup(GPIOD, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO6);
+        //    gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO7);
+        //    gpio_mode_setup(GPIOD, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO6);
+
+        gpio_mode_setup(GPIOD, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO6);
+        gpio_set_af(GPIOD, 1, GPIO6); // AF1 = UART2 RX
+
+        // PD7 (UART2 TX): Output, alternate function
+        gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO7);
+        gpio_set_af(GPIOD, 1, GPIO7); // AF1 = UART2 TX
+
+        // Enable digital mode
+
         gpio_set_af(GPIOD, 1, GPIO6 | GPIO7);
         periph_clock_enable(RCC_UART2);
+        __asm__("nop");
+    }
+    else if (_usart == UART3)
+    {
+        // PC7 as TX and PC6 as RX
+        periph_clock_enable(RCC_GPIOC);
+        gpio_set_af(GPIOC, 1, GPIO6 | GPIO7); /* Mux PC6 and PC7 to UART3 (alternate function 1) */
+        periph_clock_enable(RCC_UART3);
+        /* We need a brief delay before we can access UART config registers */
         __asm__("nop");
     }
     else
     {
         return -1;
     }
+
     /* Disable the UART while we mess with its setings */
     uart_disable(_usart);
     /* Configure the UART clock source as precision internal oscillator */
@@ -63,25 +84,27 @@ int HardwareSerial::begin(uint32_t baudrate)
     /* Gimme and RX interrupt */
     uart_enable_rx_interrupt(_usart);
     uart_enable_tx_interrupt(_usart);
+
+    uart_enable_fifo(_usart);
+    uart_set_fifo_trigger_levels(_usart,UART_FIFO_RX_TRIG_1_2,UART_FIFO_TX_TRIG_1_2); 
     switch (_usart)
     {
     case UART0:
-    {
         nvic_enable_irq(NVIC_UART0_IRQ);
         break;
-    }
     case UART2:
-    {
         nvic_enable_irq(NVIC_UART2_IRQ);
         break;
-    }
+    case UART3:
+        nvic_enable_irq(NVIC_UART3_IRQ);
+        break;
     }
     return 0;
 }
 
 int HardwareSerial::write(uint8_t *data, size_t length)
 {
-if ( _txBuffer.write(data, length) )
+    if (_txBuffer.write(data, length))
     {
         _txdOverflow++;
         return EOVERFLOW;
@@ -92,14 +115,19 @@ if ( _txBuffer.write(data, length) )
 
 void HardwareSerial::isr_txd_done()
 {
-    if (_txBuffer.hasData())
+    while  (_txBuffer.hasData() && !uart_is_tx_fifo_full(_usart))
+    {
         uart_send(_usart, _txBuffer.read());
+    };
 }
 
 // split into PPP frames
-void HardwareSerial::isr_rxd(uint8_t data) // ISR !
+void HardwareSerial::isr_rxd() // ISR !
 {
-    _rxBuffer.write(data);
+    while(!uart_is_rx_fifo_empty(_usart))
+    {
+        _rxBuffer.write(uart_recv(_usart));
+    }
 }
 
 int HardwareSerial::available()
@@ -131,13 +159,11 @@ int HardwareSerial::flush()
  */
 extern "C" void uart0_isr(void)
 {
-    uint8_t rx;
     uint32_t irq_clear = 0;
 
     if (uart_is_interrupt_source(UART0, UART_INT_RX))
     {
-        rx = uart_recv(UART0);
-        Serial0.isr_rxd(rx);
+        Serial0.isr_rxd();
         irq_clear |= UART_INT_RX;
     }
     else if (uart_is_interrupt_source(UART0, UART_INT_TX))
@@ -151,13 +177,11 @@ extern "C" void uart0_isr(void)
 
 extern "C" void uart2_isr(void)
 {
-    uint8_t rx;
     uint32_t irq_clear = 0;
 
     if (uart_is_interrupt_source(UART2, UART_INT_RX))
     {
-        rx = uart_recv(UART2);
-        Serial2.isr_rxd(rx);
+        Serial2.isr_rxd();
         irq_clear |= UART_INT_RX;
     }
     else if (uart_is_interrupt_source(UART2, UART_INT_TX))
@@ -167,4 +191,21 @@ extern "C" void uart2_isr(void)
     }
 
     uart_clear_interrupt_flag(UART2, (uart_interrupt_flag)irq_clear);
+}
+
+extern "C" void uart3_isr(void)
+{
+    uint32_t irq_clear = 0;
+
+    if (uart_is_interrupt_source(UART3, UART_INT_RX))
+    {
+        Serial3.isr_rxd();
+        irq_clear |= UART_INT_RX;
+    }
+    else if (uart_is_interrupt_source(UART3, UART_INT_TX))
+    {
+        Serial3.isr_txd_done();
+        irq_clear |= UART_INT_TX;
+    } 
+    uart_clear_interrupt_flag(UART3, (uart_interrupt_flag)irq_clear);
 }

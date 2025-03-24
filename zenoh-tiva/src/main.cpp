@@ -7,7 +7,7 @@
 Log logger;
 
 #define MODE "client"
-#define LOCATOR "serial/UART_2#baudrate=115200"
+#define LOCATOR "serial/UART_3#baudrate=115200"
 const char *pub_topic = "src/tiva/zenoh-pico";
 const char *sub_topic = "dst/tiva/**";
 const char *value = "Pub from tiva !";
@@ -161,7 +161,7 @@ void loop()
 int main()
 {
   sys_init();
-  Serial2.begin(115200);
+  Serial3.begin(115200);
   Serial0.begin(115200);
   setup();
   while (1)

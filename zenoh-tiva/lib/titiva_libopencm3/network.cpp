@@ -434,6 +434,9 @@ extern "C"
         else if (strcmp(dev, "UART_2") == 0)
         {
             sock->_serial = &Serial2;
+        }if (strcmp(dev, "UART_3") == 0)
+        {
+            sock->_serial = &Serial3;
         }
 
         if (sock->_serial != NULL)
