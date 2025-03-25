@@ -8,8 +8,7 @@ class HardwareSerial Serial2(UART2);
 extern "C" int _write(int file, char *ptr, int len)
 {
     (void)file;
-    Serial0.write((uint8_t *)ptr, len);
-    return len;
+    return Serial0.write((uint8_t *)ptr, len);
 }
 
 std::string bytes_to_hex(uint8_t *bytes, size_t length)
@@ -59,7 +58,7 @@ int HardwareSerial::begin(uint32_t baudrate)
     }
     else if (_usart == UART3)
     {
-        // PC7 as TX and PC6 as RX
+        // PC6 as RX, PC7 as TX
         periph_clock_enable(RCC_GPIOC);
         gpio_set_af(GPIOC, 1, GPIO6 | GPIO7); /* Mux PC6 and PC7 to UART3 (alternate function 1) */
         periph_clock_enable(RCC_UART3);
@@ -82,11 +81,12 @@ int HardwareSerial::begin(uint32_t baudrate)
     uart_enable(_usart);
 
     /* Gimme and RX interrupt */
-    uart_enable_rx_interrupt(_usart);
-    uart_enable_tx_interrupt(_usart);
+ //   uart_enable_rx_interrupt(_usart);
+//   uart_enable_tx_interrupt(_usart);
+    uart_enable_interrupts(_usart, (uart_interrupt_flag)(UART_INT_TX | UART_INT_RX | UART_INT_OE));
 
     uart_enable_fifo(_usart);
-    uart_set_fifo_trigger_levels(_usart,UART_FIFO_RX_TRIG_1_2,UART_FIFO_TX_TRIG_1_2); 
+    uart_set_fifo_trigger_levels(_usart, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_7_8);
     switch (_usart)
     {
     case UART0:
@@ -107,27 +107,24 @@ int HardwareSerial::write(uint8_t *data, size_t length)
     if (_txBuffer.write(data, length))
     {
         _txdOverflow++;
-        return EOVERFLOW;
+        errno = ENOSPC;
+        return -1;
     }
     isr_txd_done();
-    return 0;
+    return length;
 }
 
 void HardwareSerial::isr_txd_done()
 {
-    while  (_txBuffer.hasData() && !uart_is_tx_fifo_full(_usart))
-    {
+    while (_txBuffer.hasData() && !uart_is_tx_fifo_full(_usart))
         uart_send(_usart, _txBuffer.read());
-    };
 }
 
 // split into PPP frames
 void HardwareSerial::isr_rxd() // ISR !
 {
-    while(!uart_is_rx_fifo_empty(_usart))
-    {
+    while (!uart_is_rx_fifo_empty(_usart))
         _rxBuffer.write(uart_recv(_usart));
-    }
 }
 
 int HardwareSerial::available()
@@ -171,6 +168,11 @@ extern "C" void uart0_isr(void)
         Serial0.isr_txd_done();
         irq_clear |= UART_INT_TX;
     }
+    else if (uart_is_interrupt_source(UART0, UART_INT_OE))
+    {
+        Serial0._rxdOverflow++;
+        irq_clear |= UART_INT_OE;
+    }
 
     uart_clear_interrupt_flag(UART0, (uart_interrupt_flag)irq_clear);
 }
@@ -189,6 +191,11 @@ extern "C" void uart2_isr(void)
         Serial2.isr_txd_done();
         irq_clear |= UART_INT_TX;
     }
+    else if (uart_is_interrupt_source(UART2, UART_INT_OE))
+    {
+        Serial2._rxdOverflow++;
+        irq_clear |= UART_INT_OE;
+    }
 
     uart_clear_interrupt_flag(UART2, (uart_interrupt_flag)irq_clear);
 }
@@ -206,6 +213,11 @@ extern "C" void uart3_isr(void)
     {
         Serial3.isr_txd_done();
         irq_clear |= UART_INT_TX;
-    } 
+    }
+    else if (uart_is_interrupt_source(UART3, UART_INT_OE))
+    {
+        Serial3._rxdOverflow++;
+        irq_clear |= UART_INT_OE;
+    }
     uart_clear_interrupt_flag(UART3, (uart_interrupt_flag)irq_clear);
 }
