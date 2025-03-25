@@ -81,12 +81,12 @@ int HardwareSerial::begin(uint32_t baudrate)
     uart_enable(_usart);
 
     /* Gimme and RX interrupt */
- //   uart_enable_rx_interrupt(_usart);
-//   uart_enable_tx_interrupt(_usart);
+    //   uart_enable_rx_interrupt(_usart);
+    //   uart_enable_tx_interrupt(_usart);
     uart_enable_interrupts(_usart, (uart_interrupt_flag)(UART_INT_TX | UART_INT_RX | UART_INT_OE));
 
     uart_enable_fifo(_usart);
-    uart_set_fifo_trigger_levels(_usart, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_7_8);
+    uart_set_fifo_trigger_levels(_usart, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_1_8);
     switch (_usart)
     {
     case UART0:
@@ -104,6 +104,12 @@ int HardwareSerial::begin(uint32_t baudrate)
 
 int HardwareSerial::write(uint8_t *data, size_t length)
 {
+    if ( _usart == UART3 )
+    {
+        std::string s = bytes_to_hex(data, length);
+        INFO("Writing [%d] bytes: %s", length, s.c_str());
+    }
+
     if (_txBuffer.write(data, length))
     {
         _txdOverflow++;

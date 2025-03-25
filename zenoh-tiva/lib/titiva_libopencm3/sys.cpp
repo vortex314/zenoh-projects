@@ -109,7 +109,7 @@ void Log::flush()
 void SystemClock_Config(void)
 {
     gpio_enable_ahb_aperture();
-    systick_set_reload(72000000 / 1000);  // 72MHz CPU → 1ms tick
+    systick_set_reload(16000000 / 1000);  // 16MHz CPU → 1ms tick
     systick_set_clocksource(STK_CSR_CLKSOURCE_AHB);
     systick_counter_enable();
     systick_interrupt_enable();
