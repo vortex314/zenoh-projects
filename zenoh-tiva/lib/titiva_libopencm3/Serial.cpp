@@ -60,6 +60,8 @@ int HardwareSerial::begin(uint32_t baudrate)
     {
         // PC6 as RX, PC7 as TX
         periph_clock_enable(RCC_GPIOC);
+        gpio_mode_setup(GPIOC, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO6);
+
         gpio_set_af(GPIOC, 1, GPIO6 | GPIO7); /* Mux PC6 and PC7 to UART3 (alternate function 1) */
         periph_clock_enable(RCC_UART3);
         /* We need a brief delay before we can access UART config registers */
@@ -85,14 +87,14 @@ int HardwareSerial::begin(uint32_t baudrate)
     switch (_usart)
     {
     case UART0:
-        nvic_set_priority(NVIC_UART0_IRQ, 16); // only higher 4 bits are used, lower priority
+        nvic_set_priority(NVIC_UART0_IRQ, 0); // only higher 4 bits are used, lower priority in fact
         nvic_enable_irq(NVIC_UART0_IRQ);
         break;
     case UART2:
         nvic_enable_irq(NVIC_UART2_IRQ);
         break;
     case UART3:
-        nvic_set_priority(NVIC_UART3_IRQ, 0); // highest priority for zenoh
+        nvic_set_priority(NVIC_UART3_IRQ, 16); // highest priority for zenoh
         nvic_enable_irq(NVIC_UART3_IRQ);
         break;
     }

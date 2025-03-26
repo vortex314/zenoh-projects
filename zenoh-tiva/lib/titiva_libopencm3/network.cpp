@@ -411,7 +411,6 @@ extern "C"
 
 #if Z_FEATURE_LINK_SERIAL == 1
 
-
 #define READ_TIMEOUT 100
     /*------------------ Serial sockets ------------------*/
     z_result_t _z_open_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin, uint32_t rxpin, uint32_t baudrate)
@@ -434,7 +433,8 @@ extern "C"
         else if (strcmp(dev, "UART_2") == 0)
         {
             sock->_serial = &Serial2;
-        }if (strcmp(dev, "UART_3") == 0)
+        }
+        if (strcmp(dev, "UART_3") == 0)
         {
             sock->_serial = &Serial3;
         }
@@ -501,6 +501,7 @@ extern "C"
                 if (rb == 0)
                 {
                     free(raw_buf);
+                    INFO("Rxd [%u]", rb);
                     return SIZE_MAX; // failure in z_open, retry later for other calls
                 }
                 else
@@ -508,13 +509,13 @@ extern "C"
                     break;
                 }
             }
-            while (sock._serial->available())
+            if (sock._serial->available())
             {
                 raw_buf[rb] = sock._serial->read();
                 rb = rb + (size_t)1;
                 if (raw_buf[rb] == (uint8_t)0x00)
                 {
-                    if (rb > 1)
+                    if (rb > 1) 
                         break;
                     else
                         rb = 0;
