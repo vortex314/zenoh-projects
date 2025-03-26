@@ -59,6 +59,10 @@ void setup()
   z_result_t res;
   while (true)
   {
+    while ( Serial3.available() ) // flush serial buffer
+    {
+      Serial3.read();
+    };
     z_owned_config_t *config = new z_owned_config_t;
     zenoh_session = new z_owned_session_t;
 
