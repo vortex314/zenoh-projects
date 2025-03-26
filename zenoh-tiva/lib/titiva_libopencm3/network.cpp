@@ -492,45 +492,40 @@ extern "C"
     size_t _z_read_serial_internal(const _z_sys_net_socket_t sock, uint8_t *header, uint8_t *ptr, size_t len)
     {
         uint8_t *raw_buf = (uint8_t *)z_malloc(_Z_SERIAL_MAX_COBS_BUF_SIZE);
+        uint8_t *tmp_buf = (uint8_t *)z_malloc(_Z_SERIAL_MFS_SIZE);
         size_t rb = 0;
         uint64_t start = millis();
-        while (true)
+        size_t ret=SIZE_MAX;
+        bool found_marker = false;
+        while ((millis() - start) < READ_TIMEOUT && rb < _Z_SERIAL_MAX_COBS_BUF_SIZE) // limit in time and space
         {
-            if ((millis() - start) > READ_TIMEOUT) // timeout
+            while (sock._serial->available()) // read until COBS marker
             {
-                if (rb == 0)
+                raw_buf[rb] = sock._serial->read();
+                if (raw_buf[rb++] == (uint8_t)0x00)
                 {
-                    free(raw_buf);
-                    INFO("Rxd [%u]", rb);
-                    return SIZE_MAX; // failure in z_open, retry later for other calls
-                }
-                else
-                {
+                    found_marker = true;
                     break;
                 }
             }
-            if (sock._serial->available())
+
+            if ( found_marker)
             {
-                raw_buf[rb] = sock._serial->read();
-                rb = rb + (size_t)1;
-                if (raw_buf[rb] == (uint8_t)0x00)
+                ret = _z_serial_msg_deserialize(raw_buf, rb, ptr, len, header, tmp_buf, _Z_SERIAL_MFS_SIZE);
+                if (ret != SIZE_MAX)
                 {
-                    if (rb > 1) 
-                        break;
-                    else
-                        rb = 0;
+                    break;
+                }
+                else
+                {           // drop noise
+                    INFO("Rxd [%u] marker : %s [%s]", rb, found_marker ? "true" : "false", bytes_to_hex(raw_buf, rb).c_str());
+                    rb = 0;
+                    found_marker = false;
                 }
             }
-            if (rb >= _Z_SERIAL_MAX_COBS_BUF_SIZE)
-            {
-                break;
-            }
         }
-
-        INFO("Rxd [%u]", rb);
-
-        uint8_t *tmp_buf = (uint8_t *)z_malloc(_Z_SERIAL_MFS_SIZE);
-        size_t ret = _z_serial_msg_deserialize(raw_buf, rb, ptr, len, header, tmp_buf, _Z_SERIAL_MFS_SIZE);
+       
+        INFO("Rxd [%u] marker : %s [%s]", rb, found_marker ? "true" : "false", bytes_to_hex(raw_buf, rb).c_str());
 
         z_free(raw_buf);
         z_free(tmp_buf);

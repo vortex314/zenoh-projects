@@ -61,5 +61,6 @@ extern class HardwareSerial Serial0;
 extern class HardwareSerial Serial2;
 extern class HardwareSerial Serial3;
 
+std::string bytes_to_hex(uint8_t *bytes, size_t length);
 
 #endif /* _SERIAL_H_ */
