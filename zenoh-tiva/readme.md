@@ -11,3 +11,4 @@
 - [blink example](https://github.com/libopencm3/libopencm3-miniblink)
 - [datasheet lm4f120h5qr](https://www.mouser.com/datasheet/2/405/lm4f120h5qr-124014.pdf)
 - Alternate functions for GPIO : Page 612 datasheet
+- [Tiva tutorials](https://sites.google.com/site/luiselectronicprojects/tutorials/tiva-tutorials)

@@ -29,7 +29,7 @@ int HardwareSerial::begin(uint32_t baudrate)
 {
     if (_usart == UART0)
     {
-        // PA1 as TX and PA0 as RX
+        // PA0 as RX,PA1 as TX
         periph_clock_enable(RCC_GPIOA);
         gpio_set_af(GPIOA, 1, GPIO0 | GPIO1); /* Mux PA0 and PA1 to UART0 (alternate function 1) */
         periph_clock_enable(RCC_UART0);
@@ -38,7 +38,7 @@ int HardwareSerial::begin(uint32_t baudrate)
     }
     else if (_usart == UART2)
     {
-        // PD7 as TX and PD6 as RX
+        // PD6 as RX,PD7 as TX
         periph_clock_enable(RCC_GPIOD);
         //    gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, GPIO7);
         //    gpio_mode_setup(GPIOD, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO6);
@@ -67,7 +67,7 @@ int HardwareSerial::begin(uint32_t baudrate)
     }
     else
     {
-        return -1;
+        return -EINVAL;
     }
 
     /* Disable the UART while we mess with its setings */
@@ -78,24 +78,21 @@ int HardwareSerial::begin(uint32_t baudrate)
     uart_set_databits(_usart, 8);
     uart_set_parity(_usart, UART_PARITY_NONE);
     uart_set_stopbits(_usart, 1);
-    uart_enable(_usart);
-
-    /* Gimme and RX interrupt */
-    //   uart_enable_rx_interrupt(_usart);
-    //   uart_enable_tx_interrupt(_usart);
     uart_enable_interrupts(_usart, (uart_interrupt_flag)(UART_INT_TX | UART_INT_RX | UART_INT_OE));
-
     uart_enable_fifo(_usart);
-    uart_set_fifo_trigger_levels(_usart, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_1_8);
+    uart_set_fifo_trigger_levels(_usart, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_7_8);
+    uart_enable(_usart);
     switch (_usart)
     {
     case UART0:
+        nvic_set_priority(NVIC_UART0_IRQ, 16); // only higher 4 bits are used, lower priority
         nvic_enable_irq(NVIC_UART0_IRQ);
         break;
     case UART2:
         nvic_enable_irq(NVIC_UART2_IRQ);
         break;
     case UART3:
+        nvic_set_priority(NVIC_UART3_IRQ, 0); // highest priority for zenoh
         nvic_enable_irq(NVIC_UART3_IRQ);
         break;
     }
@@ -104,7 +101,7 @@ int HardwareSerial::begin(uint32_t baudrate)
 
 int HardwareSerial::write(uint8_t *data, size_t length)
 {
-    if ( _usart == UART3 )
+    if (_usart == UART3)
     {
         std::string s = bytes_to_hex(data, length);
         INFO("Writing [%d] bytes: %s", length, s.c_str());
