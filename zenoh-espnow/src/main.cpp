@@ -7,10 +7,10 @@
 Log logger;
 
 #define MODE "client"
-#define LOCATOR "serial/UART_3#baudrate=115200"
-const char *pub_topic = "src/tiva/zenoh-pico";
-const char *sub_topic = "dst/tiva/**";
-const char *value = "Pub from tiva !";
+#define LOCATOR "serial/UART_1#baudrate=115200"
+const char *pub_topic = "src/stm32/zenoh-pico";
+const char *sub_topic = "dst/stm32/**";
+const char *value = "Pub from STM32 !";
 z_owned_session_t *zenoh_session;
 z_owned_publisher_t publisher;
 z_view_keyexpr_t pub_keyexpr;
@@ -43,11 +43,11 @@ void data_handler(z_loaned_sample_t *sample, void *ctx)
   (void)(ctx);
   z_view_string_t keystr;
   z_keyexpr_as_view_string(z_sample_keyexpr(sample), &keystr);
-  z_owned_string_t sub_value;
-  z_bytes_to_string(z_sample_payload(sample), &sub_value);
+  z_owned_string_t value;
+  z_bytes_to_string(z_sample_payload(sample), &value);
   INFO(">> [Subscriber] Received ('%.*s': '%.*s')", (int)z_string_len(z_view_string_loan(&keystr)),
-       z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&sub_value)), z_string_data(z_string_loan(&sub_value)));
-  z_string_drop(z_string_move(&sub_value));
+         z_string_data(z_view_string_loan(&keystr)), (int)z_string_len(z_string_loan(&value)), z_string_data(z_string_loan(&value)));
+  z_string_drop(z_string_move(&value));
   msg_nb++;
 }
 
@@ -59,10 +59,6 @@ void setup()
   z_result_t res;
   while (true)
   {
-    while ( Serial3.available() ) // flush serial buffer
-    {
-      Serial3.read();
-    };
     z_owned_config_t *config = new z_owned_config_t;
     zenoh_session = new z_owned_session_t;
 
@@ -162,11 +158,20 @@ void loop()
     */
 }
 
-int main()
+extern "C" int app_main()
+
 {
-  sys_init();
-  Serial3.begin(115200);
-  Serial0.begin(115200);
+  if (sys_init().is_err())
+    panic_handler("sys_init failed");
+  Serial2.begin(921600);
+  Serial1.begin(115200);
+  uint32_t count = 0;
+  while (Serial1.available())
+  {
+    Serial1.read();
+    count++;
+  }
+  INFO("Read %d bytes from Serial1", count);
   setup();
   while (1)
   {

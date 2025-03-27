@@ -36,6 +36,8 @@ extern "C"
 #include "zenoh-pico/utils/checksum.h"
 #include "zenoh-pico/utils/encoding.h"
 
+#define Z_FEATURE_LINK_UDP_MULTICAST 1
+
 #if Z_FEATURE_LINK_TCP == 1
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
@@ -409,7 +411,7 @@ extern "C"
 #error "Bluetooth not supported yet on OpenCR port of Zenoh-Pico"
 #endif
 
-#if Z_FEATURE_LINK_SERIAL == 1
+#if Z_FEATURE_LINK_SERIAL == 10
 
     /*------------------ Serial sockets ------------------*/
     z_result_t _z_open_serial_from_pins(_z_sys_net_socket_t *sock, uint32_t txpin, uint32_t rxpin, uint32_t baudrate)

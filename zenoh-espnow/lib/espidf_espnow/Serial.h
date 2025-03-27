@@ -9,11 +9,6 @@
 #include <CircBuf.h>
 
 
-#include <libopencm3/lm4f/systemcontrol.h>
-#include <libopencm3/lm4f/gpio.h>
-#include <libopencm3/lm4f/uart.h>
-#include <libopencm3/lm4f/nvic.h>
-
 #define COBS_SEPARATOR 0x00
 #define FRAME_MAX 256
 
@@ -52,9 +47,6 @@ public:
 
 };
 
-extern class HardwareSerial Serial0;
-extern class HardwareSerial Serial2;
-extern class HardwareSerial Serial3;
 
 std::string bytes_to_hex(uint8_t *bytes, size_t length);
 

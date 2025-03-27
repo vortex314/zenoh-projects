@@ -1,0 +1,36 @@
+{
+    "name": "titiva_libopencm3",
+    "version": "0.1",
+    "description": "stm32_stm32cube bridge zenoh",
+    "keywords": [
+        "zenoh",
+        "lm4f120",
+        "titiva_libopencm3"
+    ],
+    "homepage": "",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/votex314"
+    },
+    "authors": {
+        "name": "Lieven Merckx",
+        "email": "lieven.merckx@gmail.com",
+        "url": "https://vortex314.blogspot.com/",
+        "maintainer": true
+    },
+    "license": "Apache-2.0 OR EPL-2.0",
+    "frameworks": [
+        "libopencm3"
+    ],
+    "platforms": [
+        "titiva"
+    ],
+    "headers": [
+        "generic.h"
+    ],
+    "examples": [],
+    "dependencies": {
+        "zenoh-pico": "1.2.1.0"
+    },
+    "build": {}
+}
