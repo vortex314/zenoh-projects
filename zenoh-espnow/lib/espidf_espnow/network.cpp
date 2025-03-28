@@ -147,8 +147,7 @@ extern "C"
 #endif
 
 #if Z_FEATURE_LINK_UDP_UNICAST == 1 || Z_FEATURE_LINK_UDP_MULTICAST == 1
-#include <WiFiClient.h>
-#include <WiFiUdp.h>
+
     /*------------------ UDP sockets ------------------*/
     z_result_t _z_create_endpoint_udp(_z_sys_net_endpoint_t *ep, const char *s_address, const char *s_port)
     {
