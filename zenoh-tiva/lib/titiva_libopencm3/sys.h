@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <util.h>
+#include <printf.h>
 
 #include <libopencm3/cm3/systick.h>
 
@@ -26,7 +27,7 @@ public:
     Level _level = L_INFO;
 
     Log();
-    static void time(char* buf, unsigned long buflen);
+    static void time(char *buf, unsigned long buflen);
 
     Log &tfl(const char *lvl, const char *file, const uint32_t line);
     Log &logf(const char *fmt, ...);
@@ -56,7 +57,6 @@ static constexpr const char *past_last_slash(cstr str)
         })
 extern Log logger;
 
-#if ZENOH_DEBUG==3
 #define INFO(fmt, ...)                                                                  \
     {                                                                                   \
         if (logger._level <= Log::L_INFO)                                               \
@@ -67,11 +67,6 @@ extern Log logger;
         if (logger._level <= Log::L_WARN)                                               \
             logger.tfl("W", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
     }
-#define DEBUG(fmt, ...)                                                                 \
-    {                                                                                   \
-        if (logger._level <= Log::L_DEBUG)                                              \
-            logger.tfl("D", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
-    }
 #define ERROR(fmt, ...)                                                                 \
     {                                                                                   \
         if (logger._level <= Log::L_ERROR)                                              \
@@ -80,13 +75,26 @@ extern Log logger;
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 #undef PANIC
-#define PANIC(msg) { ERROR("PANIC: " msg); panic_handler(msg); }
+#define PANIC(msg)            \
+    {                         \
+        ERROR("PANIC: " msg); \
+        panic_handler(msg);   \
+    }
+#if ZENOH_DEBUG == 3
+#define DEBUG(fmt, ...)                                                                 \
+    {                                                                                   \
+        if (logger._level <= Log::L_DEBUG)                                              \
+            logger.tfl("D", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
+    }
+
 #else
-#define INFO(fmt, ...) {}
-#define WARN(fmt, ...) {}
-#define DEBUG(fmt, ...) {}
-#define ERROR(fmt, ...)  {}
-#define PANIC(msg) { panic_handler("fatal ");}
+#define DEBUG(fmt, ...) \
+    {                   \
+    }
 #endif
+#define PANIC(msg)               \
+    {                            \
+        panic_handler("fatal "); \
+    }
 
 #endif

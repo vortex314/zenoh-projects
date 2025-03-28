@@ -11,6 +11,11 @@ extern "C" int _write(int file, char *ptr, int len)
     return Serial0.write((uint8_t *)ptr, len);
 }
 
+extern "C" void _putchar(char c)
+{
+    Serial0.write((uint8_t*)&c,1);
+}
+
 std::string bytes_to_hex(uint8_t *bytes, size_t length)
 {
     std::string s;

@@ -496,6 +496,7 @@ extern "C"
         uint8_t *tmp_buf = (uint8_t *)z_malloc(_Z_SERIAL_MFS_SIZE);
         uint64_t timeout = millis() + READ_TIMEOUT;
         size_t ret = SIZE_MAX;
+        rxd_packet.clear();
 
         while (millis() < timeout && rxd_packet.size() < _Z_SERIAL_MAX_COBS_BUF_SIZE )
         {
@@ -513,6 +514,7 @@ extern "C"
                 }
             }
         }
+        DEBUG(" Rxd  [%d] %s ", rxd_packet.size(),bytes_to_hex(rxd_packet.data(), rxd_packet.size()).c_str());
         z_free(tmp_buf);
         return ret;
     }
