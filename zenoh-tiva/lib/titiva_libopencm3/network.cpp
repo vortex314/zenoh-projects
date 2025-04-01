@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-#include <generic.h>
+#include <zenoh_generic_platform.h>
 #include <sys.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -408,7 +408,7 @@ extern "C"
 #if Z_FEATURE_LINK_BLUETOOTH == 1
 #error "Bluetooth not supported yet on OpenCR port of Zenoh-Pico"
 #endif
-
+#define Z_FEATURE_LINK_SERIAL 1
 #if Z_FEATURE_LINK_SERIAL == 1
 
     /*------------------ Serial sockets ------------------*/

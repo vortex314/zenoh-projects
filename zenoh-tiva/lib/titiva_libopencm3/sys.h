@@ -92,9 +92,5 @@ extern Log logger;
     {                   \
     }
 #endif
-#define PANIC(msg)               \
-    {                            \
-        panic_handler("fatal "); \
-    }
 
 #endif

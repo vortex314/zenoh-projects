@@ -11,7 +11,7 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
-#include <generic.h>
+#include <zenoh_generic_platform.h>
 //#include <hw/driver/delay.h>
 #include <stddef.h>
 #include <random>

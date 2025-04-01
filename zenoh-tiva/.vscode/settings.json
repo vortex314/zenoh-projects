@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "nvic.h": "c"
+        "nvic.h": "c",
+        "platform.h": "c",
+        "zenoh_generic_platform.h": "c"
     }
 }

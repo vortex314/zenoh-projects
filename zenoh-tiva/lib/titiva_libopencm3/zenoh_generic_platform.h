@@ -12,13 +12,13 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-#ifndef ZENOH_PICO_SYSTEM_ARDUINO_TYPES_H
-#define ZENOH_PICO_SYSTEM_ARDUINO_TYPES_H
+#ifndef _ZENOH_GENERIC_PLATFORM_H
+#define _ZENOH_GENERIC_PLATFORM_H
 
 #include <stddef.h>
 #include <sys/time.h>
 
-#include "zenoh-pico/config.h"
+#include "zenoh_generic_config.h"
 
 
 #ifdef __cplusplus
