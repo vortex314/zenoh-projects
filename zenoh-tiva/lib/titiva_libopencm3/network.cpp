@@ -408,7 +408,10 @@ extern "C"
 #if Z_FEATURE_LINK_BLUETOOTH == 1
 #error "Bluetooth not supported yet on OpenCR port of Zenoh-Pico"
 #endif
-#define Z_FEATURE_LINK_SERIAL 1
+
+void _z_socket_close(_z_sys_net_socket_t *sock) {
+    (void)sock;
+}
 #if Z_FEATURE_LINK_SERIAL == 1
 
     /*------------------ Serial sockets ------------------*/
