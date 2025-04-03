@@ -50,6 +50,7 @@ int CircBuf::read()
     if (hasData())
         return start[readPos++ % limit];
     PANIC("CircBuf underflow");
+    return -1;
 }
 
 uint32_t CircBuf::size() { return writePos - readPos; }

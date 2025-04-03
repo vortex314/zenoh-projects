@@ -12,7 +12,7 @@
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 //
 
-#include <generic.h>
+#include <zenoh_generic_platform.h>
 #include <sys.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -399,6 +399,10 @@ size_t _z_send_udp_multicast(const _z_sys_net_socket_t sock, const uint8_t *ptr,
 #if Z_FEATURE_LINK_BLUETOOTH == 1
 #error "Bluetooth not supported yet on OpenCR port of Zenoh-Pico"
 #endif
+
+void _z_socket_close(_z_sys_net_socket_t *sock) {
+    (void)sock;
+}
 
 #if Z_FEATURE_LINK_SERIAL == 1
 extern "C"
