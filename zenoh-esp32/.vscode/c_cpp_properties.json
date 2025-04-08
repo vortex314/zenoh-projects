@@ -347,7 +347,7 @@
                 "SOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE",
                 "IDF_VER=\"5.3.1\"",
                 "ESP_PLATFORM",
-                "PLATFORMIO=60117",
+                "PLATFORMIO=60118",
                 "ARDUINO_ESP32_DEV",
                 "WIFI_SSID=Merckx2",
                 "WIFI_PASS=LievenMarletteEwoutRonald",

@@ -220,17 +220,17 @@ Res WifiMsg::serialize(Serializer &ser)
  // uint32_t idx = 0;
   ser.reset();
   ser.map_begin();
-  ser.serialize("mac", mac_address);
-  ser.serialize("ip", ip_address);
-  ser.serialize("gtw", gateway);
-  ser.serialize("mask", netmask);
-  ser.serialize("dns", dns);
-  ser.serialize("ssid", ssid);
-  ser.serialize("chnl", channel);
-  ser.serialize("rssi", rssi);
-  ser.serialize("encr", encryption);
-  ser.serialize("mode", wifi_mode);
-  ser.serialize("ap", ap_scan);
+  ser.serialize(H("mac"), mac_address);
+  ser.serialize(H("ip"), ip_address);
+  ser.serialize(H("gateway"), gateway);
+  ser.serialize(H("netmask"), netmask);
+  ser.serialize(H("dns"), dns);
+  ser.serialize(H("ssid"), ssid);
+  ser.serialize(H("channel"), channel);
+  ser.serialize(H("rssi"), rssi);
+  ser.serialize(H("encryption"), encryption);
+  ser.serialize(H("wifi_mode"), wifi_mode);
+  ser.serialize(H("ap"), ap_scan);
   return ser.map_end();
 }
 Res WifiMsg::deserialize(Deserializer &des)

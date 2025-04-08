@@ -1,6 +1,6 @@
 #include <zenoh_actor.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 1 // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
 #define MODE "client"
 #define CONNECT "" // If empty, it will scout
@@ -352,12 +352,12 @@ Res ZenohMsg::serialize(Serializer &ser)
 //  int idx = 0;
   ser.reset();
   ser.map_begin();
-  ser.serialize("zid", zid);
-  ser.serialize("role", what_am_i);
-  ser.serialize("peer", peers);
-  ser.serialize("prfx", prefix);
-  ser.serialize("rout", routers);
-  ser.serialize("conn", connect);
+  ser.serialize(H("zid"), zid);
+  ser.serialize(H("what_am_i"), what_am_i);
+  ser.serialize(H("peers"), peers);
+  ser.serialize(H("prefix"), prefix);
+  ser.serialize(H("routers"), routers);
+  ser.serialize(H("connect"), connect);
   return ser.map_end();
 }
 

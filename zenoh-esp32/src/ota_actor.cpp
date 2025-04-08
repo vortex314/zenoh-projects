@@ -121,16 +121,15 @@ Res OtaActor::ota_write(uint32_t offset, Bytes &data)
 
 Res OtaMsg::serialize(Serializer &ser)
 {
-    int idx = 0;
     ser.reset();
     ser.map_begin();
-    ser.serialize("op", (std::optional<uint32_t>)operation);
-    ser.serialize("ofst", offset);
-    ser.serialize("imag", image);
-    ser.serialize("rc", rc);
-    ser.serialize("msg", message);
-    ser.serialize("rply", reply_to);
-    ser.serialize("part", partition_label);
+    ser.serialize(H("operation"), (std::optional<uint32_t>)operation);
+    ser.serialize(H("offset"), offset);
+    ser.serialize(H("image"), image);
+    ser.serialize(H("rc"), rc);
+    ser.serialize(H("message"), message);
+    ser.serialize(H("reply_to"), reply_to);
+    ser.serialize(H("partition_label"), partition_label);
     ser.map_end();
     return Res::Ok();
 }
@@ -143,17 +142,17 @@ Res OtaMsg::deserialize(Deserializer &des)
     //    INFO("key %d", key);
         switch (key)
         {
-        case 0:
+        case H("operation"):
             return d.deserialize((std::optional<uint32_t>&)operation);
-        case 1:
+        case H("offset"):
             return d.deserialize(offset);
-        case 2:
+        case H("image"):
             return d.deserialize(image);
-        case 3:
+        case H("rc"):
             return d.deserialize(rc);
-        case 4:
+        case H("message"):
             return d.deserialize(message);
-        case 5:
+        case H("partition_label"):
             return d.deserialize(reply_to);
         default:
             INFO("unknown key %d",key);

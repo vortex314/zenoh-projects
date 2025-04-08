@@ -1,8 +1,3 @@
-//
-// !!! WARNING !!! AUTO-GENERATED FILE!
-// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
-// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
-//
 {
     "configurations": [
         {
@@ -178,7 +173,8 @@
                 "/Users/mg61dd/.platformio/packages/framework-espidf/components/wifi_provisioning/include",
                 "/Users/mg61dd/Developer/zenoh-projects/zenoh-motor-pwm/.pio/libdeps/zenoh-camera/esp32-camera/driver/include",
                 "/Users/mg61dd/Developer/zenoh-projects/zenoh-motor-pwm/.pio/libdeps/zenoh-camera/esp32-camera/conversions/include",
-                ""
+                "",
+                "${workspaceFolder}/include"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

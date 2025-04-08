@@ -74,13 +74,13 @@ Res SysMsg::serialize(Serializer &ser)
     int idx = 0;
     ser.reset();
     ser.map_begin();
-    ser.serialize("cpu", cpu);
-    ser.serialize("clck", clock);
-    ser.serialize("flsh", flash_size);
-    ser.serialize("RAM", ram_size);
-    ser.serialize("heap", free_heap);
-    ser.serialize("up", up_time);
-    ser.serialize("log", log_message);
+    ser.serialize(H("cpu"), cpu);
+    ser.serialize(H("clock"), clock);
+    ser.serialize(H("flash_size"), flash_size);
+    ser.serialize(H("ram_size"), ram_size);
+    ser.serialize(H("free_heap"), free_heap);
+    ser.serialize(H("up_time"), up_time);
+    ser.serialize(H("log_message"), log_message);
     ser.map_end();
     return ser.serialize(idx++, state);
 }
