@@ -103,6 +103,14 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
       //   vTaskDelay(1000 / portTICK_PERIOD_MS);
       //   tell(new ZenohCmd{.action = ZenohAction::Connect});
     }
+    if (zenoh_publish("dst/esp2/sys", cmd.publish.value().payload).is_err())
+    {
+      INFO("Failed to publish message dst/esp2/sys");
+      //   disconnect();
+      //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+      //   tell(new ZenohCmd{.action = ZenohAction::Connect});
+    }
+
   }
 }
 

@@ -85,7 +85,7 @@ extern "C" void app_main()
   esp_wifi_set_ps(WIFI_PS_NONE);
   // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
-  zenoh_actor.prefix("esp1"); // set the zenoh prefix to src/esp1 and destination subscriber dst/esp1/ **
+  zenoh_actor.prefix("esp1"); // set the zenoh prefix to src/esp1 and destination subscriber dst/esp1/**
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
