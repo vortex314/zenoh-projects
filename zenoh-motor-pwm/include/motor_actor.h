@@ -10,8 +10,13 @@
 
 struct MotorMsg : public Serializable
 {
-    std::optional<Bytes> image = std::nullopt;
-    std::optional<bool> light = std::nullopt;
+    std::optional<uint32_t> rpm_target = std::nullopt;
+    std::optional<uint32_t> rpm_measured = std::nullopt;
+    std::optional<float> current = std::nullopt;
+    std::optional<float> Kp = std::nullopt;
+    std::optional<float> Ki = std::nullopt;
+    std::optional<float> Kd = std::nullopt;
+
 
     Res serialize(Serializer &ser);
     Res deserialize(Deserializer &des);
@@ -45,6 +50,7 @@ public:
 private:
     int _timer_publish = -1;
     bool _light = false;
-    MotorMsg _camera_msg;
+    MotorMsg _motor_msg;
     Bytes _image;
+    float _Kp,_Ki,_Kd;
 };

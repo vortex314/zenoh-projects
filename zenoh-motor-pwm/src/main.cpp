@@ -43,6 +43,10 @@ std::optional<T> deserialize(Bytes bytes)
   return std::nullopt;
 }
 
+#define DEVICE_NAME "mtr1"
+
+#define DST_DEVICE "dst/" DEVICE_NAME "/"
+
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
 | SYS | = system events => | ZENOH | ( publish )
@@ -64,7 +68,7 @@ extern "C" void app_main()
   esp_wifi_set_ps(WIFI_PS_NONE);
   // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
-  zenoh_actor.prefix("mtr1"); // set the zenoh prefix to src/mtr1 and destination subscriber dst/mtr1/ **
+  zenoh_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/mtr1 and destination subscriber dst/mtr1/ **
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
@@ -98,7 +102,7 @@ extern "C" void app_main()
     if (event.publish) {
       PublishBytes pub = *event.publish;
       CborDeserializer des(pub.payload.data(), pub.payload.size());
-      if (pub.topic == "dst/mtr1/sys") {
+      if (pub.topic == DST_DEVICE "sys" ) {
         auto msg = deserialize<SysMsg>(pub.payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes { msg.value() }});  
       } else if ( pub.topic == "dst/mtr1/wifi") {
