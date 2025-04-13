@@ -5,6 +5,7 @@
 #include <serdes.h>
 #include "cbor.h"
 #include <vector>
+#include "driver/mcpwm_prelude.h"
 
 #define LED_FLASH GPIO_NUM_4
 
@@ -43,10 +44,11 @@ public:
     void on_cmd(MotorCmd &cmd);
     void on_timer(int timer_id);
     void on_start( void );
-    Res camera_init();
-    Res camera_capture();
-    void process_image(int width, int height, int format, uint8_t *data, size_t len);
+    Res pwm_init();
+    Res pwm_test();
+    Res pwm_set_duty(int duty);
 
+  
 private:
     int _timer_publish = -1;
     bool _light = false;
