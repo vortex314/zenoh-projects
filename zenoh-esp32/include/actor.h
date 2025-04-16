@@ -39,6 +39,11 @@ public:
         return ok;
     }
 
+    bool sendFromIsr(const T message, TickType_t timeout = portMAX_DELAY)
+    {
+        return xQueueSendFromISR(queue, &message, nullptr) == pdTRUE;
+    }
+
     bool receive(T *message, TickType_t timeout = portMAX_DELAY)
     {
         return xQueueReceive(queue, message, timeout) == pdTRUE;
@@ -247,6 +252,10 @@ public:
     bool tell(CMD *msg)
     {
         return _cmds.send(msg);
+    }
+    bool tellFromIsr(CMD *msg)
+    {
+        return _cmds.sendFromIsr(msg);
     }
     void stop()
     {
