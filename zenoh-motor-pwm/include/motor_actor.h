@@ -25,7 +25,7 @@ struct MotorMsg : public Serializable
 {
     std::optional<uint32_t> rpm_target = std::nullopt;
     std::optional<uint32_t> rpm_measured = std::nullopt;
-    std::optional<float> current = std::nullopt;
+    std::optional<float> pwm = std::nullopt;
     std::optional<float> Kp = std::nullopt;
     std::optional<float> Ki = std::nullopt;
     std::optional<float> Kd = std::nullopt;
@@ -88,7 +88,7 @@ private:
     mcpwm_cap_timer_handle_t _cap_timer = nullptr;
     mcpwm_cap_channel_handle_t _cap_channel = nullptr;
     uint32_t _pwm_value = 0;
-    uint32_t _pwm_percent = 0;
+    float _pwm_percent = 0;
     float _rpm_measured = 0;
     uint64_t _last_rpm_measured = 0;
     float _rpm_target = 0;

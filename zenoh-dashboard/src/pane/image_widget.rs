@@ -37,7 +37,7 @@ impl TextureSafe {
     }
 
     async fn switch(&self,texture_handle:TextureHandle  ) {
-        let p = active.get_mut();
+        let p = self.active.get_mut();
         *p = Some(texture_handle);
     }
 }

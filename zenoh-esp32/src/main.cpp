@@ -71,6 +71,10 @@ auto operator>>=(const std::optional<T> &opt, F &&func)
 | ZENOH | = publish events => | LED | (pulse)
 */
 
+#define DEVICE_NAME "esp3"
+#define DST_DEVICE "dst/" DEVICE_NAME "/"
+#define SRC_DEVICE "src/" DEVICE_NAME "/"
+
 extern "C" void app_main()
 {
   esp_err_t ret = nvs_flash_init();
@@ -100,34 +104,31 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("src/esp3/wifi", event.serdes);
-                      zenoh_publish("info/esp3/wifi",event.prop_info); });
+                      { zenoh_publish(SRC_DEVICE "wifi", event.serdes); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("src/esp3/sys", event.serdes); 
-                     zenoh_publish("info/esp3/sys",event.prop_info); });
+                     { zenoh_publish(SRC_DEVICE "sys", event.serdes); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("src/esp3/zenoh", event.serdes); 
-                       zenoh_publish("info/esp3/zenoh",event.prop_info); });
+                       { zenoh_publish(SRC_DEVICE "zenoh", event.serdes); });
   ota_actor.on_event([&](OtaEvent event)
-                     { zenoh_publish("src/esp3/ota", event.serdes); });
+                     { zenoh_publish(SRC_DEVICE "ota", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
-      if (event.publish->topic == "dst/esp3/sys") {
+      if (event.publish->topic == DST_DEVICE "sys") {
         auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
         if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
       } 
-      else if ( event.publish->topic == "dst/esp3/wifi") {
+      else if ( event.publish->topic == DST_DEVICE "wifi") {
         auto msg = cbor_deserialize<WifiMsg>(event.publish->payload);
         if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
       } 
-      else if ( event.publish->topic == "dst/esp3/zenoh") {
+      else if ( event.publish->topic == DST_DEVICE "zenoh") {
         auto msg = cbor_deserialize<ZenohMsg>(event.publish->payload);
         if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
       } 
-      else if ( event.publish->topic == "dst/esp3/ota") {
+      else if ( event.publish->topic == DST_DEVICE "ota") {
         cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = std::move(msg)});};
       } 
       else {
