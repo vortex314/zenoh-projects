@@ -51,11 +51,13 @@ void ZenohActor::on_timer(int id)
 
 void ZenohActor::on_cmd(ZenohCmd &cmd)
 {
+  INFO("ZenohActor::on_cmd");
   if (cmd.action)
   {
     switch (cmd.action.value())
     {
     case ZenohAction::Connect:
+      INFO("Connecting to Zenoh...");
       if (!_connected)
       {
         Res res = connect();
@@ -83,10 +85,10 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
       }
       break;
     case ZenohAction::Disconnect:
+      INFO("Disconnecting from Zenoh...");
       if (_connected)
       {
         disconnect();
-        INFO("Disconnecting from Zenoh...");
       }
       break;
     case ZenohAction::Stop:
@@ -354,7 +356,8 @@ Res ZenohActor::publish_props()
 //============================================================
 //============================================================
 //============================================================
-
+#undef H
+#define H(x) x
 Res ZenohMsg::serialize(Serializer &ser)
 {
 //  int idx = 0;

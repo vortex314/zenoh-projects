@@ -269,7 +269,7 @@ fn get_endpoint(ui: &mut egui::Ui, endpoint: &EndPoint, cnt: usize) -> Option<En
                 ui.selectable_value::<String>(&mut selected_value, option.clone(), option);
             }
         });
-    info!(
+    debug!(
         "Selected value {:?} {:?}",
         selected_value,
         EndPoint::from_str(&selected_value).ok()

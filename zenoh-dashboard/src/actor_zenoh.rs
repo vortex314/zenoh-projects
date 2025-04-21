@@ -99,10 +99,10 @@ impl Actor for ZenohActor {
 
 impl ZenohActor {
     pub fn new() -> Self {
-        //let config = Config::from_file("./zenoh.json5").ok().unwrap();
-        let mut config = Config::default();
-        config.insert_json5("mode", r#""client""#).unwrap();
-        config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
+        let config = Config::from_file("./zenoh.json5").ok().unwrap();
+     //   let mut config = Config::default();
+   //     config.insert_json5("mode", r#""client""#).unwrap();
+   //     config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
 
         let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
         ZenohActor {

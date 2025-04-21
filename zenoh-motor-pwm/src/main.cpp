@@ -20,6 +20,7 @@
 // threads can be run separately or share a thread
 // Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
 WifiActor wifi_actor("wifi", 9000, 40, 5);
+Thread wifi_thread("wifi_thread", 9000, 40, 23, Cpu::CPU1);
 ZenohActor zenoh_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
@@ -33,19 +34,10 @@ Log logger;
 
 void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
 
-template <typename T>
-std::optional<T> deserialize(Bytes bytes)
-{
-  CborDeserializer des(bytes.data(), bytes.size());
-  T obj;
-  if (obj.deserialize(des).is_ok())
-    return obj;
-  return std::nullopt;
-}
 
 #define DEVICE_NAME "mtr1"
-
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
+#define SRC_DEVICE "src/" DEVICE_NAME "/"
 
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -75,50 +67,51 @@ extern "C" void app_main()
   wifi_actor.on_event([](WifiEvent event)
                       {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
-      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
+      INFO("WIFI_CONNECTED => ZENOH_CONNECT");
+      auto ok = zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
+      INFO("WIFI_CONNECTED => ZENOH_CONNECT %s", ok ? "true" : "false");
     }
     if (event.signal == WifiSignal::WIFI_DISCONNECTED) {
-      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});
+      auto ok = zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});
     } });
 
   // publish data from actors
   wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish("src/mtr1/wifi", event.serdes);
-                      zenoh_publish("info/mtr1/wifi",event.prop_info); });
+                      { zenoh_publish(SRC_DEVICE "wifi", event.serdes); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish("src/mtr1/sys", event.serdes); 
-                     zenoh_publish("info/mtr1/sys",event.prop_info); });
+                     { zenoh_publish(SRC_DEVICE "sys", event.serdes); });
   zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish("src/mtr1/zenoh", event.serdes); 
-                       zenoh_publish("info/mtr1/zenoh",event.prop_info); });
+                       { zenoh_publish(SRC_DEVICE "zenoh", event.serdes); });
   motor_actor.on_event([&](MotorEvent event)
-                        { zenoh_publish("src/mtr1/motor", event.serdes); });
+                       { zenoh_publish(SRC_DEVICE "motor", event.serdes); });
   ota_actor.on_event([&](OtaEvent event)
-                        { zenoh_publish("src/mtr1/ota", event.serdes); });
+                     { zenoh_publish(SRC_DEVICE "ota", event.serdes); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
-      PublishBytes pub = *event.publish;
-      CborDeserializer des(pub.payload.data(), pub.payload.size());
-      if (pub.topic == DST_DEVICE "sys" ) {
-        auto msg = deserialize<SysMsg>(pub.payload);
-        if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes { msg.value() }});  
-      } else if ( pub.topic == "dst/mtr1/wifi") {
-        auto msg = deserialize<WifiMsg>(pub.payload);
-        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( pub.topic == "dst/mtr1/zenoh") {
-        auto msg = deserialize<ZenohMsg>(pub.payload);
-        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes { msg.value() }});
-      } else if ( pub.topic == "dst/mtr1/motor") {
-        auto msg = deserialize<MotorMsg>(pub.payload);
-        if ( msg ) motor_actor.tell(new MotorCmd{.msg = msg.value()});
-      } else if ( pub.topic == "dst/mtr1/ota") {
-        INFO("Received OTA message");
-        auto msg = deserialize<OtaMsg>(pub.payload);
-        if ( msg ) ota_actor.tell(new OtaCmd{.msg = msg.value()});
-      }else {
+      if (event.publish->topic == DST_DEVICE "sys") {
+        auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
+        if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
+      } 
+      else if ( event.publish->topic == DST_DEVICE "wifi") {
+        auto msg = cbor_deserialize<WifiMsg>(event.publish->payload);
+        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
+      } 
+      else if ( event.publish->topic == DST_DEVICE "zenoh") {
+        auto msg = cbor_deserialize<ZenohMsg>(event.publish->payload);
+        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
+      } 
+      else if ( event.publish->topic == DST_DEVICE "ota") {
+        auto msg = cbor_deserialize<OtaMsg>(event.publish->payload);
+        if ( msg ) ota_actor.tell(new OtaCmd{.msg = std::move(msg)});
+      } 
+      else if ( event.publish->topic == DST_DEVICE "motor") {
+        auto msg = cbor_deserialize<MotorMsg>(event.publish->payload);
+        if ( msg ) motor_actor.tell(new MotorCmd{.msg = std::move(msg)});
+      } 
+      else {
         INFO("Received Zenoh unknown event");
       }
     } });
@@ -127,8 +120,10 @@ extern "C" void app_main()
   // wifi_actor.start();
   motor_thread.add_actor(motor_actor);
   motor_thread.start();
-  //actor_thread.add_actor(motor_actor);
-  actor_thread.add_actor(wifi_actor);
+  // actor_thread.add_actor(motor_actor);
+  wifi_thread.add_actor(wifi_actor); // wifi blocking
+  wifi_thread.start();
+
   actor_thread.add_actor(zenoh_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
@@ -153,8 +148,10 @@ void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
     auto &serializable = serdes.value().payload;
     serializable.serialize(ser);
 
-    assert(buffer.size() > 0);
-//    assert(buffer.size() < 1024);
+    if (serdes.value().topic)
+    {
+      topic = serdes.value().topic.value().c_str();
+    };
 
     zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
     // pulse led when we publish

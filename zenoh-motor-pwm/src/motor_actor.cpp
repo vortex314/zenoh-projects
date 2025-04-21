@@ -10,7 +10,7 @@ MotorActor::MotorActor() : MotorActor("sys", 4096, 5, 5) {}
 
 MotorActor::MotorActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<MotorEvent, MotorCmd>(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(100);
+    _timer_publish = timer_repetitive(1000);
     _timer_watchdog = timer_repetitive(1000);
     _timer_pid = timer_repetitive(1000);
     _Kd = 0.0f;

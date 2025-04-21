@@ -10,7 +10,6 @@
             "includePath": [
                 "/home/lieven/workspace/zenoh-projects/zenoh-esp32/include",
                 "/home/lieven/workspace/zenoh-projects/zenoh-esp32/src",
-                "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/ArduinoJson/src",
                 "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/NanoCBOR/include",
                 "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/NanoCBOR/src",
                 "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/zenoh-pico/include",
@@ -176,7 +175,6 @@
                 "path": [
                     "/home/lieven/workspace/zenoh-projects/zenoh-esp32/include",
                     "/home/lieven/workspace/zenoh-projects/zenoh-esp32/src",
-                    "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/ArduinoJson/src",
                     "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/NanoCBOR/include",
                     "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/NanoCBOR/src",
                     "/home/lieven/workspace/zenoh-projects/zenoh-esp32/.pio/libdeps/esp1/zenoh-pico/include",

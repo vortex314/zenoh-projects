@@ -21,6 +21,7 @@ public:
   virtual Res serialize(uint32_t i) = 0;
   virtual Res serialize(int64_t i) = 0;
   virtual Res serialize(uint64_t i) = 0;
+  virtual Res serialize(const char* s) = 0;
   virtual Res serialize(std::string &s) = 0;
   virtual Res serialize(Bytes b) = 0;
   virtual Res serialize(float f) = 0;

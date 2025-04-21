@@ -69,6 +69,9 @@ Res SysActor::publish_props_info()
     return Res::Ok();
 }*/
 
+#undef H
+#define H(x) (const char *)x
+
 Res SysMsg::serialize(Serializer &ser)
 {
     int idx = 0;

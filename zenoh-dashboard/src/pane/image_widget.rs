@@ -8,6 +8,7 @@ use std::{
 
 use image::ImageReader;
 
+use crate::value::Value;
 use anyhow::Result;
 use egui::{ColorImage, Context, Image, ImageSource, TextureHandle};
 use egui_plot::{Line, Plot, PlotPoints};
@@ -15,8 +16,7 @@ use egui_tiles::UiResponse;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
-
-use crate::value::Value;
+use tokio::task::block_in_place;
 
 use super::{PaneWidget, PubSub};
 
@@ -28,17 +28,18 @@ enum Status {
 }
 
 struct TextureSafe {
-    active : Mutex<Option<TextureHandle>>
+    active: Mutex<Option<TextureHandle>>,
 }
 
 impl TextureSafe {
     fn new() -> Self {
-        TextureSafe { active : Mutex::new(None)}
+        TextureSafe {
+            active: Mutex::new(None),
+        }
     }
 
-    async fn switch(&self,texture_handle:TextureHandle  ) {
-        let p = self.active.get_mut();
-        *p = Some(texture_handle);
+    async fn switch(&mut self, texture_handle: TextureHandle) {
+        self.active.lock().await.replace(texture_handle);
     }
 }
 
@@ -66,7 +67,7 @@ impl ImageWidget {
     pub fn new() -> ImageWidget {
         ImageWidget {
             data: None,
-            texture: None,
+            texture: Mutex::new(None).into(),
             ctx: None,
             last_update: None,
         }
@@ -103,15 +104,15 @@ impl PaneWidget for ImageWidget {
             self.ctx = Some(ui.ctx().clone());
         }
 
-        if self.texture.is_none() {
-            return UiResponse::None;
-        }
-
-        if let Some(texture) = self.texture.as_ref() {
-            // Display the image
-            ui.image((texture.id(), ui.available_size()));
-        } else {
-            ui.label("Failed to decode image.");
+        let mg = self.texture.try_lock();
+        if let Ok(mut texture) = mg {
+            if texture.is_none() {
+                if let Some(textu) = texture.as_mut() {
+                    ui.image((textu.id(), ui.available_size()));
+                } else {
+                    ui.label("No texture available");
+                }
+            }
         }
         let elapsed = start_time.elapsed();
         debug!("ImageWidget rendered in {:?}", elapsed);
@@ -138,16 +139,25 @@ impl PaneWidget for ImageWidget {
 
         let th = self.texture.clone();
 
-        tokio::spawn(async move {
-        });
+        tokio::spawn(async move {});
 
         match _value {
             Value::Bytes(bytes) => {
                 debug!("ImageWidget received image data [{}]", bytes.len());
                 self.data = Some(bytes.clone());
                 if let Some(ctx) = self.ctx.as_ref() {
-                    let _ = decode_bytes_to_texture(ctx, bytes).map(|texture| {
-                        self.texture = Some(texture);
+                    let _ = decode_bytes_to_texture(ctx, bytes).map(|texture1| {
+                        self.texture.try_lock()
+                            .map(|mut texture_guard| {
+                                if let Some(textu) = texture_guard.as_mut() {
+                                    *textu = texture1;
+                                } else {
+                                    error!("Failed to lock texture");
+                                }
+                            })
+                            .unwrap_or_else(|_| {
+                                error!("Failed to lock texture");
+                            });
                     });
                 }
                 self.last_update = Some(Instant::now());

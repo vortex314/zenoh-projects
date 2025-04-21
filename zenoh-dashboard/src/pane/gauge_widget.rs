@@ -8,7 +8,7 @@ use super::{find_inner_rectangle, PaneWidget, PubSub};
 
 const RADIUS: f32 = 100.0;
 const THICKNESS: f32 = 10.0;
-const MARGIN: f32 = 5.0;
+const MARGIN: i8 = 5;
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Status {

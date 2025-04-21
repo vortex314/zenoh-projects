@@ -39,6 +39,7 @@ public:
   Res serialize(int64_t i);
   Res serialize(uint64_t i);
   Res serialize(std::string &s);
+  Res serialize(const char *s);
   Res serialize(Bytes b);
   Res serialize(float f);
 

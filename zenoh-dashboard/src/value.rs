@@ -4,6 +4,8 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use anyhow::Result;
 use anyhow::anyhow;
+use log::info;
+use minicbor::display;
 use minicbor::{data::Token, Decoder};
 use mlua::FromLua;
 use mlua::FromLuaMulti;
@@ -65,6 +67,7 @@ impl Value {
         }
     }
     pub fn from_cbor( bytes : Vec<u8> ) -> Result<Value> {
+        info!("from_cbor {}", display(&bytes));
         let mut decoder = Decoder::new(&bytes);
         let tokens = decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
         let mut iter = tokens.iter();
@@ -79,14 +82,16 @@ impl Value {
                     }
                     let value = iter.next().ok_or_else(|| anyhow!("Value not found"))?;
                     let key = match key {
-                        Token::U32(i) => *i as usize,
-                        Token::U8(i) => *i as usize,
-                        Token::U16(i) => *i as usize,
-                        _ => return Err( anyhow!("Unsupported key type")),
+                        Token::U32(i) => i.to_string(),
+                        Token::U8(i) => i.to_string(),
+                        Token::U16(i) => i.to_string(),
+                        Token::String(s) => s.to_string(),
+                        Token::Bool(b) => b.to_string(),
+                        _ => return Err( anyhow!("Unsupported key type {}", key)),
                     };
                     map.insert(key, Value::from_token(value)?);
                 }
-                Ok(Value::MapIdx(map))
+                Ok(Value::MapStr(map))
             }
             Token::Map(len) => {
                 let mut map = HashMap::new();
@@ -94,12 +99,20 @@ impl Value {
                     let key = iter.next().ok_or_else(|| anyhow::anyhow!("Key not found"))?;
                     let value = iter.next().ok_or_else(|| anyhow::anyhow!("Value not found"))?;
                     let key = match key {
-                        Token::U32(i) => *i as usize,
-                        _ => return Err( anyhow::anyhow!("Unsupported key type")),
+                        Token::U32(i) => i.to_string(),
+                        Token::U8(i) => i.to_string(),
+                        Token::U16(i) => i.to_string(),
+                        Token::String(s) => s.to_string(),
+                        Token::I32(i) => i.to_string(),
+                        Token::I8(i) => i.to_string(),
+                        Token::I16(i) => i.to_string(),
+                        Token::I64(i) => i.to_string(),
+                        Token::U64(i) => i.to_string(),
+                        _ => return Err( anyhow::anyhow!("Unsupported key type {}", key)),
                     };
                     map.insert(key, Value::from_token(value)?);
                 }
-                Ok(Value::MapIdx(map))
+                Ok(Value::MapStr(map))
             }
             Token::BeginArray => {
                 let mut list = Vec::new();

@@ -7,7 +7,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use super::find_inner_rectangle;
-const MARGIN: f32 = 5.0;
+const MARGIN: i8 = 5;
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,9 +23,9 @@ pub struct TextWidget {
 impl TextWidget {
     pub fn new() -> TextWidget {
         TextWidget {
-            prefix: "'".to_string(),
-            suffix: "'".to_string(),
-            text: "-".to_string(),
+            prefix: "".to_string(),
+            suffix: "".to_string(),
+            text: "----".to_string(),
         }
     }
 }
@@ -42,7 +42,7 @@ impl PaneWidget for TextWidget {
             };
         let s = format!("{}{}{}",self.prefix, self.text,self.suffix );
 
-        let rct = find_inner_rectangle(rect, 2.5/ s.len() as f32  ) ;
+        let rct = find_inner_rectangle(rect, 2.0/ s.len() as f32  ) ;
         let text_height = rct.height() * 0.8;
 
         ui.put(

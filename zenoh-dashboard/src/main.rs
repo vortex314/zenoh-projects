@@ -6,12 +6,13 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use eframe::egui::{self, Ui, widget_text::WidgetText};
 use egui_tiles::{Tile, TileId, Tiles};
 use egui_extras::install_image_loaders;
+use egui_tiles::Behavior;
 mod pane;
 use log::debug;
 use log::error;
+use minicbor::display;
 use pane::NullWidget;
 use pane::Pane;
 use pane::Widget;
@@ -63,6 +64,7 @@ async fn main() -> Result<(), eframe::Error> {
 
             actor_zenoh.add_listener(move |_event| match _event {
                 actor_zenoh::ZenohEvent::Publish { topic, payload } => {
+                    info!("from_cbor {} => {}", topic,display(&payload));
                     let r = Value::from_cbor(payload.to_vec());
                     if let Ok(value) = r {
                         let s:String = value.to_string();
@@ -221,7 +223,7 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         pane.show(ui)
     }
 
-    fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::widget_text::WidgetText {
+    fn tab_title_for_pane(&mut self, pane: &Pane) ->egui::widget_text::WidgetText {
         format!("View {}", pane.title()).into()
     }
 

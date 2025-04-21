@@ -74,6 +74,12 @@ Res CborSerializer::serialize(uint64_t i)
     return Res::Ok();
 }
 
+Res CborSerializer::serialize(const char *s)
+{
+    RET_ERRI(nanocbor_put_tstr(&_enc, s), "Failed to encode string");
+    return Res::Ok();
+}
+
 Res CborSerializer::serialize(std::string &s)
 {
     RET_ERRI(nanocbor_put_tstr(&_enc, s.c_str()), "Failed to encode string");

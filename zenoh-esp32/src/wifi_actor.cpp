@@ -119,7 +119,12 @@ void WifiActor::on_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      wifi_msg.fill(esp_netif);
+      auto r = wifi_msg.fill(esp_netif);
+      if (r.is_err())
+      {
+        INFO("Failed to fill wifi msg: %s", r.msg().c_str());
+        return;
+      }
       emit(WifiEvent{.serdes = PublishSerdes(wifi_msg)});
     }
   }
@@ -214,6 +219,8 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   return Res::Ok();
 }*/
+#undef H
+#define H(x) x
 
 Res WifiMsg::serialize(Serializer &ser)
 {
@@ -242,7 +249,7 @@ Res WifiMsg::fill(esp_netif_t *esp_netif)
 {
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
-  esp_netif_get_ip_info(esp_netif, &ip_info);
+  CHECK_ESP(esp_netif_get_ip_info(esp_netif, &ip_info));
   ip_address = ip4addr_to_str(&ip_info.ip);
   gateway = ip4addr_to_str(&ip_info.gw);
   netmask = ip4addr_to_str(&ip_info.netmask);
@@ -276,9 +283,9 @@ Res WifiMsg::fill(esp_netif_t *esp_netif)
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip)
 {
-  char buf[16];
+  char buf[17];
   uint8_t *ip_parts = (uint8_t *)ip;
-  snprintf(buf, 16, "%u.%u.%u.%u",
+  snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
            ip_parts[0], ip_parts[1],
            ip_parts[2], ip_parts[3]);
   return buf;
@@ -416,8 +423,8 @@ Res WifiActor::scan()
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
-  assert(sta_netif);
+  esp_netif = esp_netif_create_default_wifi_sta();
+  assert(esp_netif);
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
