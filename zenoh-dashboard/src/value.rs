@@ -43,6 +43,7 @@ impl Value {
                 }
                 Ok(Value::List(list))
             }
+            Token::F16(f) => Ok(Value::Number(*f as f64)),
             Token::F64(f) => Ok(Value::Number(*f)),
             Token::F32(f) => Ok(Value::Number(f64::from(*f))),
             Token::U8(u) => Ok(Value::Number(f64::from(*u))),
@@ -85,6 +86,8 @@ impl Value {
                         Token::U32(i) => i.to_string(),
                         Token::U8(i) => i.to_string(),
                         Token::U16(i) => i.to_string(),
+                        Token::F16(f) => f.to_string(),
+                        Token::F32(f) => f.to_string(),
                         Token::String(s) => s.to_string(),
                         Token::Bool(b) => b.to_string(),
                         _ => return Err( anyhow!("Unsupported key type {}", key)),

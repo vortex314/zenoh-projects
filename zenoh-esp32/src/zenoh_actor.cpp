@@ -51,7 +51,6 @@ void ZenohActor::on_timer(int id)
 
 void ZenohActor::on_cmd(ZenohCmd &cmd)
 {
-  INFO("ZenohActor::on_cmd");
   if (cmd.action)
   {
     switch (cmd.action.value())
@@ -352,23 +351,18 @@ Res ZenohActor::publish_props()
 }*/
 
 //============================================================
-//============================================================
-//============================================================
-//============================================================
-//============================================================
-#undef H
-#define H(x) x
+
 Res ZenohMsg::serialize(Serializer &ser)
 {
 //  int idx = 0;
   ser.reset();
   ser.map_begin();
-  ser.serialize(H("zid"), zid);
-  ser.serialize(H("what_am_i"), what_am_i);
-  ser.serialize(H("peers"), peers);
-  ser.serialize(H("prefix"), prefix);
-  ser.serialize(H("routers"), routers);
-  ser.serialize(H("connect"), connect);
+  ser.serialize(KEY("zid"), zid);
+  ser.serialize(KEY("what_am_i"), what_am_i);
+  ser.serialize(KEY("peers"), peers);
+  ser.serialize(KEY("prefix"), prefix);
+  ser.serialize(KEY("routers"), routers);
+  ser.serialize(KEY("connect"), connect);
   return ser.map_end();
 }
 

@@ -123,13 +123,13 @@ Res OtaMsg::serialize(Serializer &ser)
 {
     ser.reset();
     ser.map_begin();
-    ser.serialize(H("operation"), (std::optional<uint32_t>)operation);
-    ser.serialize(H("offset"), offset);
-    ser.serialize(H("image"), image);
-    ser.serialize(H("rc"), rc);
-    ser.serialize(H("message"), message);
-    ser.serialize(H("reply_to"), reply_to);
-    ser.serialize(H("partition_label"), partition_label);
+    ser.serialize(KEY("operation"), (std::optional<uint32_t>)operation);
+    ser.serialize(KEY("offset"), offset);
+    ser.serialize(KEY("image"), image);
+    ser.serialize(KEY("rc"), rc);
+    ser.serialize(KEY("message"), message);
+    ser.serialize(KEY("reply_to"), reply_to);
+    ser.serialize(KEY("partition_label"), partition_label);
     ser.map_end();
     return Res::Ok();
 }

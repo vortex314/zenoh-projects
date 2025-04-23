@@ -46,6 +46,26 @@ void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
 | ZENOH | = publish events => | LED | (pulse)
 */
 
+/**
+ * @brief Main application entry point for initializing and managing the system.
+ *
+ * This function initializes the Non-Volatile Storage (NVS), configures WiFi power-saving mode,
+ * and sets up the Zenoh actor prefix. It wires together various actors (WiFi, system, Zenoh, motor, OTA)
+ * to handle events and publish data. It also processes incoming Zenoh commands and dispatches them
+ * to the appropriate actors. The function starts threads for managing actors and continuously logs
+ * the free heap size and largest memory block available.
+ *
+ * Key functionalities:
+ * - Initializes NVS and handles errors related to storage.
+ * - Configures WiFi power-saving mode.
+ * - Sets up event handling for WiFi, system, Zenoh, motor, and OTA actors.
+ * - Publishes actor events to Zenoh topics.
+ * - Processes incoming Zenoh commands and routes them to the appropriate actors.
+ * - Starts threads for managing actors and their events.
+ * - Logs memory usage periodically.
+ *
+ * @note This function runs indefinitely in a loop to monitor system memory.
+ */
 extern "C" void app_main()
 {
   esp_err_t ret = nvs_flash_init();
@@ -141,20 +161,19 @@ extern "C" void app_main()
 // re-entrant function to publish a serializable object
 void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
 {
-  if (serdes)
-  {
-    Bytes buffer;
-    CborSerializer ser(buffer);
-    auto &serializable = serdes.value().payload;
-    serializable.serialize(ser);
+  if (!serdes)
+    return;
 
-    if (serdes.value().topic)
-    {
-      topic = serdes.value().topic.value().c_str();
-    };
+  auto &serdes_value = serdes.value();
+  Bytes buffer;
+  CborSerializer ser(buffer);
+  serdes_value.payload.serialize(ser);
 
-    zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
-    // pulse led when we publish
-    led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
-  }
+  const char *final_topic = serdes_value.topic ? serdes_value.topic->c_str() : topic;
+
+  // Publish to Zenoh
+  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{final_topic, buffer}});
+
+  // Pulse LED when publishing
+  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }

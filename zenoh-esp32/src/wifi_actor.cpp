@@ -219,31 +219,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   return Res::Ok();
 }*/
-#undef H
-#define H(x) x
 
-Res WifiMsg::serialize(Serializer &ser)
-{
- // uint32_t idx = 0;
-  ser.reset();
-  ser.map_begin();
-  ser.serialize(H("mac"), mac_address);
-  ser.serialize(H("ip"), ip_address);
-  ser.serialize(H("gateway"), gateway);
-  ser.serialize(H("netmask"), netmask);
-  ser.serialize(H("dns"), dns);
-  ser.serialize(H("ssid"), ssid);
-  ser.serialize(H("channel"), channel);
-  ser.serialize(H("rssi"), rssi);
-  ser.serialize(H("encryption"), encryption);
-  ser.serialize(H("wifi_mode"), wifi_mode);
-  ser.serialize(H("ap"), ap_scan);
-  return ser.map_end();
-}
-Res WifiMsg::deserialize(Deserializer &des)
-{
-  return Res::Err(-1, "Not implemented");
-}
 
 Res WifiMsg::fill(esp_netif_t *esp_netif)
 {
@@ -504,4 +480,28 @@ Res WifiActor::connect()
   CHECK_ESP(esp_wifi_start());
 
   return Res::Ok();
+}
+
+
+Res WifiMsg::serialize(Serializer &ser)
+{
+ // uint32_t idx = 0;
+  ser.reset();
+  ser.map_begin();
+  ser.serialize(KEY("mac"), mac_address);
+  ser.serialize(KEY("ip"), ip_address);
+  ser.serialize(KEY("gateway"), gateway);
+  ser.serialize(KEY("netmask"), netmask);
+  ser.serialize(KEY("dns"), dns);
+  ser.serialize(KEY("ssid"), ssid);
+  ser.serialize(KEY("channel"), channel);
+  ser.serialize(KEY("rssi"), rssi);
+  ser.serialize(KEY("encryption"), encryption);
+  ser.serialize(KEY("wifi_mode"), wifi_mode);
+  ser.serialize(KEY("ap"), ap_scan);
+  return ser.map_end();
+}
+Res WifiMsg::deserialize(Deserializer &des)
+{
+  return Res::Err(-1, "Not implemented");
 }

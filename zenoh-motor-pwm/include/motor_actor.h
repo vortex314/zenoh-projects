@@ -93,6 +93,7 @@ private:
     uint64_t _last_rpm_measured = 0;
     float _rpm_target = 0;
     float _rpm_integral = 0;
+    float _previous_error = 0;
 };
 
 // constexpr mcpwm_timer_clock_source_t MCPWM_TIMER_CLK_SRC_DEFAULT = (mcpwm_timer_clock_source_t)SOC_MOD_CLK_PLL_F160M;
