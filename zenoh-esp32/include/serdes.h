@@ -5,6 +5,19 @@
 class Serializer;
 class Deserializer;
 
+#define KEY_TYPE_STR 0 
+#define KEY_TYPE_INT 1
+
+#ifndef KEY_TYPE
+#define KEY_TYPE KEY_TYPE_STR
+#endif
+
+#if KEY_TYPE == KEY_TYPE_STR
+#define KEY(x) x
+#else
+#define KEY(x) H(x)
+#endif
+
 class Serializable
 {
 public:
@@ -180,9 +193,14 @@ public:
       RET_ERR(peek_type(type), "Failed to peek type");
       if (type == SerialType::SER_END)
         break;
-      if (type != SerialType::SER_UINT)
+      if (type != SerialType::SER_UINT && type != SerialType::SER_STR)
         return Res::Err(0, "Expected uint");
       uint32_t key;
+      if ( type == SerialType::SER_STR) {
+        std::string key_str ;
+        RET_ERR(deserialize(key_str),"Failed to decode key str in map");
+        key = H(key_str.c_str());
+      }
       RET_ERR(deserialize(key), "Failed to decode key in map");
       RET_ERR(func(*this, key), "Failed to process map entry");
     }

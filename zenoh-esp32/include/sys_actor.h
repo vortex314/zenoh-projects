@@ -9,6 +9,7 @@
 
 struct SysMsg : public Serializable
 {
+  std::optional<uint64_t> utc;
   std::optional<std::string> cpu = std::nullopt;
   std::optional<uint32_t> clock = std::nullopt;
   std::optional<uint32_t> flash_size = std::nullopt;

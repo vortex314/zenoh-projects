@@ -9,6 +9,8 @@
 #include <vector>
 #include <util.h>
 
+
+
 class CborSerializer : public Serializer
 {
 private:
@@ -67,6 +69,7 @@ private:
   nanocbor_value_t _des;
   nanocbor_value_t _map;
   nanocbor_value_t _array;
+
   typedef enum
   {
     INIT,

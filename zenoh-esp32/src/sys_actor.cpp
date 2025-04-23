@@ -69,26 +69,37 @@ Res SysActor::publish_props_info()
     return Res::Ok();
 }*/
 
-#undef H
-#define H(x) (const char *)x
+
 
 Res SysMsg::serialize(Serializer &ser)
 {
     int idx = 0;
     ser.reset();
     ser.map_begin();
-    ser.serialize(H("cpu"), cpu);
-    ser.serialize(H("clock"), clock);
-    ser.serialize(H("flash_size"), flash_size);
-    ser.serialize(H("ram_size"), ram_size);
-    ser.serialize(H("free_heap"), free_heap);
-    ser.serialize(H("up_time"), up_time);
-    ser.serialize(H("log_message"), log_message);
+    ser.serialize(KEY("cpu"), cpu);
+    ser.serialize(KEY("clock"), clock);
+    ser.serialize(KEY("flash_size"), flash_size);
+    ser.serialize(KEY("ram_size"), ram_size);
+    ser.serialize(KEY("free_heap"), free_heap);
+    ser.serialize(KEY("up_time"), up_time);
+    ser.serialize(KEY("log_message"), log_message);
     ser.map_end();
     return ser.serialize(idx++, state);
 }
 
 Res SysMsg::deserialize(Deserializer &des)
 {
-    return Res::Err(EAFNOSUPPORT, "Not implemented");
+    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
+                    {
+    //    INFO("key %d", key);
+        switch (key)
+        {
+        case H("utc"):
+            return d.deserialize(utc);
+        default:
+            INFO("unknown key %d",key);
+            return d.skip_next();
+        } });
+
+    return Res::Ok();
 }

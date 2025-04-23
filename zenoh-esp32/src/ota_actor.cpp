@@ -134,6 +134,7 @@ Res OtaMsg::serialize(Serializer &ser)
     return Res::Ok();
 }
 
+
 Res OtaMsg::deserialize(Deserializer &des)
 {
   //  INFO("OtaMsg::deserialize");
