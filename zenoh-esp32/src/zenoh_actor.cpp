@@ -334,7 +334,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.serdes = PublishSerdes(_zenoh_msg)});
+  emit(ZenohEvent{.msg = _zenoh_msg });
   z_drop(z_move(z_str));
   return Res::Ok();
 }
@@ -352,7 +352,7 @@ Res ZenohActor::publish_props()
 
 //============================================================
 
-Res ZenohMsg::serialize(Serializer &ser)
+Res ZenohMsg::serialize(Serializer &ser) const
 {
 //  int idx = 0;
   ser.reset();

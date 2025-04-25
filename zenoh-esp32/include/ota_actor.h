@@ -16,26 +16,28 @@ typedef enum {
 
 struct OtaMsg : public Serializable
 {
-    std::optional<OtaOperation> operation;
-    std::optional<uint32_t> offset;
-    std::optional<Bytes> image = std::nullopt;
-    std::optional<int32_t> rc = std::nullopt;
-    std::optional<std::string> message = std::nullopt;
-    std::optional<std::string> reply_to = std::nullopt;
-    std::optional<std::string> partition_label = std::nullopt;
+    Option<uint32_t> operation;
+    Option<uint32_t> offset;
+    Option<Bytes> image = nullptr;
+    Option<int32_t> rc = nullptr;
+    Option<std::string> message = nullptr;
+    Option<std::string> reply_to = nullptr;
+    Option<std::string> partition_label = nullptr;
 
-    Res serialize(Serializer &ser);
+    Res serialize(Serializer &ser) const;
     Res deserialize(Deserializer &des);
 };
 
+constexpr uint32_t sz = sizeof(OtaMsg);
+
 struct OtaEvent
 {
-    std::optional<PublishSerdes> serdes = std::nullopt;
+    Option<OtaMsg> msg = nullptr;
 };
 
 struct OtaCmd
 {
-    std::optional<OtaMsg> msg = std::nullopt;
+    Option<OtaMsg> msg = nullptr;
 };
 
 class OtaActor : public Actor<OtaEvent, OtaCmd>
@@ -54,5 +56,5 @@ public:
  //   Res flash(const uint8_t *data, size_t size);
     Res ota_begin();
     Res ota_end();
-    Res ota_write(uint32_t offset,Bytes& bytes );
+    Res ota_write(uint32_t offset,const Bytes& bytes );
 };

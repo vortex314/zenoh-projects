@@ -18,7 +18,7 @@ void LedActor::on_cmd(LedCmd &cmd)
 {
     if (cmd.action)
     {
-        switch (cmd.action.value())
+        switch (*cmd.action)
         {
         case LED_ON:
         {
@@ -39,7 +39,7 @@ void LedActor::on_cmd(LedCmd &cmd)
             _led_is_on = true;
             if (cmd.duration)
             {
-                _duration = cmd.duration.value();
+                _duration = *cmd.duration;
                 timer_fire(_timer_publish, _duration);
             }
             break;
@@ -51,7 +51,7 @@ void LedActor::on_cmd(LedCmd &cmd)
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
             if (cmd.duration)
             {
-                _duration = cmd.duration.value();
+                _duration = *cmd.duration;
                 timer_fire(_timer_publish, _duration);
             }
             break;

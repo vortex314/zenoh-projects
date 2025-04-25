@@ -1,11 +1,17 @@
 
 #include <actor.h>
 
-PublishSerdes ::PublishSerdes(Serializable& pl) : payload(pl) {
-    topic = std::nullopt;
+void panic_here(const char *s) {
+    printf("PANIC : %s \n",s);
+    // force coredump
+    int* p=0;
+    *p = 0;
 }
 
-PublishSerdes ::PublishSerdes(std::optional<std::string> topic,Serializable& pl) : topic(topic),payload(pl) {
+PublishSerdes ::PublishSerdes(Serializable& pl) : payload(pl) {
+}
+
+PublishSerdes ::PublishSerdes(Option<std::string> topic,Serializable& pl) : topic(topic),payload(pl) {
 }
 
 

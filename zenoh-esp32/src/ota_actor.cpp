@@ -17,20 +17,20 @@ void OtaActor::on_cmd(OtaCmd &cmd)
     Res result;
     if (cmd.msg)
     {
-        OtaMsg &msg = cmd.msg.value();
+        const OtaMsg &msg = cmd.msg.value();
         if (msg.operation)
         {
-            if (msg.operation.value() == OTA_BEGIN)
+            if (msg.operation == OTA_BEGIN)
             {
                 INFO("OTA_BEGIN");
                 result = ota_begin();
             }
-            else if (msg.operation.value() == OTA_END)
+            else if (msg.operation == OTA_END)
             {
                 INFO("OTA_END");
                 result = ota_end();
             }
-            else if (msg.operation.value() == OTA_WRITE && msg.offset && msg.image)
+            else if (msg.operation == OTA_WRITE && msg.offset && msg.image)
             {
                 INFO("OTA_WRITE offset %d [%d]", msg.offset.value(), msg.image.value().size());
                 result = ota_write(msg.offset.value(), msg.image.value());
@@ -45,7 +45,8 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             reply.message = result.msg();
             reply.offset = msg.offset;
             reply.operation = msg.operation;
-            emit(OtaEvent{.serdes = PublishSerdes(msg.reply_to, reply)});
+            reply.reply_to = msg.reply_to;
+            emit(OtaEvent{.msg = reply});
         }
     }
 }
@@ -55,7 +56,7 @@ void OtaActor::on_timer(int timer_id)
     const esp_partition_t *part = esp_ota_get_running_partition();
     OtaMsg event;
     event.partition_label = part->label;
-    emit(OtaEvent{.serdes = PublishSerdes(event)});
+    emit(OtaEvent{.msg = event});
 }
 
 void OtaActor::on_start()
@@ -85,7 +86,7 @@ Res OtaActor::ota_end()
     esp_restart();
 }
 
-Res OtaActor::ota_write(uint32_t offset, Bytes &data)
+Res OtaActor::ota_write(uint32_t offset,const Bytes &data)
 {
     CHECK_ESP(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(), offset));
     return Res::Ok();
@@ -119,11 +120,11 @@ Res OtaActor::ota_write(uint32_t offset, Bytes &data)
     esp_restart();
 }*/
 
-Res OtaMsg::serialize(Serializer &ser)
+Res OtaMsg::serialize(Serializer &ser) const
 {
     ser.reset();
     ser.map_begin();
-    ser.serialize(KEY("operation"), (std::optional<uint32_t>)operation);
+    ser.serialize(KEY("operation"), operation);
     ser.serialize(KEY("offset"), offset);
     ser.serialize(KEY("image"), image);
     ser.serialize(KEY("rc"), rc);

@@ -5,47 +5,36 @@
  *      Author: lieven
  */
 #include <log.h>
-extern "C"
-{
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-}
+
 Log::Log()
 {
-    _level = Level::L_INFO;
-    txBusy = false;
+    _busy = false;
 }
 // log the file and line
 Log &Log::logf(const char *format, ...)
 {
-    if (txBusy)
+    bool expected = false;
+    if (_busy.compare_exchange_weak(expected, true))
     {
         va_list args;
         va_start(args, format);
         vprintf(format, args);
         va_end(args);
+        printf("\n");
+        expected = true;
+        _busy.compare_exchange_weak(expected, false);
     }
     return *this;
 }
 
-void Log::setLevel(Level level)
-{
-    _level = level;
-}
-
-void Log::flush()
-{
-    printf("\n");
-    txBusy = false;
-}
 #include <sys/time.h>
 #include <esp_timer.h>
+// log level-time-file-line
 Log &Log::tfl(const char *lvl, const char *file, const uint32_t line)
 {
-    if (!txBusy)
+    bool expected = false;
+    if (_busy.compare_exchange_weak(expected, true))
     {
-        txBusy = true;
         uint64_t msec = esp_timer_get_time() / 1000;
         uint32_t sec = msec / 1000;
         uint32_t min = sec / 60;
@@ -57,6 +46,15 @@ Log &Log::tfl(const char *lvl, const char *file, const uint32_t line)
                (int)sec % 60,
                (int)ms,
                file, (unsigned int)line);
+        /*   struct tm* tm_info;
+struct timeval tv;
+
+gettimeofday(&tv, NULL);
+tm_info = localtime(&tv.tv_sec);
+strftime(buffer, 9, "%H:%M:%S", tm_info);
+printf("%s.%03d\n", buffer, tv.tv_usec/1000);*/
+        expected = true;
+        _busy.compare_exchange_weak(expected, false);
     }
     return *this;
 }

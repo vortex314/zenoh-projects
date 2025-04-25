@@ -9,7 +9,7 @@
 
 struct SysMsg : public Serializable
 {
-  std::optional<uint64_t> utc;
+  std::optional<int64_t> utc;
   std::optional<std::string> cpu = std::nullopt;
   std::optional<uint32_t> clock = std::nullopt;
   std::optional<uint32_t> flash_size = std::nullopt;
@@ -19,14 +19,13 @@ struct SysMsg : public Serializable
   std::optional<std::string> log_message = std::nullopt; // dynamic
   std::optional<std::string> state = std::nullopt;       // dynamic
 
-  Res serialize(Serializer &ser);
+  Res serialize(Serializer &ser) const;
   Res deserialize(Deserializer &des);
 };
 
 struct SysEvent
 {
-  std::optional<PublishSerdes> serdes = std::nullopt;
-  std::optional<PublishSerdes> prop_info = std::nullopt;
+  std::optional<SysMsg> msg = std::nullopt;
 };
 
 enum SysAction
@@ -36,7 +35,7 @@ enum SysAction
 
 struct SysCmd
 {
-  std::optional<PublishSerdes> serdes = std::nullopt;
+  std::optional<SysMsg> msg = std::nullopt;
   std::optional<SysAction> action = std::nullopt;
 };
 
@@ -61,8 +60,4 @@ private:
   void init_properties();
   SysMsg _sys_msg;
   Bytes _buffer;
-
-  Property<uint64_t> _up_time;
-  Property<uint32_t> _free_heap;
-  Property<std::string> _cpu;
 };

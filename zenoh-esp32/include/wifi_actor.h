@@ -14,23 +14,25 @@ std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 struct WifiMsg : public Serializable
 {
   // WIFI & ethernet
-  std::optional<std::string> mac_address = std::nullopt;
-  std::optional<std::string> ip_address = std::nullopt;
-  std::optional<std::string> gateway = std::nullopt;
-  std::optional<std::string> netmask = std::nullopt;
-  std::optional<std::string> dns = std::nullopt;
-  std::optional<std::string> ssid = std::nullopt;
-  std::optional<uint8_t> channel = std::nullopt; // dynamic
-  std::optional<int8_t> rssi = std::nullopt;
-  std::optional<std::string> encryption = std::nullopt;
-  std::optional<uint8_t> wifi_mode = std::nullopt;
-  std::optional<std::string> ap_scan = std::nullopt;
+  Option<std::string> mac_address = nullptr ;
+  Option<std::string> ip_address = nullptr;
+  Option<std::string> gateway = nullptr;
+  Option<std::string> netmask = nullptr;
+  Option<std::string> dns = nullptr;
+  Option<std::string> ssid = nullptr;
+  Option<uint8_t> channel = nullptr; // dynamic
+  Option<int8_t> rssi = nullptr;
+  Option<std::string> encryption = nullptr;
+  Option<uint8_t> wifi_mode = nullptr;
+  Option<std::string> ap_scan = nullptr;
 
-  Res serialize(Serializer &ser);
+  Res serialize(Serializer &ser) const;
   Res deserialize(Deserializer &des);
   Res fill(esp_netif_t *esp_netif);
 //  const InfoProp *info(int idx);
 };
+
+constexpr uint32_t SIZE = sizeof(WifiMsg);
 
 typedef enum
 {
@@ -40,15 +42,15 @@ typedef enum
 
 struct WifiEvent
 {
-  std::optional<WifiSignal> signal = std::nullopt;
-  std::optional<PublishSerdes> serdes = std::nullopt;
-  std::optional<PublishSerdes> prop_info = std::nullopt;
+  Option<WifiSignal> signal = nullptr;
+  Option<std::string> topic= nullptr;
+  Option<WifiMsg> msg = nullptr;
 };
 
 struct WifiCmd
 {
-  std::optional<bool> stop_actor = std::nullopt;
-  std::optional<PublishSerdes> serdes = std::nullopt;
+  Option<bool> stop_actor = nullptr;
+  Option<WifiMsg> msg = nullptr;
 };
 
 class WifiActor : public Actor<WifiEvent, WifiCmd>

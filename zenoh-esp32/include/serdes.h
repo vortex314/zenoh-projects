@@ -21,28 +21,28 @@ class Deserializer;
 class Serializable
 {
 public:
-  virtual Res serialize(Serializer &ser) = 0;
+  virtual Res serialize(Serializer &ser) const = 0;
   virtual Res deserialize(Deserializer &des) = 0;
 };
 
 class Serializer
 {
 public:
-  virtual Res serialize(uint8_t i) = 0;
-  virtual Res serialize(int8_t i) = 0;
-  virtual Res serialize(int32_t i) = 0;
-  virtual Res serialize(uint32_t i) = 0;
-  virtual Res serialize(int64_t i) = 0;
-  virtual Res serialize(uint64_t i) = 0;
+  virtual Res serialize(const uint8_t i) = 0;
+  virtual Res serialize(const int8_t i) = 0;
+  virtual Res serialize(const int32_t i) = 0;
+  virtual Res serialize(const uint32_t i) = 0;
+  virtual Res serialize(const int64_t i) = 0;
+  virtual Res serialize(const uint64_t i) = 0;
   virtual Res serialize(const char *s) = 0;
-  virtual Res serialize(std::string &s) = 0;
-  virtual Res serialize(Bytes b) = 0;
-  virtual Res serialize(float f) = 0;
-  virtual Res serialize(bool b) = 0;
-  virtual Res serialize(int i) = 0;
+  virtual Res serialize(const std::string &s) = 0;
+  virtual Res serialize(const Bytes b) = 0;
+  virtual Res serialize(const float f) = 0;
+  virtual Res serialize(const bool b) = 0;
+  virtual Res serialize(const int i) = 0;
   virtual Res serialize_null() = 0;
   template <typename V>
-  Res serialize(std::optional<V> value)
+  Res serialize(const std::optional<V> value)
   {
     if (value)
     {
@@ -55,7 +55,7 @@ public:
     return Res::Ok();
   }
   template <typename V>
-  Res serialize(uint32_t idx, std::optional<V> value)
+  Res serialize(const uint32_t idx, const std::optional<V> value)
   {
     if (value)
     {
@@ -65,7 +65,27 @@ public:
     return Res::Ok();
   }
   template <typename V>
-  Res serialize(const char *name, std::optional<V> value)
+  Res serialize(const uint32_t idx, const Option<V>& value)
+  {
+    if (value)
+    {
+      serialize(idx);
+      serialize(*value);
+    }
+    return Res::Ok();
+  }
+  template <typename V>
+  Res serialize(const char* idx, const Option<V>& value)
+  {
+    if (value)
+    {
+      serialize(idx);
+      serialize(*value);
+    }
+    return Res::Ok();
+  }
+  template <typename V>
+  Res serialize(const char *name, const std::optional<V> value)
   {
     if (value)
     {
@@ -74,7 +94,7 @@ public:
     }
     return Res::Ok();
   }
-  Res serialize(Serializable &value) { return value.serialize(*this); }
+  Res serialize(const Serializable &value) { return value.serialize(*this); }
 
   virtual Res map_begin() = 0;
   virtual Res map_end() = 0;
@@ -124,6 +144,15 @@ public:
 
   template <typename U>
   Res deserialize(std::optional<U> &opt)
+  {
+    U u;
+    RET_ERR(deserialize(u), "Failed to decode option");
+    opt = u;
+    return Res::Ok();
+  }
+
+  template <typename U>
+  Res deserialize(Option<U> &opt)
   {
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");

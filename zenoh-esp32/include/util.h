@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 #include <log.h>
+#include <errno.h>
+#include <option.h>
 
 #include "esp_err.h"
 
@@ -68,11 +70,22 @@ typedef bool Void;
     int rc = (VAL);                               \
     if (rc < 0)                                   \
     {                                             \
-      INFO(MSG);                                  \
-      INFO("[%d] %s:%d", rc, __FILE__, __LINE__); \
+      ERROR(MSG);                                  \
+      ERROR("[%d] %s:%d", rc, __FILE__, __LINE__); \
       return Res::Err(rc, MSG);                   \
     }                                             \
   }
+
+#define ERRNO(VAL) \
+{                                               \
+  int rc = (VAL);                               \
+  if (rc < 0)                                   \
+  {                                             \
+    ERROR("[%d] %s:%d failed " #VAL " with %d:%s", rc, __FILE__, __LINE__,errno,strerror(errno)); \
+  }                                             \
+}
+
+
 
 #define CHECK(VAL)                                           \
   {                                                          \
@@ -280,6 +293,41 @@ constexpr uint16_t H(const char *s)
 {
     //    uint32_t  h = fnv1(FNV_OFFSET, s) ;
     return (fnv1(FNV_OFFSET, s) & FNV_MASK);
+}
+
+template <typename T, typename U>
+std::optional<U> map(std::optional<T> t, std::function<U(T)> f)
+{
+  if (t)
+  {
+    return f(t);
+  }
+  else
+  {
+    return std::nullopt;
+  }
+}
+
+template <typename T, typename F>
+void operator>>(std::optional<T> t, F f)
+{
+  if (t)
+  {
+    f(t.value());
+  }
+}
+
+template <typename T, typename F>
+auto operator>>=(const std::optional<T> &opt, F &&func)
+    -> std::optional<std::invoke_result_t<F, T>>
+{
+  // If the optional has a value, apply the function to it and wrap the result in an optional
+  if (opt)
+  {
+    return std::invoke(std::forward<F>(func), *opt);
+  }
+  // Otherwise, return an empty optional
+  return std::nullopt;
 }
 
 #endif

@@ -32,18 +32,18 @@ public:
   CborSerializer(Bytes &bytes);
   ~CborSerializer();
   Res reset();
-  Res serialize(uint8_t v);
-  Res serialize(int8_t v);
-  Res serialize(int i);
-  Res serialize(bool b);
-  Res serialize(int32_t i);
-  Res serialize(uint32_t i);
-  Res serialize(int64_t i);
-  Res serialize(uint64_t i);
-  Res serialize(std::string &s);
+  Res serialize(const uint8_t v);
+  Res serialize(const int8_t v);
+  Res serialize(const int i);
+  Res serialize(const bool b);
+  Res serialize(const int32_t i);
+  Res serialize(const uint32_t i);
+  Res serialize(const int64_t i);
+  Res serialize(const uint64_t i);
+  Res serialize(const std::string &s);
   Res serialize(const char *s);
-  Res serialize(Bytes b);
-  Res serialize(float f);
+  Res serialize(const Bytes b);
+  Res serialize(const float f);
 
   Res map_begin();
   Res map_end();
@@ -52,7 +52,7 @@ public:
   Res array_end();
   Res serialize_null();
 
-  Res serialize(Serializable &value);
+  Res serialize(const Serializable &value);
 };
 
 #define MAX_TSTR_LENGTH 256
@@ -63,7 +63,7 @@ class CborDeserializer : public Deserializer
 
 private:
   /* data */
-  uint8_t *_bytes;
+  const uint8_t *_bytes;
   size_t _size;
   size_t _capacity;
   nanocbor_value_t _des;
@@ -83,7 +83,7 @@ private:
 
 public:
   //  CborDeserializer(size_t size);
-  CborDeserializer(uint8_t *bytes, size_t size)
+  CborDeserializer(const uint8_t *bytes, size_t size)
   {
     _bytes = bytes;
     _size = size;
@@ -100,7 +100,7 @@ public:
   Res deserialize(uint64_t &val);
   Res deserialize(int64_t &val);
   Res deserialize(uint32_t &val);
-  Res deserialize(std::string &s);
+  Res deserialize( std::string &s);
   Res deserialize(Bytes &bytes);
   Res deserialize(float &f);
   Res deserialize(bool &b);
@@ -115,11 +115,11 @@ public:
   Res peek_type(SerialType &serial_type);
   Res deserialize_null();
   template <typename U>
-  Res deserialize_option(std::optional<U> &opt)
+  Res deserialize_option(Option<U> &opt)
   {
     if (nanocbor_get_null(get_des()) == 0)
     {
-      opt = std::nullopt;
+      opt = nullptr;
       return Res::Ok();
     }
     U u;
@@ -130,7 +130,7 @@ public:
 };
 
 template <typename T>
-std::optional<T> cbor_deserialize(Bytes &bytes)
+Option<T> cbor_deserialize(const Bytes &bytes)
 {
   // INFO("Deserializing %d bytes", bytes.size());
   CborDeserializer des(bytes.data(), bytes.size());
@@ -138,7 +138,7 @@ std::optional<T> cbor_deserialize(Bytes &bytes)
   if (obj.deserialize(des).is_ok())
     return obj;
   ERROR("Failed to deserialize object ");
-  return std::nullopt;
+  return nullptr;
 }
 
 #endif

@@ -32,30 +32,29 @@ struct ZenohSerial
 
 struct ZenohMsg : public Serializable
 {
-  std::optional<std::string> zid;
-  std::optional<std::string> what_am_i;
-  std::optional<std::string> peers;
-  std::optional<std::string> prefix;
-  std::optional<std::string> routers;
-  std::optional<std::string> connect;
-  std::optional<std::string> listen;
+  Option<std::string> zid;
+  Option<std::string> what_am_i;
+  Option<std::string> peers;
+  Option<std::string> prefix;
+  Option<std::string> routers;
+  Option<std::string> connect;
+  Option<std::string> listen;
 
-  Res serialize(Serializer &ser);
+  Res serialize(Serializer &ser) const;
   Res deserialize(Deserializer &des);
 };
 
 struct ZenohEvent
 {
-  std::optional<PublishBytes> publish = std::nullopt; // publish a message
-  std::optional<PublishSerdes> serdes = std::nullopt; // publish a serializable object
-  std::optional<PublishSerdes> prop_info = std::nullopt; // publish a serializable object of propinfo
+  Option<PublishBytes> publish = nullptr; // publish a message
+  Option<ZenohMsg> msg = nullptr; // publish a serializable object
 };
 
 struct ZenohCmd
 {
-  std::optional<ZenohAction> action = std::nullopt;
-  std::optional<PublishSerdes> serdes = std::nullopt;
-  std::optional<PublishBytes> publish = std::nullopt;
+  Option<ZenohAction> action = nullptr;
+  Option<ZenohMsg> msg = nullptr;
+  Option<PublishBytes> publish = nullptr;
 };
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>

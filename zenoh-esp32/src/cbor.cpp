@@ -29,46 +29,46 @@ Res CborSerializer::reset()
                                  CborSerializer::append_func, CborSerializer::fits_func);
     return Res::Ok();
 }
-Res CborSerializer::serialize(uint8_t v)
+Res CborSerializer::serialize(const uint8_t v)
 {
     RET_ERRI(nanocbor_fmt_uint(&_enc, v), "Failed to encode uint8_t");
     return Res::Ok();
 }
-Res CborSerializer::serialize(int8_t v)
+Res CborSerializer::serialize(const int8_t v)
 {
     RET_ERRI(nanocbor_fmt_int(&_enc, v), "Failed to encode int8_t");
     return Res::Ok();
 }
-Res CborSerializer::serialize(int i)
+Res CborSerializer::serialize(const int i)
 {
     RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int");
     return Res::Ok();
 }
-Res CborSerializer::serialize(bool b)
+Res CborSerializer::serialize(const bool b)
 {
     RET_ERRI(nanocbor_fmt_bool(&_enc, b), "Failed to encode bool");
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(int32_t i)
+Res CborSerializer::serialize(const int32_t i)
 {
     RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int");
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(uint32_t i)
+Res CborSerializer::serialize(const uint32_t i)
 {
     RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode uint32_t");
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(int64_t i)
+Res CborSerializer::serialize(const int64_t i)
 {
     RET_ERRI(nanocbor_fmt_int(&_enc, i), "Failed to encode int64_t");
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(uint64_t i)
+Res CborSerializer::serialize(const uint64_t i)
 {
     RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode int64_t");
     return Res::Ok();
@@ -80,18 +80,18 @@ Res CborSerializer::serialize(const char *s)
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(std::string &s)
+Res CborSerializer::serialize(const std::string &s)
 {
     RET_ERRI(nanocbor_put_tstr(&_enc, s.c_str()), "Failed to encode string");
     return Res::Ok();
 }
-Res CborSerializer::serialize(Bytes b)
+Res CborSerializer::serialize(const Bytes b)
 {
     RET_ERRI(nanocbor_put_bstr(&_enc, b.data(), b.size()),
              "Failed to encode bytes");
     return Res::Ok();
 }
-Res CborSerializer::serialize(float f)
+Res CborSerializer::serialize(const float f)
 {
     RET_ERRI(nanocbor_fmt_float(&_enc, f), "Failed to encode float");
     return Res::Ok();
@@ -130,7 +130,7 @@ Res CborSerializer::serialize_null()
     return Res::Ok();
 }
 
-Res CborSerializer::serialize(Serializable &value) { return value.serialize(*this); }
+Res CborSerializer::serialize(const Serializable &value) { return value.serialize(*this); }
 
 nanocbor_value_t *CborDeserializer::get_des()
 {

@@ -1,12 +1,13 @@
 
 #include <sys_actor.h>
+#include <sys/time.h>
 
 SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 
 SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<SysEvent, SysCmd>(stack_size, name, priority, queue_depth)
 {
     _timer_publish = timer_repetitive(1000);
- //   _timer_publish_props = timer_repetitive(5000);
+    //   _timer_publish_props = timer_repetitive(5000);
 }
 
 void SysActor::on_cmd(SysCmd &cmd)
@@ -22,6 +23,20 @@ void SysActor::on_cmd(SysCmd &cmd)
             INFO("Unknown action");
         }
     }
+    if (cmd.msg)
+    {
+        SysMsg &msg = *cmd.msg;
+        if (msg.utc) // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
+        {
+            // https://github.com/espressif/esp-idf/issues/10876
+            // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
+            struct timeval tv = {
+                .tv_sec = msg.utc.value(),
+                .tv_usec = 0
+            };
+            ERRNO(settimeofday(&tv, NULL));
+        }
+    }
 }
 
 void SysActor::on_timer(int id)
@@ -29,7 +44,9 @@ void SysActor::on_timer(int id)
     if (id == _timer_publish)
     {
         publish_props();
-    } else {
+    }
+    else
+    {
         INFO("Unknown timer id: %d", id);
     }
 }
@@ -46,8 +63,8 @@ Res SysActor::publish_props()
     _sys_msg.flash_size = 0;
     _sys_msg.ram_size = std::nullopt;
     _sys_msg.free_heap = esp_get_free_heap_size();
-    _sys_msg.up_time = esp_timer_get_time()/1000;
-    emit(SysEvent{.serdes = PublishSerdes(_sys_msg)});
+    _sys_msg.up_time = esp_timer_get_time() / 1000;
+    emit(SysEvent{.msg = _sys_msg });
     return Res::Ok();
 }
 /*
@@ -69,9 +86,7 @@ Res SysActor::publish_props_info()
     return Res::Ok();
 }*/
 
-
-
-Res SysMsg::serialize(Serializer &ser)
+Res SysMsg::serialize(Serializer &ser) const
 {
     int idx = 0;
     ser.reset();

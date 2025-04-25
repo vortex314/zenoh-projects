@@ -1,17 +1,9 @@
-/*
- * log.h
- *
- *  Created on: Nov 7, 2021
- *      Author: lieven
- */
-
 #ifndef SRC_LOG_H_
 #define SRC_LOG_H_
 #include <stdint.h>
 #include <stdarg.h>
-#include <string>
-#include <string.h>
-#include <errno.h>
+#include <stdio.h>
+#include <atomic>
 
 #define ColorOrange "\033[33m"
 #define ColorGreen "\033[32m"
@@ -41,47 +33,45 @@ static constexpr const char *past_last_slash(cstr str)
 class Log
 {
 
-public:
-	typedef enum
-	{
-		L_DEBUG,
-		L_INFO,
-		L_WARN,
-		L_ERROR
-	} Level;
-	Level _level = L_INFO;
+	std::atomic<bool> _busy;
 
+public:
 	Log();
-	bool txBusy = false;
 	Log &tfl(const char *lvl, const char *file, const uint32_t line);
 	Log &logf(const char *fmt, ...);
-	void flush();
-	void setLevel(Level);
-
-private:
 };
 
 extern Log logger;
+// LOG_LEVEL =>
+//  0 : FATAL
+//  1 : ERROR & WARN
+//  2 : INFO
+//  3 : DEBUG
+#ifndef LOG_LEVEL
+#define LOG_LEVEL 2
+#endif
 
-#define INFO(fmt, ...)                                                                  \
-	{                                                                                   \
-		if (logger._level <= Log::L_INFO )                                               \
-			logger.tfl("I", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
-	}
-#define WARN(fmt, ...)                                                                  \
-	{                                                                                   \
-		if (logger._level <= Log::L_WARN  )                                               \
-			logger.tfl("W", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
-	}
-#define DEBUG(fmt, ...)                                                                 \
-	{                                                                                   \
-		if (logger._level <= Log::L_DEBUG )                                              \
-			logger.tfl("D", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
-	}
-#define ERROR(fmt, ...)                                                                 \
-	{                                                                                   \
-		if (logger._level <= Log::L_ERROR )                                              \
-			logger.tfl("E", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__).flush(); \
-	}
+#define FATAL(fmt, ...) logger.tfl("F", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__);
+#define ERROR(fmt, ...) logger.tfl("E", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__);
+#define WARN(fmt, ...) logger.tfl("W", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__);
+#define INFO(fmt, ...) logger.tfl("I", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__);
+#define DEBUG(fmt, ...) logger.tfl("D", __SHORT_FILE__, __LINE__).logf(fmt, ##__VA_ARGS__);
+
+#if LOG_LEVEL < 3
+#undef DEBUG
+#define DEBUG(fmt, ...) {}
+#endif
+
+#if LOG_LEVEL < 2
+#undef INFO
+#define INFO(fmt, ...) {}
+#endif
+
+#if LOG_LEVEL < 1
+#undef ERROR
+#define ERROR(fmt, ...) {}
+#undef WARN
+#define WARN(fmt, ...) {}
+#endif
 
 #endif /* SRC_LOG_H_ */

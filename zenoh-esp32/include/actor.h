@@ -249,11 +249,11 @@ public:
     {
         _handlers.push_back(handler);
     }
-    bool tell(CMD *msg)
+    inline bool tell(CMD *msg)
     {
         return _cmds.send(msg);
     }
-    bool tellFromIsr(CMD *msg)
+    inline bool tellFromIsr(CMD *msg)
     {
         return _cmds.sendFromIsr(msg);
     }
@@ -336,10 +336,10 @@ struct PublishBytes
 };
 struct PublishSerdes
 {
-    std::optional<std::string> topic;
+    Option<std::string> topic=nullptr;
     Serializable &payload;
     PublishSerdes(Serializable& pl);
-    PublishSerdes(std::optional<std::string> topic,Serializable &payload);
+    PublishSerdes(Option<std::string> topic,Serializable &payload);
 };
 
 class PropertyCommon : public Serializable
@@ -362,8 +362,8 @@ template <typename T>
 struct Property : public PropertyCommon
 {
     T value;
-    std::optional<std::function<T()>> getter;
-    std::optional<std::function<void(T)>> setter;
+    Option<std::function<T()>> getter;
+    Option<std::function<void(T)>> setter;
     Property(std::string name = "", std::string description = "") : PropertyCommon(name, description) {}
     Res serialize(Serializer &ser) override
     {
@@ -406,5 +406,7 @@ struct Property : public PropertyCommon
         return Res::Err(0, "No setter");
     }
 };
+
+
 
 #endif

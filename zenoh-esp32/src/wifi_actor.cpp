@@ -125,7 +125,7 @@ void WifiActor::on_timer(int timer_id)
         INFO("Failed to fill wifi msg: %s", r.msg().c_str());
         return;
       }
-      emit(WifiEvent{.serdes = PublishSerdes(wifi_msg)});
+      emit(WifiEvent{.msg = wifi_msg });
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -483,7 +483,7 @@ Res WifiActor::connect()
 }
 
 
-Res WifiMsg::serialize(Serializer &ser)
+Res WifiMsg::serialize(Serializer &ser) const
 {
  // uint32_t idx = 0;
   ser.reset();

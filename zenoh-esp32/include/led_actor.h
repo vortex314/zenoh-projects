@@ -6,6 +6,8 @@
 #define GPIO_LED GPIO_NUM_2
 #endif
 
+struct LedMsg{};
+
 enum LedAction {
     LED_ON,
     LED_OFF,
@@ -14,13 +16,13 @@ enum LedAction {
 };
 
 struct LedCmd {
-    std::optional<LedAction> action = std::nullopt;
-    std::optional<int> duration = std::nullopt;
-    std::optional<PublishSerdes> serdes = std::nullopt;
+    Option<LedAction> action = nullptr;
+    Option<int> duration = nullptr;
+    Option<LedMsg> serdes = nullptr;
 };
 
 struct LedEvent {
-    std::optional<LedAction> action = std::nullopt;
+    Option<LedAction> action = nullptr;
 };  
 
 

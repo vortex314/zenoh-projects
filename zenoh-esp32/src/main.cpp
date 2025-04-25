@@ -27,41 +27,18 @@ Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 
 Log logger;
 
-void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
-
-template <typename T, typename U>
-std::optional<U> map(std::optional<T> t, std::function<U(T)> f)
+void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
+void publish(const char *topic, const Option<Serializable> &serializable)
 {
-  if (t)
+  if (serializable)
   {
-    return f(t);
+    Bytes buffer;
+    CborSerializer ser(buffer);
+    serializable->serialize(ser);
+    zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+    // pulse led when we publish
+    led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
   }
-  else
-  {
-    return std::nullopt;
-  }
-}
-
-template <typename T, typename F>
-void operator>>(std::optional<T> t, F f)
-{
-  if (t)
-  {
-    f(t.value());
-  }
-}
-
-template <typename T, typename F>
-auto operator>>=(const std::optional<T> &opt, F &&func)
-    -> std::optional<std::invoke_result_t<F, T>>
-{
-  // If the optional has a value, apply the function to it and wrap the result in an optional
-  if (opt)
-  {
-    return std::invoke(std::forward<F>(func), *opt);
-  }
-  // Otherwise, return an empty optional
-  return std::nullopt;
 }
 
 /*
@@ -77,6 +54,7 @@ auto operator>>=(const std::optional<T> &opt, F &&func)
 
 extern "C" void app_main()
 {
+
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -93,7 +71,11 @@ extern "C" void app_main()
 
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.on_event([](WifiEvent event)
+
+  Option<Serializable> ser(*new WifiMsg());
+  Serializable ser2 =  *new WifiMsg ;
+
+  wifi_actor.on_event([](const WifiEvent &event)
                       {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
       zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
@@ -103,35 +85,42 @@ extern "C" void app_main()
     } });
 
   // publish data from actors
-  wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish(SRC_DEVICE "wifi", event.serdes); });
+  wifi_actor.on_event([&](const WifiEvent &event)
+                      { publish(SRC_DEVICE "wifi", event.msg); });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish(SRC_DEVICE "sys", event.serdes); });
-  zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish(SRC_DEVICE "zenoh", event.serdes); });
+                     { publish(SRC_DEVICE "sys", event.msg); });
+  zenoh_actor.on_event([&](ZenohEvent event)
+                       { publish(SRC_DEVICE "zenoh", event.msg); });
   ota_actor.on_event([&](OtaEvent event)
-                     { zenoh_publish(SRC_DEVICE "ota", event.serdes); });
+                     { publish(SRC_DEVICE "ota", event.msg); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
-    if (event.publish) {
-      if (event.publish->topic == DST_DEVICE "sys") {
-        auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
-        if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
-      } 
-      else if ( event.publish->topic == DST_DEVICE "wifi") {
-        auto msg = cbor_deserialize<WifiMsg>(event.publish->payload);
-        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
-      } 
-      else if ( event.publish->topic == DST_DEVICE "zenoh") {
-        auto msg = cbor_deserialize<ZenohMsg>(event.publish->payload);
-        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
-      } 
-      else if ( event.publish->topic == DST_DEVICE "ota") {
-        cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg) {ota_actor.tell(new OtaCmd{.msg = std::move(msg)});};
-      } 
-      else {
+    if (event.publish)
+    {
+      if (event.publish->topic == DST_DEVICE "sys")
+      {
+        cbor_deserialize<SysMsg>(event.publish->payload) >> [&](SysMsg &msg)
+        { sys_actor.tell(new SysCmd{.msg = msg}); };
+      }
+      else if (event.publish->topic == DST_DEVICE "wifi")
+      {
+        cbor_deserialize<WifiMsg>(event.publish->payload) >> [&](WifiMsg &msg)
+        { wifi_actor.tell(new WifiCmd{.msg = msg}); };
+      }
+      else if (event.publish->topic == DST_DEVICE "zenoh")
+      {
+        cbor_deserialize<ZenohMsg>(event.publish->payload) >> [&](ZenohMsg &msg)
+        { zenoh_actor.tell(new ZenohCmd{.msg = msg}); };
+      }
+      else if (event.publish->topic == DST_DEVICE "ota")
+      {
+        cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg)
+        { ota_actor.tell(new OtaCmd{.msg = std::move(msg)}); };
+      }
+      else
+      {
         INFO("Received Zenoh unknown event");
       }
     } });
@@ -154,7 +143,7 @@ extern "C" void app_main()
 
 // re-entrant function to publish a serializable object
 //
-void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
+void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes)
 {
   if (serdes)
   {
