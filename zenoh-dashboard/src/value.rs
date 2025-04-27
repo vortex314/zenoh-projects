@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use anyhow::Result;
 use anyhow::anyhow;
+use log::debug;
 use log::info;
 use minicbor::display;
 use minicbor::{data::Token, Decoder};
@@ -68,7 +69,7 @@ impl Value {
         }
     }
     pub fn from_cbor( bytes : Vec<u8> ) -> Result<Value> {
-        info!("from_cbor {}", display(&bytes));
+        debug!("from_cbor {}", display(&bytes));
         let mut decoder = Decoder::new(&bytes);
         let tokens = decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
         let mut iter = tokens.iter();

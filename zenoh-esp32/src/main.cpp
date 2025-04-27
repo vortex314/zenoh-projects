@@ -28,17 +28,14 @@ Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 Log logger;
 
 void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-void publish(const char *topic, const Option<Serializable> &serializable)
+void publish(const char *topic, const Serializable &serializable)
 {
-  if (serializable)
-  {
-    Bytes buffer;
-    CborSerializer ser(buffer);
-    serializable->serialize(ser);
-    zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
-    // pulse led when we publish
-    led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
-  }
+  Bytes buffer;
+  CborSerializer ser(buffer);
+  serializable.serialize(ser);
+  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+  // pulse led when we publish
+  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
 
 /*
@@ -72,9 +69,6 @@ extern "C" void app_main()
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
 
-  Option<Serializable> ser(*new WifiMsg());
-  Serializable ser2 =  *new WifiMsg ;
-
   wifi_actor.on_event([](const WifiEvent &event)
                       {
     if (event.signal == WifiSignal::WIFI_CONNECTED) {
@@ -86,13 +80,16 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](const WifiEvent &event)
-                      { publish(SRC_DEVICE "wifi", event.msg); });
+                      { if ( event.msg ){ publish(SRC_DEVICE "wifi", event.msg.value()); }; });
   sys_actor.on_event([&](SysEvent event)
-                     { publish(SRC_DEVICE "sys", event.msg); });
+                     { event.msg >> [](auto msg)
+                       { publish(SRC_DEVICE "sys", msg); }; });
   zenoh_actor.on_event([&](ZenohEvent event)
-                       { publish(SRC_DEVICE "zenoh", event.msg); });
+                       { event.msg >> [](auto msg)
+                         { publish(SRC_DEVICE "zenoh", msg); }; });
   ota_actor.on_event([&](OtaEvent event)
-                     { publish(SRC_DEVICE "ota", event.msg); });
+                     { event.msg >> [](auto msg)
+                       { publish(SRC_DEVICE "ota", msg); }; });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)

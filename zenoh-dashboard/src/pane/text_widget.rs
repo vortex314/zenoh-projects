@@ -23,7 +23,7 @@ pub struct TextWidget {
 impl TextWidget {
     pub fn new() -> TextWidget {
         TextWidget {
-            prefix: "".to_string(),
+            prefix: "".to_string(), 
             suffix: "".to_string(),
             text: "----".to_string(),
         }

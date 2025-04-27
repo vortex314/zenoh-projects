@@ -25,7 +25,7 @@ void SysActor::on_cmd(SysCmd &cmd)
     }
     if (cmd.msg)
     {
-        SysMsg &msg = *cmd.msg;
+        SysMsg msg = *cmd.msg;
         if (msg.utc) // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
         {
             // https://github.com/espressif/esp-idf/issues/10876
@@ -61,7 +61,7 @@ Res SysActor::publish_props()
     _sys_msg.cpu = "ESP32";
     _sys_msg.clock = 240000000;
     _sys_msg.flash_size = 0;
-    _sys_msg.ram_size = std::nullopt;
+    _sys_msg.ram_size = nullptr;
     _sys_msg.free_heap = esp_get_free_heap_size();
     _sys_msg.up_time = esp_timer_get_time() / 1000;
     emit(SysEvent{.msg = _sys_msg });

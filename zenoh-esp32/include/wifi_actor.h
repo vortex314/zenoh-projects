@@ -9,8 +9,6 @@
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
-
-
 struct WifiMsg : public Serializable
 {
   // WIFI & ethernet

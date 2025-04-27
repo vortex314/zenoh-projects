@@ -23,9 +23,9 @@ use shared::on_shared;
 use shared::update_with_value;
 use shared::FieldInfo;
 use value::Value;
-mod actor_zenoh;
+mod zenoh_actor;
 mod logger;
-use actor_zenoh::{Actor, ZenohActor};
+use zenoh_actor::{Actor, ZenohActor};
 use log::info;
 mod file_storage;
 
@@ -63,8 +63,8 @@ async fn main() -> Result<(), eframe::Error> {
             let mut actor_zenoh: ZenohActor = ZenohActor::new();
 
             actor_zenoh.add_listener(move |_event| match _event {
-                actor_zenoh::ZenohEvent::Publish { topic, payload } => {
-                    info!("from_cbor {} => {}", topic,display(&payload));
+                zenoh_actor::ZenohEvent::Publish { topic, payload } => {
+                    debug!("from_cbor {} => {}", topic,display(&payload));
                     let r = Value::from_cbor(payload.to_vec());
                     if let Ok(value) = r {
                         let s:String = value.to_string();

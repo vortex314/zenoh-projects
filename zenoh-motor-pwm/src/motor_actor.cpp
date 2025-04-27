@@ -14,7 +14,7 @@ MotorActor::MotorActor(const char *name, size_t stack_size, int priority, size_t
     _timer_watchdog = timer_repetitive(1000);
     _timer_pid = timer_repetitive(100);
     _Kd = 0.0f;
-    _Kp = 0.5f;
+    _Kp = 0.05f;
     _Ki = 0.003f;
     _rpm_target = 2000.0f;
     _rpm_measured = 0.0f;
@@ -22,6 +22,19 @@ MotorActor::MotorActor(const char *name, size_t stack_size, int priority, size_t
     _pwm_percent = 20.0f;
     _last_rpm_measured = 0;
     _rpm_integral = 0.0f;
+}
+
+float MotorActor::pid_update(float delta_t, float error)
+{
+    _p = _Kp * error;
+    _rpm_integral += error * delta_t;
+    _rpm_integral = clip(_rpm_integral, -50.0f/_Ki, 50.0f/_Ki); // Anti-windup: Clamp the integral term
+    _i = _Ki * _rpm_integral;
+    _d = _Kd * (error - _previous_error) / delta_t;
+
+    INFO("error:%f p:%f i:%f d:%f", error, _p, _i, _d);
+    _previous_error = error;
+    return _p + _i + _d;
 }
 
 void MotorActor::on_cmd(MotorCmd &cmd)
@@ -33,18 +46,18 @@ void MotorActor::on_cmd(MotorCmd &cmd)
     {
         uint32_t sum = cmd.isr_msg->sum;
         uint32_t count = cmd.isr_msg->count;
-        float sum_as_float =  sum;
+        float sum_as_float = sum;
         float avg = sum_as_float / count;
 
         float hz = 80'000'000.0f / avg;
-        float rpm = (hz * 60.0f) / 4.0f; // 4 polar tacho ?? maybe 
+        float rpm = (hz * 60.0f) / 4.0f; // 4 polar tacho ?? maybe
         INFO("Isr sum: %d count: %d freq : %f Hz. RPM = %f", sum, count, hz, rpm);
 
         float delta_t = sum_as_float / 80'000'000.0f; // sample time in seconds
         this->_rpm_measured = rpm;
 
         float pid = this->pid_update(delta_t, _rpm_target - _rpm_measured);
-        this->_pwm_percent = MotorActor::pwm_clip(pid);
+        this->_pwm_percent = MotorActor::clip(pid,0,100.0f);
         this->_pwm_value = MotorActor::pwm_percent_to_ticks(_pwm_percent);
 
         if (this->_pwm_value > TICKS_PER_PERIOD)
@@ -69,46 +82,48 @@ void MotorActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        INFO("Timer 1 : target : %f measured : %f pwm_percent : %d", _rpm_target, _rpm_measured, _pwm_percent);
         _motor_msg.rpm_measured = _rpm_measured;
         _motor_msg.rpm_target = _rpm_target;
         _motor_msg.pwm = _pwm_percent;
         _motor_msg.Kp = _Kp;
         _motor_msg.Ki = _Ki;
         _motor_msg.Kd = _Kd;
+        _motor_msg.p = _p;
+        _motor_msg.i = _i;
+        _motor_msg.d = _d;
 
-        emit(MotorEvent{.serdes = PublishSerdes(_motor_msg)});
+        emit(MotorEvent{.msg = _motor_msg});
     }
     else if (id == _timer_pid)
     {
 
         float delta_t = static_cast<float>(esp_timer_get_time() - _last_rpm_measured) / 1'000'000.0f; // Convert microseconds to seconds
-        if (delta_t > 1.0f)
+        if (delta_t > 0.2f)
         {
             INFO("No recent rpm measurements, delta_t:%f sec", delta_t);
-            _rpm_measured = _rpm_target / 2.0f;
-
-            float pid = pid_update(delta_t, _rpm_target - _rpm_measured);
-            _pwm_percent = MotorActor::pwm_clip(pid);
-            _pwm_value = MotorActor::pwm_percent_to_ticks(_pwm_percent);
-
-            if (_pwm_value > TICKS_PER_PERIOD)
-            {
-                _pwm_value = TICKS_PER_PERIOD;
-            }
-
-            INFO("pid:%f pwm:%f pwm_value:%d", pid, _pwm_percent, _pwm_value);
-
-            esp_err_t err = mcpwm_comparator_set_compare_value(_cmpr, _pwm_value);
-            if (err != ESP_OK)
-            {
-                ERROR("Failed to set compare value: %s", esp_err_to_name(err));
-            }
-
-            _last_rpm_measured = esp_timer_get_time();
+            _rpm_measured = 0.0f;
         }
+
+        float pid = pid_update(delta_t, _rpm_target - _rpm_measured);
+        _pwm_percent = MotorActor::clip(pid,0, 100.0f);
+        _pwm_value = MotorActor::pwm_percent_to_ticks(_pwm_percent);
+
+        if (_pwm_value > TICKS_PER_PERIOD)
+        {
+            _pwm_value = TICKS_PER_PERIOD;
+        }
+
+        INFO("pid:%f pwm:%f pwm_value:%d", pid, _pwm_percent, _pwm_value);
+
+        esp_err_t err = mcpwm_comparator_set_compare_value(_cmpr, _pwm_value);
+        if (err != ESP_OK)
+        {
+            ERROR("Failed to set compare value: %s", esp_err_to_name(err));
+        }
+
     }
 }
+
 
 void MotorActor::on_start(void)
 {
@@ -134,8 +149,8 @@ MotorActor::~MotorActor()
 /**
  * @brief Initializes the PWM (Pulse Width Modulation) for the MotorActor.
  *
- * This function configures and initializes the MCPWM (Motor Control Pulse Width Modulation) timer, operator, comparator, 
- * and generator to control the motor's PWM signals. It sets up the necessary configurations for the timer, operator, 
+ * This function configures and initializes the MCPWM (Motor Control Pulse Width Modulation) timer, operator, comparator,
+ * and generator to control the motor's PWM signals. It sets up the necessary configurations for the timer, operator,
  * comparator, and generator, and defines the actions for timer and compare events.
  *
  * @return Res::Ok on successful initialization, or an appropriate error code if initialization fails.
@@ -189,7 +204,7 @@ Res MotorActor::pwm_init()
         period_ticks : TICKS_PER_PERIOD, // 50us, 20KHz, 500 ticks
         intr_priority : 1,
         flags : {
-            update_period_on_empty : 1, // change 
+            update_period_on_empty : 1, // change
             update_period_on_sync : 1,
             allow_pd : 0, // set to allow power down. When this flag set, the driver will backup/restore the MCPWM registers before/after entering/exist sleep mode.
         },                // when to change the value
@@ -334,8 +349,6 @@ Res config_gpio_to_value(gpio_num_t gpio_num, uint8_t value)
     return Res::Ok();
 }
 
-
-
 /**
  * @brief Callback function for handling capture events from an MCPWM capture channel.
  *
@@ -353,12 +366,12 @@ Res config_gpio_to_value(gpio_num_t gpio_num, uint8_t value)
  * @return Always returns true to indicate successful handling of the capture event.
  */
 
- static struct IsrData
- {
-     uint32_t last_capture;
-     uint32_t sum;
-     uint32_t count;
- } isr_data;
+static struct IsrData
+{
+    uint32_t last_capture;
+    uint32_t sum;
+    uint32_t count;
+} isr_data;
 
 extern "C" bool capture_callback(
     mcpwm_cap_channel_t *cap_channel,
@@ -389,19 +402,7 @@ extern "C" bool capture_callback(
     return true;
 }
 
-float MotorActor::pid_update(float delta_t, float error)
-{
-    float p = _Kp * error;
-    _rpm_integral += error * delta_t;
-    float i = _Ki * _rpm_integral;
-    float d = _Kd * (error - _previous_error) / delta_t;
 
-    INFO("error:%f p:%f i:%f d:%f", error, p, i, d);
-    // Anti-windup: Clamp the integral term
-    _rpm_integral = std::min(50.0f, std::max(-50.0f, i));
-
-    return p + _rpm_integral + d;
-}
 
 uint32_t MotorActor::pwm_percent_to_ticks(float percent)
 {
@@ -409,21 +410,22 @@ uint32_t MotorActor::pwm_percent_to_ticks(float percent)
     return static_cast<uint32_t>(ticks);
 }
 
-float MotorActor::pwm_clip(float pwm)
+float MotorActor::clip(float value,float min, float max)
 {
-    if (pwm > 100.0f)
+    if (value > max)
     {
-        return 100.0f;
+        return max;
     }
-    else if (pwm < 0.0f)
+    else if (value < min)
     {
-        return 0.0f;
+        return min;
     }
     else
     {
-        return pwm;
+        return value;
     }
 }
+
 
 Res MotorActor::pwm_stop()
 {
@@ -432,7 +434,7 @@ Res MotorActor::pwm_stop()
     return Res::Ok();
 }
 
-Res MotorMsg::serialize(Serializer &ser)
+Res MotorMsg::serialize(Serializer &ser) const
 {
     ser.reset();
     ser.map_begin();
@@ -442,6 +444,9 @@ Res MotorMsg::serialize(Serializer &ser)
     ser.serialize(KEY("Ki"), Ki);
     ser.serialize(KEY("Kd"), Kd);
     ser.serialize(KEY("pwm"), pwm);
+    ser.serialize(KEY("p"), p);
+    ser.serialize(KEY("i"), i);
+    ser.serialize(KEY("d"), d);
     ser.map_end();
     return Res::Ok();
 }

@@ -20,6 +20,8 @@ mod plot_widget;
 pub use plot_widget::PlotWidget;
 mod image_widget;
 pub use image_widget::ImageWidget;
+mod input_widget;
+pub use input_widget::InputWidget;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EndPoint {
@@ -76,6 +78,8 @@ const GRAPH_ICON: ImageSource<'_> = include_image!("../../assets/graph.png");
 const PROGRESS_ICON: ImageSource<'_> = include_image!("../../assets/progress.png");
 const TEXT_ICON: ImageSource<'_> = include_image!("../../assets/text.png");
 const IMAGE_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
+const LABEL_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
+const INPUT_ICON: ImageSource<'_> = include_image!("../../assets/input.png");
 
 #[derive(Debug)]
 enum IconEvent {
@@ -85,6 +89,7 @@ enum IconEvent {
     Text,
     Label,
     Image,
+    Input,
 }
 
 fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
@@ -95,7 +100,7 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
             .add(
                 egui::Image::new(GAUGE_ICON)
                     .max_width(20.0)
-                    .rounding(1.0)
+                    .corner_radius(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
@@ -106,7 +111,7 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
             .add(
                 egui::Image::new(GRAPH_ICON)
                     .max_width(20.0)
-                    .rounding(1.0)
+                    .corner_radius(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
@@ -117,7 +122,7 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
             .add(
                 egui::Image::new(PROGRESS_ICON)
                     .max_width(20.0)
-                    .rounding(1.0)
+                    .corner_radius(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
@@ -128,7 +133,7 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
             .add(
                 egui::Image::new(TEXT_ICON)
                     .max_width(20.0)
-                    .rounding(1.0)
+                    .corner_radius(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
@@ -139,12 +144,34 @@ fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
             .add(
                 egui::Image::new(IMAGE_ICON)
                     .max_width(20.0)
-                    .rounding(1.0)
+                    .corner_radius(1.0)
                     .sense(Sense::click()),
             )
             .clicked()
         {
             event = Some(IconEvent::Image);
+        }
+        if ui
+            .add(
+                egui::Image::new(LABEL_ICON)
+                    .max_width(20.0)
+                    .corner_radius(1.0)
+                    .sense(Sense::click()),
+            )
+            .clicked()
+        {
+            event = Some(IconEvent::Label);
+        }
+        if ui
+            .add(
+                egui::Image::new(INPUT_ICON)
+                    .max_width(20.0)
+                    .corner_radius(1.0)
+                    .sense(Sense::click()),
+            )
+            .clicked()
+        {
+            event = Some(IconEvent::Input);
         }
     });
     event
@@ -158,6 +185,7 @@ pub enum Widget {
     GaugeWidget(GaugeWidget),
     PlotWidget(PlotWidget),
     ImageWidget(ImageWidget),
+    InputWidget(InputWidget),
 }
 
 impl PaneWidget for Widget {
@@ -169,6 +197,7 @@ impl PaneWidget for Widget {
             Widget::GaugeWidget(gw) => gw.show(ui),
             Widget::PlotWidget(pw) => pw.show(ui),
             Widget::ImageWidget(iw) => iw.show(ui),
+            Widget::InputWidget(iw) => iw.show(ui),
         }
     }
 
@@ -180,6 +209,7 @@ impl PaneWidget for Widget {
             Widget::GaugeWidget(gw) => gw.context_menu(ui),
             Widget::PlotWidget(pw) => pw.context_menu(ui),
             Widget::ImageWidget(iw) => iw.context_menu(ui),
+            Widget::InputWidget(iw) => iw.context_menu(ui),
         }
     }
 
@@ -191,6 +221,7 @@ impl PaneWidget for Widget {
             Widget::GaugeWidget(gw) => gw.process_data(topic, value),
             Widget::PlotWidget(pw) => pw.process_data(topic, value),
             Widget::ImageWidget(iw) => iw.process_data(topic, value),
+            Widget::InputWidget(iw) => iw.process_data(topic, value),
         }
     }
 }
@@ -345,6 +376,7 @@ impl PaneWidget for Pane {
                     IconEvent::Text => Widget::TextWidget(TextWidget::new()),
                     IconEvent::Label => Widget::NullWidget(NullWidget::new()),
                     IconEvent::Image => Widget::ImageWidget(ImageWidget::new()),
+                    IconEvent::Input => Widget::InputWidget(InputWidget::new()),
                 };
             });
             ui.separator();

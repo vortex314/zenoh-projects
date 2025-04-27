@@ -23,21 +23,23 @@
 
 struct MotorMsg : public Serializable
 {
-    std::optional<uint32_t> rpm_target = std::nullopt;
-    std::optional<uint32_t> rpm_measured = std::nullopt;
-    std::optional<float> pwm = std::nullopt;
-    std::optional<float> Kp = std::nullopt;
-    std::optional<float> Ki = std::nullopt;
-    std::optional<float> Kd = std::nullopt;
+    Option<uint32_t> rpm_target = nullptr;
+    Option<uint32_t> rpm_measured = nullptr;
+    Option<float> pwm = nullptr;
+    Option<float> Kp = nullptr;
+    Option<float> Ki = nullptr;
+    Option<float> Kd = nullptr;
+    Option<float> p = nullptr;
+    Option<float> i = nullptr;
+    Option<float> d = nullptr;
 
-    Res serialize(Serializer &ser);
+    Res serialize(Serializer &ser) const;
     Res deserialize(Deserializer &des);
 };
 
 struct MotorEvent
 {
-    std::optional<PublishSerdes> serdes = std::nullopt;
-    std::optional<PublishSerdes> prop_info = std::nullopt;
+    Option<MotorMsg> msg = nullptr;
 };
 
 struct IsrMsg {
@@ -48,9 +50,9 @@ struct IsrMsg {
 
 struct MotorCmd
 {
-    //    std::optional<PublishSerdes> serdes = std::nullopt;
-    std::optional<MotorMsg> msg = std::nullopt;
-    std::optional<IsrMsg> isr_msg = std::nullopt;
+    //    Option<PublishSerdes> serdes = nullptr;
+    Option<MotorMsg> msg = nullptr;
+    Option<IsrMsg> isr_msg = nullptr;
 };
 
 class MotorActor : public Actor<MotorEvent, MotorCmd>
@@ -68,7 +70,7 @@ public:
     Res pwm_set_duty(int duty);
     float pid_update(float delta_t, float error);
     static uint32_t pwm_percent_to_ticks(float percent);
-    static float pwm_clip(float value);
+    static float clip(float value,float min=0.0f, float max=100.0f);
     static uint32_t pwm_ticks_to_percent(uint32_t ticks);
     static uint32_t pwm_ticks_to_duty(uint32_t ticks);
     Res pwm_stop();
@@ -81,6 +83,7 @@ private:
     MotorMsg _motor_msg;
     Bytes _image;
     float _Kp, _Ki, _Kd;
+    float _p,_i, _d;
     mcpwm_timer_handle_t _timer = nullptr;
     mcpwm_oper_handle_t _oper = nullptr;
     mcpwm_gen_handle_t _gen = nullptr;

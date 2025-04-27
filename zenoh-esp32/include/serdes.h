@@ -23,6 +23,7 @@ class Serializable
 public:
   virtual Res serialize(Serializer &ser) const = 0;
   virtual Res deserialize(Deserializer &des) = 0;
+  virtual ~Serializable() {};
 };
 
 class Serializer

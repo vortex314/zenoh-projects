@@ -9,15 +9,15 @@
 
 struct SysMsg : public Serializable
 {
-  std::optional<int64_t> utc;
-  std::optional<std::string> cpu = std::nullopt;
-  std::optional<uint32_t> clock = std::nullopt;
-  std::optional<uint32_t> flash_size = std::nullopt;
-  std::optional<uint32_t> ram_size = std::nullopt;
-  std::optional<uint32_t> free_heap = std::nullopt;      // dynamic
-  std::optional<uint64_t> up_time = std::nullopt;        // dynamic
-  std::optional<std::string> log_message = std::nullopt; // dynamic
-  std::optional<std::string> state = std::nullopt;       // dynamic
+  Option<int64_t> utc;
+  Option<std::string> cpu = nullptr;
+  Option<uint32_t> clock = nullptr;
+  Option<uint32_t> flash_size = nullptr;
+  Option<uint32_t> ram_size = nullptr;
+  Option<uint32_t> free_heap = nullptr;      // dynamic
+  Option<uint64_t> up_time = nullptr;        // dynamic
+  Option<std::string> log_message = nullptr; // dynamic
+  Option<std::string> state = nullptr;       // dynamic
 
   Res serialize(Serializer &ser) const;
   Res deserialize(Deserializer &des);
@@ -25,7 +25,7 @@ struct SysMsg : public Serializable
 
 struct SysEvent
 {
-  std::optional<SysMsg> msg = std::nullopt;
+  Option<SysMsg> msg = nullptr;
 };
 
 enum SysAction
@@ -35,8 +35,8 @@ enum SysAction
 
 struct SysCmd
 {
-  std::optional<SysMsg> msg = std::nullopt;
-  std::optional<SysAction> action = std::nullopt;
+  Option<SysMsg> msg = nullptr;
+  Option<SysAction> action = nullptr;
 };
 
 class SysActor : public Actor<SysEvent, SysCmd>

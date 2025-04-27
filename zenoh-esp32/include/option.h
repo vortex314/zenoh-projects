@@ -37,11 +37,14 @@ public:
     {
         _pv = nullptr;
     }
-    inline ~Option()
+    ~Option()
     {
-        delete _pv;
+        if (_pv)
+        {
+            delete _pv;
+        }
     }
-     bool operator==(const T t) const
+    bool operator==(const T t) const
     {
         if (_pv)
         {
@@ -65,7 +68,7 @@ public:
         return *_pv;
     }
     constexpr explicit operator bool() const noexcept { return _pv != nullptr; }
-    constexpr void operator=( const T t)
+    constexpr void operator=(const T t)
     {
         if (_pv == nullptr)
         {
@@ -74,7 +77,17 @@ public:
         *_pv = t;
     }
     constexpr Option<T> &operator=(const Option<T> &other)
+
     {
+        if (other._pv == nullptr)
+        {
+            if ( _pv != nullptr)
+            {
+                delete _pv;
+            }
+            _pv = nullptr;
+            return *this;
+        }
         if (_pv == nullptr)
         {
             _pv = new T;
@@ -84,6 +97,11 @@ public:
     }
     Option<T> &operator=(Option<T> &&other)
     {
+        if ( other._pv == nullptr)
+        {
+            _pv = nullptr;
+            return *this;
+        }
         _pv = other._pv;
         other._pv = nullptr;
         return *this;
@@ -103,15 +121,21 @@ public:
     }
     Option(const Option<T> &other)
     {
+        if ( other._pv == nullptr)
+        {
+            _pv = nullptr;
+            return;
+        } 
         _pv = new T;
         *_pv = *other._pv;
     }
-    void operator>>(std::function<void(T&)> f)
+    void operator>>(std::function<void(T &)> f)
     {
-       if   (_pv)   f(*_pv) ;
+        if (_pv)
+            f(*_pv);
     }
     template <typename U>
-    Option<U> operator>>(std::function<U(const T&)> f)
+    Option<U> operator>>(std::function<U(const T &)> f)
     {
         return _pv ? f(*_pv) : nullptr;
     }
@@ -121,8 +145,10 @@ public:
     {
         return _pv ? f(*_pv) : nullptr;
     }
-    const T& value() const {
-        if ( _pv == nullptr ) PANIC("");
+    const T &value() const
+    {
+        if (_pv == nullptr)
+            PANIC("");
         return *_pv;
     }
 };

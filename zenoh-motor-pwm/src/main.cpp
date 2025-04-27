@@ -32,8 +32,15 @@ Thread motor_thread("motor_thread", 9000, 40, 23, Cpu::CPU0);
 
 Log logger;
 
-void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes);
-
+void publish(const char *topic, const Serializable &serializable)
+{
+  Bytes buffer;
+  CborSerializer ser(buffer);
+  serializable.serialize(ser);
+  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+  // pulse led when we publish
+  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
+}
 
 #define DEVICE_NAME "mtr1"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
@@ -96,40 +103,44 @@ extern "C" void app_main()
     } });
 
   // publish data from actors
-  wifi_actor.on_event([&](WifiEvent event)
-                      { zenoh_publish(SRC_DEVICE "wifi", event.serdes); });
+  wifi_actor.on_event([&](const WifiEvent &event)
+                      { if ( event.msg ){ publish(SRC_DEVICE "wifi", event.msg.value()); }; });
   sys_actor.on_event([&](SysEvent event)
-                     { zenoh_publish(SRC_DEVICE "sys", event.serdes); });
-  zenoh_actor.on_event([&](ZenohEvent event) // send to myself
-                       { zenoh_publish(SRC_DEVICE "zenoh", event.serdes); });
-  motor_actor.on_event([&](MotorEvent event)
-                       { zenoh_publish(SRC_DEVICE "motor", event.serdes); });
+                     { event.msg >> [](auto msg)
+                       { publish(SRC_DEVICE "sys", msg); }; });
+  zenoh_actor.on_event([&](ZenohEvent event)
+                       { event.msg >> [](auto msg)
+                         { publish(SRC_DEVICE "zenoh", msg); }; });
   ota_actor.on_event([&](OtaEvent event)
-                     { zenoh_publish(SRC_DEVICE "ota", event.serdes); });
+                     { event.msg >> [](auto msg)
+                       { publish(SRC_DEVICE "ota", msg); }; });
+  motor_actor.on_event([&](MotorEvent event)
+                       { event.msg >> [](auto msg)
+                         { publish(SRC_DEVICE "motor", msg); }; });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
       if (event.publish->topic == DST_DEVICE "sys") {
-        auto msg = cbor_deserialize<SysMsg>(event.publish->payload);
-        if ( msg )  sys_actor.tell(new SysCmd{.serdes = PublishSerdes ( msg.value() )});  
+        cbor_deserialize<SysMsg>(event.publish->payload) >>
+        [](auto msg){sys_actor.tell(new SysCmd{.msg = msg});};
       } 
       else if ( event.publish->topic == DST_DEVICE "wifi") {
-        auto msg = cbor_deserialize<WifiMsg>(event.publish->payload);
-        if ( msg ) wifi_actor.tell(new WifiCmd{.serdes = PublishSerdes ( msg.value() )});
+        cbor_deserialize<WifiMsg>(event.publish->payload) >>
+        [](auto msg){wifi_actor.tell(new WifiCmd{.msg = msg});};
       } 
       else if ( event.publish->topic == DST_DEVICE "zenoh") {
-        auto msg = cbor_deserialize<ZenohMsg>(event.publish->payload);
-        if ( msg ) zenoh_actor.tell(new ZenohCmd{.serdes = PublishSerdes ( msg.value() )});
+        cbor_deserialize<ZenohMsg>(event.publish->payload) >>
+        [](auto msg){zenoh_actor.tell(new ZenohCmd{.msg = msg});};
       } 
       else if ( event.publish->topic == DST_DEVICE "ota") {
-        auto msg = cbor_deserialize<OtaMsg>(event.publish->payload);
-        if ( msg ) ota_actor.tell(new OtaCmd{.msg = std::move(msg)});
+        cbor_deserialize<OtaMsg>(event.publish->payload) >>
+        [](auto msg){ota_actor.tell(new OtaCmd{.msg = msg});};
       } 
       else if ( event.publish->topic == DST_DEVICE "motor") {
-        auto msg = cbor_deserialize<MotorMsg>(event.publish->payload);
-        if ( msg ) motor_actor.tell(new MotorCmd{.msg = std::move(msg)});
+        cbor_deserialize<MotorMsg>(event.publish->payload) >>
+        [](auto msg){motor_actor.tell(new MotorCmd{.msg = msg});};
       } 
       else {
         INFO("Received Zenoh unknown event");
@@ -156,24 +167,4 @@ extern "C" void app_main()
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
-}
-
-// re-entrant function to publish a serializable object
-void zenoh_publish(const char *topic, std::optional<PublishSerdes> &serdes)
-{
-  if (!serdes)
-    return;
-
-  auto &serdes_value = serdes.value();
-  Bytes buffer;
-  CborSerializer ser(buffer);
-  serdes_value.payload.serialize(ser);
-
-  const char *final_topic = serdes_value.topic ? serdes_value.topic->c_str() : topic;
-
-  // Publish to Zenoh
-  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{final_topic, buffer}});
-
-  // Pulse LED when publishing
-  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
