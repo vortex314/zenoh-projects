@@ -122,6 +122,7 @@ extern "C" void app_main()
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
     if (event.publish) {
+      INFO("Received zenoh event %s", event.publish->topic.c_str());
       if (event.publish->topic == DST_DEVICE "sys") {
         cbor_deserialize<SysMsg>(event.publish->payload) >>
         [](auto msg){sys_actor.tell(new SysCmd{.msg = msg});};

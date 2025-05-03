@@ -6,6 +6,7 @@ use egui_tiles::UiResponse;
 use log::{debug, info};
 use mlua::{Error, Function, IntoLua};
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc::Sender;
 
 use crate::{shared::get_possible_endpoints, value::Value};
 mod text_widget;
@@ -25,8 +26,8 @@ pub use input_widget::InputWidget;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EndPoint {
-    topic: String,
-    field: Option<String>,
+    pub topic: String,
+    pub field: Option<String>,
 }
 
 impl ToString for EndPoint {
@@ -37,6 +38,8 @@ impl ToString for EndPoint {
             .unwrap_or(self.topic.clone())
     }
 }
+
+
 
 impl FromStr for EndPoint {
     type Err = String;
@@ -64,11 +67,31 @@ struct PubSub {
     dst: Option<Vec<EndPoint>>,
 }
 
+#[derive(Debug)]
+pub enum WidgetEvent {
+    Publish(EndPoint, Value),
+    Subscribe(String),
+}
+
+pub struct WidgetReaction {
+    pub ui_response : UiResponse,
+    pub event: Option<WidgetEvent>,
+}
+
+impl Default for WidgetReaction {
+    fn default() -> Self {
+        WidgetReaction {
+            ui_response: UiResponse::None,
+            event: None,
+        }
+    }
+}
+
 pub trait PaneWidget
 where
     Self: std::fmt::Debug + Send,
 {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse;
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction;
     fn context_menu(&mut self, ui: &mut egui::Ui);
     fn process_data(&mut self, topic: String, value: &Value);
 }
@@ -189,7 +212,7 @@ pub enum Widget {
 }
 
 impl PaneWidget for Widget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         match self {
             Widget::TextWidget(tw) => tw.show(ui),
             Widget::StatusWidget(sw) => sw.show(ui),
@@ -199,6 +222,7 @@ impl PaneWidget for Widget {
             Widget::ImageWidget(iw) => iw.show(ui),
             Widget::InputWidget(iw) => iw.show(ui),
         }
+
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
@@ -230,6 +254,7 @@ impl PaneWidget for Widget {
 pub struct Pane {
     retain: bool,
     pub title: String,
+    dst: Option<EndPoint>,
     src: Vec<EndPoint>,
     lua_code: Option<String>,
     widget: Widget,
@@ -244,6 +269,7 @@ impl Pane {
         Pane {
             retain: true,
             title: "Pane".to_string(),
+            dst: None,
             src: Vec::new(),
             lua_code: None,
             widget,
@@ -258,7 +284,6 @@ impl Pane {
     pub fn title(&self) -> String {
         self.title.clone()
     }
-
 
 
     pub fn process_lua(&mut self, _topic: &String, value: &Value) -> Result<Value> {
@@ -354,8 +379,22 @@ fn get_title(ui: &mut egui::Ui, title: &mut String) {
     });
 }
 
+fn get_destination(ui: &mut egui::Ui, dst: &mut Option<EndPoint>) {
+    let mut ep : String = dst
+        .as_ref()
+        .map(|ep| ep.to_string())
+        .unwrap_or("".to_string());
+    ui.label("Destination topic ");
+    ui.text_edit_singleline(&mut ep);
+    if ep.len() == 0 {
+        *dst = None;
+    } else {
+        *dst = Some(EndPoint::from_str(&ep).unwrap());
+    }
+}
+
 impl PaneWidget for Pane {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let mut button_rect = ui.max_rect();
         button_rect.max.y = button_rect.min.y + 15.0;
         let resp = ui.put(
@@ -364,6 +403,7 @@ impl PaneWidget for Pane {
         );
         resp.context_menu(|ui| {
             get_title(ui, &mut self.title);
+            get_destination(ui, &mut self.dst);
             get_endpoints(ui, &mut self.src);
             get_lua_filter(ui, &mut self.lua_code);
             ui.label(self.value.to_string());
@@ -391,14 +431,30 @@ impl PaneWidget for Pane {
                     self.retain = false;
                 }
             });
+
         });
         let uiresponse = if resp.drag_started() {
             egui_tiles::UiResponse::DragStarted
         } else {
             egui_tiles::UiResponse::None
         };
-        let _ = self.widget.show(ui);
-        uiresponse
+        let  wr = self.widget.show(ui);
+        if let Some(WidgetEvent::Publish(endpoint, value)) = wr.event {
+            if let Some(dst) = self.dst.clone() {
+                WidgetReaction {
+                    ui_response: wr.ui_response,
+                    event: Some(WidgetEvent::Publish(dst, value.clone())),
+                }
+            } else {
+                WidgetReaction {
+                    ui_response: wr.ui_response,
+                    event: Some(WidgetEvent::Publish(endpoint, value.clone())),
+                }
+            }
+        } else {
+            wr
+        }
+
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {

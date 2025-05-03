@@ -6,12 +6,13 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use egui_tiles::{Tile, TileId, Tiles};
 use egui_extras::install_image_loaders;
 use egui_tiles::Behavior;
+use egui_tiles::{Tile, TileId, Tiles};
 mod pane;
 use log::debug;
 use log::error;
+use minicbor::decode::info;
 use minicbor::display;
 use pane::NullWidget;
 use pane::Pane;
@@ -19,20 +20,24 @@ use pane::Widget;
 mod value;
 use pane::PaneWidget;
 use pane::TextWidget;
+use pane::WidgetEvent;
 use shared::on_shared;
 use shared::update_with_value;
 use shared::FieldInfo;
+use tokio::sync::mpsc::Sender;
 use value::Value;
-mod zenoh_actor;
 mod logger;
-use zenoh_actor::{Actor, ZenohActor};
+mod zenoh_actor;
 use log::info;
+use zenoh_actor::{Actor, ZenohActor};
 mod file_storage;
 
 mod shared;
 use shared::SHARED;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+static mut ZENOH_SENDER: Option<Sender<zenoh_actor::ZenohCmd>> = None;
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 3)]
 
 async fn main() -> Result<(), eframe::Error> {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
@@ -60,21 +65,24 @@ async fn main() -> Result<(), eframe::Error> {
 
             let tree_clone = app.tree.clone();
             let _registry_clone = app.registry.clone();
-            let mut actor_zenoh: ZenohActor = ZenohActor::new();
+            let mut zenoh_actor: ZenohActor = ZenohActor::new();
+            unsafe {
+                ZENOH_SENDER = Some(zenoh_actor.sender().unwrap());
+            };
 
-            actor_zenoh.add_listener(move |_event| match _event {
+            zenoh_actor.add_listener(move |_event| match _event {
                 zenoh_actor::ZenohEvent::Publish { topic, payload } => {
-                    debug!("from_cbor {} => {}", topic,display(&payload));
+                    debug!("from_cbor {} => {}", topic, display(&payload));
                     let r = Value::from_cbor(payload.to_vec());
                     if let Ok(value) = r {
-                        let s:String = value.to_string();
-                        if  s.len() > 100 {
+                        let s: String = value.to_string();
+                        if s.len() > 100 {
                             debug!(" RXD {} :{} ", topic, &s[0..100]);
                         } else {
                             debug!(" RXD {} :{} ", topic, s);
                         }
-                        update_with_value(topic,&value);
-
+                        update_with_value(topic, &value);
+                        // update widgets with received value
                         let _ = tree_clone.lock().map(|mut tree_clone| {
                             for (_tile_id, tile_pane) in tree_clone.tiles.iter_mut() {
                                 match tile_pane {
@@ -86,14 +94,19 @@ async fn main() -> Result<(), eframe::Error> {
                             }
                         });
                     } else {
-                        error!("Error decoding payload from topic {} [{}] : {}", topic,payload.len(),r.err().unwrap());
+                        error!(
+                            "Error decoding payload from topic {} [{}] : {}",
+                            topic,
+                            payload.len(),
+                            r.err().unwrap()
+                        );
                     }
                 }
                 _ => {}
             });
 
             tokio::spawn(async move {
-                let r = actor_zenoh.run().await;
+                let r = zenoh_actor.run().await;
                 if let Err(e) = r {
                     error!("Error running zenoh actor: {}", e);
                 }
@@ -110,7 +123,7 @@ async fn main() -> Result<(), eframe::Error> {
     )
 }
 
-fn registry_add_topic(topic: &String,value:&Value) {
+fn registry_add_topic(topic: &String, value: &Value) {
     on_shared(|shared| {
         if shared.values.contains_key(topic) {
             return;
@@ -149,10 +162,8 @@ fn registry_add_topic(topic: &String,value:&Value) {
                 fields.push(field);
             }
         }
-       
     });
 }
-
 
 struct TreeBehavior {
     simplification_options: egui_tiles::SimplificationOptions,
@@ -220,10 +231,55 @@ impl egui_tiles::Behavior<Pane> for TreeBehavior {
         _tile_id: egui_tiles::TileId,
         pane: &mut Pane,
     ) -> egui_tiles::UiResponse {
-        pane.show(ui)
+        let r = pane.show(ui);
+        if r.event.is_some() {
+            info!("===> Event: {:?}", r.event);
+        }
+        if let Some(event) = r.event {
+            match event {
+                WidgetEvent::Publish(endpoint, value) => {
+                    info!("Publishing value {} to topic {:?}", value, endpoint);
+                    let v = endpoint.field.clone().map_or(value.clone(),
+                        |field| {
+                            let mut map = HashMap::new();
+                            map.insert(field, value.clone());
+                            Value::MapStr(map)
+                        },
+                    );
+
+                    let bytes = v.to_cbor();
+                    if let Ok(payload) = bytes {
+                        unsafe {
+                            ZENOH_SENDER.as_ref().map(|s| {
+                                // split topic into parts
+                                info!(
+                                    "Publishing to zenoh: {:?} => {}",
+                                    endpoint.clone(),
+                                    display(&payload)
+                                );
+                                if s.try_send(zenoh_actor::ZenohCmd::Publish {
+                                    topic: endpoint.topic.clone(),
+                                    payload,
+                                })
+                                .is_err()
+                                {
+                                    error!("Error sending to zenoh.");
+                                }
+                            });
+                        }
+                    } else {
+                        error!("Error encoding value to cbor: {}", v);
+                    }
+
+                    registry_add_topic(&endpoint.to_string(), &value);
+                }
+                _ => {}
+            }
+        }
+        r.ui_response
     }
 
-    fn tab_title_for_pane(&mut self, pane: &Pane) ->egui::widget_text::WidgetText {
+    fn tab_title_for_pane(&mut self, pane: &Pane) -> egui::widget_text::WidgetText {
         format!("View {}", pane.title()).into()
     }
 

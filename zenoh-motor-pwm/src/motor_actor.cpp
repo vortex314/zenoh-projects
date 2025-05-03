@@ -28,11 +28,11 @@ float MotorActor::pid_update(float delta_t, float error)
 {
     _p = _Kp * error;
     _rpm_integral += error * delta_t;
-    _rpm_integral = clip(_rpm_integral, -50.0f/_Ki, 50.0f/_Ki); // Anti-windup: Clamp the integral term
+    _rpm_integral = clip(_rpm_integral, -50.0f / _Ki, 50.0f / _Ki); // Anti-windup: Clamp the integral term
     _i = _Ki * _rpm_integral;
     _d = _Kd * (error - _previous_error) / delta_t;
 
-    INFO("error:%f p:%f i:%f d:%f", error, _p, _i, _d);
+    DEBUG("error:%f p:%f i:%f d:%f", error, _p, _i, _d);
     _previous_error = error;
     return _p + _i + _d;
 }
@@ -41,6 +41,16 @@ void MotorActor::on_cmd(MotorCmd &cmd)
 {
     if (cmd.msg)
     {
+        INFO("Motor actor received command MotorMsg");
+        const MotorMsg &msg = cmd.msg.value();
+        msg.Kp >> [&](const float& v)
+        {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
+        msg.Ki >> [&](auto v)
+        { _Ki = v; };
+        msg.Kd >> [&](auto v)
+        { _Kd = v; };
+        msg.rpm_target >> [&](auto v)
+        { _rpm_target = v; };
     }
     if (cmd.isr_msg)
     {
@@ -57,7 +67,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
         this->_rpm_measured = rpm;
 
         float pid = this->pid_update(delta_t, _rpm_target - _rpm_measured);
-        this->_pwm_percent = MotorActor::clip(pid,0,100.0f);
+        this->_pwm_percent = MotorActor::clip(pid, 0, 100.0f);
         this->_pwm_value = MotorActor::pwm_percent_to_ticks(_pwm_percent);
 
         if (this->_pwm_value > TICKS_PER_PERIOD)
@@ -100,12 +110,12 @@ void MotorActor::on_timer(int id)
         float delta_t = static_cast<float>(esp_timer_get_time() - _last_rpm_measured) / 1'000'000.0f; // Convert microseconds to seconds
         if (delta_t > 0.2f)
         {
-            INFO("No recent rpm measurements, delta_t:%f sec", delta_t);
+            DEBUG("No recent rpm measurements, delta_t:%f sec", delta_t);
             _rpm_measured = 0.0f;
         }
 
         float pid = pid_update(delta_t, _rpm_target - _rpm_measured);
-        _pwm_percent = MotorActor::clip(pid,0, 100.0f);
+        _pwm_percent = MotorActor::clip(pid, 0, 100.0f);
         _pwm_value = MotorActor::pwm_percent_to_ticks(_pwm_percent);
 
         if (_pwm_value > TICKS_PER_PERIOD)
@@ -113,17 +123,15 @@ void MotorActor::on_timer(int id)
             _pwm_value = TICKS_PER_PERIOD;
         }
 
-        INFO("pid:%f pwm:%f pwm_value:%d", pid, _pwm_percent, _pwm_value);
+        DEBUG("pid:%f pwm:%f pwm_value:%d", pid, _pwm_percent, _pwm_value);
 
         esp_err_t err = mcpwm_comparator_set_compare_value(_cmpr, _pwm_value);
         if (err != ESP_OK)
         {
             ERROR("Failed to set compare value: %s", esp_err_to_name(err));
         }
-
     }
 }
-
 
 void MotorActor::on_start(void)
 {
@@ -402,15 +410,13 @@ extern "C" bool capture_callback(
     return true;
 }
 
-
-
 uint32_t MotorActor::pwm_percent_to_ticks(float percent)
 {
     float ticks = 500.0f - ((percent * static_cast<float>(TICKS_PER_PERIOD)) / 100.0f);
     return static_cast<uint32_t>(ticks);
 }
 
-float MotorActor::clip(float value,float min, float max)
+float MotorActor::clip(float value, float min, float max)
 {
     if (value > max)
     {
@@ -425,7 +431,6 @@ float MotorActor::clip(float value,float min, float max)
         return value;
     }
 }
-
 
 Res MotorActor::pwm_stop()
 {
@@ -453,10 +458,8 @@ Res MotorMsg::serialize(Serializer &ser) const
 
 Res MotorMsg::deserialize(Deserializer &des)
 {
-    des.map_begin();
-    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
-                    {
-//    INFO("key %d", key);
+    auto r = des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
+                             {
         switch (key)
         {
         case H("rpm_target"):
@@ -471,6 +474,10 @@ Res MotorMsg::deserialize(Deserializer &des)
             INFO("unknown key %d",key);
             return d.skip_next();
         } });
-    des.map_end();
+    if (r.is_err())
+    {
+        ERROR("Failed to deserialize MotorMsg");
+        return r;
+    }
     return Res::Ok();
 }

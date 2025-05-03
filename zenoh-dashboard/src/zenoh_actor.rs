@@ -69,6 +69,15 @@ impl Actor for ZenohActor {
             select! {
                 cmd = self.rx_cmd.recv() => {
                     info!("ActorZenoh::run() cmd {:?}", cmd);
+                    match cmd {
+                        Some(ZenohCmd::Publish { topic, payload }) => {
+                            info!("ZenohActor::run() Publish {} {} {:X?}", topic, minicbor::display(&payload) , &payload);
+                            self.zenoh_session.as_ref().unwrap().put(topic, payload).await.unwrap();
+                        }
+                        _ => {
+                            info!("ZenohActor::run() Unknown command");
+                        }
+                    }
                 },
                 msg = subscriber.recv_async() => {
                     match msg {

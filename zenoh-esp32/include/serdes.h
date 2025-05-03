@@ -66,7 +66,7 @@ public:
     return Res::Ok();
   }
   template <typename V>
-  Res serialize(const uint32_t idx, const Option<V>& value)
+  Res serialize(const uint32_t idx, const Option<V> &value)
   {
     if (value)
     {
@@ -76,7 +76,7 @@ public:
     return Res::Ok();
   }
   template <typename V>
-  Res serialize(const char* idx, const Option<V>& value)
+  Res serialize(const char *idx, const Option<V> &value)
   {
     if (value)
     {
@@ -197,7 +197,7 @@ public:
 
   Res iterate_map(std::function<Res(Deserializer &, uint32_t)> func)
   {
-    //    INFO("iterate_map");
+    DEBUG("iterate_map");
     SerialType map_type;
     size_t map_size = 1000;
     size_t count = 0;
@@ -205,7 +205,7 @@ public:
     if (map_type == SerialType::SER_MAP_FIXED)
     {
       RET_ERR(map_begin(map_size), "Failed to decode map begin");
-      //    INFO("map size %u", map_size);
+      map_size=1000; // nanocbor doesn't distinguish between fixed and indefinite map
     }
     else if (map_type == SerialType::SER_MAP)
     {

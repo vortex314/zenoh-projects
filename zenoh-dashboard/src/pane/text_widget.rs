@@ -6,7 +6,7 @@ use egui_tiles::UiResponse;
 use log::*;
 use serde::{Deserialize, Serialize};
 
-use super::find_inner_rectangle;
+use super::{find_inner_rectangle, WidgetReaction};
 const MARGIN: i8 = 5;
 
 
@@ -31,7 +31,7 @@ impl TextWidget {
 }
 
 impl PaneWidget for TextWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let rect = ui.available_rect_before_wrap();
         let rect = rect
             - Margin {
@@ -53,7 +53,7 @@ impl PaneWidget for TextWidget {
                     .color(egui::Color32::BLUE),
             ));
         ui.label(s.clone());
-        egui_tiles::UiResponse::None
+        WidgetReaction::default()
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {

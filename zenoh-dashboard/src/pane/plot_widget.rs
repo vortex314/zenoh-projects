@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::value::Value;
 
-use super::{PaneWidget, PubSub};
+use super::{PaneWidget, PubSub, Widget, WidgetReaction};
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Status {
@@ -69,7 +69,7 @@ impl PlotWidget {
 }
 
 impl PaneWidget for PlotWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let x_axis_formatter = |value: egui_plot::GridMark, _range: &std::ops::RangeInclusive<f64>| {
             let value = value.value;
             let time = UNIX_EPOCH + Duration::from_secs_f64(value );
@@ -90,7 +90,7 @@ impl PaneWidget for PlotWidget {
                 let line = Line::new(points).width(1.0).color(egui::Color32::BLUE);
                 plot_ui.line(line);
             });
-        UiResponse::None
+        WidgetReaction::default()
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {

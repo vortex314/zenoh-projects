@@ -7,13 +7,14 @@ use anyhow::anyhow;
 use log::debug;
 use log::info;
 use minicbor::display;
+use minicbor::Encoder;
 use minicbor::{data::Token, Decoder};
 use mlua::FromLua;
 use mlua::FromLuaMulti;
 use mlua::IntoLua;
 use mlua::IntoLuaMulti;
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Value {
     MapStr(HashMap<String, Value>),
     MapIdx(HashMap<usize, Value>),
@@ -152,6 +153,50 @@ impl Value {
             _ => Err(anyhow::anyhow!("Unsupported first token type {:?} ", first_token)),
         }
     }
+
+
+    pub fn to_cbor(&self) -> Result<Vec<u8>> {
+        let mut writer = Vec::<u8>::new();
+        let mut encoder = Encoder::new(&mut writer);
+        self.encode(&mut encoder)?;
+        Ok(writer)
+    }
+
+    pub fn encode(&self,encoder:&mut Encoder<&mut Vec<u8>>) -> Result<()> {
+        match self {
+            Value::MapStr(map) => {
+                encoder.begin_map()?;
+                for (key, value) in map {
+                    encoder.str(key)?;
+                    value.encode(encoder)?;
+                }
+                encoder.end()?
+            }
+            Value::MapIdx(map) => {
+                encoder.begin_map()?;
+                for (key, value) in map {
+                    encoder.u32(*key as u32)?;
+                    value.encode(encoder)?;
+                }
+                encoder.end()?
+            }
+            Value::List(list) => {
+                encoder.begin_array()?;
+                for value in list {
+                    value.encode(encoder)?;                }
+                encoder.end()?
+            }
+            Value::String(s) => encoder.str(s)?,
+            Value::Number(n) => encoder.f32(*n as f32)?,
+            Value::Bool(b) => encoder.bool(*b)?,
+            Value::Bytes(bytes) => encoder.bytes(bytes)?,
+            Value::Null => encoder.null()?,
+        };
+        Ok(())
+    }
+    
+
+
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             Value::Number(n) => Some(*n),

@@ -237,6 +237,7 @@ Res CborDeserializer::deserialize(float &f)
 {
     float val;
     RET_ERRI(nanocbor_get_float(get_des(), &val), "Failed to decode float");
+    f = val;
     return Res::Ok();
 }
 

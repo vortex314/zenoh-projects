@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::value::Value;
 
-use super::{PaneWidget, PubSub};
+use super::{PaneWidget, PubSub, Widget, WidgetReaction};
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Status {
@@ -31,10 +31,10 @@ impl StatusWidget {
 }
 
 impl PaneWidget for StatusWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let mut button_rect = ui.max_rect();
         button_rect.max.y = button_rect.min.y + 20.0;
-        let response = if ui
+        let ui_response = if ui
             .put(
                 button_rect,
                 egui::Button::new(self.title.clone()).sense(egui::Sense::drag()), //             .fill(THEME.title_background_color),
@@ -47,7 +47,11 @@ impl PaneWidget for StatusWidget {
         };
         ui.label(&self.title);
         ui.label("============================================");
-        response
+      //  response
+        WidgetReaction { 
+            ui_response,
+            ..WidgetReaction::default()
+        }
     }
 
     fn context_menu(&mut self,ui: &mut egui::Ui) {

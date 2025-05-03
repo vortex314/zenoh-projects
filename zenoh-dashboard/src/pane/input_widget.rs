@@ -1,12 +1,16 @@
-use crate::{pane::PaneWidget, shared::SHARED};
-use crate::value::Value;
+use std::str::FromStr;
 
-use egui::{Margin, TextEdit};
+use crate::pane::{EndPoint, WidgetEvent};
+use crate::value::Value;
+use crate::{pane::PaneWidget, shared::SHARED};
+
+use egui::{InnerResponse, Margin, TextEdit, Widget};
 use egui_tiles::UiResponse;
 use log::*;
+use serde::de::value;
 use serde::{Deserialize, Serialize};
 
-use super::find_inner_rectangle;
+use super::{find_inner_rectangle, WidgetReaction};
 const MARGIN: i8 = 5;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -39,13 +43,14 @@ impl InputWidget {
             kind: InputKind::Float32,
             prefix: "".to_string(),
             suffix: "".to_string(),
-            text: "----".to_string(),
+            text: "0.01".to_string(),
         }
     }
 }
 
 impl PaneWidget for InputWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
+        let mut value = Value::Null;
         ui.horizontal(|ui| {
             ui.label("Value:");
             ui.text_edit_singleline(&mut self.text);
@@ -54,24 +59,32 @@ impl PaneWidget for InputWidget {
                 .on_hover_text("Send value to topic")
                 .clicked()
             {
-                let value = match self.kind {
-                    InputKind::Float32 => Value::Number(self.text.parse::<f32>().unwrap().into()),
-                    InputKind::Float64 => Value::Number(self.text.parse::<f64>().unwrap().into()),
-                    InputKind::Int32 => Value::Number(self.text.parse::<i32>().unwrap().into()),
-                    InputKind::UInt32 => Value::Number(self.text.parse::<u32>().unwrap().into()),
-                    InputKind::String => Value::String(self.text.clone()),
-                    InputKind::Bool => Value::Bool(self.text.parse::<bool>().unwrap()),
-                    _ => {
-                        error!("Unsupported type");
-                        Value::Null
-                    }
+                value = if let Ok(v) = self.text.parse::<f32>() {
+                    Value::Number(v as f64)
+                } else if let Ok(v) = self.text.parse::<f64>() {
+                    Value::Number(v)
+                } else if let Ok(v) = self.text.parse::<i32>() {
+                    Value::Number(v as f64)
+                } else if let Ok(v) = self.text.parse::<u32>() {
+                    Value::Number(v as f64)
+                } else if let Ok(v) = self.text.parse::<bool>() {
+                    Value::Bool(v)
+                } else if let Ok(v) = self.text.parse::<u64>() {
+                    Value::Number(v as f64)
+                } else {
+                    Value::String(self.text.clone())
                 };
-                info!("InputWidget send value {} {:?}", self.text, value);
-
-            }
+            };
         });
-
-        egui_tiles::UiResponse::None
+        if value != Value::Null {
+            info!("InputWidget send value {} {:?}", self.text, value);
+            WidgetReaction {
+                ui_response: UiResponse::None,
+                event: Some(WidgetEvent::Publish(EndPoint::from_str("").unwrap(), value)),
+            }
+        } else {
+            WidgetReaction::default()
+        }
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {

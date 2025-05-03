@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokio::task::block_in_place;
 
-use super::{PaneWidget, PubSub};
+use super::{PaneWidget, PubSub, Widget, WidgetReaction};
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Status {
@@ -26,7 +26,7 @@ enum Status {
     Warning,
     Error,
 }
-
+/* 
 struct TextureSafe {
     active: Mutex<Option<TextureHandle>>,
 }
@@ -41,7 +41,7 @@ impl TextureSafe {
     async fn switch(&mut self, texture_handle: TextureHandle) {
         self.active.lock().await.replace(texture_handle);
     }
-}
+}*/
 
 #[derive(Serialize, Deserialize)]
 pub struct ImageWidget {
@@ -98,7 +98,7 @@ fn decode_bytes_to_texture(ctx: &egui::Context, data: &Vec<u8>) -> Result<egui::
 }
 
 impl PaneWidget for ImageWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let start_time = Instant::now();
         if self.ctx.is_none() {
             self.ctx = Some(ui.ctx().clone());
@@ -117,7 +117,7 @@ impl PaneWidget for ImageWidget {
         let elapsed = start_time.elapsed();
         debug!("ImageWidget rendered in {:?}", elapsed);
 
-        UiResponse::None
+        WidgetReaction::default()
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
@@ -137,7 +137,7 @@ impl PaneWidget for ImageWidget {
             return;
         }
 
-        let th = self.texture.clone();
+        let _th = self.texture.clone();
 
         tokio::spawn(async move {});
 

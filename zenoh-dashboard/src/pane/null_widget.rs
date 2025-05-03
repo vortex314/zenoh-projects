@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::value::Value;
 
-use super::{PaneWidget, PubSub};
+use super::{PaneWidget, PubSub, WidgetReaction};
 
 #[derive(Debug, Serialize, Deserialize)]
 enum Status {
@@ -23,13 +23,13 @@ impl NullWidget {
 }
 
 impl PaneWidget for NullWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         // paint rectangle yellow
         let rect = ui.available_rect_before_wrap();
         ui.painter().rect_filled(rect, 0.0, egui::Color32::from_rgb(255, 255, 0));
         ui.label("NullWidget");
         ui.separator();
-        UiResponse::None
+        WidgetReaction::default()
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {

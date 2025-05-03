@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::value::Value;
 
-use super::{find_inner_rectangle, PaneWidget, PubSub};
+use super::{find_inner_rectangle, PaneWidget, PubSub, WidgetReaction};
 
 const RADIUS: f32 = 100.0;
 const THICKNESS: f32 = 10.0;
@@ -51,9 +51,9 @@ impl GaugeWidget {
 }
 
 impl PaneWidget for GaugeWidget {
-    fn show(&mut self, ui: &mut egui::Ui) -> UiResponse {
+    fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         self.draw_gauge(ui);
-        UiResponse::None
+        WidgetReaction::default()
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
