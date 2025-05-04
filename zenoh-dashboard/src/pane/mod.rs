@@ -39,8 +39,6 @@ impl ToString for EndPoint {
     }
 }
 
-
-
 impl FromStr for EndPoint {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -74,7 +72,7 @@ pub enum WidgetEvent {
 }
 
 pub struct WidgetReaction {
-    pub ui_response : UiResponse,
+    pub ui_response: UiResponse,
     pub event: Option<WidgetEvent>,
 }
 
@@ -222,7 +220,6 @@ impl PaneWidget for Widget {
             Widget::ImageWidget(iw) => iw.show(ui),
             Widget::InputWidget(iw) => iw.show(ui),
         }
-
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
@@ -285,7 +282,6 @@ impl Pane {
         self.title.clone()
     }
 
-
     pub fn process_lua(&mut self, _topic: &String, value: &Value) -> Result<Value> {
         if self.lua_code == None {
             return Ok(value.clone());
@@ -298,18 +294,16 @@ impl Pane {
             }*/
             self.lua = Some(lua);
         }
-        let r = self.lua
-            .as_ref()
-            .map(|lua| {
-                let func:Function  = lua.load(self.lua_code.as_ref().unwrap()).eval().unwrap();
-                let result = func.call::<Value>(value.clone());
-    //            let process_data: mlua::Function = lua.globals().get("process_data")?;
-    //            let result: String = process_data.call(value.clone().into_lua(lua))?;
-    //            Ok(Value::String(result))
-                result
-            });
-        Ok(r.unwrap() ?)
-        }
+        let r = self.lua.as_ref().map(|lua| {
+            let func: Function = lua.load(self.lua_code.as_ref().unwrap()).eval().unwrap();
+            let result = func.call::<Value>(value.clone());
+            //            let process_data: mlua::Function = lua.globals().get("process_data")?;
+            //            let result: String = process_data.call(value.clone().into_lua(lua))?;
+            //            Ok(Value::String(result))
+            result
+        });
+        Ok(r.unwrap()?)
+    }
 }
 
 fn get_endpoint(ui: &mut egui::Ui, endpoint: &EndPoint, cnt: usize) -> Option<EndPoint> {
@@ -380,7 +374,7 @@ fn get_title(ui: &mut egui::Ui, title: &mut String) {
 }
 
 fn get_destination(ui: &mut egui::Ui, dst: &mut Option<EndPoint>) {
-    let mut ep : String = dst
+    let mut ep: String = dst
         .as_ref()
         .map(|ep| ep.to_string())
         .unwrap_or("".to_string());
@@ -424,37 +418,43 @@ impl PaneWidget for Pane {
             ui.separator();
             ui.horizontal(|ui| {
                 if ui.button("Ok").clicked() {
-                    self.title = self.src.iter().map(|ep| ep.to_string()).collect::<Vec<String>>().join(" ");
+                    self.title = self
+                        .src
+                        .iter()
+                        .map(|ep| ep.to_string())
+                        .collect::<Vec<String>>()
+                        .join(" ");
                     ui.close_menu();
                 };
                 if ui.button("Delete").clicked() {
                     self.retain = false;
                 }
             });
-
         });
-        let uiresponse = if resp.drag_started() {
+        let ui_response = if resp.drag_started() {
             egui_tiles::UiResponse::DragStarted
         } else {
             egui_tiles::UiResponse::None
         };
-        let  wr = self.widget.show(ui);
+        let wr = self.widget.show(ui);
         if let Some(WidgetEvent::Publish(endpoint, value)) = wr.event {
             if let Some(dst) = self.dst.clone() {
                 WidgetReaction {
-                    ui_response: wr.ui_response,
+                    ui_response,
                     event: Some(WidgetEvent::Publish(dst, value.clone())),
                 }
             } else {
                 WidgetReaction {
-                    ui_response: wr.ui_response,
+                    ui_response,
                     event: Some(WidgetEvent::Publish(endpoint, value.clone())),
                 }
             }
         } else {
-            wr
+            WidgetReaction {
+                ui_response,
+                event: None,
+            }
         }
-
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
@@ -481,7 +481,11 @@ impl PaneWidget for Pane {
                             let v1 = v2.clone();
                             match v1 {
                                 Value::Bytes(bytes) => {
-                                    debug!("Processed value {} [{}] to widget ", topic, bytes.len());
+                                    debug!(
+                                        "Processed value {} [{}] to widget ",
+                                        topic,
+                                        bytes.len()
+                                    );
                                 }
                                 _ => {
                                     debug!("Processed value {} {} to widget ", topic, &v1);

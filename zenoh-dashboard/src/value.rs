@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Display;
-use std::fmt::Formatter;
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::Result;
 use log::debug;
 use log::info;
 use minicbor::display;
@@ -13,8 +9,12 @@ use mlua::FromLua;
 use mlua::FromLuaMulti;
 use mlua::IntoLua;
 use mlua::IntoLuaMulti;
+use std::collections::HashMap;
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Formatter;
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     MapStr(HashMap<String, Value>),
     MapIdx(HashMap<usize, Value>),
@@ -27,21 +27,24 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn from_token(token: &Token) -> Result<Value> {
+    pub fn from_cbor_token(token: &Token) -> Result<Value> {
         match token {
             Token::Map(len) => {
                 let mut map = HashMap::new();
                 for _ in 0..*len {
-                    let key = Value::from_token(token)?;
-                    let value = Value::from_token(token)?;
-                    map.insert(key.as_f64().ok_or_else(|| anyhow!("Key not found"))? as usize, value);
+                    let key = Value::from_cbor_token(token)?;
+                    let value = Value::from_cbor_token(token)?;
+                    map.insert(
+                        key.as_f64().ok_or_else(|| anyhow!("Key not found"))? as usize,
+                        value,
+                    );
                 }
                 Ok(Value::MapIdx(map))
             }
             Token::Array(len) => {
                 let mut list = Vec::new();
                 for _ in 0..*len {
-                    list.push(Value::from_token(token)?);
+                    list.push(Value::from_cbor_token(token)?);
                 }
                 Ok(Value::List(list))
             }
@@ -65,11 +68,11 @@ impl Value {
             Token::Bytes(bytes) => {
                 let vec = bytes.iter().map(|b| *b).collect();
                 Ok(Value::Bytes(vec))
-            },
+            }
             _ => Err(anyhow!("Unsupported other token type {:?} ", token)),
         }
     }
-    pub fn from_cbor( bytes : Vec<u8> ) -> Result<Value> {
+    pub fn from_cbor(bytes: Vec<u8>) -> Result<Value> {
         debug!("from_cbor {}", display(&bytes));
         let mut decoder = Decoder::new(&bytes);
         let tokens = decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
@@ -80,7 +83,7 @@ impl Value {
                 let mut map = HashMap::new();
                 loop {
                     let key = iter.next().ok_or_else(|| anyhow!("Key not found"))?;
-                    if  key == &Token::Break  {
+                    if key == &Token::Break {
                         break;
                     }
                     let value = iter.next().ok_or_else(|| anyhow!("Value not found"))?;
@@ -92,17 +95,21 @@ impl Value {
                         Token::F32(f) => f.to_string(),
                         Token::String(s) => s.to_string(),
                         Token::Bool(b) => b.to_string(),
-                        _ => return Err( anyhow!("Unsupported key type {}", key)),
+                        _ => return Err(anyhow!("Unsupported key type {}", key)),
                     };
-                    map.insert(key, Value::from_token(value)?);
+                    map.insert(key, Value::from_cbor_token(value)?);
                 }
                 Ok(Value::MapStr(map))
             }
             Token::Map(len) => {
                 let mut map = HashMap::new();
                 for _ in 0..*len {
-                    let key = iter.next().ok_or_else(|| anyhow::anyhow!("Key not found"))?;
-                    let value = iter.next().ok_or_else(|| anyhow::anyhow!("Value not found"))?;
+                    let key = iter
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("Key not found"))?;
+                    let value = iter
+                        .next()
+                        .ok_or_else(|| anyhow::anyhow!("Value not found"))?;
                     let key = match key {
                         Token::U32(i) => i.to_string(),
                         Token::U8(i) => i.to_string(),
@@ -113,9 +120,9 @@ impl Value {
                         Token::I16(i) => i.to_string(),
                         Token::I64(i) => i.to_string(),
                         Token::U64(i) => i.to_string(),
-                        _ => return Err( anyhow::anyhow!("Unsupported key type {}", key)),
+                        _ => return Err(anyhow::anyhow!("Unsupported key type {}", key)),
                     };
-                    map.insert(key, Value::from_token(value)?);
+                    map.insert(key, Value::from_cbor_token(value)?);
                 }
                 Ok(Value::MapStr(map))
             }
@@ -126,7 +133,7 @@ impl Value {
                     if value == &Token::Break {
                         break;
                     }
-                    list.push(Value::from_token(value)?);
+                    list.push(Value::from_cbor_token(value)?);
                 }
                 Ok(Value::List(list))
             }
@@ -134,13 +141,13 @@ impl Value {
                 let mut list = Vec::new();
                 for _ in 0..*len {
                     let value = iter.next().ok_or_else(|| anyhow!("Value not found"))?;
-                    list.push(Value::from_token(value)?);
+                    list.push(Value::from_cbor_token(value)?);
                 }
                 Ok(Value::List(list))
             }
             Token::F64(f) => Ok(Value::Number(*f)),
             Token::F32(f) => Ok(Value::Number(f64::from(*f))),
-            Token::U16(u) => Ok(Value::Number(f64::from(*u))),  
+            Token::U16(u) => Ok(Value::Number(f64::from(*u))),
             Token::U32(u) => Ok(Value::Number(f64::from(*u))),
             Token::U64(u) => Ok(Value::Number(*u as f64)),
             Token::I16(i) => Ok(Value::Number(f64::from(*i))),
@@ -150,10 +157,12 @@ impl Value {
             Token::Simple(16) => Ok(Value::Null),
             Token::Simple(20) => Ok(Value::Bool(false)),
             Token::Simple(21) => Ok(Value::Bool(true)),
-            _ => Err(anyhow::anyhow!("Unsupported first token type {:?} ", first_token)),
+            _ => Err(anyhow::anyhow!(
+                "Unsupported first token type {:?} ",
+                first_token
+            )),
         }
     }
-
 
     pub fn to_cbor(&self) -> Result<Vec<u8>> {
         let mut writer = Vec::<u8>::new();
@@ -162,7 +171,7 @@ impl Value {
         Ok(writer)
     }
 
-    pub fn encode(&self,encoder:&mut Encoder<&mut Vec<u8>>) -> Result<()> {
+    pub fn encode(&self, encoder: &mut Encoder<&mut Vec<u8>>) -> Result<()> {
         match self {
             Value::MapStr(map) => {
                 encoder.begin_map()?;
@@ -183,7 +192,8 @@ impl Value {
             Value::List(list) => {
                 encoder.begin_array()?;
                 for value in list {
-                    value.encode(encoder)?;                }
+                    value.encode(encoder)?;
+                }
                 encoder.end()?
             }
             Value::String(s) => encoder.str(s)?,
@@ -194,8 +204,24 @@ impl Value {
         };
         Ok(())
     }
-    
 
+    pub fn from_text(text: &String) -> Value {
+        if let Ok(v) = text.parse::<f32>() {
+            Value::Number(v as f64)
+        } else if let Ok(v) = text.parse::<f64>() {
+            Value::Number(v)
+        } else if let Ok(v) = text.parse::<i32>() {
+            Value::Number(v as f64)
+        } else if let Ok(v) = text.parse::<u32>() {
+            Value::Number(v as f64)
+        } else if let Ok(v) = text.parse::<bool>() {
+            Value::Bool(v)
+        } else if let Ok(v) = text.parse::<u64>() {
+            Value::Number(v as f64)
+        } else {
+            Value::String(text.clone())
+        }
+    }
 
     pub fn as_f64(&self) -> Option<f64> {
         match self {
@@ -223,7 +249,7 @@ impl Value {
         }
     }
 
-    pub fn get_opt(&self, key:&Option<String>) -> Option<&Value> {
+    pub fn get_opt(&self, key: &Option<String>) -> Option<&Value> {
         match key {
             Some(key) => self.get(key.as_str()),
             None => Some(self),

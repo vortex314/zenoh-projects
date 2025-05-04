@@ -51,30 +51,19 @@ impl InputWidget {
 impl PaneWidget for InputWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let mut value = Value::Null;
+        let rect = ui.available_rect_before_wrap();
         ui.horizontal(|ui| {
             ui.label("Value:");
-            ui.text_edit_singleline(&mut self.text);
+            ui.add(egui::TextEdit::singleline(&mut self.text));
+
             if ui
-                .button("Send")
+                .button(">")
                 .on_hover_text("Send value to topic")
                 .clicked()
             {
-                value = if let Ok(v) = self.text.parse::<f32>() {
-                    Value::Number(v as f64)
-                } else if let Ok(v) = self.text.parse::<f64>() {
-                    Value::Number(v)
-                } else if let Ok(v) = self.text.parse::<i32>() {
-                    Value::Number(v as f64)
-                } else if let Ok(v) = self.text.parse::<u32>() {
-                    Value::Number(v as f64)
-                } else if let Ok(v) = self.text.parse::<bool>() {
-                    Value::Bool(v)
-                } else if let Ok(v) = self.text.parse::<u64>() {
-                    Value::Number(v as f64)
-                } else {
-                    Value::String(self.text.clone())
-                };
+                value = Value::from_text(&self.text)
             };
+
         });
         if value != Value::Null {
             info!("InputWidget send value {} {:?}", self.text, value);

@@ -4,9 +4,9 @@ name = "zenoh-dashboard"
 version = "0.1.0"
 
 [dependencies]
-eframe = {version = "0.31.0", features = ["serde", "persistence"]}
-egui = "0.31.0"
-egui_extras = {version = "0.31.0", features = ["default","all_loaders"]}
+eframe = {version = "0.31.1", features = ["serde", "persistence"]}
+egui = "0.31.1"
+egui_extras = {version = "0.31.1", features = ["default","all_loaders"]}
 egui_plot = "0.31.0"
 egui_tiles = "0.12.0"
 image = { version = "*", features = ["ico", "jpeg", "png"] } # Enable JPEG decoding
