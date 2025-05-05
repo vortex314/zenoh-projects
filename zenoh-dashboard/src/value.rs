@@ -9,6 +9,7 @@ use mlua::FromLua;
 use mlua::FromLuaMulti;
 use mlua::IntoLua;
 use mlua::IntoLuaMulti;
+use strfmt::DisplayStr;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Display;
@@ -221,6 +222,35 @@ impl Value {
         } else {
             Value::String(text.clone())
         }
+    }
+
+    pub fn formatter(&self,format: &str) -> String {
+        let mut map = std::collections::HashMap::<String, Box<dyn DisplayStr>>::new();
+        match self {
+            Value::String(s) => {
+                map.insert("value".to_string(), Box::new(s.clone()));
+            }
+            Value::Number(n) => {
+                map.insert("value".to_string(), Box::new(*n));
+            }
+            Value::Bool(b) => {
+                map.insert(
+                    "value".to_string(),
+                    Box::new(if *b {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    }),
+                );
+            }
+            Value::Null => {
+                map.insert("value".to_string(), Box::new("null".to_string()));
+            }
+            _ => {
+                map.insert("value".to_string(), Box::new(self.to_string()));
+            }
+        }
+        strfmt::strfmt(format, &map).unwrap_or("Format failed".to_string())
     }
 
     pub fn as_f64(&self) -> Option<f64> {

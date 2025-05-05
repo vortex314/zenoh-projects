@@ -23,11 +23,27 @@ mod image_widget;
 pub use image_widget::ImageWidget;
 mod input_widget;
 pub use input_widget::InputWidget;
+mod slider_widget;
+pub use slider_widget::SliderWidget;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct EndPoint {
     pub topic: String,
     pub field: Option<String>,
+}
+
+impl EndPoint {
+    pub fn valid(&self) -> bool {
+        if self.topic.len() == 0 {
+            return false;
+        }
+        if let Some(field) = &self.field {
+            if field.len() == 0 {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 impl ToString for EndPoint {
@@ -38,6 +54,8 @@ impl ToString for EndPoint {
             .unwrap_or(self.topic.clone())
     }
 }
+
+
 
 impl FromStr for EndPoint {
     type Err = String;
@@ -95,14 +113,15 @@ where
 }
 
 const GAUGE_ICON: ImageSource<'_> = include_image!("../../assets/gauge.png");
-const GRAPH_ICON: ImageSource<'_> = include_image!("../../assets/graph.png");
+const GRAPH_ICON: ImageSource<'_> = include_image!("../../assets/chart.png");
 const PROGRESS_ICON: ImageSource<'_> = include_image!("../../assets/progress.png");
 const TEXT_ICON: ImageSource<'_> = include_image!("../../assets/text.png");
-const IMAGE_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
+const IMAGE_ICON: ImageSource<'_> = include_image!("../../assets/camera.png");
 const LABEL_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
 const INPUT_ICON: ImageSource<'_> = include_image!("../../assets/input.png");
+const SLIDER_ICON: ImageSource<'_> = include_image!("../../assets/slider.png");
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum IconEvent {
     Gauge,
     Graph,
@@ -111,34 +130,41 @@ enum IconEvent {
     Label,
     Image,
     Input,
+    Slider,
 }
 
-fn add_image_button(ui:&mut egui::Ui,image_source : ImageSource<'_>, event : IconEvent ) -> Option<IconEvent> {
-    if ui.add(
-                egui::Image::new(image_source)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-             Some(event)
-        } else {
-            None
-        }
+fn add_image_button(
+    ui: &mut egui::Ui,
+    image_source: ImageSource<'_>,
+    event: &IconEvent,
+) -> Option<IconEvent> {
+    if ui
+        .add(
+            egui::Image::new(image_source)
+                .max_width(20.0)
+                .corner_radius(1.0)
+                .sense(Sense::click()),
+        )
+        .clicked()
+    {
+        Some(event.clone())
+    } else {
+        None
+    }
 }
 
 fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
     let mut event = None;
 
     ui.horizontal(|ui| {
-        event = add_image_button(GAUGE_ICON,IconEvent::Gauge).or_else(event)
-        event = add_image_button(GRAPH_ICON,IconEvent::Graph).or_else(event)
-        event = add_image_button(PROGRESS_ICON,IconEvent::Progress).or_else(event)
-        event = add_image_button(TEXT_ICON,IconEvent::Text).or_else(event)
-        event = add_image_button(IMAGE_ICON,IconEvent::Image).or_else(event)
-        event = add_image_button(LABEL_ICON,IconEvent::Label).or_else(event)
-        event = add_image_button(INPUT_ICON,IconEvent::Input).or_else(event)
+        event = add_image_button(ui, GAUGE_ICON, &IconEvent::Gauge)
+            .or(add_image_button(ui, GRAPH_ICON, &IconEvent::Graph))
+            .or(add_image_button(ui, PROGRESS_ICON, &IconEvent::Progress))
+            .or(add_image_button(ui, TEXT_ICON, &IconEvent::Text))
+            .or(add_image_button(ui, IMAGE_ICON, &IconEvent::Image))
+            .or(add_image_button(ui, LABEL_ICON, &IconEvent::Label))
+            .or(add_image_button(ui, INPUT_ICON, &IconEvent::Input))
+            .or(add_image_button(ui, SLIDER_ICON, &IconEvent::Slider));
     });
     event
 }
@@ -152,6 +178,7 @@ pub enum Widget {
     PlotWidget(PlotWidget),
     ImageWidget(ImageWidget),
     InputWidget(InputWidget),
+    SliderWidget(SliderWidget),
 }
 
 impl PaneWidget for Widget {
@@ -164,6 +191,7 @@ impl PaneWidget for Widget {
             Widget::PlotWidget(pw) => pw.show(ui),
             Widget::ImageWidget(iw) => iw.show(ui),
             Widget::InputWidget(iw) => iw.show(ui),
+            Widget::SliderWidget(sw) => sw.show(ui),
         }
     }
 
@@ -176,6 +204,7 @@ impl PaneWidget for Widget {
             Widget::PlotWidget(pw) => pw.context_menu(ui),
             Widget::ImageWidget(iw) => iw.context_menu(ui),
             Widget::InputWidget(iw) => iw.context_menu(ui),
+            Widget::SliderWidget(sw) => sw.context_menu(ui),
         }
     }
 
@@ -188,6 +217,7 @@ impl PaneWidget for Widget {
             Widget::PlotWidget(pw) => pw.process_data(topic, value),
             Widget::ImageWidget(iw) => iw.process_data(topic, value),
             Widget::InputWidget(iw) => iw.process_data(topic, value),
+            Widget::SliderWidget(sw) => sw.process_data(topic, value),
         }
     }
 }
@@ -196,7 +226,6 @@ impl PaneWidget for Widget {
 pub struct Pane {
     retain: bool,
     pub title: String,
-    dst: Option<EndPoint>,
     src: Vec<EndPoint>,
     lua_code: Option<String>,
     widget: Widget,
@@ -211,7 +240,6 @@ impl Pane {
         Pane {
             retain: true,
             title: "Pane".to_string(),
-            dst: None,
             src: Vec::new(),
             lua_code: None,
             widget,
@@ -283,7 +311,7 @@ fn get_lua_filter(ui: &mut egui::Ui, lua_filter: &mut Option<String>) {
     }
 }
 
-fn get_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
+fn get_src_endpoints(ui: &mut egui::Ui, src: &mut Vec<EndPoint>) {
     ui.horizontal(|ui| {
         ui.label("Source topics");
         if ui.button("+").clicked() {
@@ -318,19 +346,7 @@ fn get_title(ui: &mut egui::Ui, title: &mut String) {
     });
 }
 
-fn get_destination(ui: &mut egui::Ui, dst: &mut Option<EndPoint>) {
-    let mut ep: String = dst
-        .as_ref()
-        .map(|ep| ep.to_string())
-        .unwrap_or("".to_string());
-    ui.label("Destination topic ");
-    ui.text_edit_singleline(&mut ep);
-    if ep.len() == 0 {
-        *dst = None;
-    } else {
-        *dst = Some(EndPoint::from_str(&ep).unwrap());
-    }
-}
+
 
 impl PaneWidget for Pane {
     fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
@@ -342,8 +358,7 @@ impl PaneWidget for Pane {
         );
         resp.context_menu(|ui| {
             get_title(ui, &mut self.title);
-            get_destination(ui, &mut self.dst);
-            get_endpoints(ui, &mut self.src);
+            get_src_endpoints(ui, &mut self.src);
             get_lua_filter(ui, &mut self.lua_code);
             ui.label(self.value.to_string());
             button_bar(ui).map(|icon| {
@@ -356,6 +371,7 @@ impl PaneWidget for Pane {
                     IconEvent::Label => Widget::NullWidget(NullWidget::new()),
                     IconEvent::Image => Widget::ImageWidget(ImageWidget::new()),
                     IconEvent::Input => Widget::InputWidget(InputWidget::new()),
+                    IconEvent::Slider => Widget::SliderWidget(SliderWidget::new()),
                 };
             });
             ui.separator();
@@ -381,25 +397,9 @@ impl PaneWidget for Pane {
         } else {
             egui_tiles::UiResponse::None
         };
-        let wr = self.widget.show(ui);
-        if let Some(WidgetEvent::Publish(endpoint, value)) = wr.event {
-            if let Some(dst) = self.dst.clone() {
-                WidgetReaction {
-                    ui_response,
-                    event: Some(WidgetEvent::Publish(dst, value.clone())),
-                }
-            } else {
-                WidgetReaction {
-                    ui_response,
-                    event: Some(WidgetEvent::Publish(endpoint, value.clone())),
-                }
-            }
-        } else {
-            WidgetReaction {
-                ui_response,
-                event: None,
-            }
-        }
+        let mut wr = self.widget.show(ui);
+        wr.ui_response = ui_response;
+        wr
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
@@ -460,3 +460,5 @@ pub fn find_inner_rectangle(rect: Rect, rectangle_ratio_y_vs_x: f32) -> Rect {
     }
     inner_rect
 }
+
+

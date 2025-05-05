@@ -72,6 +72,10 @@ impl Actor for ZenohActor {
                     match cmd {
                         Some(ZenohCmd::Publish { topic, payload }) => {
                             info!("ZenohActor::run() Publish {} {} {:X?}", topic, minicbor::display(&payload) , &payload);
+                            if topic == "" {
+                                error!("ZenohActor::run() Publish empty topic");
+                                continue;
+                            }
                             self.zenoh_session.as_ref().unwrap().put(topic, payload).await.unwrap();
                         }
                         _ => {

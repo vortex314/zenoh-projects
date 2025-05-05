@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use crate::pane::{EndPoint, WidgetEvent};
 use crate::value::Value;
@@ -27,52 +28,65 @@ enum InputKind {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct InputWidget {
-    // config fields
+pub struct SliderWidget {
+    min: f32,
+    max: f32,
     dst: String,
-    kind: InputKind,
+    dst_endpoint: Option<EndPoint>,
+    send_direct: bool,
+
     format: String,
     // runtime fields
     #[serde(skip)]
-    src_text: String,
+    text: String,
     #[serde(skip)]
-    dst_text: String,
-    #[serde(skip)]
-    dst_endpoint: Option<EndPoint>,
+    value: f32,
 }
 
-impl InputWidget {
-    pub fn new() -> InputWidget {
-        InputWidget {
+impl SliderWidget {
+    pub fn new() -> SliderWidget {
+        SliderWidget {
+            min: 0.0,
+            max: 100.0,
             dst: "".to_string(),
-            kind: InputKind::Float32,
-            format: "{value:5.5}".to_string(),
-            dst_text:"".to_string(),
-            src_text: "0.0".to_string(),
             dst_endpoint: None,
+            send_direct: false,
+
+            format: "{value:5.5}".to_string(),
+            text: "0.0".to_string(),
+            value: 0.0,
         }
     }
 }
 
-impl PaneWidget for InputWidget {
+impl PaneWidget for SliderWidget {
     fn show(&mut self, ui: &mut egui::Ui) -> WidgetReaction {
         let mut value = Value::Null;
         let _rect = ui.available_rect_before_wrap();
-        ui.horizontal(|ui| {
-            ui.label( self.src_text.clone());
-            ui.label("New Value:");
-            ui.add(egui::TextEdit::singleline(&mut self.dst_text));
+        ui.spacing_mut().slider_width = _rect.width()/2.0;
 
-            if ui
+
+        ui.horizontal(|ui| {
+            ui.label("Value:");
+            let response = egui::Slider::new(&mut self.value, self.min..=self.max)
+                .text(&self.text)
+                .show_value(true)
+                .ui(ui);
+
+            if self.send_direct  {
+                if response.changed() {
+                    value = Value::Number(self.value as f64);
+                }
+            } else if ui
                 .button("Send")
                 .on_hover_text("Send value to topic")
                 .clicked()
             {
-                value = Value::from_text(&self.dst_text)
+                value = Value::Number(self.value as f64);
             };
         });
         if value != Value::Null && self.dst_endpoint.is_some() {
-            info!("InputWidget send value {} {:?}", self.dst_text, value);
+            info!("SliderWidget {:?} {:?}", self.dst_endpoint.clone().unwrap(), value);
             WidgetReaction {
                 ui_response: UiResponse::None,
                 event: Some(WidgetEvent::Publish(self.dst_endpoint.clone().unwrap(), value)),
@@ -84,28 +98,32 @@ impl PaneWidget for InputWidget {
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
         ui.separator();
-        ui.label("InputWidget context menu");
+        ui.label("SliderWidget context menu");
         ui.separator();
         ui.horizontal(|ui| {
             ui.label("Destination:");
             ui.text_edit_singleline(&mut self.dst);
             self.dst_endpoint = EndPoint::from_str(&self.dst).ok();
         });
-
         ui.horizontal(|ui| {
-            ui.label("Input kind:");
-            ui.radio_value(&mut self.kind, InputKind::Float32, "F32");
-            ui.radio_value(&mut self.kind, InputKind::Float64, "F64");
-            ui.radio_value(&mut self.kind, InputKind::Int32, "I32");
-            ui.radio_value(&mut self.kind, InputKind::Int64, "I64");
-            ui.radio_value(&mut self.kind, InputKind::UInt32, "U32");
-            ui.radio_value(&mut self.kind, InputKind::UInt64, "U64");
-            ui.radio_value(&mut self.kind, InputKind::String, "Str");
-            ui.radio_value(&mut self.kind, InputKind::Bool, "Bool");
+            ui.label("Send direct:");
+            ui.checkbox(&mut self.send_direct, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("Min:");
+            ui.add(egui::DragValue::new(&mut self.min));
+        });
+        ui.horizontal(|ui| {
+            ui.label("Max:");
+            ui.add(egui::DragValue::new(&mut self.max));
+        });
+        ui.horizontal(|ui| {
+            ui.label("Format:");
+            ui.text_edit_singleline(&mut self.format);
         });
     }
 
     fn process_data(&mut self, topic: String, value: &Value) {
-        self.src_text = value.formatter(&self.format);
+        self.text = value.formatter(&self.format);
     }
 }
