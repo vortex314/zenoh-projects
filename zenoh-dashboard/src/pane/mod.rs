@@ -113,87 +113,32 @@ enum IconEvent {
     Input,
 }
 
+fn add_image_button(ui:&mut egui::Ui,image_source : ImageSource<'_>, event : IconEvent ) -> Option<IconEvent> {
+    if ui.add(
+                egui::Image::new(image_source)
+                    .max_width(20.0)
+                    .corner_radius(1.0)
+                    .sense(Sense::click()),
+            )
+            .clicked()
+        {
+             Some(event)
+        } else {
+            None
+        }
+}
+
 fn button_bar(ui: &mut egui::Ui) -> Option<IconEvent> {
     let mut event = None;
 
     ui.horizontal(|ui| {
-        if ui
-            .add(
-                egui::Image::new(GAUGE_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Gauge);
-        }
-        if ui
-            .add(
-                egui::Image::new(GRAPH_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Graph);
-        }
-        if ui
-            .add(
-                egui::Image::new(PROGRESS_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Progress);
-        }
-        if ui
-            .add(
-                egui::Image::new(TEXT_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Text);
-        }
-        if ui
-            .add(
-                egui::Image::new(IMAGE_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Image);
-        }
-        if ui
-            .add(
-                egui::Image::new(LABEL_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Label);
-        }
-        if ui
-            .add(
-                egui::Image::new(INPUT_ICON)
-                    .max_width(20.0)
-                    .corner_radius(1.0)
-                    .sense(Sense::click()),
-            )
-            .clicked()
-        {
-            event = Some(IconEvent::Input);
-        }
+        event = add_image_button(GAUGE_ICON,IconEvent::Gauge).or_else(event)
+        event = add_image_button(GRAPH_ICON,IconEvent::Graph).or_else(event)
+        event = add_image_button(PROGRESS_ICON,IconEvent::Progress).or_else(event)
+        event = add_image_button(TEXT_ICON,IconEvent::Text).or_else(event)
+        event = add_image_button(IMAGE_ICON,IconEvent::Image).or_else(event)
+        event = add_image_button(LABEL_ICON,IconEvent::Label).or_else(event)
+        event = add_image_button(INPUT_ICON,IconEvent::Input).or_else(event)
     });
     event
 }

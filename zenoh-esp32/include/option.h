@@ -24,6 +24,7 @@ private:
     T *_pv;
 
 public:
+    static constexpr Option NillOption=Option(nullptr);
     inline Option()
     {
         _pv = nullptr;
@@ -55,6 +56,7 @@ public:
             return false;
         }
     }
+
     const T *operator->() const
     {
         if (_pv == nullptr)
@@ -81,7 +83,7 @@ public:
     {
         if (other._pv == nullptr)
         {
-            if ( _pv != nullptr)
+            if (_pv != nullptr)
             {
                 delete _pv;
             }
@@ -97,7 +99,7 @@ public:
     }
     Option<T> &operator=(Option<T> &&other)
     {
-        if ( other._pv == nullptr)
+        if (other._pv == nullptr)
         {
             _pv = nullptr;
             return *this;
@@ -121,11 +123,11 @@ public:
     }
     Option(const Option<T> &other)
     {
-        if ( other._pv == nullptr)
+        if (other._pv == nullptr)
         {
             _pv = nullptr;
             return;
-        } 
+        }
         _pv = new T;
         *_pv = *other._pv;
     }
@@ -145,6 +147,19 @@ public:
     {
         return _pv ? f(*_pv) : nullptr;
     }
+
+    const Option<T> &filter(std::function<bool(T)> f)
+    {
+        if (_pv == nullptr)
+            return NillOption;
+        if (f(*_pv))
+        {
+            return *this;
+        }
+        else
+            return NillOption;
+    }
+
     const T &value() const
     {
         if (_pv == nullptr)
