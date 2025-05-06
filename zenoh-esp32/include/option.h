@@ -24,7 +24,6 @@ private:
     T *_pv;
 
 public:
-    static constexpr Option NillOption=Option(nullptr);
     inline Option()
     {
         _pv = nullptr;
@@ -137,27 +136,33 @@ public:
             f(*_pv);
     }
     template <typename U>
-    Option<U> operator>>(std::function<U(const T &)> f)
+    Option<U> operator>>(std::function<Option<U>(const T &)> f)
+    {
+        return _pv ? f(*_pv) : nullptr;
+    }
+
+    template <typename U,typename F>
+    Option<U> operator<<(F&& f)
     {
         return _pv ? f(*_pv) : nullptr;
     }
 
     template <typename U>
-    Option<U> map(std::function<U(T)> f)
+    Option<U> map(std::function<Option<U>(T)> f)
     {
         return _pv ? f(*_pv) : nullptr;
     }
 
-    const Option<T> &filter(std::function<bool(T)> f)
+    const Option<T> filter(std::function<bool(T)> f)
     {
         if (_pv == nullptr)
-            return NillOption;
+            return *this;
         if (f(*_pv))
         {
             return *this;
         }
         else
-            return NillOption;
+            return nullptr;
     }
 
     const T &value() const
