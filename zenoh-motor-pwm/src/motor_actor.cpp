@@ -43,7 +43,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
     {
         INFO("Motor actor received command MotorMsg");
         const MotorMsg &msg = cmd.msg.value();
-        msg.Kp >> [&](const float& v)
+        msg.Kp >> [&]( const float& v)
         {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
         msg.Ki >> [&](auto v)
         { _Ki = v; };

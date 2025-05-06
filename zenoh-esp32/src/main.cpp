@@ -43,11 +43,13 @@ void publish(const char *topic, const Serializable &serializable)
   led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
 
-template <typename U> 
-std::function<Option<U>(const PublishBytes&)> cbor_to = [](const PublishBytes& pub)->Option<U>{ return cbor_deserialize<U>(pub.payload);} ;
+template <typename U>
+std::function<Option<U>(const PublishBytes)> cbor_to = [](const PublishBytes pub) -> Option<U>
+{ return cbor_deserialize<U>(pub.payload); };
 
-template <typename T> 
-std::function<void(const T& )> z_publish = [](const T& msg){ publish(SRC_DEVICE "zenoh", msg); };
+template <typename T>
+std::function<void(const T &)> z_publish = [](const T &msg)
+{ publish(SRC_DEVICE "zenoh", msg); };
 
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -55,8 +57,6 @@ std::function<void(const T& )> z_publish = [](const T& msg){ publish(SRC_DEVICE 
 | ZENOH | = zenoh events => | ZENOH | ( publish )
 | ZENOH | = publish events => | LED | (pulse)
 */
-
-
 
 extern "C" void app_main()
 {
@@ -103,11 +103,6 @@ extern "C" void app_main()
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
-                  auto p1 = event.publish.filter( [&](const PublishBytes& pub){ return pub.topic == DST_DEVICE "sys "; });
-                  p1  >> cbor_to<SysMsg> 
-                     >> [&](SysMsg &msg){ sys_actor.tell(new SysCmd{.msg = msg}); };
-
-
     if (event.publish)
     {
       if (event.publish->topic == DST_DEVICE "sys")

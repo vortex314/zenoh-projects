@@ -130,7 +130,7 @@ public:
         _pv = new T;
         *_pv = *other._pv;
     }
-    void operator>>(std::function<void(T &)> f)
+    void operator>>(std::function<void(  T &)> f) const
     {
         if (_pv)
             f(*_pv);
