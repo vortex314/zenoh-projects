@@ -291,7 +291,6 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   size_t len = z_bytes_len(payload);
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
-  INFO("Received message on topic '%s' ", topic.c_str());
 
   actor->emit(ZenohEvent{.publish = PublishBytes{topic, std::move(buffer)}});
 }
@@ -330,17 +329,6 @@ Res ZenohActor::publish_props()
   z_drop(z_move(z_str));
   return Res::Ok();
 }
-
-/*Res ZenohActor::publish_props_info()
-{
-  if (!_connected)
-  {
-    return Res::Err(ENOTCONN, "Not connected to Zenoh");
-  }
-  emit(ZenohEvent{.prop_info = PublishSerdes(info_props_zenoh[_prop_counter])});
-  _prop_counter = (_prop_counter + 1) % (sizeof(info_props_zenoh) / sizeof(InfoProp));
-  return Res::Ok();
-}*/
 
 //============================================================
 

@@ -41,7 +41,6 @@ void MotorActor::on_cmd(MotorCmd &cmd)
 {
     if (cmd.msg)
     {
-        INFO("Motor actor received command MotorMsg");
         const MotorMsg &msg = cmd.msg.value();
         msg.Kp >> [&]( const float& v)
         {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
@@ -61,7 +60,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
 
         float hz = 80'000'000.0f / avg;
         float rpm = (hz * 60.0f) / 4.0f; // 4 polar tacho ?? maybe
-        INFO("Isr sum: %d count: %d freq : %f Hz. RPM = %f", sum, count, hz, rpm);
+//        INFO("Isr sum: %d count: %d freq : %f Hz. RPM = %f", sum, count, hz, rpm);
 
         float delta_t = sum_as_float / 80'000'000.0f; // sample time in seconds
         this->_rpm_measured = rpm;
@@ -75,8 +74,8 @@ void MotorActor::on_cmd(MotorCmd &cmd)
             this->_pwm_value = TICKS_PER_PERIOD;
         }
 
-        INFO("sum:%d count:%d rpm:%f/%f pid:%f pwm:%f pwm_value:%d",
-             sum, count, _rpm_measured, _rpm_target, pid, _pwm_percent, _pwm_value);
+//        INFO("sum:%d count:%d rpm:%f/%f pid:%f pwm:%f pwm_value:%d",
+//             sum, count, _rpm_measured, _rpm_target, pid, _pwm_percent, _pwm_value);
 
         esp_err_t err = mcpwm_comparator_set_compare_value(_cmpr, _pwm_value);
         if (err != ESP_OK)

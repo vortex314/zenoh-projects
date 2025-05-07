@@ -153,10 +153,7 @@ CborDeserializer::~CborDeserializer()
     // delete bytes only when owner of bytes
 }
 
-Res CborDeserializer::deserialize(uint8_t &i)
-{
-    return decode_number(i, get_des());
-}
+
 
 template <typename T>
 Res decode_number(T &i, nanocbor_value_t *des)
@@ -192,6 +189,11 @@ Res decode_number(T &i, nanocbor_value_t *des)
     }
     }
     return Res::Ok();
+}
+
+Res CborDeserializer::deserialize(uint8_t &i)
+{
+    return decode_number(i, get_des());
 }
 
 Res CborDeserializer::deserialize(int8_t &i)
