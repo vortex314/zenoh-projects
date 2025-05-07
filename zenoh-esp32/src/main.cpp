@@ -17,7 +17,7 @@
 #include <esp_coexist.h>
 #include <esp_event.h>
 
-#define DEVICE_NAME "esp3"
+#define DEVICE_NAME "esp32"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 

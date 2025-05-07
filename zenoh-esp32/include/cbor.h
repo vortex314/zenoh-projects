@@ -100,9 +100,10 @@ public:
   Res deserialize(uint64_t &val);
   Res deserialize(int64_t &val);
   Res deserialize(uint32_t &val);
-  Res deserialize( std::string &s);
+  Res deserialize(std::string &s);
   Res deserialize(Bytes &bytes);
   Res deserialize(float &f);
+  // Res deserialize(double& d);
   Res deserialize(bool &b);
   Res skip_next();
 

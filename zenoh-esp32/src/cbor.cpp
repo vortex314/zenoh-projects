@@ -148,71 +148,75 @@ nanocbor_value_t *CborDeserializer::get_des()
     return &_des;
 }
 
-/*CborDeserializer::CborDeserializer(size_t size)
-{
-    _bytes = new uint8_t[size];
-    _size = 0;
-    _capacity = size;
-    _state = INIT;
-}*/
 CborDeserializer::~CborDeserializer()
 {
     // delete bytes only when owner of bytes
 }
-/*
-Res CborDeserializer::fill_buffer(Bytes &b)
-{
-    if (b.size() > _capacity)
-    {
-        return Res::Err(ENOSPC, "Buffer too small");
-    }
-    memcpy(_bytes, b.data(), b.size());
-    _size = b.size();
-    _state = INIT;
-    nanocbor_decoder_init(get_des(), _bytes, _size);
-    return Res::Ok();
-}*/
 
 Res CborDeserializer::deserialize(uint8_t &i)
 {
-    RET_ERRI(nanocbor_get_uint8(get_des(), &i), "Failed to decode uint8_t");
+    return decode_number(i, get_des());
+}
+
+template <typename T>
+Res decode_number(T &i, nanocbor_value_t *des)
+{
+    int type = nanocbor_get_type(des);
+    switch (type)
+    {
+    case NANOCBOR_TYPE_UINT:
+    {
+        uint64_t v;
+        RET_ERRI(nanocbor_get_uint64(des, &v), "decode fail");
+        i = v;
+        break;
+    }
+    case NANOCBOR_TYPE_NINT:
+    {
+        int64_t v;
+        RET_ERRI(nanocbor_get_int64(des, &v), "decode fail");
+        i = v;
+        break;
+    }
+    case NANOCBOR_TYPE_FLOAT:
+    {
+        double v;
+        RET_ERRI(nanocbor_get_double(des, &v), "decode fail");
+        i = v;
+        break;
+    }
+    default:
+    {
+        RET_ERRI(-1, "decode fail");
+        break;
+    }
+    }
     return Res::Ok();
 }
 
 Res CborDeserializer::deserialize(int8_t &i)
 {
-    RET_ERRI(nanocbor_get_int8(get_des(), &i), "Failed to decode int8_t");
-    return Res::Ok();
+    return decode_number(i, get_des());
 }
 
 Res CborDeserializer::deserialize(int32_t &i)
 {
-    int64_t val;
-    RET_ERRI(nanocbor_get_int64(get_des(), &val), "Failed to decode int");
-    if (val > INT32_MAX || val < INT32_MIN)
-    {
-        return Res::Err(ERANGE, "Value out of range");
-    }
-    i = val;
-    return Res::Ok();
+    return decode_number(i, get_des());
 }
 
 Res CborDeserializer::deserialize(uint64_t &val)
 {
-    RET_ERRI(nanocbor_get_uint64(get_des(), &val), "Failed to decode uint64_t");
-    return Res::Ok();
+    return decode_number(val, get_des());
 }
 
 Res CborDeserializer::deserialize(int64_t &val)
 {
-    RET_ERRI(nanocbor_get_int64(get_des(), &val), "Failed to decode int64_t");
-    return Res::Ok();
+    return decode_number(val, get_des());
 }
 
 Res CborDeserializer::deserialize(uint32_t &val)
 {
-    RET_ERRI(nanocbor_get_uint32(get_des(), &val), "Failed to decode uint32_t");
-    return Res::Ok();
+    return decode_number(val, get_des());
 }
 
 Res CborDeserializer::deserialize(std::string &s)
@@ -249,7 +253,8 @@ Res CborDeserializer::deserialize(bool &b)
     return Res::Ok();
 }
 
-Res CborDeserializer::skip_next() {
+Res CborDeserializer::skip_next()
+{
     CHECK(nanocbor_skip(get_des()));
     return Res::Ok();
 }
@@ -260,11 +265,11 @@ Res CborDeserializer::map_begin()
     _state = MAP;
     return Res::Ok();
 }
-Res CborDeserializer::map_begin(size_t& count)
+Res CborDeserializer::map_begin(size_t &count)
 {
     CHECK(nanocbor_enter_map(get_des(), &_map));
     _state = MAP_FIXED;
-    count = ((size_t) (&_map)->remaining) / 2;
+    count = ((size_t)(&_map)->remaining) / 2;
     return Res::Ok();
 }
 Res CborDeserializer::map_end()
@@ -273,7 +278,6 @@ Res CborDeserializer::map_end()
     _state = INIT;
     return Res::Ok();
 }
-
 
 Res CborDeserializer::array_begin()
 {
