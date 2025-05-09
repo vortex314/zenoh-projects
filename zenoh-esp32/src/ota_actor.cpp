@@ -15,9 +15,9 @@ OtaActor::~OtaActor()
 void OtaActor::on_cmd(OtaCmd &cmd)
 {
     Res result;
-    if (cmd.msg)
+    if (cmd.publish)
     {
-        const OtaMsg &msg = cmd.msg.value();
+        const OtaMsg &msg = cmd.publish.value();
         if (msg.operation)
         {
             if (msg.operation == OTA_BEGIN)
@@ -46,7 +46,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             reply.offset = msg.offset;
             reply.operation = msg.operation;
             reply.reply_to = msg.reply_to;
-            emit(OtaEvent{.msg = reply});
+            emit(OtaEvent{.publish = reply});
         }
     }
 }
@@ -56,7 +56,7 @@ void OtaActor::on_timer(int timer_id)
     const esp_partition_t *part = esp_ota_get_running_partition();
     OtaMsg event;
     event.partition_label = part->label;
-    emit(OtaEvent{.msg = event});
+    emit(OtaEvent{.publish = event});
 }
 
 void OtaActor::on_start()

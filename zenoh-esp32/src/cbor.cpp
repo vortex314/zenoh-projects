@@ -70,7 +70,7 @@ Res CborSerializer::serialize(const int64_t i)
 
 Res CborSerializer::serialize(const uint64_t i)
 {
-    RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode int64_t");
+    RET_ERRI(nanocbor_fmt_uint(&_enc, i), "Failed to encode uint64_t");
     return Res::Ok();
 }
 

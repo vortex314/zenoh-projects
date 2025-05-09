@@ -25,7 +25,7 @@ struct SysMsg : public Serializable
 
 struct SysEvent
 {
-  Option<SysMsg> msg = nullptr;
+  Option<SysMsg> publish = nullptr;
 };
 
 enum SysAction
@@ -35,7 +35,7 @@ enum SysAction
 
 struct SysCmd
 {
-  Option<SysMsg> msg = nullptr;
+  Option<SysMsg> publish = nullptr;
   Option<SysAction> action = nullptr;
 };
 

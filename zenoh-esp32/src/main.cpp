@@ -32,24 +32,16 @@ Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 
 Log logger;
 
-void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
+// void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
 void publish(const char *topic, const Serializable &serializable)
 {
   Bytes buffer;
   CborSerializer ser(buffer);
   serializable.serialize(ser);
-  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+  zenoh_actor.tell(new ZenohCmd{.publish_bytes = PublishBytes{topic, buffer}});
   // pulse led when we publish
   led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
-
-template <typename U>
-std::function<Option<U>(const PublishBytes)> cbor_to = [](const PublishBytes pub) -> Option<U>
-{ return cbor_deserialize<U>(pub.payload); };
-
-template <typename T>
-std::function<void(const T &)> z_publish = [](const T &msg)
-{ publish(SRC_DEVICE "zenoh", msg); };
 
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -70,7 +62,7 @@ extern "C" void app_main()
   }
   ESP_ERROR_CHECK(ret);
 
-  esp_wifi_set_ps(WIFI_PS_NONE);
+  esp_wifi_set_ps(WIFI_PS_NONE); // no power save
   // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 
   zenoh_actor.prefix("esp3"); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
@@ -78,58 +70,46 @@ extern "C" void app_main()
   // WIRING the actors together
   // WiFi connectivity starts and stops zenoh connection
 
-  wifi_actor.on_event([](const WifiEvent &event)
+  wifi_actor.on_event([&](const WifiEvent &event)
                       {
-    if (event.signal == WifiSignal::WIFI_CONNECTED) {
-      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});
-    }
-    if (event.signal == WifiSignal::WIFI_DISCONNECTED) {
-      zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});
-    } });
+                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_CONNECTED;})
+                          .and_then([](auto sig ){  return zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});});
+                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_DISCONNECTED;})
+                          .and_then([](auto sig ){  return zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});}); });
 
   // publish data from actors
   wifi_actor.on_event([&](const WifiEvent &event)
-                      { if ( event.msg ){ publish(SRC_DEVICE "wifi", event.msg.value()); }; });
+                      { event.publish.for_each([](auto msg)
+                                               { publish(SRC_DEVICE "wifi", msg); }); });
   sys_actor.on_event([&](SysEvent event)
-                     { event.msg >> [](auto msg)
+                     { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "sys", msg); }; });
   zenoh_actor.on_event([&](ZenohEvent event)
-                       { event.msg >> [](auto msg)
+                       { event.publish >> [](auto msg)
                          { publish(SRC_DEVICE "zenoh", msg); }; });
   ota_actor.on_event([&](OtaEvent event)
-                     { event.msg >> [](auto msg)
+                     { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "ota", msg); }; });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
-    if (event.publish)
-    {
-      if (event.publish->topic == DST_DEVICE "sys")
-      {
-        cbor_deserialize<SysMsg>(event.publish->payload) >> [&](SysMsg &msg)
-        { sys_actor.tell(new SysCmd{.msg = msg}); };
-      }
-      else if (event.publish->topic == DST_DEVICE "wifi")
-      {
-        cbor_deserialize<WifiMsg>(event.publish->payload) >> [&](WifiMsg &msg)
-        { wifi_actor.tell(new WifiCmd{.msg = msg}); };
-      }
-      else if (event.publish->topic == DST_DEVICE "zenoh")
-      {
-        cbor_deserialize<ZenohMsg>(event.publish->payload) >> [&](ZenohMsg &msg)
-        { zenoh_actor.tell(new ZenohCmd{.msg = msg}); };
-      }
-      else if (event.publish->topic == DST_DEVICE "ota")
-      {
-        cbor_deserialize<OtaMsg>(event.publish->payload) >> [&](OtaMsg msg)
-        { ota_actor.tell(new OtaCmd{.msg = std::move(msg)}); };
-      }
-      else
-      {
-        INFO("Received Zenoh unknown event");
-      }
-    } });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
+                          .and_then([&](auto pb ){ return cbor_deserialize<SysMsg>(pb.payload);})
+                          .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "wifi" ;})
+                          .and_then([&](auto pb ){ return cbor_deserialize<WifiMsg>(pb.payload);})
+                          .for_each([&](auto msg){ wifi_actor.tell(new WifiCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "zenoh" ;})
+                          .and_then([&](auto pb ){ return cbor_deserialize<ZenohMsg>(pb.payload);})
+                          .for_each([&](auto msg){ zenoh_actor.tell(new ZenohCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "ota" ;})
+                          .and_then([&](auto pb ){ return cbor_deserialize<OtaMsg>(pb.payload);})
+                          .for_each([&](auto msg){ ota_actor.tell(new OtaCmd{.publish = msg}); }); });
 
   // actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
@@ -147,24 +127,4 @@ extern "C" void app_main()
   }
 }
 
-// re-entrant function to publish a serializable object
-//
-void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes)
-{
-  if (serdes)
-  {
-    Bytes buffer;
-    CborSerializer ser(buffer);
-    auto &serializable = serdes.value().payload;
-    serializable.serialize(ser);
 
-    if (serdes.value().topic)
-    {
-      topic = serdes.value().topic.value().c_str();
-    };
-
-    zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
-    // pulse led when we publish
-    led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
-  }
-}

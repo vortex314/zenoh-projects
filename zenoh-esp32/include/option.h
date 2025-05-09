@@ -120,6 +120,50 @@ public:
             return Option<U>();
         }
     }
+
+    inline bool is_some() const {
+        return _pv != nullptr;
+    }
+
+    inline bool is_none() const {
+        return _pv == nullptr;
+    }
+
+    inline const T& ref() const {
+        if (is_none()) {
+            PANIC("Attempted to unwrap an error result");
+        }
+        return *_pv;
+    }
+    // map ((T) -> U) -> Option<U>
+    template <typename F>
+    auto map(F&& func) const -> Option<decltype(func(std::declval<T>()))> {
+        using OptionType = decltype(func(std::declval<T>()));
+        if (is_some()) {
+            return func(ref());
+        }
+        return Option<OptionType>();
+    }
+    // and_then ((T) -> Option<U>) -> Option<U>
+    template <typename F>
+    auto and_then(F&& func) const -> Option<decltype(func(std::declval<T>()))> {
+        using OptionType = decltype(func(std::declval<T>()));
+        if (is_some()) {
+            return Option<OptionType>(func(ref()));
+        }
+        return Option<OptionType>();
+    }
+    template <typename F>
+    auto filter(F&& predicate) const -> Option<T>  {
+        if (is_some() && predicate(ref())) {
+            return Option<T>(ref()); // Return the current value if predicate is true
+        }
+        return Option<T>(); // Return None if predicate fails
+    }
+    template <typename F>
+    void for_each(F&& func) const  {
+        if (is_some() ) func(ref());
+    }
     Option(const Option<T> &other)
     {
         if (other._pv == nullptr)
@@ -153,7 +197,7 @@ public:
         return _pv ? f(*_pv) : nullptr;
     }
 
-    const Option<T> filter(std::function<bool(T)> f)
+    /*const Option<T> filter(std::function<bool(T)> f)
     {
         if (_pv == nullptr)
             return *this;
@@ -163,7 +207,7 @@ public:
         }
         else
             return nullptr;
-    }
+    }*/
 
     const T &value() const
     {

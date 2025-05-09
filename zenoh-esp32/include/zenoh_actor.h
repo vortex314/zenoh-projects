@@ -46,15 +46,15 @@ struct ZenohMsg : public Serializable
 
 struct ZenohEvent
 {
-  Option<PublishBytes> publish = nullptr; // publish a message
-  Option<ZenohMsg> msg = nullptr; // publish a serializable object
+  Option<PublishBytes> publish_bytes = nullptr; // publish a message
+  Option<ZenohMsg> publish = nullptr; // publish a serializable object
 };
 
 struct ZenohCmd
 {
   Option<ZenohAction> action = nullptr;
-  Option<ZenohMsg> msg = nullptr;
-  Option<PublishBytes> publish = nullptr;
+  Option<ZenohMsg> publish = nullptr;
+  Option<PublishBytes> publish_bytes = nullptr;
 };
 
 class ZenohActor : public Actor<ZenohEvent, ZenohCmd>

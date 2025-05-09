@@ -19,8 +19,6 @@
 #include "driver/mcpwm_fault.h"
 #include <driver/gpio.h>
 
-#define LED_FLASH GPIO_NUM_4
-
 struct MotorMsg : public Serializable
 {
     Option<uint32_t> rpm_target = nullptr;
@@ -43,7 +41,6 @@ struct MotorEvent
 };
 
 struct IsrMsg {
-
     uint32_t sum = 0;
     uint32_t count = 0;
 };

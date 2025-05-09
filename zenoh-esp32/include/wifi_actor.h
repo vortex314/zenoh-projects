@@ -42,13 +42,13 @@ struct WifiEvent
 {
   Option<WifiSignal> signal = nullptr;
   Option<std::string> topic= nullptr;
-  Option<WifiMsg> msg = nullptr;
+  Option<WifiMsg> publish = nullptr;
 };
 
 struct WifiCmd
 {
   Option<bool> stop_actor = nullptr;
-  Option<WifiMsg> msg = nullptr;
+  Option<WifiMsg> publish = nullptr;
 };
 
 class WifiActor : public Actor<WifiEvent, WifiCmd>

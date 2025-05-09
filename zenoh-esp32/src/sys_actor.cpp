@@ -12,31 +12,23 @@ SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t que
 
 void SysActor::on_cmd(SysCmd &cmd)
 {
-    if (cmd.action)
-    {
-        switch (cmd.action.value())
-        {
-        case SysAction::Reboot:
+    cmd.action.for_each([](auto action)
+                        {
+        switch (action ) {
+            case SysAction::Reboot:
             esp_restart();
             break;
-        default:
-            INFO("Unknown action");
-        }
-    }
-    if (cmd.msg)
-    {
-        SysMsg msg = *cmd.msg;
-        if (msg.utc) // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
-        {
+        } });
+    cmd.publish.for_each([](auto msg)
+                         { msg.utc.for_each([](auto utc)
+                                            {
             // https://github.com/espressif/esp-idf/issues/10876
             // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
             struct timeval tv = {
-                .tv_sec = msg.utc.value(),
+                .tv_sec = utc,
                 .tv_usec = 0
             };
-            ERRNO(settimeofday(&tv, NULL));
-        }
-    }
+            ERRNO(settimeofday(&tv, NULL)); }); });
 }
 
 void SysActor::on_timer(int id)
@@ -64,7 +56,7 @@ Res SysActor::publish_props()
     _sys_msg.ram_size = nullptr;
     _sys_msg.free_heap = esp_get_free_heap_size();
     _sys_msg.up_time = esp_timer_get_time() / 1000;
-    emit(SysEvent{.msg = _sys_msg });
+    emit(SysEvent{.publish = _sys_msg});
     return Res::Ok();
 }
 /*

@@ -95,9 +95,9 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
       return;
     }
   }
-  if (cmd.publish && _connected)
+  if (cmd.publish_bytes && _connected)
   {
-    if (zenoh_publish(cmd.publish.value().topic.c_str(), cmd.publish.value().payload).is_err())
+    if (zenoh_publish(cmd.publish_bytes.value().topic.c_str(), cmd.publish_bytes.value().payload).is_err())
     {
       INFO("Failed to publish message");
       //   disconnect();
@@ -292,7 +292,7 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
 
-  actor->emit(ZenohEvent{.publish = PublishBytes{topic, std::move(buffer)}});
+  actor->emit(ZenohEvent{.publish_bytes = PublishBytes{topic, std::move(buffer)}});
 }
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
@@ -325,7 +325,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.msg = _zenoh_msg });
+  emit(ZenohEvent{.publish = _zenoh_msg });
   z_drop(z_move(z_str));
   return Res::Ok();
 }

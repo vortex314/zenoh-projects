@@ -32,12 +32,12 @@ constexpr uint32_t sz = sizeof(OtaMsg);
 
 struct OtaEvent
 {
-    Option<OtaMsg> msg = nullptr;
+    Option<OtaMsg> publish = nullptr;
 };
 
 struct OtaCmd
 {
-    Option<OtaMsg> msg = nullptr;
+    Option<OtaMsg> publish = nullptr;
 };
 
 class OtaActor : public Actor<OtaEvent, OtaCmd>

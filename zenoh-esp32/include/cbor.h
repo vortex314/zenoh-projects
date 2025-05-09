@@ -9,8 +9,6 @@
 #include <vector>
 #include <util.h>
 
-
-
 class CborSerializer : public Serializer
 {
 private:
@@ -20,7 +18,6 @@ private:
   {
     INIT,
     MAP,
-
     ARRAY,
     ARRAY_FIXED,
   } State;
