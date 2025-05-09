@@ -16,9 +16,8 @@ LedActor::~LedActor()
 
 void LedActor::on_cmd(LedCmd &cmd)
 {
-    if (cmd.action)
-    {
-        switch (*cmd.action)
+    cmd.action.for_each([&](auto action){
+        switch (action)
         {
         case LED_ON:
         {
@@ -37,11 +36,10 @@ void LedActor::on_cmd(LedCmd &cmd)
             _state = LED_STATE_PULSE;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
             _led_is_on = true;
-            if (cmd.duration)
-            {
-                _duration = *cmd.duration;
+            cmd.duration.for_each([&](auto duration){
+                _duration = duration;
                 timer_fire(_timer_publish, _duration);
-            }
+            });
             break;
         }
         case LED_BLINK:
@@ -49,14 +47,17 @@ void LedActor::on_cmd(LedCmd &cmd)
             _state = LED_STATE_BLINK;
             _led_is_on = true;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
-            if (cmd.duration)
-            {
+            cmd.duration.for_each([&](auto duration){
                 _duration = *cmd.duration;
                 timer_fire(_timer_publish, _duration);
-            }
+            });
             break;
         }
         }
+    });
+    if (cmd.action)
+    {
+        
     }
 }
 

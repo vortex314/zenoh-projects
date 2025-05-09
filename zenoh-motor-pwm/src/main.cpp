@@ -17,6 +17,11 @@
 #include <esp_wifi.h>
 #include <esp_coexist.h>
 #include <esp_event.h>
+
+#define DEVICE_NAME "mtr1"
+#define DST_DEVICE "dst/" DEVICE_NAME "/"
+#define SRC_DEVICE "src/" DEVICE_NAME "/"
+
 // threads can be run separately or share a thread
 // Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
 WifiActor wifi_actor("wifi", 9000, 40, 5);
@@ -37,14 +42,12 @@ void publish(const char *topic, const Serializable &serializable)
   Bytes buffer;
   CborSerializer ser(buffer);
   serializable.serialize(ser);
-  zenoh_actor.tell(new ZenohCmd{.publish = PublishBytes{topic, buffer}});
+  zenoh_actor.tell(new ZenohCmd{.publish_bytes = PublishBytes{topic, buffer}});
   // pulse led when we publish
   led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
 
-#define DEVICE_NAME "mtr1"
-#define DST_DEVICE "dst/" DEVICE_NAME "/"
-#define SRC_DEVICE "src/" DEVICE_NAME "/"
+esp_err_t nvs_init();
 
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -75,21 +78,8 @@ void publish(const char *topic, const Serializable &serializable)
  */
 extern "C" void app_main()
 {
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
-  esp_wifi_set_ps(WIFI_PS_NONE);
-  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
-
-  zenoh_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/mtr1 and destination subscriber dst/mtr1/ **
-
-  // WIRING the actors together
+  ESP_ERROR_CHECK(nvs_init());
+  zenoh_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([](WifiEvent event)
                       {
@@ -104,49 +94,44 @@ extern "C" void app_main()
 
   // publish data from actors
   wifi_actor.on_event([&](const WifiEvent &event)
-                      { if ( event.msg ){ publish(SRC_DEVICE "wifi", event.msg.value()); }; });
+                      { event.publish.for_each([](auto msg)
+                                               { publish(SRC_DEVICE "wifi", msg); }); });
   sys_actor.on_event([&](SysEvent event)
-                     { event.msg >> [](auto msg)
+                     { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "sys", msg); }; });
   zenoh_actor.on_event([&](ZenohEvent event)
-                       { event.msg >> [](auto msg)
+                       { event.publish >> [](auto msg)
                          { publish(SRC_DEVICE "zenoh", msg); }; });
   ota_actor.on_event([&](OtaEvent event)
-                     { event.msg >> [](auto msg)
+                     { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "ota", msg); }; });
   motor_actor.on_event([&](MotorEvent event)
-                       { event.msg >> [](auto msg)
+                       { event.publish >> [](auto msg)
                          { publish(SRC_DEVICE "motor", msg); }; });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
-    if (event.publish) {
-      INFO("Received zenoh event %s", event.publish->topic.c_str());
-      if (event.publish->topic == DST_DEVICE "sys") {
-        cbor_deserialize<SysMsg>(event.publish->payload) >>
-        [](auto msg){sys_actor.tell(new SysCmd{.msg = msg});};
-      } 
-      else if ( event.publish->topic == DST_DEVICE "wifi") {
-        cbor_deserialize<WifiMsg>(event.publish->payload) >>
-        [](auto msg){wifi_actor.tell(new WifiCmd{.msg = msg});};
-      } 
-      else if ( event.publish->topic == DST_DEVICE "zenoh") {
-        cbor_deserialize<ZenohMsg>(event.publish->payload) >>
-        [](auto msg){zenoh_actor.tell(new ZenohCmd{.msg = msg});};
-      } 
-      else if ( event.publish->topic == DST_DEVICE "ota") {
-        cbor_deserialize<OtaMsg>(event.publish->payload) >>
-        [](auto msg){ota_actor.tell(new OtaCmd{.msg = msg});};
-      } 
-      else if ( event.publish->topic == DST_DEVICE "motor") {
-        cbor_deserialize<MotorMsg>(event.publish->payload) >>
-        [](auto msg){motor_actor.tell(new MotorCmd{.msg = msg});};
-      } 
-      else {
-        INFO("Received Zenoh unknown event");
-      }
-    } });
+   event.publish_bytes
+     .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
+     .and_then([&](auto pb ){ return cbor_deserialize<SysMsg>(pb.payload);})
+     .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
+   event.publish_bytes
+     .filter([&](auto pb){ return pb.topic == DST_DEVICE "wifi" ;})
+     .and_then([&](auto pb ){ return cbor_deserialize<WifiMsg>(pb.payload);})
+     .for_each([&](auto msg){ wifi_actor.tell(new WifiCmd{.publish = msg}); });
+   event.publish_bytes
+     .filter([&](auto pb){ return pb.topic == DST_DEVICE "zenoh" ;})
+     .and_then([&](auto pb ){ return cbor_deserialize<ZenohMsg>(pb.payload);})
+     .for_each([&](auto msg){ zenoh_actor.tell(new ZenohCmd{.publish = msg}); });
+   event.publish_bytes
+     .filter([&](auto pb){ return pb.topic == DST_DEVICE "ota" ;})
+     .and_then([&](auto pb ){ return cbor_deserialize<OtaMsg>(pb.payload);})
+     .for_each([&](auto msg){ ota_actor.tell(new OtaCmd{.publish = msg}); }); 
+     event.publish_bytes
+     .filter([&](auto pb){ return pb.topic == DST_DEVICE "ota" ;})
+     .and_then([&](auto pb ){ return cbor_deserialize<MotorMsg>(pb.payload);})
+     .for_each([&](auto msg){ motor_actor.tell(new MotorCmd{.publish = msg}); }); });
 
   // one thread to rule them all, in the hope to save some memory
   // wifi_actor.start();
@@ -168,4 +153,16 @@ extern "C" void app_main()
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
+}
+
+esp_err_t nvs_init()
+{
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  return ret;
 }

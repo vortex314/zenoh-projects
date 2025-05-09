@@ -39,18 +39,16 @@ float MotorActor::pid_update(float delta_t, float error)
 
 void MotorActor::on_cmd(MotorCmd &cmd)
 {
-    if (cmd.msg)
-    {
-        const MotorMsg &msg = cmd.msg.value();
-        msg.Kp >> [&]( const float& v)
+    cmd.publish.for_each([&](auto msg){
+        msg.Kp >> [&](const float &v)
         {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
         msg.Ki >> [&](auto v)
         { _Ki = v; };
         msg.Kd >> [&](auto v)
         { _Kd = v; };
         msg.rpm_target >> [&](auto v)
-        { _rpm_target = v; };
-    }
+        { _rpm_target = v; };});
+
     if (cmd.isr_msg)
     {
         uint32_t sum = cmd.isr_msg->sum;
@@ -60,7 +58,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
 
         float hz = 80'000'000.0f / avg;
         float rpm = (hz * 60.0f) / 4.0f; // 4 polar tacho ?? maybe
-//        INFO("Isr sum: %d count: %d freq : %f Hz. RPM = %f", sum, count, hz, rpm);
+                                         //        INFO("Isr sum: %d count: %d freq : %f Hz. RPM = %f", sum, count, hz, rpm);
 
         float delta_t = sum_as_float / 80'000'000.0f; // sample time in seconds
         this->_rpm_measured = rpm;
@@ -74,8 +72,8 @@ void MotorActor::on_cmd(MotorCmd &cmd)
             this->_pwm_value = TICKS_PER_PERIOD;
         }
 
-//        INFO("sum:%d count:%d rpm:%f/%f pid:%f pwm:%f pwm_value:%d",
-//             sum, count, _rpm_measured, _rpm_target, pid, _pwm_percent, _pwm_value);
+        //        INFO("sum:%d count:%d rpm:%f/%f pid:%f pwm:%f pwm_value:%d",
+        //             sum, count, _rpm_measured, _rpm_target, pid, _pwm_percent, _pwm_value);
 
         esp_err_t err = mcpwm_comparator_set_compare_value(_cmpr, _pwm_value);
         if (err != ESP_OK)
@@ -101,7 +99,7 @@ void MotorActor::on_timer(int id)
         _motor_msg.i = _i;
         _motor_msg.d = _d;
 
-        emit(MotorEvent{.msg = _motor_msg});
+        emit(MotorEvent{.publish = _motor_msg});
     }
     else if (id == _timer_pid)
     {

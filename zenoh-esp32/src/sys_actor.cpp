@@ -27,7 +27,7 @@ void SysActor::on_cmd(SysCmd &cmd)
             struct timeval tv = {
                 .tv_sec = utc,
                 .tv_usec = 0
-            };
+                };
             ERRNO(settimeofday(&tv, NULL)); }); });
 }
 

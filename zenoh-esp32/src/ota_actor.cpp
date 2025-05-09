@@ -15,25 +15,22 @@ OtaActor::~OtaActor()
 void OtaActor::on_cmd(OtaCmd &cmd)
 {
     Res result;
-    if (cmd.publish)
-    {
-        const OtaMsg &msg = cmd.publish.value();
-        if (msg.operation)
-        {
-            if (msg.operation == OTA_BEGIN)
+    cmd.publish.for_each([&](auto msg){
+        msg.operation.for_each([&](auto operation){
+            if (operation == OTA_BEGIN)
             {
                 INFO("OTA_BEGIN");
                 result = ota_begin();
             }
-            else if (msg.operation == OTA_END)
+            else if (operation == OTA_END)
             {
                 INFO("OTA_END");
                 result = ota_end();
             }
-            else if (msg.operation == OTA_WRITE && msg.offset && msg.image)
+            else if (operation == OTA_WRITE && msg.offset && msg.image)
             {
-                INFO("OTA_WRITE offset %d [%d]", msg.offset.value(), msg.image.value().size());
-                result = ota_write(msg.offset.value(), msg.image.value());
+                INFO("OTA_WRITE offset %d [%d]", *msg.offset, (*msg.image).size());
+                result = ota_write(*msg.offset, msg.image.ref());
             }
             else
             {
@@ -47,8 +44,9 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             reply.operation = msg.operation;
             reply.reply_to = msg.reply_to;
             emit(OtaEvent{.publish = reply});
-        }
-    }
+        });
+    });
+
 }
 
 void OtaActor::on_timer(int timer_id)

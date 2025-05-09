@@ -37,7 +37,7 @@ struct MotorMsg : public Serializable
 
 struct MotorEvent
 {
-    Option<MotorMsg> msg = nullptr;
+    Option<MotorMsg> publish = nullptr;
 };
 
 struct IsrMsg {
@@ -48,7 +48,7 @@ struct IsrMsg {
 struct MotorCmd
 {
     //    Option<PublishSerdes> serdes = nullptr;
-    Option<MotorMsg> msg = nullptr;
+    Option<MotorMsg> publish = nullptr;
     Option<IsrMsg> isr_msg = nullptr;
 };
 

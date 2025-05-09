@@ -42,42 +42,25 @@ void publish(const char *topic, const Serializable &serializable)
   // pulse led when we publish
   led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
-
+esp_err_t nvs_init();
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
 | SYS | = system events => | ZENOH | ( publish )
 | ZENOH | = zenoh events => | ZENOH | ( publish )
 | ZENOH | = publish events => | LED | (pulse)
 */
-
 extern "C" void app_main()
 {
-
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
-  esp_wifi_set_ps(WIFI_PS_NONE); // no power save
-  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
-
-  zenoh_actor.prefix("esp3"); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
-
-  // WIRING the actors together
+  ESP_ERROR_CHECK(nvs_init());
+  zenoh_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
   // WiFi connectivity starts and stops zenoh connection
-
   wifi_actor.on_event([&](const WifiEvent &event)
                       {
                         event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_CONNECTED;})
                           .and_then([](auto sig ){  return zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Connect});});
                         event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_DISCONNECTED;})
                           .and_then([](auto sig ){  return zenoh_actor.tell(new ZenohCmd{.action = ZenohAction::Disconnect});}); });
-
-  // publish data from actors
+  // WIRING the actors together
   wifi_actor.on_event([&](const WifiEvent &event)
                       { event.publish.for_each([](auto msg)
                                                { publish(SRC_DEVICE "wifi", msg); }); });

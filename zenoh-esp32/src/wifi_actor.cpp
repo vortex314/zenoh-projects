@@ -64,6 +64,9 @@ WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t q
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
   wifi_password = S(WIFI_PASS);
+  esp_wifi_set_ps(WIFI_PS_NONE); // no power save
+    // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
+
 }
 
 void WifiActor::on_start()
