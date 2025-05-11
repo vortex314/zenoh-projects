@@ -35,6 +35,11 @@ Log logger;
 // void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
 void publish(const char *topic, const Serializable &serializable)
 {
+  if (zenoh_actor.is_connected() == false)
+  {
+    INFO("Zenoh not connected, cannot publish");
+    return;
+  }
   Bytes buffer;
   CborSerializer ser(buffer);
   serializable.serialize(ser);
@@ -108,6 +113,18 @@ extern "C" void app_main()
     vTaskDelay(5000 / portTICK_PERIOD_MS);
     INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
+}
+
+esp_err_t nvs_init()
+{
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  return ret;
 }
 
 

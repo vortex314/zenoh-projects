@@ -70,6 +70,7 @@ public:
   void on_timer(int id);
   void on_cmd(ZenohCmd &cmd);
   void prefix(const char *prefix);
+  bool is_connected() const;
   Res connect(void);
   Res disconnect();
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);

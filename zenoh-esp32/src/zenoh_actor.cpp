@@ -191,6 +191,11 @@ Res ZenohActor::disconnect()
   return Res::Ok();
 }
 
+bool ZenohActor::is_connected() const
+{
+  return _connected;
+}
+
 void ZenohActor::prefix(const char *prefix)
 {
   _src_prefix = "src/";

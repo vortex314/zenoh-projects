@@ -112,6 +112,7 @@ extern "C" void app_main()
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
+                        INFO("Zenoh event ");
    event.publish_bytes
      .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
      .and_then([&](auto pb ){ return cbor_deserialize<SysMsg>(pb.payload);})

@@ -40,6 +40,7 @@ float MotorActor::pid_update(float delta_t, float error)
 void MotorActor::on_cmd(MotorCmd &cmd)
 {
     cmd.publish.for_each([&](auto msg){
+        INFO("Motor actor cmd ");
         msg.Kp >> [&](const float &v)
         {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
         msg.Ki >> [&](auto v)
@@ -47,7 +48,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
         msg.Kd >> [&](auto v)
         { _Kd = v; };
         msg.rpm_target >> [&](auto v)
-        { _rpm_target = v; };});
+        { INFO("rpm_target %f ",v);_rpm_target = v; };});
 
     if (cmd.isr_msg)
     {
