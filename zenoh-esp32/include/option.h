@@ -161,6 +161,12 @@ public:
         return Option<T>(); // Return None if predicate fails
     }
     template <typename F>
+    auto inspect(F&& predicate) const -> Option<T>  {
+        predicate(ref());
+        return *this; 
+    }
+
+    template <typename F>
     void for_each(F&& func) const  {
         if (is_some() ) func(ref());
     }

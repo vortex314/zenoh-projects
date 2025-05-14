@@ -7,7 +7,7 @@
 # Actor framework in FreeRTOS
 - As lightway as possible, inherits from base class Actor 
 - Actors should be re-usable in total different programs, re-usable components.
-- _Actors are not aware about each other, know only their own types_
+- Actors are <ins>not aware about each other</ins>, know only their own types.
 - Actors are glued together at the main level by registering closure handlers that send messages to other actors
 - The glue code should be stateless or re-entrant  if re-used among event handlers ( they can be triggered by multiple threads )
 - Actor is a separate thread ( version 1 ) 
