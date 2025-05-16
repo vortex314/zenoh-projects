@@ -14,11 +14,12 @@ use zenoh::Config;
 use zenoh::Session;
 
 use crate::actor::Actor;
+use crate::actor::ActorImpl;
 use crate::actor::Timers;
 
-use minicbor::{Decode, Encode, encode::Write};
+use minicbor::{encode::Write, Decode, Encode};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub enum BrainCmd {
     Connect,
     Disconnect,
@@ -31,7 +32,7 @@ pub enum BrainEvent {
     Connected,
     Disconnected,
     Publish { topic: String, payload: Vec<u8> },
-    Msg ( BrainMsg )
+    Msg(BrainMsg),
 }
 
 #[derive(Debug)]
@@ -40,7 +41,11 @@ pub struct BrainMsg {
 }
 
 impl<C> Encode<C> for BrainMsg {
-    fn encode<W:minicbor::encode::Write,>(&self, e: &mut minicbor::Encoder<W>,ctx:&mut C) -> Result<(), minicbor::encode::Error<W::Error>> {
+    fn encode<W: minicbor::encode::Write>(
+        &self,
+        e: &mut minicbor::Encoder<W>,
+        ctx: &mut C,
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
         e.begin_map()?;
         if let Some(utc) = self.utc {
             e.str("utc")?;
@@ -49,79 +54,81 @@ impl<C> Encode<C> for BrainMsg {
         e.end()?;
         Ok(())
     }
-    
+
     fn is_nil(&self) -> bool {
         false
     }
 }
 
 pub struct BrainActor {
-    tx_cmd: Sender<BrainCmd>,
-    rx_cmd: Receiver<BrainCmd>,
-    event_handlers: Vec<Box<dyn FnMut(&BrainEvent) + Send>>,
-    timers: Timers,
+    pub actor: Actor<BrainCmd, BrainEvent>,
 }
 
-impl Actor for BrainActor {
-    type Cmd = BrainCmd;
-    type Event = BrainEvent;
-
-    fn add_listener<FUNC: FnMut(&Self::Event) + 'static + Send>(&mut self, f: FUNC) {
-        self.event_handlers.push(Box::new(f));
+impl BrainActor {
+    pub fn new() -> Self {
+        BrainActor {
+            actor: Actor::new(),
+        }
     }
 
-    async fn run(&mut self) -> Result<()> {
+    async fn on_cmd(&mut self, cmd: &BrainCmd) {
+        info!("ActorBrain::run() cmd {:?}", cmd);
+        match cmd {
+            BrainCmd::Publish { topic, payload } => {
+                info!(
+                    "BrainActor::run() Publish {} {} {:X?}",
+                    topic,
+                    minicbor::display(&payload),
+                    &payload
+                );
+            }
+            _ => {
+                info!("BrainActor::run() Unknown command");
+            }
+        }
+    }
+
+    async fn on_timer(&mut self, timer_name: &str) {
+        match &timer_name[..] {
+            "heartbeat" => {
+                self.actor.emit(&BrainEvent::Msg(BrainMsg {
+                    utc: Some(chrono::Utc::now().timestamp_millis() as u64),
+                }));
+            }
+            _ => {
+                info!("Unknown timer {}", timer_name);
+            }
+        }
+    }
+}
+
+impl ActorImpl<BrainCmd, BrainEvent> for BrainActor {
+    async fn run(&mut self) {
         loop {
             select! {
-                cmd = self.rx_cmd.recv() => {
-                    info!("ActorBrain::run() cmd {:?}", cmd);
-                    match cmd {
-                        Some(BrainCmd::Publish { topic, payload }) => {
-                            info!("BrainActor::run() Publish {} {} {:X?}", topic, minicbor::display(&payload) , &payload);
-
-                        }
-                        _ => {
-                            info!("BrainActor::run() Unknown command");
-                        }
-                    }
-                },
-                expired_timers  = self.timers.expired_timers() => {
-                    for timer_name in expired_timers {
-                        match &timer_name[..] {
-                            "heartbeat" => {
-                                info!("Heartbeat");
-                                for handler in &mut self.event_handlers {
-                                    handler(&BrainEvent::Msg (BrainMsg {
-                                        utc: Some(chrono::Utc::now().timestamp_millis() as u64),
-                                    }));
-                                }
-
-                            }
-                            _ => {
-                                info!("Unknown timer {}", timer_name);
-                            }
-                        }
+                cmd = self.actor.rx_cmd.recv() => {
+                    cmd.iter().for_each(|cmd| {
+                        self.on_cmd(&cmd);
+                })},
+                timers = self.actor.timers.expired_timers() => {
+                    for timer in timers {
+                        self.on_timer(timer.as_str());
                     }
                 }
             }
         }
     }
-
-    fn sender(&self) -> Result<Sender<Self::Cmd>> {
-        Ok(self.tx_cmd.clone())
+    fn tell(&self,cmd:BrainCmd) {
+        self.actor.tell(cmd)
     }
-}
 
-impl BrainActor {
-    pub fn new() -> Self {
-        let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
-        let mut timers = Timers::new();
-        timers.add_repeat_timer("heartbeat".to_string(), std::time::Duration::from_secs(1));
-        BrainActor {
-            tx_cmd,
-            rx_cmd,
-            event_handlers: Vec::new(),
-            timers,
-        }
+    fn sender(&self)->Sender<BrainCmd>{
+        self.actor.sender()
     }
+
+    fn on_event<FUNC: FnMut(&BrainEvent) + 'static + Send>(&mut self, f: FUNC) -> () {
+        self.actor.on_event(f);
+    }
+
+
 }

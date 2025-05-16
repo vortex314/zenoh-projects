@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(unused_imports)]
 use actor::Actor;
+use actor::ActorImpl;
 use log::info;
 use minicbor::Encode;
 use minicbor::Encoder;
@@ -18,20 +19,17 @@ use minicbor::display;
 
 mod value;
 
-use shared::on_shared;
-use shared::update_with_value;
-use shared::FieldInfo;
 use tokio::sync::mpsc::Sender;
 use value::Value;
 mod actor;
 mod logger;
 mod zenoh_actor;
 use zenoh_actor::ZenohActor;
+use zenoh_actor::ZenohCmd;
+use zenoh_actor::*;
 mod brain_actor;
 use anyhow::Result;
 use brain_actor::BrainActor;
-mod shared;
-use shared::SHARED;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 3)]
 
@@ -41,58 +39,34 @@ async fn main() -> Result<()> {
     let mut zenoh_actor: ZenohActor = ZenohActor::new();
     let mut brain_actor: BrainActor = BrainActor::new();
 
-
-    zenoh_actor.add_listener(move |_event| match _event {
-        zenoh_actor::ZenohEvent::Publish { topic, payload } => {
+    zenoh_actor.on_event( |event| match event {
+        ZenohEvent::Publish { topic, payload } => {
             info!("{} =>{}", topic, display(&payload));
-            let r = Value::from_cbor(payload.to_vec());
-            if let Ok(value) = r {
-                let s: String = value.to_string();
-                if s.len() > 100 {
-                    debug!(" RXD {} :{} ", topic, &s[0..100]);
-                } else {
-                    debug!(" RXD {} :{} ", topic, s);
-                }
-                update_with_value(topic, &value);
-                // update widgets with received value
-            } else {
-                error!(
-                    "Error decoding payload from topic {} [{}] : {}",
-                    topic,
-                    payload.len(),
-                    r.err().unwrap()
-                );
-            }
         }
         _ => {}
     });
 
-    let sender = zenoh_actor.sender().unwrap();
+    let zenoh_sender = zenoh_actor.sender();
 
-    brain_actor.add_listener(move |_event| match _event {
+    brain_actor.on_event(move |event| match event {
         brain_actor::BrainEvent::Msg(brain_msg) => {
             let mut writer = Vec::<u8>::new();
             let mut encoder = Encoder::new(&mut writer);
             let r = brain_msg.encode(&mut encoder, &mut ()).unwrap();
-            let mut zenoh_cmd = zenoh_actor::ZenohCmd::Publish {
+            zenoh_sender.send(ZenohCmd::Publish {
                 topic: "src/brain/msg".to_string(),
                 payload: writer,
-            };
-            sender.try_send(zenoh_cmd).unwrap();
+            });
         }
         _ => {}
     });
 
     tokio::spawn(async move {
-        let _ = zenoh_actor.run().await.map_err(|err| {
-            error!("Error in Zenoh actor: {}", err);
-        });
+        zenoh_actor.run().await;
     });
     tokio::spawn(async move {
-        let _ = brain_actor.run().await.map_err(|err| {
-            error!("Error in Brain actor: {}", err);
-        });
+        brain_actor.run().await;
     });
-    tokio::time::sleep(Duration::from_secs(1000)).await;
+    tokio::time::sleep(Duration::from_secs(100000)).await;
     Result::Ok(())
 }

@@ -1,18 +1,18 @@
-use std::collections::HashMap;
+#![allow(unused_mut)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
 
-use anyhow::Result;
+use std::collections::HashMap;
+use tokio::select;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio::time::Duration;
 use tokio::time::Instant;
 
-pub trait Actor {
-    type Cmd;
-    type Event;
-    async fn run(&mut self) -> Result<()>;
-    fn sender(&self) -> Result<Sender<Self::Cmd>>;
-    fn add_listener<FUNC: FnMut(&Self::Event) + 'static + Send>(&mut self, f: FUNC) -> ();
-}
+use log::error;
+use log::info;
+
+use anyhow::Result;
 
 struct Timer {
     active: bool,
@@ -143,3 +143,95 @@ impl Timers {
         expired_timers
     }
 }
+
+pub struct Actor<Cmd, Evt> {
+    tx_cmd: Sender<Cmd>,
+    pub rx_cmd: Receiver<Cmd>,
+    event_handlers: Vec<Box<dyn FnMut(&Evt) + Send>>,
+    pub timers: Timers,
+}
+
+impl<Cmd, Evt> Actor<Cmd, Evt> {
+    pub fn sender(&self) -> Sender<Cmd>{
+        self.tx_cmd.clone()
+    }
+
+    pub fn tell(&self, cmd: Cmd) {
+        self.tx_cmd.try_send(cmd);
+    }
+    pub fn emit(&mut self, event: &Evt) {
+        for handler in self.event_handlers.iter_mut() {
+            handler(event);
+        }
+    }
+
+    pub fn new() -> Self {
+        let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
+        Actor {
+            tx_cmd,
+            rx_cmd,
+            event_handlers: Vec::new(),
+            timers: Timers::new(),
+        }
+    }
+
+/* 
+    async fn run(&mut self) -> Result<()> {
+        self.actor_impl
+            .on_start()
+            .await
+            .iter()
+            .for_each(|ev| self.emit(ev));
+        loop {
+            select! {
+                cmd = self.rx_cmd.recv() => {
+                    cmd.iter().for_each(|cmd| {
+                        for event in self.actor_impl.on_cmd(&cmd).await {
+                            self.emit(&event);
+                            }});
+                },
+                expired_timers  = self.timers.expired_timers() => {
+                    expired_timers.iter().for_each(|timer_name| {
+                        for event in self.actor_impl.on_timer(&timer_name).await {
+                            self.emit(&event);
+                        }
+                    });
+                }
+            }
+        }
+    }
+*/
+    pub fn on_event<FUNC: FnMut(&Evt) + 'static + Send>(&mut self, f: FUNC) -> () {
+        self.event_handlers.push(Box::new(f));
+    }
+}
+
+pub trait ActorImpl<Cmd, Evt> {
+    fn tell(&self,cmd:Cmd) ;
+    fn sender(&self) -> Sender<Cmd>;
+    fn on_event<FUNC: FnMut(&Evt) + 'static + Send>(&mut self, f: FUNC)  ;
+    async fn run(&mut self)  ;
+}
+/*
+struct ZenohCmd {
+    sleep: u32,
+}
+
+#[derive(Debug)]
+struct ZenohEvent {
+    slept: u32,
+}
+
+struct ZenohActor {}
+
+impl ActorImpl<ZenohCmd, ZenohEvent> for ZenohActor {
+    fn on_cmd(&mut self, _cmd: &ZenohCmd) -> Vec<ZenohEvent> {}
+    fn on_timer(&mut self, _timer: &str) -> Ves<ZenohEvent> {}
+}
+
+fn main() {
+    let mut zenoh_actor = Actor::new(ZenohActor {});
+    zenoh_actor.tell(&ZenohCmd { sleep: 100 });
+    zenoh_actor.on_event(|x| println!("{:?}", x));
+    println!("Hello, world!");
+}*/

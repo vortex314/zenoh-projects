@@ -1,18 +1,19 @@
 use log::*;
 
-
 use serde::Serialize;
 use tokio::select;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 
-
 use anyhow::Result;
+use zenoh::handlers::FifoChannelHandler;
+use zenoh::pubsub::Subscriber;
+use zenoh::sample::Sample;
 use zenoh::Config;
 use zenoh::Session;
 
 use crate::actor::Actor;
-
+use crate::actor::ActorImpl;
 
 #[derive(Debug, Serialize)]
 pub enum ZenohCmd {
@@ -30,90 +31,115 @@ pub enum ZenohEvent {
 }
 
 pub struct ZenohActor {
-    tx_cmd: Sender<ZenohCmd>,
-    rx_cmd: Receiver<ZenohCmd>,
-    event_handlers: Vec<Box<dyn FnMut(&ZenohEvent) + Send >>,
+    actor: Actor<ZenohCmd, ZenohEvent>,
     config: Option<zenoh::config::Config>,
     zenoh_session: Option<Session>,
+    subscriber: Option<Subscriber<FifoChannelHandler<Sample>>>,
+    connected : bool,
 }
 
-impl Actor for ZenohActor {
-    type Cmd = ZenohCmd;
-    type Event = ZenohEvent;
+impl ZenohActor {
+    pub fn new() -> Self {
+        let config = Config::from_file("./zenoh.json5").ok().unwrap();
+        //   let mut config = Config::default();
+        //     config.insert_json5("mode", r#""client""#).unwrap();
+        //     config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
 
-     fn add_listener<FUNC: FnMut(&Self::Event) + 'static + Send >(&mut self, f:FUNC) {
-        self.event_handlers.push(Box::new(f));
+        ZenohActor {
+            actor: Actor::new(),
+            config: Some(config),
+            zenoh_session: None,
+            subscriber: None,
+            connected : false,
+        }
     }
 
-    async fn run(&mut self) -> Result<()> {
+    async fn on_cmd(&mut self, cmd: &ZenohCmd) {
+        info!("ActorBrain::run() cmd {:?}", cmd);
+        match cmd {
+            ZenohCmd::Publish { topic, payload } => {
+                info!(
+                    "ZenohActor::run() Publish {} {} {:X?}",
+                    topic,
+                    minicbor::display(&payload),
+                    &payload
+                );
+                self.zenoh_session
+                    .iter().for_each(async |session:&Session| { session.put(topic, payload).await.unwrap();});
+            }
+
+            _ => {
+                info!("BrainActor::run() Unknown command");
+            }
+        }
+    }
+
+    async fn on_timer(&mut self, timer_name: &str) {
+        match &timer_name[..] {
+            "heartbeat" => {}
+            _ => {
+                info!("Unknown timer {}", timer_name);
+            }
+        }
+    }
+
+    async fn open_zenoh(&mut self) -> Result<()> {
         let config = self.config.clone().unwrap();
         zenoh::init_log_from_env_or("debug");
-        let zenoh_session = zenoh::open(config).await.map_err(|e| anyhow::anyhow!(e))?;
+        zenoh::open(config).await.inspect(async |session:&Session| {
+            self.subscriber = session.declare_subscriber("**").await.ok();
+            self.zenoh_session = Some(session);
+            ()
+        });
+        Ok(())
+    }
+}
 
-        let subscriber = zenoh_session.declare_subscriber("**")
-        .await.unwrap();
+impl ActorImpl<ZenohCmd, ZenohEvent> for ZenohActor {
+    fn tell(&self, cmd: ZenohCmd) {
+        self.actor.tell(cmd)
+    }
 
-        self.zenoh_session = Some(zenoh_session);
+    fn sender(&self) -> Sender<ZenohCmd> {
+        self.actor.sender()
+    }
+
+    fn on_event<FUNC: FnMut(&ZenohEvent) + 'static + Send>(&mut self, f: FUNC) -> () {
+        self.actor.on_event(f);
+    }
+
+    async fn run(&mut self) {
+        self.open_zenoh().await.unwrap();
 
         loop {
             select! {
-                cmd = self.rx_cmd.recv() => {
+                cmd = self.actor.rx_cmd.recv() => {
                     info!("ActorZenoh::run() cmd {:?}", cmd);
-                    match cmd {
-                        Some(ZenohCmd::Publish { topic, payload }) => {
-                            info!("ZenohActor::run() Publish {} {} {:X?}", topic, minicbor::display(&payload) , &payload);
-                            if topic == "" {
-                                error!("ZenohActor::run() Publish empty topic");
-                                continue;
-                            }
-                            self.zenoh_session.as_ref().unwrap().put(topic, payload).await.unwrap();
-                        }
-                        _ => {
-                            info!("ZenohActor::run() Unknown command");
-                        }
+                    cmd.iter().for_each(|cmd| self.on_cmd(cmd));
+
+                },
+                timers = self.actor.timers.expired_timers() => {
+                    for timer in timers {
+                        self.on_timer(timer.as_str());
                     }
                 },
-                msg = subscriber.recv_async() => {
+                msg = self.subscriber.as_mut().unwrap().recv_async() => {
                     match msg {
                         Ok(msg) => {
                             let topic = msg.key_expr().to_string();
                             let payload = msg.payload().to_bytes();
                             debug!("From zenoh: {}:{}", topic,minicbor::display(&payload));
-                            for handler in self.event_handlers.iter_mut() {
-                                handler(&ZenohEvent::Publish {
+                            self.actor.emit(&ZenohEvent::Publish {
                                     topic: topic.clone(),
-                                    payload: payload.to_vec()   ,
+                                    payload: payload.to_vec(),
                                 });
-                            }       
-                        }
+                            },
                         Err(e) => {
                             info!("PubSubActor::run() error {} ",e);
                         }
                     }
                 }
             }
-        }
-    }
-
-    fn sender(&self) -> Result<Sender<Self::Cmd>> {
-        Ok(self.tx_cmd.clone())
-    }
-}
-
-impl ZenohActor {
-    pub fn new() -> Self {
-        let config = Config::from_file("./zenoh.json5").ok().unwrap();
-     //   let mut config = Config::default();
-   //     config.insert_json5("mode", r#""client""#).unwrap();
-   //     config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
-
-        let (tx_cmd, rx_cmd) = tokio::sync::mpsc::channel(100);
-        ZenohActor {
-            tx_cmd,
-            rx_cmd,
-            event_handlers: Vec::new(),
-            config: Some(config),
-            zenoh_session: None,
         }
     }
 }
