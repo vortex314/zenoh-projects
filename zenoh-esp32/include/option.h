@@ -121,54 +121,69 @@ public:
         }
     }
 
-    inline bool is_some() const {
+    inline bool is_some() const
+    {
         return _pv != nullptr;
     }
 
-    inline bool is_none() const {
+    inline bool is_none() const
+    {
         return _pv == nullptr;
     }
 
-    inline const T& ref() const {
-        if (is_none()) {
-            PANIC("Attempted to unwrap an error result");
+    inline const T &ref() const
+    {
+        if (is_none())
+        {
+            PANIC("Attempted to unwrap a none option");
         }
         return *_pv;
     }
     // map ((T) -> U) -> Option<U>
     template <typename F>
-    auto map(F&& func) const -> Option<decltype(func(std::declval<T>()))> {
+    auto map(F &&func) const -> Option<decltype(func(std::declval<T>()))>
+    {
         using OptionType = decltype(func(std::declval<T>()));
-        if (is_some()) {
+        if (is_some())
+        {
             return func(ref());
         }
         return Option<OptionType>();
     }
     // and_then ((T) -> Option<U>) -> Option<U>
     template <typename F>
-    auto and_then(F&& func) const -> Option<decltype(func(std::declval<T>()))> {
+    auto and_then(F &&func) const -> Option<decltype(func(std::declval<T>()))>
+    {
         using OptionType = decltype(func(std::declval<T>()));
-        if (is_some()) {
+        if (is_some())
+        {
             return Option<OptionType>(func(ref()));
         }
         return Option<OptionType>();
     }
+
     template <typename F>
-    auto filter(F&& predicate) const -> Option<T>  {
-        if (is_some() && predicate(ref())) {
+    auto filter(F &&predicate) const -> Option<T>
+    {
+        if (is_some() && predicate(ref()))
+        {
             return Option<T>(ref()); // Return the current value if predicate is true
         }
         return Option<T>(); // Return None if predicate fails
     }
+
     template <typename F>
-    auto inspect(F&& predicate) const -> Option<T>  {
-        predicate(ref());
-        return *this; 
+    auto inspect(F &&func) const -> Option<T>
+    {
+        func(ref());
+        return Option<T>(ref());
     }
 
     template <typename F>
-    void for_each(F&& func) const  {
-        if (is_some() ) func(ref());
+    void for_each(F &&func) const
+    {
+        if (is_some())
+            func(ref());
     }
     Option(const Option<T> &other)
     {
@@ -180,7 +195,7 @@ public:
         _pv = new T;
         *_pv = *other._pv;
     }
-    void operator>>(std::function<void(  T &)> f) const
+    void operator>>(std::function<void(T &)> f) const
     {
         if (_pv)
             f(*_pv);
@@ -191,8 +206,8 @@ public:
         return _pv ? f(*_pv) : nullptr;
     }
 
-    template <typename U,typename F>
-    Option<U> operator<<(F&& f)
+    template <typename U, typename F>
+    Option<U> operator<<(F &&f)
     {
         return _pv ? f(*_pv) : nullptr;
     }

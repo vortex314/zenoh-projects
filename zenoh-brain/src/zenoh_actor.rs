@@ -35,7 +35,7 @@ pub struct ZenohActor {
     config: Option<zenoh::config::Config>,
     zenoh_session: Option<Session>,
     subscriber: Option<Subscriber<FifoChannelHandler<Sample>>>,
-    connected : bool,
+    connected: bool,
 }
 
 impl ZenohActor {
@@ -50,7 +50,7 @@ impl ZenohActor {
             config: Some(config),
             zenoh_session: None,
             subscriber: None,
-            connected : false,
+            connected: false,
         }
     }
 
@@ -64,8 +64,14 @@ impl ZenohActor {
                     minicbor::display(&payload),
                     &payload
                 );
-                self.zenoh_session
-                    .iter().for_each(async |session:&Session| { session.put(topic, payload).await.unwrap();});
+                if let Some(session) = &self.zenoh_session {
+                    let topic = topic.clone();
+                    let payload = payload.clone();
+
+                    let _ = session.put(&topic, &payload).await;
+                } else {
+                    error!("ZenohActor::run() zenoh_session is None");
+                }
             }
 
             _ => {
@@ -86,11 +92,10 @@ impl ZenohActor {
     async fn open_zenoh(&mut self) -> Result<()> {
         let config = self.config.clone().unwrap();
         zenoh::init_log_from_env_or("debug");
-        zenoh::open(config).await.inspect(async |session:&Session| {
-            self.subscriber = session.declare_subscriber("**").await.ok();
-            self.zenoh_session = Some(session);
-            ()
-        });
+        let session = zenoh::open(config).await.unwrap();
+        info!("Zenoh session opened");
+        self.subscriber = session.declare_subscriber("**").await.ok();
+        self.zenoh_session = Some(session);
         Ok(())
     }
 }
@@ -115,12 +120,14 @@ impl ActorImpl<ZenohCmd, ZenohEvent> for ZenohActor {
             select! {
                 cmd = self.actor.rx_cmd.recv() => {
                     info!("ActorZenoh::run() cmd {:?}", cmd);
-                    cmd.iter().for_each(|cmd| self.on_cmd(cmd));
+                    if let Some(c) = cmd {
+                            self.on_cmd(&c).await;
+                    }
 
                 },
                 timers = self.actor.timers.expired_timers() => {
                     for timer in timers {
-                        self.on_timer(timer.as_str());
+                        self.on_timer(timer.as_str()).await;
                     }
                 },
                 msg = self.subscriber.as_mut().unwrap().recv_async() => {

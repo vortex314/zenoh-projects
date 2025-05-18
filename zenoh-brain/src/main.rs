@@ -29,7 +29,7 @@ use zenoh_actor::ZenohCmd;
 use zenoh_actor::*;
 mod brain_actor;
 use anyhow::Result;
-use brain_actor::BrainActor;
+use brain_actor::*;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 3)]
 
@@ -48,13 +48,13 @@ async fn main() -> Result<()> {
 
     let zenoh_sender = zenoh_actor.sender();
 
-    brain_actor.on_event(move |event| match event {
-        brain_actor::BrainEvent::Msg(brain_msg) => {
+    brain_actor.on_event( move |event: &brain_actor::BrainEvent| match event {
+        BrainEvent::Publish{topic,msg} => {
             let mut writer = Vec::<u8>::new();
             let mut encoder = Encoder::new(&mut writer);
-            let r = brain_msg.encode(&mut encoder, &mut ()).unwrap();
-            zenoh_sender.send(ZenohCmd::Publish {
-                topic: "src/brain/msg".to_string(),
+            msg.encode(&mut encoder, &mut ()).unwrap();
+            let _ = zenoh_sender.try_send(ZenohCmd::Publish {
+                topic : topic.clone(),
                 payload: writer,
             });
         }

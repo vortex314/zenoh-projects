@@ -58,6 +58,10 @@ extern "C" void app_main()
 {
   ESP_ERROR_CHECK(nvs_init());
   zenoh_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
+
+  /*zenoh_actor.tell(new ZenohCmd{
+      .action = ZenohAction::Subscribe,
+      .topic = Option<std::string>("src/brain/ **")}); // connect to zenoh*/
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([&](const WifiEvent &event)
                       {
@@ -82,8 +86,10 @@ extern "C" void app_main()
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
+                        INFO("Zenoh event received");
                         event.publish_bytes
                           .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
+ //                         .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})
                           .and_then([&](auto pb ){ return cbor_deserialize<SysMsg>(pb.payload);})
                           .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
                         event.publish_bytes
@@ -126,5 +132,3 @@ esp_err_t nvs_init()
   }
   return ret;
 }
-
-

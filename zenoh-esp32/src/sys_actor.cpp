@@ -20,8 +20,11 @@ void SysActor::on_cmd(SysCmd &cmd)
             break;
         } });
     cmd.publish.for_each([](auto msg)
-                         { msg.utc.for_each([](auto utc)
+                         {
+                            INFO("Sys actor received message");
+                            msg.utc.for_each([](auto utc)
                                             {
+                                                INFO("Setting UTC time to %lld", utc);
             // https://github.com/espressif/esp-idf/issues/10876
             // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
             struct timeval tv = {

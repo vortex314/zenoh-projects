@@ -21,6 +21,7 @@ enum ZenohAction
 {
   Connect,
   Disconnect,
+  Subscribe,
   Stop
 };
 /*
@@ -53,6 +54,7 @@ struct ZenohEvent
 struct ZenohCmd
 {
   Option<ZenohAction> action = nullptr;
+  Option<std::string> topic = nullptr;
   Option<ZenohMsg> publish = nullptr;
   Option<PublishBytes> publish_bytes = nullptr;
 };
@@ -79,7 +81,7 @@ public:
   Res publish_props();
 //  Res publish_props_info();
 
-  void zenoh_subscribe(const std::string &topic);
+  Result<Void> subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
 
   Result<z_owned_subscriber_t> declare_subscriber(const char *topic);
@@ -98,6 +100,7 @@ private:
   z_owned_config_t config;
   z_put_options_t put_options;
 
+  std::vector<std::string> _subscribed_topics;
   std::map<std::string, z_owned_subscriber_t> _subscribers;
   std::map<std::string, z_owned_publisher_t> _publishers;
   std::map<std::string, PropertyCommon *> _properties;

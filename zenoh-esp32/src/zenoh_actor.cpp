@@ -55,6 +55,9 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
   {
     switch (cmd.action.value())
     {
+    case ZenohAction::Subscribe:
+      subscribe(cmd.topic.value());
+      break;
     case ZenohAction::Connect:
       INFO("Connecting to Zenoh...");
       if (!_connected)
@@ -69,6 +72,11 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
         else
         {
           INFO("Connected to Zenoh.");
+          for (const auto &topic : _subscribed_topics)
+          {
+            subscribe(topic);
+            INFO("Subscribed to topic: %s", topic.c_str());
+          }
           std::string topic = _dst_prefix;
           topic += "/**";
           auto sub = declare_subscriber(topic.c_str());
@@ -202,6 +210,29 @@ void ZenohActor::prefix(const char *prefix)
   _src_prefix += prefix;
   _dst_prefix = "dst/";
   _dst_prefix += prefix;
+  _subscribed_topics.push_back(_dst_prefix + "/**");
+}
+
+
+Result<Void> ZenohActor::subscribe(const std::string &topic)
+{
+  if (_connected)
+  {
+    auto sub = declare_subscriber(topic.c_str());
+    if (sub.is_err())
+    {
+      return Result<Void>::Err(-1, "Failed to declare subscriber");
+    }
+    else
+    {
+      _subscribers.emplace(topic, sub.value());
+    }
+  }
+  else
+  {
+    return Result<Void>::Err(-1, "Not connected to Zenoh");
+  }
+  return Result<Void>::Ok(true);
 }
 
 Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
@@ -330,7 +361,7 @@ Res ZenohActor::publish_props()
     z_info_what_am_i(session, &what_am_i_str);
     what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
   */
-  emit(ZenohEvent{.publish = _zenoh_msg });
+  emit(ZenohEvent{.publish = _zenoh_msg});
   z_drop(z_move(z_str));
   return Res::Ok();
 }
@@ -339,7 +370,7 @@ Res ZenohActor::publish_props()
 
 Res ZenohMsg::serialize(Serializer &ser) const
 {
-//  int idx = 0;
+  //  int idx = 0;
   ser.reset();
   ser.map_begin();
   ser.serialize(KEY("zid"), zid);

@@ -27,12 +27,11 @@ pub enum BrainCmd {
     Subscribe { topic: String },
     Unsubscribe { topic: String },
 }
-#[derive(Debug)]
+
 pub enum BrainEvent {
     Connected,
     Disconnected,
-    Publish { topic: String, payload: Vec<u8> },
-    Msg(BrainMsg),
+    Publish { topic: String, msg: BrainMsg },
 }
 
 #[derive(Debug)]
@@ -91,9 +90,12 @@ impl BrainActor {
     async fn on_timer(&mut self, timer_name: &str) {
         match &timer_name[..] {
             "heartbeat" => {
-                self.actor.emit(&BrainEvent::Msg(BrainMsg {
-                    utc: Some(chrono::Utc::now().timestamp_millis() as u64),
-                }));
+                self.actor.emit(&BrainEvent::Publish {
+                    topic: "dst/mtr1/sys".to_string(),
+                    msg: BrainMsg {
+                        utc: Some(chrono::Utc::now().timestamp_millis() as u64),
+                    },
+                });
             }
             _ => {
                 info!("Unknown timer {}", timer_name);
@@ -104,31 +106,33 @@ impl BrainActor {
 
 impl ActorImpl<BrainCmd, BrainEvent> for BrainActor {
     async fn run(&mut self) {
+        self.actor
+            .timers
+            .add_repeat_timer("heartbeat".to_string(), Duration::from_secs(1));
         loop {
             select! {
                 cmd = self.actor.rx_cmd.recv() => {
-                    cmd.iter().for_each(|cmd| {
-                        self.on_cmd(&cmd);
-                })},
+                    for c in cmd.iter() {
+                        info!("ActorBrain::run() cmd {:?}", c);
+                        self.on_cmd(&c).await;
+                }},
                 timers = self.actor.timers.expired_timers() => {
                     for timer in timers {
-                        self.on_timer(timer.as_str());
+                        self.on_timer(timer.as_str()).await;
                     }
                 }
             }
         }
     }
-    fn tell(&self,cmd:BrainCmd) {
+    fn tell(&self, cmd: BrainCmd) {
         self.actor.tell(cmd)
     }
 
-    fn sender(&self)->Sender<BrainCmd>{
+    fn sender(&self) -> Sender<BrainCmd> {
         self.actor.sender()
     }
 
     fn on_event<FUNC: FnMut(&BrainEvent) + 'static + Send>(&mut self, f: FUNC) -> () {
         self.actor.on_event(f);
     }
-
-
 }
