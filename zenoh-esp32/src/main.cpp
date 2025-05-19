@@ -72,7 +72,7 @@ extern "C" void app_main()
   // WIRING the actors together
   wifi_actor.on_event([&](const WifiEvent &event)
                       { event.publish.for_each([](auto msg)
-                                               { publish(SRC_DEVICE "wifi", msg); }); });
+                        { publish(SRC_DEVICE "wifi", msg); }); });
   sys_actor.on_event([&](SysEvent event)
                      { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "sys", msg); }; });
@@ -89,7 +89,7 @@ extern "C" void app_main()
                         INFO("Zenoh event received");
                         event.publish_bytes
                           .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
- //                         .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})
+                          .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})
                           .and_then([&](auto pb ){ return cbor_deserialize<SysMsg>(pb.payload);})
                           .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
                         event.publish_bytes

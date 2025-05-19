@@ -175,8 +175,9 @@ public:
     template <typename F>
     auto inspect(F &&func) const -> Option<T>
     {
-        func(ref());
-        return Option<T>(ref());
+        if (is_some())
+            func(ref());
+        return *this;
     }
 
     template <typename F>
