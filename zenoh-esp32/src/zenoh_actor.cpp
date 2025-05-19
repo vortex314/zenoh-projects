@@ -36,7 +36,6 @@ ZenohActor::ZenohActor(const char *name, size_t stack_size, int priority, size_t
   }
   // put_options.encoding = z_move(encoding); // commenting this line out makes it work fine
   put_options.congestion_control = Z_CONGESTION_CONTROL_DROP;
-  prefix("device"); // default prefix
 }
 
 void ZenohActor::on_timer(int id)
@@ -74,20 +73,17 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
           INFO("Connected to Zenoh.");
           for (const auto &topic : _subscribed_topics)
           {
-            subscribe(topic);
-            INFO("Subscribed to topic: %s", topic.c_str());
+            auto r = subscribe(topic);
+            if ( r.is_err() )
+            {
+              INFO("Failed to subscribe to topic: %s", topic.c_str());
+            }
+            else
+            {
+              INFO("Subscribed to topic: %s", topic.c_str());
+            }
           }
-          std::string topic = _dst_prefix;
-          topic += "/**";
-          auto sub = declare_subscriber(topic.c_str());
-          if (sub.is_err())
-          {
-            INFO("Failed to declare subscriber: %s", sub.msg().c_str());
-          }
-          else
-          {
-            _subscribers.emplace(topic, sub.value());
-          }
+        
         }
       }
       break;
@@ -327,6 +323,8 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   size_t len = z_bytes_len(payload);
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
+
+  INFO("Received message on topic '%s': %d", topic.c_str(), len);
 
   actor->emit(ZenohEvent{.publish_bytes = PublishBytes{topic, std::move(buffer)}});
 }

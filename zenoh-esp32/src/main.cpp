@@ -17,7 +17,7 @@
 #include <esp_coexist.h>
 #include <esp_event.h>
 
-#define DEVICE_NAME "esp32"
+#define DEVICE_NAME "mtr1"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
@@ -86,7 +86,7 @@ extern "C" void app_main()
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   zenoh_actor.on_event([&](ZenohEvent event)
                        {
-                        INFO("Zenoh event received");
+                        INFO("Zenoh event received %s %s", event.publish_bytes ? "publish_bytes":"-" , event.publish ? "publish" : "-" );
                         event.publish_bytes
                           .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
                           .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})

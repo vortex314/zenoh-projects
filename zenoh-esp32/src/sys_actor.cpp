@@ -99,12 +99,14 @@ Res SysMsg::serialize(Serializer &ser) const
 
 Res SysMsg::deserialize(Deserializer &des)
 {
+    des.reset();
     des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
                     {
     //    INFO("key %d", key);
         switch (key)
         {
         case H("utc"):
+            INFO("utc");
             return d.deserialize(utc);
         default:
             INFO("unknown key %d",key);
