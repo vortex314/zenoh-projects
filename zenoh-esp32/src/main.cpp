@@ -72,7 +72,7 @@ extern "C" void app_main()
   // WIRING the actors together
   wifi_actor.on_event([&](const WifiEvent &event)
                       { event.publish.for_each([](auto msg)
-                        { publish(SRC_DEVICE "wifi", msg); }); });
+                                               { publish(SRC_DEVICE "wifi", msg); }); });
   sys_actor.on_event([&](SysEvent event)
                      { event.publish >> [](auto msg)
                        { publish(SRC_DEVICE "sys", msg); }; });
