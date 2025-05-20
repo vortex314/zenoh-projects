@@ -352,7 +352,7 @@ public:
     {
         ser.serialize(name);
         ser.serialize(description);
-        return Res::Ok();
+        return ResOk;
     }
     virtual Res serialize(Serializer &ser) = 0;
     virtual Res deserialize(Deserializer &des) = 0;
@@ -381,29 +381,29 @@ struct Property : public PropertyCommon
             T value;
             des.deserialize(value);
             setter.value()(value);
-            return Res::Ok();
+            return ResOk;
         }
         des.deserialize(value);
-        return Res::Ok();
+        return ResOk;
     }
     Res get_value(T &v)
     {
         if (getter)
         {
             v = getter.value()();
-            return Res::Ok();
+            return ResOk;
         }
         v = value;
-        return Res::Ok();
+        return ResOk;
     }
     Res set_value(T value)
     {
         if (setter)
         {
             setter.value()(value);
-            return Res::Ok();
+            return ResOk;
         }
-        return Res::Err(0, "No setter");
+        return Res(0, "No setter");
     }
 };
 

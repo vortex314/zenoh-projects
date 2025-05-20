@@ -9,6 +9,7 @@
 #include <log.h>
 #include <errno.h>
 #include <option.h>
+#include <result.h>
 
 #include "esp_err.h"
 
@@ -23,7 +24,7 @@ typedef bool Void;
     {                                            \
       INFO(MSG);                                 \
       INFO("=%d %s:%d", rc, __FILE__, __LINE__); \
-      return Result<TYPE>::Err(rc, MSG);         \
+      return Result<TYPE>(rc, MSG);         \
     }                                            \
   }
 #define TEST_R(TYPE, VAL, MSG)                       \
@@ -33,7 +34,7 @@ typedef bool Void;
     {                                                \
       INFO(MSG);                                     \
       INFO("=%d %s:%d", r.rc(), __FILE__, __LINE__); \
-      return Result<TYPE>::Err(r.rc(), MSG);         \
+      return Result<TYPE>(r.rc(), MSG);         \
     }                                                \
   }
 #define RET_ERR(VAL, MSG)           \
@@ -41,7 +42,7 @@ typedef bool Void;
     auto r = (VAL);                 \
     if (r.is_err())                 \
     {                               \
-      return Res::Err(r.rc(), MSG); \
+      return Res(r.rc(), MSG); \
     }                               \
   }
 
@@ -72,7 +73,7 @@ typedef bool Void;
     {                                             \
       ERROR(MSG);                                  \
       ERROR("[%d] %s:%d", rc, __FILE__, __LINE__); \
-      return Res::Err(rc, MSG);                   \
+      return Res(rc, MSG);                   \
     }                                             \
   }
 
@@ -93,7 +94,7 @@ typedef bool Void;
     if (rc != 0)                                             \
     {                                                        \
       ERROR("rc=%d %s:%d %s", rc, __FILE__, __LINE__, #VAL); \
-      return Res::Err(rc, #VAL);                             \
+      return Res(rc, #VAL);                             \
     }                                                        \
   }
 
@@ -104,12 +105,18 @@ typedef bool Void;
     {                                                                        \
       const char *erc_str = esp_err_to_name(rc);                             \
       ERROR("rc=%d:%s %s:%d %s", rc, erc_str, __FILE__, __LINE__, #VAL); \
-      return Res::Err(rc, erc_str);                                          \
+      return Res(rc, erc_str);                                          \
     }                                                                        \
   }
 
-// #define Void (void())
+typedef Result<Void> Res;
 
+#define ResOk Res(true)
+// Ok type for Res
+
+
+// #define Void (void())
+/*
 template <typename T = void>
 class Result
 {
@@ -184,7 +191,7 @@ private:
   std::optional<std::string> _msg;
 
 public:
-  /*Res(const Res &other)
+  Res(const Res &other) // 
   {
     code = other.code;
     desc = other.desc;
@@ -194,7 +201,7 @@ public:
     ret.code = other.code;
     ret.desc = other.desc;
     return ret;
-  }*/
+  }
 
   Res() { _rc = 0; }
 
@@ -234,7 +241,7 @@ public:
     }
     else
     {
-      return Res::Ok();
+      return ResOk;
     }
   }
   Res on_ok(std::function<Res()> f)
@@ -245,10 +252,11 @@ public:
     }
     else
     {
-      return Res::Err(_rc, _msg.value());
+      return Res(_rc, _msg.value());
     }
   }
 };
+*/
 
 template <typename T>
 void for_each(std::optional<T> &opt, std::function<void()> action)

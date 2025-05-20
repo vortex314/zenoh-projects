@@ -111,12 +111,12 @@ public:
     if (nanocbor_get_null(get_des()) == 0)
     {
       opt = nullptr;
-      return Res::Ok();
+      return ResOk;
     }
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
-    return Res::Ok();
+    return ResOk;
   }
 };
 
@@ -126,10 +126,13 @@ Option<T> cbor_deserialize(const Bytes &bytes)
   // INFO("Deserializing %d bytes", bytes.size());
   CborDeserializer des(bytes.data(), bytes.size());
   T obj;
-  if (obj.deserialize(des).is_ok())
-    return obj;
-  ERROR("Failed to deserialize object ");
-  return nullptr;
+  auto r = obj.deserialize(des);
+  if (r.is_err())
+  {
+    ERROR("Failed to deserialize %s", r.msg());
+    return Option<T>(nullptr);
+  }
+  return Option<T>(obj);
 }
 
 #endif

@@ -35,7 +35,7 @@ void OtaActor::on_cmd(OtaCmd &cmd)
             else
             {
                 INFO(" invalid message ");
-                result = Res::Err(-1, "invalid message ");
+                result = Res(-1, "invalid message ");
             }
             OtaMsg reply;
             reply.rc = result.rc();
@@ -67,11 +67,11 @@ Res OtaActor::ota_begin()
     if (_update_partition == NULL)
     {
         ERROR("Unable to get next OTA partition");
-        return Res::Err(EBADF, "Unable to get next OTA partition");
+        return Res(EBADF, "Unable to get next OTA partition");
     }
     //    INFO("Writing firmware to partition: %s", _update_partition->label);
     CHECK_ESP(esp_ota_begin(_update_partition, OTA_SIZE_UNKNOWN, &_ota_handle));
-    return Res::Ok();
+    return ResOk;
 }
 
 Res OtaActor::ota_end()
@@ -87,7 +87,7 @@ Res OtaActor::ota_end()
 Res OtaActor::ota_write(uint32_t offset,const Bytes &data)
 {
     CHECK_ESP(esp_ota_write_with_offset(_ota_handle, data.data(), data.size(), offset));
-    return Res::Ok();
+    return ResOk;
 }
 
 /*Res OtaActor::flash(const uint8_t *data, size_t size)
@@ -96,7 +96,7 @@ Res OtaActor::ota_write(uint32_t offset,const Bytes &data)
     if (update_partition == NULL)
     {
         ERROR("Unable to get next OTA partition");
-        return Res::Err(EBADF, "Unable to get next OTA partition");
+        return Res(EBADF, "Unable to get next OTA partition");
     }
     INFO("Writing firmware to partition: %s", update_partition->label);
 
@@ -130,7 +130,7 @@ Res OtaMsg::serialize(Serializer &ser) const
     ser.serialize(KEY("reply_to"), reply_to);
     ser.serialize(KEY("partition_label"), partition_label);
     ser.map_end();
-    return Res::Ok();
+    return ResOk;
 }
 
 
@@ -159,5 +159,5 @@ Res OtaMsg::deserialize(Deserializer &des)
             return d.skip_next();
         } });
 
-    return Res::Ok();
+    return ResOk;
 }

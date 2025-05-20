@@ -53,7 +53,7 @@ public:
     {
       serialize_null();
     }
-    return Res::Ok();
+    return ResOk;
   }
   template <typename V>
   Res serialize(const uint32_t idx, const std::optional<V> value)
@@ -63,7 +63,7 @@ public:
       serialize(idx);
       serialize(*value);
     }
-    return Res::Ok();
+    return ResOk;
   }
   template <typename V>
   Res serialize(const uint32_t idx, const Option<V> &value)
@@ -73,7 +73,7 @@ public:
       serialize(idx);
       serialize(*value);
     }
-    return Res::Ok();
+    return ResOk;
   }
   template <typename V>
   Res serialize(const char *idx, const Option<V> &value)
@@ -83,7 +83,7 @@ public:
       serialize(idx);
       serialize(*value);
     }
-    return Res::Ok();
+    return ResOk;
   }
   template <typename V>
   Res serialize(const char *name, const std::optional<V> value)
@@ -93,7 +93,7 @@ public:
       serialize(name);
       serialize(*value);
     }
-    return Res::Ok();
+    return ResOk;
   }
   Res serialize(const Serializable &value) { return value.serialize(*this); }
 
@@ -149,7 +149,7 @@ public:
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
-    return Res::Ok();
+    return ResOk;
   }
 
   template <typename U>
@@ -158,7 +158,7 @@ public:
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
-    return Res::Ok();
+    return ResOk;
   }
 
   template <typename U>
@@ -214,7 +214,7 @@ public:
     else
     {
       ERROR("Expected map %d", map_type);
-      return Res::Err(0, "Expected map");
+      return Res(0, "Expected map");
     }
 
     while (true && (count++ < map_size))
@@ -226,13 +226,13 @@ public:
       uint32_t key;
 #ifdef KEY_TYPE_STR
       if (type != SerialType::SER_STR)
-        return Res::Err(0, "Expected key str");
+        return Res(0, "Expected key str");
       std::string key_str;
       RET_ERR(deserialize(key_str), "Failed to decode key str in map");
       key = H(key_str.c_str());
 #else
       if (type != SerialType::SER_UINT)
-        return Res::Err(0, "Expected key uint");
+        return Res(0, "Expected key uint");
       RET_ERR(deserialize(key), "Failed to decode key in map");
 #endif
       RET_ERR(func(*this, key), "Failed to process map entry");
@@ -242,7 +242,7 @@ public:
     {
       RET_ERR(map_end(), "Failed to decode map end ");
     }
-    return Res::Ok();
+    return ResOk;
   }
 };
 

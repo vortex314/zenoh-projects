@@ -196,7 +196,7 @@ Res Thread::start()
                        self->run();
                    },
                    name(), _stack_size, this, _priority, &_task_handle));*/
-    return Res::Ok();
+    return ResOk;
 }
 
 Res Thread::add_actor(ThreadSupport &actor)
@@ -205,9 +205,9 @@ Res Thread::add_actor(ThreadSupport &actor)
     auto r = xQueueAddToSet(actor.queue_handle(), _queue_set);
     if (r != pdPASS)
     {
-        return Res::Err(0, "Failed to add actor to queue set");
+        return Res(0, "Failed to add actor to queue set");
     }
-    return Res::Ok();
+    return ResOk;
 }
 
 void Thread::handle_all_cmd()

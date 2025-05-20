@@ -1,6 +1,7 @@
 
 #include <sys_actor.h>
 #include <sys/time.h>
+#include <time.h>
 
 SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 
@@ -28,12 +29,30 @@ void SysActor::on_cmd(SysCmd &cmd)
             // https://github.com/espressif/esp-idf/issues/10876
             // set local time to UTC https://gist.github.com/igrr/d7db8a78170bf6981f2e606b42c4361c 
             struct timeval tv = {
-                .tv_sec = utc,
-                .tv_usec = 0
+                .tv_sec = utc/1000,
+                .tv_usec = static_cast<long int>((utc%1000)* 1000)
                 };
-            ERRNO(settimeofday(&tv, NULL)); }); });
+                struct timezone tz = {0,0};
+                tz.tz_minuteswest = 0;
+                tz.tz_dsttime = DST_MET;
+            // set timezone to UTC
+            ERRNO(settimeofday(&tv, &tz)); }); 
+            struct timeval tv1;
+            struct tm *timeinfo;
+            char buffer[80];
+            
+            // Get current time using gettimeofday()
+            int rc = gettimeofday(&tv1, NULL);
+            
+            // Convert to local time
+            timeinfo = localtime(&tv1.tv_sec);
+            
+            // Format the time as string
+            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+            
+            // Print with microseconds
+            INFO("Current time: %s", buffer); });
 }
-
 void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
@@ -60,7 +79,7 @@ Res SysActor::publish_props()
     _sys_msg.free_heap = esp_get_free_heap_size();
     _sys_msg.up_time = esp_timer_get_time() / 1000;
     emit(SysEvent{.publish = _sys_msg});
-    return Res::Ok();
+    return ResOk;
 }
 /*
 InfoProp info_props_sys_msg[8] = {
@@ -78,7 +97,7 @@ Res SysActor::publish_props_info()
 {
     emit(SysEvent{.prop_info = PublishSerdes( info_props_sys_msg[_prop_counter])});
     _prop_counter = (_prop_counter + 1) % (sizeof(info_props_sys_msg) / sizeof(InfoProp));
-    return Res::Ok();
+    return ResOk;
 }*/
 
 Res SysMsg::serialize(Serializer &ser) const
@@ -99,19 +118,18 @@ Res SysMsg::serialize(Serializer &ser) const
 
 Res SysMsg::deserialize(Deserializer &des)
 {
-    des.reset();
     des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
                     {
-    //    INFO("key %d", key);
+       // INFO("key %d", key);
         switch (key)
         {
         case H("utc"):
-            INFO("utc");
+           // INFO("utc");
             return d.deserialize(utc);
         default:
-            INFO("unknown key %d",key);
+            ERROR("unknown key %d",key);
             return d.skip_next();
         } });
 
-    return Res::Ok();
+    return ResOk;
 }

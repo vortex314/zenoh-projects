@@ -5,7 +5,7 @@
 #include <variant>
 #include <stdint.h>
 
-void panic_here(const char *s){ printf(" ===> PANIC : %s\n", s);fflush(stdout); }
+// void panic_here(const char *s){ printf(" ===> PANIC : %s\n", s);fflush(stdout); }
 
 #define STRINGIZE(x) STRINGIZE2(x)
 #define STRINGIZE2(x) #x
@@ -69,6 +69,13 @@ public:
             PANIC("Attempted to unwrap an error result");
         }
         return *_pv;
+    }
+
+    Option<T> ok() const {
+        if (is_ok()) {
+            return Option<T>(ref());
+        }
+        return Option<T>(nullptr);
     }
 
     // Get the error (E), if there's an error

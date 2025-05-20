@@ -86,7 +86,7 @@ void WifiActor::on_start()
     }
     else
     {
-      INFO("Failed to scan: %s", r.msg().c_str());
+      INFO("Failed to scan: %s", r.msg());
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
   }
@@ -103,7 +103,7 @@ void WifiActor::on_start()
   auto r = connect();
   if (r.is_err())
   {
-    INFO("Failed to connect to WiFi %d:%s", r.rc(), r.msg().c_str());
+    INFO("Failed to connect to WiFi %d:%s", r.rc(), r.msg());
     return;
   }
 }
@@ -125,7 +125,7 @@ void WifiActor::on_timer(int timer_id)
       auto r = wifi_msg.fill(esp_netif);
       if (r.is_err())
       {
-        INFO("Failed to fill wifi msg: %s", r.msg().c_str());
+        INFO("Failed to fill wifi msg: %s", r.msg());
         return;
       }
       emit(WifiEvent{.publish = wifi_msg });
@@ -150,11 +150,11 @@ void WifiActor::on_timer(int timer_id)
 {
   if (!_wifi_connected)
   {
-    return Res::Err(ENOTCONN, "Not connected to WiFi");
+    return Res(ENOTCONN, "Not connected to WiFi");
   }
   emit(WifiEvent{.prop_info = PublishSerdes(info_props_wifi[_prop_counter])});
   _prop_counter = (_prop_counter + 1) % (sizeof(info_props_wifi) / sizeof(InfoProp));
-  return Res::Ok();
+  return ResOk;
 }*/
 
 WifiActor::~WifiActor()
@@ -207,7 +207,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
       IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, this, &handler_got_ip));
   CHECK_ESP(esp_wifi_set_mode(WIFI_MODE_STA));
   CHECK_ESP(esp_wifi_start());
-  return Res::Ok();
+  return ResOk;
 }*/
 
 /*Res WifiActor::wifi_set_config(const char* wifi_ssid, const char *wifi_password)
@@ -220,7 +220,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
         wifi_config.sta.password);
   CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  return Res::Ok();
+  return ResOk;
 }*/
 
 
@@ -239,7 +239,7 @@ Res WifiMsg::fill(esp_netif_t *esp_netif)
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
   mac_address = macStr;
-  return Res::Ok();
+  return ResOk;
 }
 
 /*const InfoProp *WifiMsg::info(int idx)
@@ -458,7 +458,7 @@ Res WifiActor::scan()
   ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
   ESP_ERROR_CHECK(esp_wifi_stop());
   ESP_ERROR_CHECK(esp_wifi_deinit());
-  return Res::Ok();
+  return ResOk;
 }
 
 Res WifiActor::connect()
@@ -482,7 +482,7 @@ Res WifiActor::connect()
       IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, this, &handler_got_ip);
   CHECK_ESP(esp_wifi_start());
 
-  return Res::Ok();
+  return ResOk;
 }
 
 
@@ -506,5 +506,5 @@ Res WifiMsg::serialize(Serializer &ser) const
 }
 Res WifiMsg::deserialize(Deserializer &des)
 {
-  return Res::Err(-1, "Not implemented");
+  return Res(-1, "Not implemented");
 }

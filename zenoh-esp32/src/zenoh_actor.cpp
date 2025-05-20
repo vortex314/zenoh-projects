@@ -64,7 +64,7 @@ void ZenohActor::on_cmd(ZenohCmd &cmd)
         Res res = connect();
         if (res.is_err())
         {
-          INFO("Failed to connect to Zenoh: %s", res.msg().c_str());
+          INFO("Failed to connect to Zenoh: %s", res.msg());
           vTaskDelay(1000 / portTICK_PERIOD_MS);
           tell(new ZenohCmd{.action = ZenohAction::Connect});
         }
@@ -168,7 +168,7 @@ Res ZenohActor::connect(void)
   CHECK(z_closure_zid(&zid_closure, f2, NULL, NULL));
   CHECK(z_info_peers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
 
-  return Res::Ok();
+  return ResOk;
 }
 
 Res ZenohActor::disconnect()
@@ -177,7 +177,7 @@ Res ZenohActor::disconnect()
   if (z_session_is_closed(z_loan_mut(_zenoh_session)))
   {
     INFO("Zenoh session is not open");
-    return Res::Ok();
+    return ResOk;
   }
 
   _connected = false;
@@ -192,7 +192,7 @@ Res ZenohActor::disconnect()
   z_drop(z_move(_zenoh_session));
   //  z_drop(z_move(zenoh_session));
   INFO("Zenoh session closed ");
-  return Res::Ok();
+  return ResOk;
 }
 
 bool ZenohActor::is_connected() const
@@ -217,18 +217,18 @@ Result<Void> ZenohActor::subscribe(const std::string &topic)
     auto sub = declare_subscriber(topic.c_str());
     if (sub.is_err())
     {
-      return Result<Void>::Err(-1, "Failed to declare subscriber");
+      return Result<Void>(-1, "Failed to declare subscriber");
     }
     else
     {
-      _subscribers.emplace(topic, sub.value());
+      _subscribers.emplace(topic, sub.ref());
     }
   }
   else
   {
-    return Result<Void>::Err(-1, "Not connected to Zenoh");
+    return Result<Void>(-1, "Not connected to Zenoh");
   }
-  return Result<Void>::Ok(true);
+  return Result<Void>(true);
 }
 
 Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
@@ -247,7 +247,7 @@ Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
           z_declare_subscriber(z_loan(_zenoh_session), &sub, z_loan(ke),
                                z_move(callback), &opts),
           "Unable to declare subscriber for key expression");
-  return Result<z_owned_subscriber_t>::Ok(sub);
+  return Result<z_owned_subscriber_t>(sub);
 }
 
 void ZenohActor::delete_subscriber(z_owned_subscriber_t sub)
@@ -304,7 +304,7 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   CHECK(z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size()));
   CHECK(z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
-  return Res::Ok();
+  return ResOk;
 }
 */
 void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
@@ -341,14 +341,14 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
   CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &put_options));
   z_drop(z_move(payload));
-  return Res::Ok();
+  return ResOk;
 }
 
 Res ZenohActor::publish_props()
 {
   if (!_connected)
   {
-    return Res::Err(ENOTCONN, "Not connected to Zenoh");
+    return Res(ENOTCONN, "Not connected to Zenoh");
   }
   z_id_t _zid = z_info_zid(z_loan(_zenoh_session));
   z_owned_string_t z_str;
@@ -361,7 +361,7 @@ Res ZenohActor::publish_props()
   */
   emit(ZenohEvent{.publish = _zenoh_msg});
   z_drop(z_move(z_str));
-  return Res::Ok();
+  return ResOk;
 }
 
 //============================================================
@@ -382,5 +382,5 @@ Res ZenohMsg::serialize(Serializer &ser) const
 
 Res ZenohMsg::deserialize(Deserializer &des)
 {
-  return Res::Err(EAFNOSUPPORT, "not implemented");
+  return Res(EAFNOSUPPORT, "not implemented");
 }
