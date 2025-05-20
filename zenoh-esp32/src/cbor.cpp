@@ -191,6 +191,13 @@ Res decode_number(T &i, nanocbor_value_t *des)
     return Res::Ok();
 }
 
+CborDeserializer::CborDeserializer(const uint8_t *bytes, size_t size){
+    _bytes = bytes;
+    _size = size;
+    _capacity = size;
+    nanocbor_decoder_init(&_des, _bytes, _size);
+}
+
 Res CborDeserializer::deserialize(uint8_t &i)
 {
     return decode_number(i, get_des());

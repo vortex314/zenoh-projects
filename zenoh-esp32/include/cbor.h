@@ -61,8 +61,7 @@ class CborDeserializer : public Deserializer
 private:
   /* data */
   const uint8_t *_bytes;
-  size_t _size;
-  size_t _capacity;
+  const size_t _size;
   nanocbor_value_t _des;
   nanocbor_value_t _map;
   nanocbor_value_t _array;
@@ -80,13 +79,7 @@ private:
 
 public:
   //  CborDeserializer(size_t size);
-  CborDeserializer(const uint8_t *bytes, size_t size)
-  {
-    _bytes = bytes;
-    _size = size;
-    _capacity = size;
-    nanocbor_decoder_init(&_des, _bytes, _size);
-  };
+  CborDeserializer(const uint8_t *bytes, size_t size);
   ~CborDeserializer();
 
   // Res fill_buffer(Bytes &b);
