@@ -39,7 +39,8 @@ float MotorActor::pid_update(float delta_t, float error)
 
 void MotorActor::on_cmd(MotorCmd &cmd)
 {
-    cmd.publish.for_each([&](auto msg){
+    cmd.publish.for_each([&](auto msg)
+                         {
         INFO("Motor actor cmd ");
         msg.Kp >> [&](const float &v)
         {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
@@ -48,7 +49,7 @@ void MotorActor::on_cmd(MotorCmd &cmd)
         msg.Kd >> [&](auto v)
         { _Kd = v; };
         msg.rpm_target >> [&](auto v)
-        { INFO("rpm_target %f ",v);_rpm_target = v; };});
+        { INFO("rpm_target %f ",v);_rpm_target = v; }; });
 
     if (cmd.isr_msg)
     {
@@ -133,18 +134,13 @@ void MotorActor::on_timer(int id)
 
 void MotorActor::on_start(void)
 {
-
-    if (capture_init().is_err())
-    {
-        ERROR("Failed to init capture");
-        return;
-    }
-    if (pwm_init().is_err())
-    {
-        ERROR("Failed to init PWM");
-        return;
-    }
-    INFO("Motor actor started");
+    capture_init()
+        .and_then([&](auto r)
+                  { return pwm_init(); })
+        .on_error([&](auto rc, auto msg)
+                  { ERROR("Motor Actor start failed."); })
+        .inspect([&](auto v)
+                 { INFO(" Motor Actor started."); });
 }
 
 MotorActor::~MotorActor()
@@ -159,7 +155,7 @@ MotorActor::~MotorActor()
  * and generator to control the motor's PWM signals. It sets up the necessary configurations for the timer, operator,
  * comparator, and generator, and defines the actions for timer and compare events.
  *
- * @return Res::Ok on successful initialization, or an appropriate error code if initialization fails.
+ * @return ResOk on successful initialization, or an appropriate error code if initialization fails.
  *
  * Configuration Details:
  * - Timer:
@@ -283,7 +279,7 @@ Res MotorActor::pwm_init()
     //  CHECK_ESP(mcpwm_timer_enable(self.timer_handle));
     CHECK_ESP(mcpwm_timer_start_stop(_timer, MCPWM_TIMER_START_NO_STOP));
 
-    return Res::Ok();
+    return ResOk;
 }
 
 /**
@@ -295,7 +291,7 @@ Res MotorActor::pwm_init()
  * callback for handling capture events. Finally, it enables and starts the
  * capture timer and channel.
  *
- * @return Res::Ok() if the initialization is successful, otherwise an error code.
+ * @return ResOk if the initialization is successful, otherwise an error code.
  */
 Res MotorActor::capture_init()
 {
@@ -338,7 +334,7 @@ Res MotorActor::capture_init()
     CHECK_ESP(mcpwm_capture_timer_enable(_cap_timer));
     CHECK_ESP(mcpwm_capture_timer_start(_cap_timer));
 
-    return Res::Ok();
+    return ResOk;
 }
 
 Res config_gpio_to_value(gpio_num_t gpio_num, uint8_t value)
@@ -352,7 +348,7 @@ Res config_gpio_to_value(gpio_num_t gpio_num, uint8_t value)
     };
     CHECK_ESP(gpio_config(&io_conf));
     CHECK_ESP(gpio_set_level(gpio_num, value));
-    return Res::Ok();
+    return ResOk;
 }
 
 /**
@@ -393,11 +389,9 @@ extern "C" bool capture_callback(
 
     if (isr_data.sum > 8'000'000)
     { // 100 msec at 80 MHz
-        MotorCmd cmd;
         IsrMsg isr_msg;
         isr_msg.sum = isr_data.sum;
         isr_msg.count = isr_data.count;
-        cmd.isr_msg = isr_msg;
         ((MotorActor *)arg)->tellFromIsr(new MotorCmd{isr_msg : isr_msg});
         // Reset the sum and count for the next period
         isr_data.sum = 0;
@@ -434,7 +428,7 @@ Res MotorActor::pwm_stop()
 {
     this->_rpm_target = 0.0f;
     this->_pwm_value = 0;
-    return Res::Ok();
+    return ResOk;
 }
 
 Res MotorMsg::serialize(Serializer &ser) const
@@ -450,14 +444,13 @@ Res MotorMsg::serialize(Serializer &ser) const
     ser.serialize(KEY("p"), p);
     ser.serialize(KEY("i"), i);
     ser.serialize(KEY("d"), d);
-    ser.map_end();
-    return Res::Ok();
+    return ser.map_end();
 }
 
 Res MotorMsg::deserialize(Deserializer &des)
 {
-    auto r = des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
-                             {
+    return des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
+                           {
         switch (key)
         {
         case H("rpm_target"):
@@ -472,10 +465,4 @@ Res MotorMsg::deserialize(Deserializer &des)
             INFO("unknown key %d",key);
             return d.skip_next();
         } });
-    if (r.is_err())
-    {
-        ERROR("Failed to deserialize MotorMsg");
-        return r;
-    }
-    return Res::Ok();
 }

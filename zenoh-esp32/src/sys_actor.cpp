@@ -41,8 +41,10 @@ void SysActor::on_cmd(SysCmd &cmd)
             struct tm *timeinfo;
             char buffer[80];
             
+            setenv("TZ","MET",1);
+            tzset();
             // Get current time using gettimeofday()
-            int rc = gettimeofday(&tv1, NULL);
+            gettimeofday(&tv1, NULL);
             
             // Convert to local time
             timeinfo = localtime(&tv1.tv_sec);
@@ -118,8 +120,8 @@ Res SysMsg::serialize(Serializer &ser) const
 
 Res SysMsg::deserialize(Deserializer &des)
 {
-    des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
-                    {
+    return des.iterate_map([&](Deserializer &d, uint32_t key) -> Res
+                           {
        // INFO("key %d", key);
         switch (key)
         {
@@ -130,6 +132,4 @@ Res SysMsg::deserialize(Deserializer &des)
             ERROR("unknown key %d",key);
             return d.skip_next();
         } });
-
-    return ResOk;
 }

@@ -89,6 +89,24 @@ public:
         };
         return _msg->c_str();
     }
+
+        template <typename F>
+    auto inspect(F &&func) const -> Result<T>
+    {
+        if (is_ok())
+            func(ref());
+        return *this;
+    }
+
+    template <typename F>
+    auto on_error(F &&func) const -> Result<T>
+    {
+        if (is_err())
+            func(_rc,_msg);
+        return *this;
+    }
+
+
     
     template <typename F>
     auto map(F&& func) const -> Result<decltype(func(std::declval<T>()))> {

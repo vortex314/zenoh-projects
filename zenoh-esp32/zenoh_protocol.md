@@ -224,3 +224,129 @@ The schema focuses on the structure of the messages rather than the exact binary
 Each message type follows a similar pattern with a header byte containing flags and a message type identifier, followed by message-specific fields. The extension mechanism allows for future protocol extensions without breaking backward compatibility.
 
 Wiki pages you might want to explore: https://deepwiki.com/eclipse-zenoh/zenoh/7-protocol-details
+
+# Answer
+
+I'll create a CDDL (Concise Data Definition Language) declaration for the Zenoh protocol's declaration, interest, and liveliness messages based on the codebase.
+
+## CDDL for Declare Messages
+
+```cddl
+; Declare message structure
+declare = {
+  ? interest_id => uint32,         ; Optional interest ID if responding to an Interest
+  ext_qos => uint64,               ; QoS extension
+  ? ext_tstamp => bstr,            ; Optional timestamp extension
+  ext_nodeid => uint64,            ; Node ID extension
+  body => declare-body             ; The actual declaration body
+}
+
+; Different types of declaration bodies
+declare-body = (
+  declare-keyexpr //
+  declare-subscriber //
+  declare-queryable //
+  declare-token //
+  undeclare-keyexpr //
+  undeclare-subscriber //
+  undeclare-queryable //
+  undeclare-token //
+  declare-final
+)
+
+; Token declaration
+declare-token = {
+  id => uint32,                    ; Token identifier
+  wire_expr => wire-expr           ; Wire expression for the token
+}
+
+; Token undeclaration
+undeclare-token = {
+  id => uint32,                    ; Token identifier to undeclare
+  ? wire_expr => wire-expr         ; Optional wire expression
+}
+
+; Wire expression structure
+wire-expr = {
+  scope => uint16,                 ; Scope of the expression
+  ? suffix => bstr                 ; Optional suffix
+}
+``` [1](#1-0) 
+
+## CDDL for Interest Messages
+
+```cddl
+; Interest message structure
+interest = {
+  id => uint32,                    ; Interest identifier
+  options => interest-options,     ; Interest options
+  ? wire_expr => wire-expr,        ; Optional wire expression (if restricted)
+  ? ext_qos => uint64,             ; Optional QoS extension
+  ? ext_tstamp => bstr,            ; Optional timestamp extension
+  ext_nodeid => uint64             ; Node ID extension
+}
+
+; Interest options
+interest-options = {
+  mode => uint2,                   ; 0=Final, 1=Current, 2=Future, 3=CurrentFuture
+  aggregate => bool,               ; If replies should be aggregated
+  mapping => bool,                 ; Mapping ownership (sender/receiver)
+  has_suffix => bool,              ; If key expression has suffix
+  restricted => bool,              ; If interest is restricted to matching key expr
+  tokens => bool,                  ; If interest refers to tokens
+  subscribers => bool,             ; If interest refers to subscribers
+  queryables => bool,              ; If interest refers to queryables
+  key_exprs => bool                ; If interest refers to key expressions
+}
+``` [2](#1-1) 
+
+## CDDL for Liveliness Messages
+
+Liveliness in Zenoh is implemented using tokens, which are declared and undeclared using the declare/undeclare token messages. Liveliness queries use the interest mechanism.
+
+```cddl
+; Liveliness token declaration (same as declare-token above)
+liveliness-token = {
+  id => uint32,                    ; Token identifier
+  wire_expr => wire-expr           ; Wire expression for the token
+}
+
+; Liveliness token undeclaration (same as undeclare-token above)
+liveliness-token-undeclare = {
+  id => uint32,                    ; Token identifier to undeclare
+  ? wire_expr => wire-expr         ; Optional wire expression
+}
+
+; Liveliness query (using interest with tokens option)
+liveliness-query = {
+  id => uint32,                    ; Interest identifier
+  options => {
+    mode => 1,                     ; Current mode
+    tokens => true,                ; Interest refers to tokens
+    ; Other options as needed
+  },
+  wire_expr => wire-expr,          ; Wire expression to query
+  ; Other fields as needed
+}
+
+; Liveliness subscription (using interest with tokens option)
+liveliness-subscription = {
+  id => uint32,                    ; Interest identifier
+  options => {
+    mode => 2 / 3,                 ; Future or CurrentFuture mode
+    tokens => true,                ; Interest refers to tokens
+    ; Other options as needed
+  },
+  wire_expr => wire-expr,          ; Wire expression to subscribe to
+  ; Other fields as needed
+}
+``` [3](#1-2) 
+
+## Notes
+
+This CDDL representation is derived from the Zenoh protocol implementation in the codebase. The actual wire format may include additional flags and encoding details not fully captured in this CDDL. The protocol uses a binary encoding with specific bit flags and field layouts as shown in the code comments.
+
+The liveliness functionality in Zenoh leverages the existing declaration and interest mechanisms, with specific options set to indicate liveliness-related operations. Liveliness tokens are declared and undeclared using the standard token declaration messages, while liveliness queries and subscriptions use interest messages with the tokens option enabled.
+
+Wiki pages you might want to explore:
+- [Session API (eclipse-zenoh/zenoh)](/wiki/eclipse-zenoh/zenoh#2.1)
