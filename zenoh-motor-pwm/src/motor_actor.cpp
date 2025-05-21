@@ -39,17 +39,14 @@ float MotorActor::pid_update(float delta_t, float error)
 
 void MotorActor::on_cmd(MotorCmd &cmd)
 {
-    cmd.publish.for_each([&](auto msg)
+    cmd.publish.inspect([&](auto msg)
                          {
-        INFO("Motor actor cmd ");
-        msg.Kp >> [&](const float &v)
-        {INFO("Kp %f _Kp %f",v,_Kp);_Kp = v; };
-        msg.Ki >> [&](auto v)
-        { _Ki = v; };
-        msg.Kd >> [&](auto v)
-        { _Kd = v; };
-        msg.rpm_target >> [&](auto v)
-        { INFO("rpm_target %f ",v);_rpm_target = v; }; });
+                             INFO("Motor actor cmd ");
+                             msg.Kp.inspect([&](const float &v){_Kp = v; });
+                             msg.Ki.inspect([&](auto v){ _Ki = v; });
+                             msg.Kd.inspect([&](auto v){ _Kd = v; });
+                             msg.rpm_target.inspect([&](auto v){ _rpm_target = v; });
+                             publish_props(); });
 
     if (cmd.isr_msg)
     {
@@ -87,21 +84,26 @@ void MotorActor::on_cmd(MotorCmd &cmd)
     }
 }
 
+void MotorActor::publish_props()
+{
+    _motor_msg.rpm_measured = _rpm_measured;
+    _motor_msg.rpm_target = _rpm_target;
+    _motor_msg.pwm = _pwm_percent;
+    _motor_msg.Kp = _Kp;
+    _motor_msg.Ki = _Ki;
+    _motor_msg.Kd = _Kd;
+    _motor_msg.p = _p;
+    _motor_msg.i = _i;
+    _motor_msg.d = _d;
+
+    emit(MotorEvent{.publish = _motor_msg});
+}
+
 void MotorActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        _motor_msg.rpm_measured = _rpm_measured;
-        _motor_msg.rpm_target = _rpm_target;
-        _motor_msg.pwm = _pwm_percent;
-        _motor_msg.Kp = _Kp;
-        _motor_msg.Ki = _Ki;
-        _motor_msg.Kd = _Kd;
-        _motor_msg.p = _p;
-        _motor_msg.i = _i;
-        _motor_msg.d = _d;
-
-        emit(MotorEvent{.publish = _motor_msg});
+        publish_props();
     }
     else if (id == _timer_pid)
     {

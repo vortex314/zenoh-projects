@@ -66,6 +66,7 @@ public:
     Res pwm_test();
     Res pwm_set_duty(int duty);
     float pid_update(float delta_t, float error);
+    void publish_props();
     static uint32_t pwm_percent_to_ticks(float percent);
     static float clip(float value,float min=0.0f, float max=100.0f);
     static uint32_t pwm_ticks_to_percent(uint32_t ticks);

@@ -1,10 +1,5 @@
 # CDDL specs of Zenoh protocol
-Thanks to Devin : https://deepwiki.com/eclipse-zenoh/zenoh/7-protocol-details
 
-I'll create a comprehensive CDDL (Concise Data Definition Language) schema for the specific message types you requested from the Zenoh080 codec.
-
-Answer
-Based on the codebase, I'll provide detailed CDDL schemas for the eight message types you requested: hello-message, scout-message, frame-message, push-message, request-message, response-message, close-message, and keepalive-message.
 
 ## Basic Types and Common Structures
 First, let's define the basic types and common structures used across all message types:
@@ -216,18 +211,6 @@ extension = {
   ext-payload: any   ; Extension-specific payload  
 }
 ```
-## Notes
-This CDDL schema representation captures the structure of the eight requested message types in the Zenoh080 protocol. The Protocol Details wiki page provides additional context about the encoding rules and message structures.
-
-The schema focuses on the structure of the messages rather than the exact binary encoding details (like the variable-length integer encoding). For a complete understanding of the binary format, you would need to refer to the RFC document mentioned in the code: "https://github.com/eclipse-zenoh/roadmap/blob/main/rfcs/ALL/Serialization.md".
-
-Each message type follows a similar pattern with a header byte containing flags and a message type identifier, followed by message-specific fields. The extension mechanism allows for future protocol extensions without breaking backward compatibility.
-
-Wiki pages you might want to explore: https://deepwiki.com/eclipse-zenoh/zenoh/7-protocol-details
-
-# Answer
-
-I'll create a CDDL (Concise Data Definition Language) declaration for the Zenoh protocol's declaration, interest, and liveliness messages based on the codebase.
 
 ## CDDL for Declare Messages
 
@@ -340,7 +323,7 @@ liveliness-subscription = {
   wire_expr => wire-expr,          ; Wire expression to subscribe to
   ; Other fields as needed
 }
-``` [3](#1-2) 
+``` 
 
 ## Notes
 
@@ -350,3 +333,18 @@ The liveliness functionality in Zenoh leverages the existing declaration and int
 
 Wiki pages you might want to explore:
 - [Session API (eclipse-zenoh/zenoh)](/wiki/eclipse-zenoh/zenoh#2.1)
+
+This CDDL schema representation captures the structure of the eight requested message types in the Zenoh080 protocol. The Protocol Details wiki page provides additional context about the encoding rules and message structures.
+
+The schema focuses on the structure of the messages rather than the exact binary encoding details (like the variable-length integer encoding). For a complete understanding of the binary format, you would need to refer to the RFC document mentioned in the code: "https://github.com/eclipse-zenoh/roadmap/blob/main/rfcs/ALL/Serialization.md".
+
+Each message type follows a similar pattern with a header byte containing flags and a message type identifier, followed by message-specific fields. The extension mechanism allows for future protocol extensions without breaking backward compatibility.
+
+Wiki pages you might want to explore: https://deepwiki.com/eclipse-zenoh/zenoh/7-protocol-details
+
+Thanks to Devin : https://deepwiki.com/eclipse-zenoh/zenoh/7-protocol-details
+
+I'll create a comprehensive CDDL (Concise Data Definition Language) schema for the specific message types you requested from the Zenoh080 codec.
+
+Answer
+Based on the codebase, I'll provide detailed CDDL schemas for the eight message types you requested: hello-message, scout-message, frame-message, push-message, request-message, response-message, close-message, and keepalive-message.

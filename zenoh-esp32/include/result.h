@@ -132,6 +132,13 @@ public:
         return Result<T>(ENOTCONN, "filter failed"); // Return the current error if predicate fails
     }
 };
+
+
+typedef bool Void;
+typedef Result<Void> Res;
+//#define ResOk Res(true)
+//constexpr Res ResOk = Result<Void>(true); 
+static Res ResOk = Result<Void>(true); 
 /*
 typedef union Un {
         union Un* _pv;

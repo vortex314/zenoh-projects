@@ -16,7 +16,7 @@
 // #include <ArduinoJson.h>
 
 typedef std::vector<uint8_t> Bytes;
-typedef bool Void;
+
 #define TEST_RC(TYPE, VAL, MSG)                  \
   {                                              \
     auto rc = (VAL);                             \
@@ -109,9 +109,7 @@ typedef bool Void;
     }                                                                        \
   }
 
-typedef Result<Void> Res;
 
-#define ResOk Res(true)
 // Ok type for Res
 
 
