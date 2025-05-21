@@ -40,14 +40,19 @@ pub struct ZenohActor {
 
 impl ZenohActor {
     pub fn new() -> Self {
-        let config = Config::from_file("./zenoh.json5").ok().unwrap();
+        let r = Config::from_file("./zenoh.json5");
+        let config = Some(r.unwrap_or_else(|e| {
+            error!("ZenohActor::new() error {}", e);
+            panic!("ZenohActor::new() error {}", e);
+        }));
+
         //   let mut config = Config::default();
         //     config.insert_json5("mode", r#""client""#).unwrap();
         //     config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
 
         ZenohActor {
             actor: Actor::new(),
-            config: Some(config),
+            config,
             zenoh_session: None,
             subscriber: None,
             connected: false,

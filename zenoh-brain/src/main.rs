@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(unused_imports)]
+#![allow(unused_must_use)]
 use actor::Actor;
 use actor::ActorImpl;
 use log::info;
@@ -31,7 +32,7 @@ mod brain_actor;
 use anyhow::Result;
 use brain_actor::*;
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 3)]
+#[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 
 async fn main() -> Result<()> {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);

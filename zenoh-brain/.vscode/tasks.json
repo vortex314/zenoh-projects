@@ -9,7 +9,8 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "RUST_BACKTRACE": "full"
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
                 }
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
