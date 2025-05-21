@@ -33,7 +33,6 @@ const id = ref(null)
 
 function pressed() {
     console.log("pressed")
-    publish(props.src, props.pressed)
 }
 
 onMounted(() => {

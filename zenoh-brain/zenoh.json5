@@ -566,7 +566,7 @@
   //
 plugins_loading: {
   //    /// Enable plugins loading.
-    enabled: false,
+    enabled: true,
   //    /// Directories where plugins configured by name should be looked for. Plugins configured by __path__ are not subject to lookup.
   //    /// Directories are specified as object with fields `kind` and `value` is accepted.
   //    ///   1. If `kind` is `current_exe_parent`, then the parent of the current executable's directory is searched and `value` should be `null`.
