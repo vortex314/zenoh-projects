@@ -1,9 +1,16 @@
 <template>
-  <div >
+  <div>
     <button @click="addNewWidget">Add New Widget</button>
     <p>{{ info }}</p>
-    <div class="grid-stack" >
-     div>
+    <div class="grid-stack">
+      <div v-for="item in items" class="grid-stack-item">
+        <div class="grid-stack-item-content">
+          <div class="card-header">- Drag here - X</div>
+          <div class="card">the rest of the panel content doesn't drag gfasgfagfagFHJA
+            <Button :h="100"></Button>
+          </div>{{ item.x }}
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -11,166 +18,117 @@
 
 
 <script setup>
-import { createApp, ref, onMounted } from "vue";
+import { ref, onMounted, h, onBeforeUnmount,  render  } from "vue";
 import { GridStack } from "gridstack";
+import { GridItemComponent} from "./components/GridItemComponent.vue";
 
-    let count = ref(0);
-    let info = ref("qqqqqqqqqqqq");
-    let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
-    const items = [
-      { x: 2, y: 1, h: 2 },
-      { x: 2, y: 4, w: 3 },
-      { x: 4, y: 2 },
-      { x: 3, y: 1, h: 2 },
-      { x: 0, y: 6, w: 2, h: 2 },
-    ];
 
-    onMounted(() => {
-      grid = GridStack.init({ // DO NOT use grid.value = GridStack.init(), see above
-        float: true,
-        cellHeight: "70px",
-        minRow: 1,
-      });
+let count = ref(0);
+let info = ref("qqqqqqqqqqqq");
+let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
+const items = [
+  { x: 1, y: 1, h: 2, content: "Hello item1" },
+  { x: 2, y: 4, w: 3 },
+  { x: 4, y: 2 },
+  { x: 3, y: 1, h: 2 },
+  { x: 0, y: 6, w: 2, h: 2 },
+];
+const shadowDom = {};
 
-      grid.on("dragstop", function (event, element) {
-        const node = element.gridstackNode;
-        info.value = `you just dragged node #${node.id} to ${node.x},${node.y} – good job!`;
-      });
+onBeforeUnmount(() => {
+  // Clean up Vue renders
+  Object.values(shadowDom).forEach((el) => {
+    render(null, el);
+  });
+});
 
-      grid.load(items, true); // load items from array
+onMounted(() => {
+  grid = GridStack.init({ // DO NOT use grid.value = GridStack.init(), see above
+    float: true,
+    cellHeight: "40px",
+    minRow: 1,
+    handle: '.card-header',
+    margin: 1,
+  });
+
+  grid.on("dragstop", function (event, element) {
+    const node = element.gridstackNode;
+    info.value = `you just dragged node #${node.id} to ${node.x},${node.y} – good job!`;
+  });
+
+    // Listen for remove events to clean up Vue renders
+  grid.on('removed', function (event, items) {
+    items.forEach((item) => {
+      if (shadowDom[item.id]) {
+        render(null, shadowDom[item.id]);
+        delete shadowDom[item.id];
+      }
     });
+  });
 
-    function addNewWidget() {
-      const node = items[count.value] || {
-        x: Math.round(12 * Math.random()),
-        y: Math.round(5 * Math.random()),
-        w: Math.round(1 + 3 * Math.random()),
-        h: Math.round(1 + 3 * Math.random()),
-      };
-      node.id = node.content = String(count.value++);
-      console.log(node);
-      grid.addWidget(node);
-    }
+  GridStack.renderCB = function (el, widget) {
+    // el: HTMLElement div.grid-stack-item-content
+    // widget: GridStackWidget
+
+    const gridItemEl = el.closest('.grid-stack-item'); // div.grid-stack-item (parent of el)
+
+    // Create Vue component for the widget content
+    const itemId = widget.id
+    const widgetNode = h(GridItemComponent, {
+      itemId: itemId,
+      onRemove: () => { // Catch the remove event from the Vue component
+        grid.removeWidget(gridItemEl); // div.grid-stack-item
+        info.value = `Widget ${itemId} removed`;
+      }
+    })
+    shadowDom[itemId] = el
+    render(widgetNode, el) // Render Vue component into the GridStack-created element
+  }
+
+  grid.load(items, true); // load items from array
+});
+
+function addNewWidget() {
+  const node = items[count.value] || {
+    x: Math.round(12 * Math.random()),
+    y: Math.round(5 * Math.random()),
+    w: Math.round(1 + 3 * Math.random()),
+    h: Math.round(1 + 3 * Math.random()),
+  };
+  node.id = node.content = String(count.value++);
+  node.content = "<Button/>"
+  console.log(node);
+  grid.addWidget(node);
+}
 
 
 </script>
-<style lang="css" >
+<style lang="css">
 /* required file for gridstack to work */
 @import "gridstack/dist/gridstack.css";
-
-/* Optional styles for demos */
-.btn-primary {
-  color: #fff;
-  background-color: #007bff;
-}
-
-.btn {
-  display: inline-block;
-  padding: .375rem .75rem;
-  line-height: 1.5;
-  border-radius: .25rem;
-}
-
-a {
-  text-decoration: none;
-}
-
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: .5rem;
-}
-
-.sidebar {
-  background: rgb(215, 243, 215);
-  padding: 25px 0;
-  height: 100px;
-  text-align: center;
-}
-.sidebar > .grid-stack-item,
-.sidebar-item {
-  width: 100px;
-  height: 50px;
-  border: 2px dashed green;
-  text-align: center;
-  line-height: 35px;
-  background: rgb(192, 231, 192);
-  cursor: default;
-  display: inline-block;
-}
 
 .grid-stack {
   background: #FAFAD2;
 }
-.grid-stack.grid-stack-static {
-  background: #eee;
-}
 
-.sidebar > .grid-stack-item,
 .grid-stack-item-content {
   text-align: center;
   background-color: #18bc9c;
 }
 
+.grid-stack-item {
+  border: 0px solid #000;
+}
+
 .card-header {
   margin: 0;
   cursor: move;
-  min-height: 25px;
-  background-color: #16af91;
+  min-height: 18px;
+  background-color: #bdbdbd;
+  width: 100%;
 }
+
 .card-header:hover {
   background-color: #149b80;
-}
-
-.ui-draggable-disabled.ui-resizable-disabled > .grid-stack-item-content {
-  background-color: #777;
-}
-
-.grid-stack-item-removing {
-  opacity: 0.5;
-}
-.trash {
-  height: 100px;
-  background: rgba(255, 0, 0, 0.1) center center url(data:image/svg+xml;utf8;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iaXNvLTg4NTktMSI/Pgo8IS0tIEdlbmVyYXRvcjogQWRvYmUgSWxsdXN0cmF0b3IgMTYuMC4wLCBTVkcgRXhwb3J0IFBsdWctSW4gLiBTVkcgVmVyc2lvbjogNi4wMCBCdWlsZCAwKSAgLS0+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgdmVyc2lvbj0iMS4xIiBpZD0iQ2FwYV8xIiB4PSIwcHgiIHk9IjBweCIgd2lkdGg9IjY0cHgiIGhlaWdodD0iNjRweCIgdmlld0JveD0iMCAwIDQzOC41MjkgNDM4LjUyOSIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDM4LjUyOSA0MzguNTI5OyIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+CjxnPgoJPGc+CgkJPHBhdGggZD0iTTQxNy42ODksNzUuNjU0Yy0xLjcxMS0xLjcwOS0zLjkwMS0yLjU2OC02LjU2My0yLjU2OGgtODguMjI0TDMwMi45MTcsMjUuNDFjLTIuODU0LTcuMDQ0LTcuOTk0LTEzLjA0LTE1LjQxMy0xNy45ODkgICAgQzI4MC4wNzgsMi40NzMsMjcyLjU1NiwwLDI2NC45NDUsMGgtOTEuMzYzYy03LjYxMSwwLTE1LjEzMSwyLjQ3My0yMi41NTQsNy40MjFjLTcuNDI0LDQuOTQ5LTEyLjU2MywxMC45NDQtMTUuNDE5LDE3Ljk4OSAgICBsLTE5Ljk4NSw0Ny42NzZoLTg4LjIyYy0yLjY2NywwLTQuODUzLDAuODU5LTYuNTY3LDIuNTY4Yy0xLjcwOSwxLjcxMy0yLjU2OCwzLjkwMy0yLjU2OCw2LjU2N3YxOC4yNzQgICAgYzAsMi42NjQsMC44NTUsNC44NTQsMi41NjgsNi41NjRjMS43MTQsMS43MTIsMy45MDQsMi41NjgsNi41NjcsMi41NjhoMjcuNDA2djI3MS44YzAsMTUuODAzLDQuNDczLDI5LjI2NiwxMy40MTgsNDAuMzk4ICAgIGM4Ljk0NywxMS4xMzksMTkuNzAxLDE2LjcwMywzMi4yNjQsMTYuNzAzaDIzNy41NDJjMTIuNTY2LDAsMjMuMzE5LTUuNzU2LDMyLjI2NS0xNy4yNjhjOC45NDUtMTEuNTIsMTMuNDE1LTI1LjE3NCwxMy40MTUtNDAuOTcxICAgIFYxMDkuNjI3aDI3LjQxMWMyLjY2MiwwLDQuODUzLTAuODU2LDYuNTYzLTIuNTY4YzEuNzA4LTEuNzA5LDIuNTctMy45LDIuNTctNi41NjRWODIuMjIxICAgIEM0MjAuMjYsNzkuNTU3LDQxOS4zOTcsNzcuMzY3LDQxNy42ODksNzUuNjU0eiBNMTY5LjMwMSwzOS42NzhjMS4zMzEtMS43MTIsMi45NS0yLjc2Miw0Ljg1My0zLjE0aDkwLjUwNCAgICBjMS45MDMsMC4zODEsMy41MjUsMS40Myw0Ljg1NCwzLjE0bDEzLjcwOSwzMy40MDRIMTU1LjMxMUwxNjkuMzAxLDM5LjY3OHogTTM0Ny4xNzMsMzgwLjI5MWMwLDQuMTg2LTAuNjY0LDguMDQyLTEuOTk5LDExLjU2MSAgICBjLTEuMzM0LDMuNTE4LTIuNzE3LDYuMDg4LTQuMTQxLDcuNzA2Yy0xLjQzMSwxLjYyMi0yLjQyMywyLjQyNy0yLjk5OCwyLjQyN0gxMDAuNDkzYy0wLjU3MSwwLTEuNTY1LTAuODA1LTIuOTk2LTIuNDI3ICAgIGMtMS40MjktMS42MTgtMi44MS00LjE4OC00LjE0My03LjcwNmMtMS4zMzEtMy41MTktMS45OTctNy4zNzktMS45OTctMTEuNTYxVjEwOS42MjdoMjU1LjgxNVYzODAuMjkxeiIgZmlsbD0iI2ZmOWNhZSIvPgoJCTxwYXRoIGQ9Ik0xMzcuMDQsMzQ3LjE3MmgxOC4yNzFjMi42NjcsMCw0Ljg1OC0wLjg1NSw2LjU2Ny0yLjU2N2MxLjcwOS0xLjcxOCwyLjU2OC0zLjkwMSwyLjU2OC02LjU3VjE3My41ODEgICAgYzAtMi42NjMtMC44NTktNC44NTMtMi41NjgtNi41NjdjLTEuNzE0LTEuNzA5LTMuODk5LTIuNTY1LTYuNTY3LTIuNTY1SDEzNy4wNGMtMi42NjcsMC00Ljg1NCwwLjg1NS02LjU2NywyLjU2NSAgICBjLTEuNzExLDEuNzE0LTIuNTY4LDMuOTA0LTIuNTY4LDYuNTY3djE2NC40NTRjMCwyLjY2OSwwLjg1NCw0Ljg1MywyLjU2OCw2LjU3QzEzMi4xODYsMzQ2LjMxNiwxMzQuMzczLDM0Ny4xNzIsMTM3LjA0LDM0Ny4xNzJ6IiBmaWxsPSIjZmY5Y2FlIi8+CgkJPHBhdGggZD0iTTIxMC4xMjksMzQ3LjE3MmgxOC4yNzFjMi42NjYsMCw0Ljg1Ni0wLjg1NSw2LjU2NC0yLjU2N2MxLjcxOC0xLjcxOCwyLjU2OS0zLjkwMSwyLjU2OS02LjU3VjE3My41ODEgICAgYzAtMi42NjMtMC44NTItNC44NTMtMi41NjktNi41NjdjLTEuNzA4LTEuNzA5LTMuODk4LTIuNTY1LTYuNTY0LTIuNTY1aC0xOC4yNzFjLTIuNjY0LDAtNC44NTQsMC44NTUtNi41NjcsMi41NjUgICAgYy0xLjcxNCwxLjcxNC0yLjU2OCwzLjkwNC0yLjU2OCw2LjU2N3YxNjQuNDU0YzAsMi42NjksMC44NTQsNC44NTMsMi41NjgsNi41N0MyMDUuMjc0LDM0Ni4zMTYsMjA3LjQ2NSwzNDcuMTcyLDIxMC4xMjksMzQ3LjE3MnogICAgIiBmaWxsPSIjZmY5Y2FlIi8+CgkJPHBhdGggZD0iTTI4My4yMiwzNDcuMTcyaDE4LjI2OGMyLjY2OSwwLDQuODU5LTAuODU1LDYuNTctMi41NjdjMS43MTEtMS43MTgsMi41NjItMy45MDEsMi41NjItNi41N1YxNzMuNTgxICAgIGMwLTIuNjYzLTAuODUyLTQuODUzLTIuNTYyLTYuNTY3Yy0xLjcxMS0xLjcwOS0zLjkwMS0yLjU2NS02LjU3LTIuNTY1SDI4My4yMmMtMi42NywwLTQuODUzLDAuODU1LTYuNTcxLDIuNTY1ICAgIGMtMS43MTEsMS43MTQtMi41NjYsMy45MDQtMi41NjYsNi41Njd2MTY0LjQ1NGMwLDIuNjY5LDAuODU1LDQuODUzLDIuNTY2LDYuNTdDMjc4LjM2NywzNDYuMzE2LDI4MC41NSwzNDcuMTcyLDI4My4yMiwzNDcuMTcyeiIgZmlsbD0iI2ZmOWNhZSIvPgoJPC9nPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+CjxnPgo8L2c+Cjwvc3ZnPgo=) no-repeat;
-}
-
-/* make nested grid have slightly darker bg take almost all space (need some to tell them apart) so items inside can have similar to external size+margin */
-.grid-stack > .grid-stack-item.grid-stack-sub-grid > .grid-stack-item-content {
-  background: rgba(0,0,0,0.1);
-  inset: 0 2px;
-}
-.grid-stack.grid-stack-nested {
-  background: none;
-  inset: 0;
-}
-
-.grid-stack.show-dimensions .grid-stack-item:after {
-   content: '1x1';
-   position: absolute;
-   top: 50%;
-   left: 50%;
-   transform: translate(-50%, -50%);
-   padding: 2px;
-   color: black;
-   background-color: white;
-   pointer-events: none; /* to not interfere with dragging the item */
-}
-
-.grid-stack.show-dimensions .grid-stack-item[gs-h]::after {
-   content: '1x' attr(gs-h);
-}
-
-.grid-stack.show-dimensions .grid-stack-item[gs-w]::after {
-   content: attr(gs-w) 'x1';
-}
-
-.grid-stack.show-dimensions .grid-stack-item[gs-h][gs-w]::after {
-   content: attr(gs-w) 'x' attr(gs-h);
-}
-body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.42857143;
-  color: #333;
-  background-color: #fff;
 }
 </style>
