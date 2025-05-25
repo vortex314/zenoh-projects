@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(unused_imports)]
 #![allow(unused_must_use)]
+#![allow(dead_code)] // Allow dead code for now
 use actor::Actor;
 use actor::ActorImpl;
 use log::info;
@@ -68,6 +69,7 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         brain_actor.run().await;
     });
-    tokio::time::sleep(Duration::from_secs(100000)).await;
-    Result::Ok(())
+    loop {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
 }

@@ -1,15 +1,13 @@
 <template>
     <div>
-        <Button />
         <Grid />
     </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, onBeforeUnmount, ref } from 'vue'
+import { defineProps, onBeforeUnmount, ref,provide } from 'vue'
 import Grid from './components/Grid.vue'
-import Button from './components/Button.vue'
-import 'gridstack/dist/gridstack.min.css';
+
 
 const props = defineProps({
     title: { type: String, default: "No Title" },
@@ -19,6 +17,14 @@ const props = defineProps({
 
 const emit = defineEmits(['remove'])
 const root = ref(null)
+let global = {
+    cols: 12,
+    rows: 12,
+    col_width: 100,
+    row_height: 100,
+};
+
+provide('global', global);
 
 const removeItem = () => {
     emit('remove', root.value)

@@ -9,8 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vueuse/core": "^13.2.0",
+    "echarts": "^5.6.0",
     "gridstack": "^12.1.2",
-    "vue": "^3.5.14"
+    "vue": "^3.5.14",
+    "vue-echarts": "^7.0.3",
+    "vue-google-charts": "^1.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",

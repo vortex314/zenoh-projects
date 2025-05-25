@@ -1,37 +1,24 @@
 <template>
   <div>
     <button @click="addNewWidget">Add New Widget</button>
-    <p>{{ info }}</p>
-    <div class="grid-stack">
-      <div v-for="item in items" class="grid-stack-item">
-        <div class="grid-stack-item-content">
-          <div class="card-header">- Drag here - X</div>
-          <div class="card">the rest of the panel content doesn't drag gfasgfagfagFHJA
-            <Button :h="100"></Button>
-          </div>{{ item.x }}
-        </div>
-      </div>
-    </div>
+    <div class="grid-stack"> </div>
   </div>
 </template>
 
-
-
 <script setup>
-import { ref, onMounted, h, onBeforeUnmount,  render  } from "vue";
+import { ref, onMounted, h, onBeforeUnmount, render, inject } from "vue";
 import { GridStack } from "gridstack";
-import { GridItemComponent} from "./components/GridItemComponent.vue";
+import GridItem from "@/components/GridItem.vue"; // Import your Vue component
 
-
+const global = inject('global'); // Inject global state if needed
 let count = ref(0);
-let info = ref("qqqqqqqqqqqq");
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = [
-  { x: 1, y: 1, h: 2, content: "Hello item1" },
-  { x: 2, y: 4, w: 3 },
-  { x: 4, y: 2 },
-  { x: 3, y: 1, h: 2 },
-  { x: 0, y: 6, w: 2, h: 2 },
+  { x: 0, y: 0, h: 10, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
+  { x: 3, y: 2, h: 4, w: 3, config: { title: "measured RPM", src: "src/mtr1/motor/measure_rpm" }, kind: "LineChart" },
+  { x: 4, y: 2, h: 4, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart" },
+  { x: 3, y: 1, h: 4, w: 4, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider" },
+  { x: 0, y: 6, w: 4, h: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button" },
 ];
 const shadowDom = {};
 
@@ -51,12 +38,12 @@ onMounted(() => {
     margin: 1,
   });
 
-  grid.on("dragstop", function (event, element) {
-    const node = element.gridstackNode;
-    info.value = `you just dragged node #${node.id} to ${node.x},${node.y} – good job!`;
-  });
+  global.grid = grid; // Store grid in global state if needed
+  global.items = items; // Store items in global state if needed
+  global.count = count; // Store count in global state if needed
 
-    // Listen for remove events to clean up Vue renders
+
+  // Listen for remove events to clean up Vue renders
   grid.on('removed', function (event, items) {
     items.forEach((item) => {
       if (shadowDom[item.id]) {
@@ -66,26 +53,35 @@ onMounted(() => {
     });
   });
 
+  grid.on('change', function (event, items) {
+    //    console.log("GridStack change event", items);
+  });
+
+
   GridStack.renderCB = function (el, widget) {
-    // el: HTMLElement div.grid-stack-item-content
-    // widget: GridStackWidget
+    console.log("Grid : renderCB", widget);
 
     const gridItemEl = el.closest('.grid-stack-item'); // div.grid-stack-item (parent of el)
 
     // Create Vue component for the widget content
-    const itemId = widget.id
-    const widgetNode = h(GridItemComponent, {
-      itemId: itemId,
+    const id = widget.id
+    const widgetNode = h(GridItem, {
+      id: id,
+      dim: widget.dim,
+      config: widget.config,
+      kind: widget.kind || "Gauge",
       onRemove: () => { // Catch the remove event from the Vue component
         grid.removeWidget(gridItemEl); // div.grid-stack-item
-        info.value = `Widget ${itemId} removed`;
+        info.value = `Widget ${id} removed`;
       }
     })
-    shadowDom[itemId] = el
+    shadowDom[id] = el
     render(widgetNode, el) // Render Vue component into the GridStack-created element
   }
 
-  grid.load(items, true); // load items from array
+  addNewWidget(); // Add initial widget
+
+  //  grid.load(items, true); // load items from array
 });
 
 function addNewWidget() {
@@ -95,9 +91,17 @@ function addNewWidget() {
     w: Math.round(1 + 3 * Math.random()),
     h: Math.round(1 + 3 * Math.random()),
   };
-  node.id = node.content = String(count.value++);
-  node.content = "<Button/>"
+  let dim = {
+    x: (node.x === undefined) ? 0 : node.x,
+    y: (node.y === undefined) ? 0 : node.y,
+    w: (node.w === undefined) ? 1 : node.w,
+    h: (node.h === undefined) ? 1 : node.h,
+  }
+  node.id = String(Math.round(2 ** 32 * Math.random()))
+  node.content = String(count.value++);
+  node.dim = dim;
   console.log(node);
+  console.log()
   grid.addWidget(node);
 }
 
@@ -114,21 +118,11 @@ function addNewWidget() {
 .grid-stack-item-content {
   text-align: center;
   background-color: #18bc9c;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .grid-stack-item {
   border: 0px solid #000;
-}
-
-.card-header {
-  margin: 0;
-  cursor: move;
-  min-height: 18px;
-  background-color: #bdbdbd;
-  width: 100%;
-}
-
-.card-header:hover {
-  background-color: #149b80;
 }
 </style>
