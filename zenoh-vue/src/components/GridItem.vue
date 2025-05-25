@@ -23,7 +23,7 @@ import Button from "@/components/Button.vue"; // Import your Vue component
 import LineChart from "@/components/LineChart.vue"; // Import your Vue component
 import PieChart from "@/components/PieChart.vue"; // Import your Vue component
 
-let grid = inject('global').grid; // Inject the grid instance if needed
+
 
 const grid_items = {
   Gauge: markRaw(Gauge),
@@ -70,7 +70,10 @@ const myElement = ref(null);
 
 onMounted(async () => {
   await nextTick();
-  console("cellHeight ", GridStack.cellHeight());
+  const  global = inject('global'); // Inject the grid instance if needed
+
+  console.log(" grid ", global.value.grid);
+  console("cellHeight ", global.value.grid.cellHeight());
   console("cellWidth ", GridStack.cellWidth());
   // if (myElement.value) {
   // Get standard HTML attributes

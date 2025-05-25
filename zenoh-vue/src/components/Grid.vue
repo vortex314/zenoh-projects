@@ -6,11 +6,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, h, onBeforeUnmount, render, inject } from "vue";
+import { ref, onMounted, h, onBeforeUnmount, render, inject, provide } from "vue";
 import { GridStack } from "gridstack";
 import GridItem from "@/components/GridItem.vue"; // Import your Vue component
 
-const global = inject('global'); // Inject global state if needed
+const global = ref({}); // Create a reactive global state
+provide ('global', global ); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = [
@@ -38,9 +39,9 @@ onMounted(() => {
     margin: 1,
   });
 
-  global.grid = grid; // Store grid in global state if needed
-  global.items = items; // Store items in global state if needed
-  global.count = count; // Store count in global state if needed
+  global.value.grid = grid; // Store grid in global state if needed
+  global.value.items = items; // Store items in global state if needed
+  global.value.count = count; // Store count in global state if needed
 
 
   // Listen for remove events to clean up Vue renders
