@@ -1,6 +1,9 @@
 <template>
   <div>
-    <button @click="addNewWidget">Add New Widget</button>
+    <span><button @click="addNewWidget">Add New Widget</button>
+      <button @click="addWidget('LineChart')">LineChart</button>
+      <button @click="addWidget('PieChart')">PieChart</button></span>
+
     <div class="grid-stack"> </div>
   </div>
 </template>
@@ -11,15 +14,15 @@ import { GridStack } from "gridstack";
 import GridItem from "@/components/GridItem.vue"; // Import your Vue component
 
 const global = ref({}); // Create a reactive global state
-provide ('global', global ); // Provide global state if needed
+provide('global', global); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = [
-  { x: 0, y: 0, h: 5, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
-  { x: 3, y: 2, h: 4, w: 3, config: { title: "measured RPM", src: "src/mtr1/motor/measure_rpm" }, kind: "LineChart" },
-  { x: 4, y: 2, h: 4, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart" },
-  { x: 3, y: 1, h: 4, w: 4, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider" },
-  { x: 0, y: 6, w: 4, h: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button" },
+  { x: 0, y: 0, h: 20, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
+  { x: 6, y: 0, h: 20, w: 5, config: { title: "measured RPM", src: "src/mtr1/motor/measure_rpm" }, kind: "LineChart" },
+  { x: 4, y: 2, h: 20, w: 5, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart" },
+  { x: 3, y: 1, h: 20, w: 4, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider" },
+  { x: 0, y: 6, w: 20, h: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button" },
 ];
 const shadowDom = {};
 
@@ -36,7 +39,7 @@ onMounted(() => {
     cellHeight: "20px",
     minRow: 1,
     handle: '.card-header',
-    margin: 1,
+    margin: 2,
   });
 
   global.value.grid = grid; // Store grid in global state if needed
@@ -78,11 +81,11 @@ onMounted(() => {
     })
     shadowDom[id] = el
     render(widgetNode, el) // Render Vue component into the GridStack-created element
-    console.log("dimensions cells",grid.getCellHeight(), grid.cellWidth())
-    el.style.height = String(widget.dim.h * grid.getCellHeight())+"px";
-    el.style.width = String(widget.dim.w *grid.cellWidth())+"px";
-        console.log("Element data",el)
-    console.log("style after ",el.style)
+    console.log("dimensions cells", grid.getCellHeight(), grid.cellWidth())
+    el.style.height = String(widget.dim.h * grid.getCellHeight()) + "px";
+    el.style.width = String(widget.dim.w * grid.cellWidth()) + "px";
+    console.log("Element data", el)
+    console.log("style after ", el.style)
 
   }
 
@@ -93,10 +96,10 @@ onMounted(() => {
 
 function addNewWidget() {
   const node = items[count.value] || {
-    x: Math.round(12 * Math.random()),
-    y: Math.round(5 * Math.random()),
-    w: Math.round(1 + 3 * Math.random()),
-    h: Math.round(1 + 3 * Math.random()),
+    x: 6,
+    y: 10,
+    w: 4,
+    h: 6,
   };
   let dim = {
     x: (node.x === undefined) ? 0 : node.x,
@@ -107,6 +110,26 @@ function addNewWidget() {
   node.id = String(Math.round(2 ** 32 * Math.random()))
   node.content = String(count.value++);
   node.dim = dim;
+  grid.addWidget(node);
+}
+
+function addWidget(kind) {
+  const node = items[count.value] || {
+    x: 6 ,
+    y: 6,
+    w: 4,
+    h: 6,
+  };
+  let dim = {
+    x: (node.x === undefined) ? 0 : node.x,
+    y: (node.y === undefined) ? 0 : node.y,
+    w: (node.w === undefined) ? 1 : node.w,
+    h: (node.h === undefined) ? 1 : node.h,
+  }
+  node.id = String(Math.round(2 ** 32 * Math.random()))
+  node.content = String(count.value++);
+  node.dim = dim;
+  node.kind = kind || "Gauge"; // Set the kind of widget
   grid.addWidget(node);
 }
 
