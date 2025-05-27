@@ -38,7 +38,7 @@
     /// See https://docs.rs/zenoh/latest/zenoh/config/struct.EndPoint.html
     endpoints: [
       /// "tcp/limero.ddns.net:7447"
-      "tcp/127.0.0.1:7447",
+       "tcp/127.0.0.1:7449",
       // "<proto>/<address>"
       ],
 
@@ -84,7 +84,7 @@
     /// or different lists for router, peer and client (e.g. endpoints: { router: ["tcp/[::]:7447"], peer: ["tcp/[::]:0"] }).
     ///"tcp/192.168.0.238:7447",
     /// See https://docs.rs/zenoh/latest/zenoh/config/struct.EndPoint.html
-    endpoints: { router: ["udp/224.0.0.123:7447","tcp/127.0.0.1:7447"], peer: ["tcp/[::]:0","udp/224.0.0.123:7447"] },
+    endpoints: { router: ["udp/224.0.0.123:7447","tcp/127.0.0.1:7448"], peer: ["tcp/[::]:0","udp/224.0.0.123:7447"] },
    ///  endpoints: { router: ["udp/192.168.0.238:7447","tcp/127.0.0.1:7447","tcp/192.168.0.238:7447"], peer: ["tcp/[::]:0","udp/224.0.0.123:7447"] },
 
     /// Global listen configuration,

@@ -17,14 +17,7 @@ const props = defineProps({
 
 const emit = defineEmits(['remove'])
 const root = ref(null)
-let global = {
-    cols: 12,
-    rows: 12,
-    col_width: 100,
-    row_height: 100,
-};
 
-provide('global', global);
 
 const removeItem = () => {
     emit('remove', root.value)
