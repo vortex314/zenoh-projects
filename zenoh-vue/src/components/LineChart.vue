@@ -1,32 +1,56 @@
 <template>
-    <div>
-        <GChart
-            type="LineChart"
-            :data="[
-                ['Label', 'Value'],
-                ['Memory', 80],
-                ['CPU', 55],
-                ['Network', 68],
-            ]"
-            :options="{
-                width: 400,
-                height: 120,
-                redFrom: 90,
-                redTo: 100,
-                yellowFrom: 75,
-                yellowTo: 90,
-                minorTicks: 5
-            }"/>
-
-    </div>>
+        <v-chart class="chart" :option="option" autoresize />
 </template>
 
 <script setup lang="ts">
 
-import { ref, onMounted, h, onBeforeUnmount, render } from "vue";
-import { GChart } from "vue-google-charts";
-// show gauge
-import { Gauge } from "vue-google-charts";
+import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
+import { useElementSize } from '@vueuse/core'
+
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  DatasetComponent,
+  GridComponent,
+  ToolboxComponent,
+  DataZoomComponent
+} from "echarts/components";
+import { use } from "echarts/core";
+import {
+    SVGRenderer,
+    CanvasRenderer
+} from "echarts/renderers";
+import { LineChart } from "echarts/charts";
+
+import VChart, { THEME_KEY } from "vue-echarts";
+use([
+  CanvasRenderer,
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  DatasetComponent,
+  GridComponent,
+  ToolboxComponent,
+  DataZoomComponent]);
+provide(THEME_KEY, "light");
+const option = ref({
+  xAxis: {
+    type: 'category',
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  },
+  yAxis: {
+    type: 'value'
+  },
+  series: [
+    {
+      data: [150, 230, 224, 218, 135, 147, 260],
+      type: 'line'
+    }
+  ]
+});
+
 const props = defineProps({
   id: {
     type: [String, Number],
@@ -54,3 +78,15 @@ onMounted(() => {
 });
 
 </script>
+
+<style scoped>
+.chart {
+    width: 100%;
+    height: 100%;
+}
+
+.v-chart {
+    width: 100%;
+    height: 100%;
+}
+</style>

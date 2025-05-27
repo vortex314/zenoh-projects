@@ -1,7 +1,5 @@
 <template>
-    <div >
-        <v-chart class="chart" :option="option" autoresize />
-    </div>
+    <v-chart class="chart" :option="option" autoresize />
 </template>
 
 <script setup>
@@ -9,7 +7,6 @@
 import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
 import { useElementSize } from '@vueuse/core'
 
-import { GChart } from "vue-google-charts";
 import { GaugeChart } from "echarts/charts";
 import {
     TitleComponent,
@@ -32,7 +29,7 @@ use([
     TooltipComponent,
     LegendComponent,
 ]);
-provide(THEME_KEY, "dark");
+provide(THEME_KEY, "light");
 
 // show gauge
 //import { Gauge } from "vue-google-charts";

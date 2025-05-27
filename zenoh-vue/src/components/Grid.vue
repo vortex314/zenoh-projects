@@ -15,7 +15,7 @@ provide ('global', global ); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = [
-  { x: 0, y: 0, h: 10, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
+  { x: 0, y: 0, h: 5, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
   { x: 3, y: 2, h: 4, w: 3, config: { title: "measured RPM", src: "src/mtr1/motor/measure_rpm" }, kind: "LineChart" },
   { x: 4, y: 2, h: 4, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart" },
   { x: 3, y: 1, h: 4, w: 4, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider" },
@@ -33,7 +33,7 @@ onBeforeUnmount(() => {
 onMounted(() => {
   grid = GridStack.init({ // DO NOT use grid.value = GridStack.init(), see above
     float: true,
-    cellHeight: "40px",
+    cellHeight: "20px",
     minRow: 1,
     handle: '.card-header',
     margin: 1,
@@ -78,6 +78,12 @@ onMounted(() => {
     })
     shadowDom[id] = el
     render(widgetNode, el) // Render Vue component into the GridStack-created element
+    console.log("dimensions cells",grid.getCellHeight(), grid.cellWidth())
+    el.style.height = String(widget.dim.h * grid.getCellHeight())+"px";
+    el.style.width = String(widget.dim.w *grid.cellWidth())+"px";
+        console.log("Element data",el)
+    console.log("style after ",el.style)
+
   }
 
   addNewWidget(); // Add initial widget
@@ -101,8 +107,6 @@ function addNewWidget() {
   node.id = String(Math.round(2 ** 32 * Math.random()))
   node.content = String(count.value++);
   node.dim = dim;
-  console.log(node);
-  console.log()
   grid.addWidget(node);
 }
 

@@ -59,6 +59,7 @@ const props = defineProps({
 
 // const global = inject('global');
 
+
 let itemId = ref(props.id);
 let item = shallowRef(props.config);
 
@@ -70,11 +71,9 @@ const myElement = ref(null);
 
 onMounted(async () => {
   await nextTick();
-  const  global = inject('global'); // Inject the grid instance if needed
+  console.log("creating GridItem ", kind.value)
 
-  console.log(" grid ", global.value.grid);
-  console("cellHeight ", global.value.grid.cellHeight());
-  console("cellWidth ", GridStack.cellWidth());
+  console.log("myElement", myElement.value);
   // if (myElement.value) {
   // Get standard HTML attributes
   const id = myElement.value.id
@@ -131,5 +130,10 @@ function handleRemove() {
 
 .card-header:hover {
   background-color: #149b80;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
 }
 </style>
