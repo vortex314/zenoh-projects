@@ -1,9 +1,11 @@
 <template>
   <div>
-    <span><button @click="addNewWidget">Add New Widget</button>
+    <span>
+      <button @click="addNewWidget">Add New Widget</button>
       <button @click="addWidget('LineChart')">LineChart</button>
-      <button @click="addWidget('PieChart')">PieChart</button></span>
-
+      <button @click="addWidget('PieChart')">PieChart</button>
+      <button @click="addWidget('Gauge')">Gauge</button>
+    </span>
     <div class="grid-stack"> </div>
   </div>
 </template>
@@ -63,7 +65,7 @@ onMounted(() => {
 
 
   GridStack.renderCB = function (el, widget) {
-    console.log("Grid : renderCB", widget);
+    console.log("Grid : renderCB", widget, "[", grid.getCellHeight(), ",", grid.cellWidth(), "]");
 
     const gridItemEl = el.closest('.grid-stack-item'); // div.grid-stack-item (parent of el)
 
@@ -81,12 +83,13 @@ onMounted(() => {
     })
     shadowDom[id] = el
     render(widgetNode, el) // Render Vue component into the GridStack-created element
-    console.log("dimensions cells", grid.getCellHeight(), grid.cellWidth())
-    el.style.height = String(widget.dim.h * grid.getCellHeight()) + "px";
-    el.style.width = String(widget.dim.w * grid.cellWidth()) + "px";
+    //   el.style.height = String(widget.dim.h * grid.getCellHeight()) + "px";
+    //   el.style.width = String(widget.dim.w * grid.cellWidth()) + "px";
     console.log("Element data", el)
     console.log("style after ", el.style)
-
+    this.emitter.on("publish", (data) => {
+      console.log(data)
+    });
   }
 
   addNewWidget(); // Add initial widget
@@ -114,8 +117,9 @@ function addNewWidget() {
 }
 
 function addWidget(kind) {
+  this.emitter.emit("publish", { topic: "dst/mtr1/motor.rpm_target", value: 3140 })
   const node = items[count.value] || {
-    x: 6 ,
+    x: 6,
     y: 6,
     w: 4,
     h: 6,

@@ -4,7 +4,7 @@
         <span>{{ config.title }}</span>
         <button class="remove-btn" @click="handleRemove" style="float: right;">×</button>
       </div>
-      <div class="card" style = "display :flex; flex-direction: column; justify-content: top; align-items: top;">
+      <div class="card" >
         <component :is="kind" :id="props.id" :config="props.config" :dim="props.dim" />
       </div>
     </div>
@@ -59,27 +59,13 @@ let item = shallowRef(props.config);
 let kind = ref(grid_items[props.kind] || Gauge);
 const emit = defineEmits(['remove', 'publish']);
 
-onMounted(async () => {
-  await nextTick();
+onMounted( () => {
   console.log("creating GridItem ", kind.value)
-
-  console.log({
-    id,
-    className,
-    title,
-    customData,
-    allAttributes: Array.from(allAttributes).map(attr => ({
-      name: attr.name,
-      value: attr.value
-    }))
-  })
-  // }
 
   item.value = { ...item.value, ...props.options };
 });
 
 onBeforeUnmount(() => {
-
   console.log(`In vue onBeforeUnmount for item `, JSON.stringify(props));
 });
 
@@ -110,6 +96,9 @@ function handleRemove() {
 }
 
 .grid-stack-item-content {
+  display :flex; 
+  flex-direction: column; 
+  justify-content: top; 
   align-items: center;
   background-color: #0e3516;
   border: 1px solid #ccc;

@@ -2,10 +2,14 @@
 
 import { createApp,provide } from 'vue'
 import App from './App.vue'
+import { PubSub } from './PubSub.js';
+
+import mitt from 'mitt'
+
+const emitter = mitt()
+
 
 const app = createApp(App);
-app.provide('global',{
-    message: 'Hello from global provide!'
-})
-app.mount('#app')
+app.component('pubsub',PubSub)
 
+app.config.globalProperties.emitter = emitter

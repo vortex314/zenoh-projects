@@ -5,7 +5,7 @@
 <script setup>
 
 import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
-import { useElementSize } from '@vueuse/core'
+import { PubSub } from "@/PubSub.js";
 
 import { GaugeChart } from "echarts/charts";
 import {
@@ -90,9 +90,8 @@ let option = ref({
 });
 const el = ref(null);
 
-onMounted(async () => {
-    await nextTick();
-    console.log("Gauge", el.value);
+onMounted( () => {
+
 
 });
 

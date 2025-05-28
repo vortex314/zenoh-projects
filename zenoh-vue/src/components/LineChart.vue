@@ -5,7 +5,6 @@
 <script setup lang="ts">
 
 import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
-import { useElementSize } from '@vueuse/core'
 
 import {
   TitleComponent,

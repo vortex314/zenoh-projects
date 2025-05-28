@@ -1,14 +1,13 @@
 /*jshint esversion: 6 */
-import Vue from 'vue';
 
-export const RedisState = new Vue({
-    name: "RedisState",
+export const PubSubState = {
+    name: "PubSubState",
     data() {
         return {
             connected: false
         };
     }
-});
+};
 
 class Queue {
     constructor() {
@@ -38,7 +37,7 @@ class Queue {
     }
 }
 
-class RedisClass {
+class PubSubClass {
     constructor(host, port, socketPath) {
         this.host = host;
         this.port = port;
@@ -68,15 +67,15 @@ class RedisClass {
 
         let promise = new Promise((resolve, reject) => {
             if (!this.isStringArray(rq)) {
-                reject("Redis request error: " + rq + " is not an array");
+                reject("PubSub request error: " + rq + " is not an array");
             }
             else if (!this.connected) {
-                reject("Redis not connected");
+                reject("PubSub not connected");
             } else {
                 let rp = { cmd: rq[0], resolve: resolve, reject: reject };
                 this.command(rq);
                 this.promises.enqueue(rp);
-                console.log("Redis request queued for answer: ", rq);
+                console.log("PubSub request queued for answer: ", rq);
             }
         })
         return promise;
@@ -85,36 +84,36 @@ class RedisClass {
         this.request(["PUBLISH", channel, JSON.stringify(message)]).catch(console.log);
     }
     onConnected() {
-        console.log("Redis connected");
+        console.log("PubSub connected");
         this.connected = true;
-        RedisState.connected = true;
+        PubSubState.connected = true;
         this.request(["hello", "3"]).then(() => {
             //  console.log("hello response", x)
         }).catch(console.log);
         this.subscriptions.forEach(subscription => {
             this.request(["PSUBSCRIBE", subscription.pattern]).then(() => {
-                //  console.log("Redis response", x)
+                //  console.log("PubSub response", x)
             }).catch(console.log);
         });
-        Eventbus.$emit("Redis.connected", true);
+  //      Eventbus.$emit("PubSub.connected", true);
         /* this.timer = setInterval(() => {
-             Redis.request(
+             PubSub.request(
                  ["publish", "src/hover/motor/targetAngle", Math.round((Math.random() * 180) - 90).toString()]);
-             Redis.request(
+             PubSub.request(
                  ["publish", "src/hover/motor/measuredAngle", Math.round((Math.random() * 180) - 90).toString()]);
-             Redis.request(
+             PubSub.request(
                  ["publish", "src/hover/motor/currentLeft", Math.round((Math.random() * 50) ).toString()]);
-             Redis.request(
+             PubSub.request(
                  ["publish", "src/hover/motor/currentRight", Math.round((Math.random() * 50) ).toString()]);
          }, 100);*/
     }
     onDisconnected() {
-        console.log("Redis disconnected");
-        RedisState.connected = false;
-        Eventbus.$emit("Redis.disconnected", false);
+        console.log("PubSub disconnected");
+        PubSubState.connected = false;
+ //       Eventbus.$emit("PubSub.disconnected", false);
     }
     onMessage(message) {
-        console.log("Redis response: ", message.data);
+        console.log("PubSub response: ", message.data);
         try {
             var arr = JSON.parse(message.data);
             var cmd = arr[0];
@@ -128,18 +127,18 @@ class RedisClass {
                     break;
 
                 default: {
-                    console.log("Redis reply", arr);
+                    console.log("PubSub reply", arr);
                     let rp = this.promises.dequeue();
                     if (rp.cmd.toLowerCase() != cmd.toLowerCase()) {
                         console.log("ERROR: ", rp.cmd, cmd);
-                        rp.reject("Redis reply error " + rp.cmd + " != " + cmd);
+                        rp.reject("PubSub reply error " + rp.cmd + " != " + cmd);
                     } else {
                         rp.resolve(arr);
                     }
                     break;
                 }
             }
-        } catch (e) { console.log("Redis message exception", e, "on", message); }
+        } catch (e) { console.log("PubSub message exception", e, "on", message); }
     }
     subscribe(pattern, action) {
         this.subscriptions.push({ pattern: pattern, callback: action });
@@ -171,19 +170,19 @@ class RedisClass {
     }
     command(arr) {
         if (!this.isStringArray(arr)) {
-            alert("Redis request error: " + arr + " is not an array");
+            alert("PubSub request error: " + arr + " is not an array");
             return;
         }
         if (!this.connected) {
-            alert("Redis not connected");
+            alert("PubSub not connected");
             return
         }
-        //console.log("Redis request: ", arr);
+        //console.log("PubSub request: ", arr);
         this.ws.send(JSON.stringify(arr));
     }
 
     connect() {
-        console.log("Redis connecting to " + this.webSocketUrl());
+        console.log("PubSub connecting to " + this.webSocketUrl());
         this.ws = new WebSocket(this.webSocketUrl(), [
             "string",
             "foo",
@@ -196,7 +195,7 @@ class RedisClass {
     disconnect() {
         this.ws.close();
         this.connected = false;
-        RedisState.connected = false;
+        PubSubState.connected = false;
     }
     configure(host, port, socketPath) {
         this.host = host;
@@ -206,9 +205,8 @@ class RedisClass {
 
 }
 
-export const Redis = new RedisClass("limero.local", 9000, "/redis");
+export const PubSub = new PubSubClass("limero.be", 7447, "/redis");
 
-export const Eventbus = new Vue()
 
 class TimerSingletonClass {
     constructor() {
