@@ -34,17 +34,28 @@ use([
   ToolboxComponent,
   DataZoomComponent]);
 provide(THEME_KEY, "light");
+
+import { PubSub } from "@/PubSub";
+
 const option = ref({
   xAxis: {
     type: 'category',
-    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    data: []
   },
   yAxis: {
     type: 'value'
   },
   series: [
     {
-      data: [150, 230, 224, 218, 135, 147, 260],
+      data: [],
+      type: 'line'
+    },
+    {
+      data: [],
+      type: 'line'
+    },
+    {
+      data: [],
       type: 'line'
     }
   ]
@@ -74,6 +85,20 @@ const props = defineProps({
   }
 });
 onMounted(() => {
+  PubSub.listen("src/mtr1/motor.rpm_target", (msg) => {
+            option.value.series[0].data.push(Math.round(msg.value));
+            option.value.series[1].data.push(Math.round(msg.value*Math.random()));
+            option.value.series[2].data.push(Math.round(msg.value*Math.random()*5));
+
+            if (option.value.xAxis.data.length > 100) {
+                option.value.xAxis.data.shift();
+                option.value.series[0].data.shift();
+                option.value.series[1].data.shift();
+                option.value.series[2].data.shift();
+            }
+
+            option.value.xAxis.data.push(new Date().toLocaleTimeString());
+    });
 });
 
 </script>

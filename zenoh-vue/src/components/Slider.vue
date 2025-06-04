@@ -1,9 +1,11 @@
 <template>
-    <v-btn color="primary" size="x-small" @click="pressed" ref="id">BUTTON</v-btn>
+    <div> {{ value }}
+        <v-slider v-model="value" thumb-label ref="id">BUTTON</v-slider>
+    </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive,h  } from 'vue'
+import { ref, onMounted, reactive, h } from 'vue'
 import { PubSub } from '@/PubSub'
 
 const props = defineProps({
@@ -30,14 +32,13 @@ const props = defineProps({
         default: "Reset"
     }
 })
-const id = ref(null)
+const value = ref(50)
 
 function pressed() {
     PubSub.publish(props.src, props.pressed)
 }
 
 onMounted(() => {
-
 
 })
 

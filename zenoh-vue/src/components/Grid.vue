@@ -1,31 +1,66 @@
 <template>
   <div>
     <span>
-      <button @click="addNewWidget">Add New Widget</button>
-      <button @click="addWidget('LineChart')">LineChart</button>
-      <button @click="addWidget('PieChart')">PieChart</button>
-      <button @click="addWidget('Gauge')">Gauge</button>
+      <v-btn color="primary" size="x-small" @click="addWidget('LineChart')">LineChart</v-btn>
+      <v-btn color="primary" size="x-small" @click="addWidget('PieChart')">PieChart</v-btn>
+      <v-btn color="primary" size="x-small" @click="addWidget('Gauge')">Gauge</v-btn>
+      <v-btn color="primary" size="x-small" @click="addWidget('Button')">v-btn</v-btn>
+      <v-btn color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
     </span>
-    <div class="grid-stack"> </div>
+    <div class="grid-stack">
+      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
+        :gs-h="item.h" :gs-id="item.itemId">
+        <div class="grid-stack-item-content" :id="item.itemId">
+          <div class="card-header">
+            <span>{{ item.config.title }}</span>
+            <v-btn size="x-small" class="remove-btn" @click="remove(item)" style="float: right;">X</v-btn>
+          </div>
+          <div class="card">
+            <component :is="grid_kinds[item.kind]" :item-id="item.itemId" :config="item.config" :dim="item.dim" />
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
 </template>
 
 <script setup>
-import { ref, onMounted, h, onBeforeUnmount, render, inject, provide } from "vue";
+import { ref, markRaw, onMounted, h, onBeforeUnmount, render, inject, provide, nextTick } from "vue";
 import { GridStack } from "gridstack";
 import GridItem from "@/components/GridItem.vue"; // Import your Vue component
+import emitter from "@/PubSub";
+
+import Gauge from "@/components/Gauge.vue"; // Import your Vue component
+import Button from "@/components/Button.vue"; // Import your Vue component
+import LineChart from "@/components/LineChart.vue"; // Import your Vue component
+import PieChart from "@/components/PieChart.vue"; // Import your Vue component
+import Table from "@/components/Table.vue"; // Import your Vue component
+import Slider from "@/components/Slider.vue"; // Import your Vue component
+
+const grid_kinds = {
+  Gauge: markRaw(Gauge),
+  Button: markRaw(Button),
+  LineChart: markRaw(LineChart),
+  PieChart: markRaw(PieChart),
+  Table: markRaw(Table),
+  Slider: markRaw(Slider)
+  // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
+};
 
 const global = ref({}); // Create a reactive global state
 provide('global', global); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
-const items = [
-  { x: 0, y: 0, h: 20, w: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge" },
-  { x: 6, y: 0, h: 20, w: 5, config: { title: "measured RPM", src: "src/mtr1/motor/measure_rpm" }, kind: "LineChart" },
-  { x: 4, y: 2, h: 20, w: 5, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart" },
-  { x: 3, y: 1, h: 20, w: 4, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider" },
-  { x: 0, y: 6, w: 20, h: 6, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button" },
-];
+const items = ref([
+  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", itemId: "341" },
+  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/measured_rpm" }, kind: "LineChart", itemId: "342" },
+  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart", itemId: "343" },
+  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider", itemId: "344" },
+  { x: 8, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button", itemId: "345" },
+  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", itemId: "346" },
+
+]);
 const shadowDom = {};
 
 onBeforeUnmount(() => {
@@ -37,104 +72,81 @@ onBeforeUnmount(() => {
 
 onMounted(() => {
   grid = GridStack.init({ // DO NOT use grid.value = GridStack.init(), see above
-    float: true,
+    float: false,
     cellHeight: "20px",
     minRow: 1,
     handle: '.card-header',
     margin: 2,
   });
 
-  global.value.grid = grid; // Store grid in global state if needed
-  global.value.items = items; // Store items in global state if needed
-  global.value.count = count; // Store count in global state if needed
-
-
   // Listen for remove events to clean up Vue renders
   grid.on('removed', function (event, items) {
     items.forEach((item) => {
-      if (shadowDom[item.id]) {
-        render(null, shadowDom[item.id]);
-        delete shadowDom[item.id];
+      if (shadowDom[item.itemId]) {
+        render(null, shadowDom[item.itemId]);
+        delete shadowDom[item.itemId];
       }
     });
   });
 
-  grid.on('change', function (event, items) {
-    //    console.log("GridStack change event", items);
+  grid.on('change', onChange);
+  console.log("this emitter", emitter)
+
+  emitter.on("publish", (data) => {
+    console.log(data)
   });
 
-
-  GridStack.renderCB = function (el, widget) {
-    console.log("Grid : renderCB", widget, "[", grid.getCellHeight(), ",", grid.cellWidth(), "]");
-
-    const gridItemEl = el.closest('.grid-stack-item'); // div.grid-stack-item (parent of el)
-
-    // Create Vue component for the widget content
-    const id = widget.id
-    const widgetNode = h(GridItem, {
-      id: id,
-      dim: widget.dim,
-      config: widget.config,
-      kind: widget.kind || "Gauge",
-      onRemove: () => { // Catch the remove event from the Vue component
-        grid.removeWidget(gridItemEl); // div.grid-stack-item
-        info.value = `Widget ${id} removed`;
-      }
-    })
-    shadowDom[id] = el
-    render(widgetNode, el) // Render Vue component into the GridStack-created element
-    //   el.style.height = String(widget.dim.h * grid.getCellHeight()) + "px";
-    //   el.style.width = String(widget.dim.w * grid.cellWidth()) + "px";
-    console.log("Element data", el)
-    console.log("style after ", el.style)
-    this.emitter.on("publish", (data) => {
-      console.log(data)
-    });
-  }
-
-  addNewWidget(); // Add initial widget
-
-  //  grid.load(items, true); // load items from array
 });
 
-function addNewWidget() {
-  const node = items[count.value] || {
-    x: 6,
-    y: 10,
-    w: 4,
-    h: 6,
-  };
-  let dim = {
-    x: (node.x === undefined) ? 0 : node.x,
-    y: (node.y === undefined) ? 0 : node.y,
-    w: (node.w === undefined) ? 1 : node.w,
-    h: (node.h === undefined) ? 1 : node.h,
+function onChange(event, changeItems) {
+  console.log("Grid items changed:", changeItems);
+  // update item position
+  for ( item in items.value) {
+    console.log("Grid item:", items.value[item],change);
   }
-  node.id = String(Math.round(2 ** 32 * Math.random()))
-  node.content = String(count.value++);
-  node.dim = dim;
-  grid.addWidget(node);
+  changeItems.forEach(item => {
+    var widget = items.value.find(w => w.itemId == item.itemId);
+    if (!widget) {
+      alert("Widget not found: " + item.itemId);
+      return;
+    }
+    widget.x = item.x;
+    widget.y = item.y;
+    widget.w = item.w;
+    widget.h = item.h;
+  });
 }
 
+function remove(widget) {
+  var index = items.value.findIndex(w => w.itemId == widget.itemId);
+  items.value.splice(index, 1);
+  const selector = `#${widget.itemId}`;
+  grid.removeWidget(widget.itemId, true, true);
+}
+
+
 function addWidget(kind) {
-  this.emitter.emit("publish", { topic: "dst/mtr1/motor.rpm_target", value: 3140 })
-  const node = items[count.value] || {
-    x: 6,
-    y: 6,
-    w: 4,
-    h: 6,
-  };
-  let dim = {
-    x: (node.x === undefined) ? 0 : node.x,
-    y: (node.y === undefined) ? 0 : node.y,
-    w: (node.w === undefined) ? 1 : node.w,
-    h: (node.h === undefined) ? 1 : node.h,
-  }
-  node.id = String(Math.round(2 ** 32 * Math.random()))
-  node.content = String(count.value++);
-  node.dim = dim;
-  node.kind = kind || "Gauge"; // Set the kind of widget
-  grid.addWidget(node);
+  let id = String(Math.round(2 ** 32 * Math.random()))
+  let item = { h: 20, w: 3, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: kind, itemId: id };
+  items.value.push(item);
+  console.log("Adding widget with itemId:", id, "kind:", kind);
+  nextTick(() => {
+    grid.makeWidget(item.itemId);
+  });
+  /* grid.makeWidget(
+    `<div class="grid-stack-item" gs-x="${node.x}" gs-y="${node.y}" gs-w="${node.w}" gs-h="${node.h}" gs-id="${id}">
+      <div class="grid-stack-item-content" id="${id}">
+        <div class="card-header">
+          <span>${node.config.title}</span>
+          <button class="remove-btn" @click="grid.removeWidget('${id}')" style="float: right;">×</button>
+        </div>
+        <div class="card">
+          <component :is="grid_kinds[node.kind]" :id="${id}" :config="node.config" :dim="{w: node.w, h: node.h}" />
+        </div>
+      </div>
+    </div>`, { itemId: id, x: node.x, y: node.y, w: node.w, h: node.h }
+  );*/
+  console.log("Grid items after adding:", items.value);
 }
 
 
@@ -156,5 +168,27 @@ function addWidget(kind) {
 
 .grid-stack-item {
   border: 0px solid #000;
+}
+
+.handle-remove:hover {
+  background-color: #149b80;
+}
+
+.card-header {
+  margin: 0;
+  cursor: move;
+  min-height: 18px;
+  background-color: #bdbdbd;
+  width: 100%;
+}
+
+.card-header:hover {
+  background-color: #149b80;
+}
+
+
+.card {
+  width: 100%;
+  height: 100%;
 }
 </style>

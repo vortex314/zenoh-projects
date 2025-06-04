@@ -5,7 +5,6 @@
 <script setup>
 
 import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
-import { PubSub } from "@/PubSub.js";
 
 import { GaugeChart } from "echarts/charts";
 import {
@@ -30,6 +29,8 @@ use([
     LegendComponent,
 ]);
 provide(THEME_KEY, "light");
+
+import { PubSub } from "@/PubSub";
 
 // show gauge
 //import { Gauge } from "vue-google-charts";
@@ -91,8 +92,9 @@ let option = ref({
 const el = ref(null);
 
 onMounted( () => {
-
-
+    PubSub.listen("src/mtr1/motor.rpm_target", (msg) => {
+            option.value.series[0].data[0].value = Math.round(msg.value);
+    });
 });
 
 </script>

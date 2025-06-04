@@ -20,12 +20,14 @@ import Gauge from "@/components/Gauge.vue"; // Import your Vue component
 import Button from "@/components/Button.vue"; // Import your Vue component
 import LineChart from "@/components/LineChart.vue"; // Import your Vue component
 import PieChart from "@/components/PieChart.vue"; // Import your Vue component
+import Table from "@/components/Table.vue"; // Import your Vue component
 
-const grid_items = {
+const grid_kinds = {
   Gauge: markRaw(Gauge),
   Button: markRaw(Button),
   LineChart: markRaw(LineChart),
   PieChart: markRaw(PieChart),
+  Table: markRaw(Table),
   Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
 
@@ -56,12 +58,11 @@ const props = defineProps({
 let itemId = ref(props.id);
 let item = shallowRef(props.config);
 
-let kind = ref(grid_items[props.kind] || Gauge);
+let kind = ref(grid_kinds[props.kind] || Gauge);
 const emit = defineEmits(['remove', 'publish']);
 
 onMounted( () => {
   console.log("creating GridItem ", kind.value)
-
   item.value = { ...item.value, ...props.options };
 });
 
