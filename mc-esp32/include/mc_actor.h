@@ -75,11 +75,13 @@ public:
   void run();
   void on_timer(int id);
   void on_cmd(McCmd &cmd);
+  void on_start() override;
   void prefix(const char *prefix);
   bool is_connected() const;
   Result<Void> connect(void);
   Result<Void> disconnect();
   // Result zenoh_publish_serializable(const char *topic, Serializable &value);
+  Result<Void>  receive_multicast_message();
 
   Result<Void> publish_props();
 //  Result publish_props_info();

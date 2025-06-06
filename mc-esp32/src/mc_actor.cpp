@@ -268,7 +268,7 @@ static void send_multicast_json(int sock, const Bytes &data)
   dest_addr.sin_port = htons(MULTICAST_PORT);
   dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
 
-  int err = sendto(sock, data.data(), data.length(), 0,
+  int err = sendto(sock, data.data(), data.size(), 0,
                    (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
   if (err < 0)
@@ -277,12 +277,12 @@ static void send_multicast_json(int sock, const Bytes &data)
   }
   else
   {
-    ERROR("Message sent: %d", data.length());
+    ERROR("Message sent: %d", data.size());
   }
 }
 
 // Function to receive multicast messages
-static void receive_multicast_messages(void *pvParameters)
+void McActor::receive_multicast_messages()
 {
   char rx_buffer[MAX_UDP_PACKET_SIZE];
   struct sockaddr_in source_addr;
