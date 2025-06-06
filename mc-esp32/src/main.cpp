@@ -1,364 +1,134 @@
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include "esp_netif.h"
-#include "cJSON.h"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
-#define BZERO(x) memset(&(x), 0, sizeof(x))
-#define T_ESP(VAL)                                                                       \
-  {                                                                                      \
-    auto r = (VAL);                                                                      \
-    if (r != ESP_OK)                                                                     \
-    {                                                                                    \
-      printf("[%d] %s:%d %s = %s ", r, __FILE__, __LINE__, #VAL, esp_err_to_name(r)); \
-      return r;                                                                          \
-    }                                                                                    \
+#include <nvs_flash.h>
+#include <optional>
+#include <string>
+#include <vector>
+#include <actor.h>
+#include <wifi_actor.h>
+#include <mc_actor.h>
+#include <sys_actor.h>
+#include <led_actor.h>
+#include <ota_actor.h>
+#include <log.h>
+
+#include <esp_wifi.h>
+#include <esp_coexist.h>
+#include <esp_event.h>
+
+#define DEVICE_NAME "mtr1"
+#define DST_DEVICE "dst/" DEVICE_NAME "/"
+#define SRC_DEVICE "src/" DEVICE_NAME "/"
+
+// threads can be run separately or share a thread
+// Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
+WifiActor wifi_actor("wifi", 9000, 40, 5);
+McActor mc_actor("zenoh", 9000, 40, 5);
+SysActor sys_actor("sys", 9000, 40, 5);
+LedActor led_actor("led", 9000, 40, 5);
+OtaActor ota_actor("ota", 9000, 40, 5);
+Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
+
+Log logger;
+
+// void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
+void publish(const char *topic, const Serializable &serializable)
+{
+  if (mc_actor.is_connected() == false)
+  {
+    INFO("Mc not connected, cannot publish");
+    return;
   }
-
-static const char *TAG = "UDP_MULTICAST";
-
-// Multicast configuration
-#define MULTICAST_IP "225.0.0.1"
-#define MULTICAST_PORT 6502
-#define MAX_UDP_PACKET_SIZE 1024
-
-static int sock = -1;
-
-// Function to create multicast socket
-static int create_multicast_socket()
-{
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (sock < 0)
-    {
-        ESP_LOGE(TAG, "Failed to create socket: errno %d : %s", errno, strerror(errno));
-        return -1;
-    }
-
-    // Set socket options
-    int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    // Bind the socket to any address
-    struct sockaddr_in saddr;
-    BZERO(saddr);
-    saddr.sin_family = AF_INET;
-    saddr.sin_port = htons(MULTICAST_PORT);
-    saddr.sin_addr = (struct in_addr){
-        .s_addr = htonl(INADDR_ANY) // Bind to all interfaces
-    };
-
-   T_ESP(bind(sock, (struct sockaddr *)&saddr, sizeof(saddr)));
-
-    // Get the actual network interface IP address
-    esp_netif_ip_info_t ip_info;
-    esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (netif == NULL) {
-        ESP_LOGE(TAG, "Failed to get network interface");
-        close(sock);
-        return -1;
-    }
-    if (esp_netif_get_ip_info(netif, &ip_info) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get IP info");
-        close(sock);
-        return -1;
-    }
-    // Join multicast group
-    struct ip_mreq mreq ;
-    BZERO(mreq);
-    mreq.imr_multiaddr.s_addr = inet_addr(MULTICAST_IP);
-    mreq.imr_interface.s_addr = ip_info.ip.addr; // Use the actual interface IP address
-    // mreq.imr_interface.s_addr = htonl(INADDR_ANY); // Use INADDR_ANY to join on all interfaces
-
-    int rc = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
-    if (rc < 0)
-    {
-        ESP_LOGE(TAG, "Failed to join multicast group: errno %d : %s", rc, strerror(errno));
-        close(sock);
-        return -1;
-    }
-
-    // Set multicast interface
-    struct in_addr if_addr;
-    if_addr.s_addr = htonl(INADDR_ANY);
-    T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &if_addr, sizeof(if_addr)));
-    // Enable loopback so we receive our own packets (for testing)
-    int loop = 1;
-    T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)));
-
-    // Set multicast TTL (time to live)
-    int ttl = 32;
-    T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)));
-
-
-    return sock;
+  Bytes buffer;
+  JsonSerializer ser(buffer);
+  serializable.serialize(ser);
+  mc_actor.tell(new McCmd{.publish_bytes = PublishBytes{topic, buffer}});
+  // pulse led when we publish
+  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
-
-// Function to send multicast JSON message
-static void send_multicast_json(int sock, const char *json_str)
-{
-    struct sockaddr_in dest_addr ;
-    BZERO(dest_addr);
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(MULTICAST_PORT);
-    dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
-
-
-    int err = sendto(sock, json_str, strlen(json_str), 0,
-                     (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-
-    if (err < 0)
-    {
-        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Message sent: %s", json_str);
-    }
-}
-
-// Function to receive multicast messages
-static void receive_multicast_messages(void *pvParameters)
-{
-    char rx_buffer[MAX_UDP_PACKET_SIZE];
-    struct sockaddr_in source_addr;
-    socklen_t socklen = sizeof(source_addr);
-
-    while (1)
-    {
-        int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0,
-                           (struct sockaddr *)&source_addr, &socklen);
-
-        if (len < 0)
-        {
-            ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
-            break;
-        }
-        else
-        {
-            rx_buffer[len] = '\0'; // Null-terminate the received data
-            printf("Received %s\n", rx_buffer);
-
-            // Parse JSON
-            cJSON *json = cJSON_Parse(rx_buffer);
-            if (json == NULL)
-            {
-                const char *error_ptr = cJSON_GetErrorPtr();
-                if (error_ptr != NULL)
-                {
-                    ESP_LOGE(TAG, "JSON parse error before: %s", error_ptr);
-                }
-            }
-            else
-            {
-                // Print the received JSON
-                char *json_str = cJSON_Print(json);
-                ESP_LOGI(TAG, "Received JSON from %s:%d: %s",
-                         inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port), json_str);
-                free(json_str);
-
-                // You can access JSON fields here
-                // Example:
-                // cJSON *field = cJSON_GetObjectItemCaseSensitive(json, "field_name");
-                // if (cJSON_IsString(field) && (field->valuestring != NULL)) {
-                //     printf("field_name: %s\n", field->valuestring);
-                // }
-
-                cJSON_Delete(json);
-            }
-        }
-    }
-
-    vTaskDelete(NULL);
-}
-
-// Function to create a sample JSON message
-static char *create_sample_json()
-{
-    cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "device", "ESP32");
-    cJSON_AddStringToObject(root, "type", "multicast_demo");
-    cJSON_AddNumberToObject(root, "value", 42);
-    cJSON_AddBoolToObject(root, "status", true);
-
-    char *json_str = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-    return json_str;
-}
+esp_err_t nvs_init();
 /*
+| WIFI | = connect/disconnect => | ZENOH | ( set up session )
+| SYS | = system events => | ZENOH | ( publish )
+| ZENOH | = zenoh events => | ZENOH | ( publish )
+| ZENOH | = publish events => | LED | (pulse)
+*/
 extern "C" void app_main()
 {
-    ESP_LOGI(TAG, "Starting UDP Multicast JSON Demo");
+  ESP_ERROR_CHECK(nvs_init());
+  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
 
-    // Initialize network stack
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+  /*mc_actor.tell(new McCmd{
+      .action = McAction::Subscribe,
+      .topic = Option<std::string>("src/brain/ **")}); // connect to zenoh*/
+  // WiFi connectivity starts and stops zenoh connection
+  wifi_actor.on_event([&](const WifiEvent &event)
+                      {
+                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_CONNECTED;})
+                          .and_then([](auto sig ){  return mc_actor.tell(new McCmd{.action = McAction::Connect});});
+                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_DISCONNECTED;})
+                          .and_then([](auto sig ){  return mc_actor.tell(new McCmd{.action = McAction::Disconnect});}); });
+  // WIRING the actors together
+  wifi_actor.on_event([&](const WifiEvent &event)
+                      { event.publish.for_each([](auto msg)
+                                               { publish(SRC_DEVICE "wifi", msg); }); });
+  sys_actor.on_event([&](SysEvent event)
+                     { event.publish >> [](auto msg)
+                       { publish(SRC_DEVICE "sys", msg); }; });
+  mc_actor.on_event([&](McEvent event)
+                       { event.publish >> [](auto msg)
+                         { publish(SRC_DEVICE "zenoh", msg); }; });
+  ota_actor.on_event([&](OtaEvent event)
+                     { event.publish >> [](auto msg)
+                       { publish(SRC_DEVICE "ota", msg); }; });
 
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
+  // send commands to actors coming from zenoh, deserialize and send to the right actor
+  mc_actor.on_event([&](McEvent event)
+                       {
+                        INFO("Mc event received %s %s", event.publish_bytes ? "publish_bytes":"-" , event.publish ? "publish" : "-" );
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
+                          .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})
+                          .and_then([&](auto pb ){ return json_deserialize<SysMsg>(pb.payload);})
+                          .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "wifi" ;})
+                          .and_then([&](auto pb ){ return json_deserialize<WifiMsg>(pb.payload);})
+                          .for_each([&](auto msg){ wifi_actor.tell(new WifiCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "zenoh" ;})
+                          .and_then([&](auto pb ){ return json_deserialize<McMsg>(pb.payload);})
+                          .for_each([&](auto msg){ mc_actor.tell(new McCmd{.publish = msg}); });
+                        event.publish_bytes
+                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "ota" ;})
+                          .and_then([&](auto pb ){ return json_deserialize<OtaMsg>(pb.payload);})
+                          .for_each([&](auto msg){ ota_actor.tell(new OtaCmd{.publish = msg}); }); });
 
-    // Create multicast socket
-    sock = create_multicast_socket();
-    if (sock < 0)
-    {
-        ESP_LOGE(TAG, "Failed to create multicast socket");
-        return;
-    }
+  // actor_thread.add_actor(camera_actor);
+  actor_thread.add_actor(wifi_actor);
+  actor_thread.add_actor(mc_actor);
+  actor_thread.add_actor(sys_actor);
+  actor_thread.add_actor(led_actor);
+  actor_thread.add_actor(ota_actor);
+  actor_thread.start();
 
-    // Create receive task
-    xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
-
-    // Main loop to send multicast messages periodically
-    while (1)
-    {
-        char *json_str = create_sample_json();
-        send_multicast_json(sock, json_str);
-        free(json_str);
-
-        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send every 5 seconds
-    }
-}*/
-
-// ...existing code...
-#include "esp_wifi.h"
-#include "lwip/err.h"
-#include "lwip/sys.h"
-
-#define WIFI_SSID      "Merckx2"
-#define WIFI_PASS      "LievenMarletteEwoutRonald"
-#define WIFI_MAX_RETRY 5
-
-static int s_retry_num = 0;
-static EventGroupHandle_t s_wifi_event_group;
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
-
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                              int32_t event_id, void* event_data)
-{
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < WIFI_MAX_RETRY) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP");
-        } else {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
-        }
-        ESP_LOGI(TAG,"connect to the AP fail");
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-    }
+  // log heap size, monitoring thread in main, we could exit also
+  while (true)
+  {
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+  }
 }
 
-static void wifi_init_sta(void)
+esp_err_t nvs_init()
 {
-    s_wifi_event_group = xEventGroupCreate();
-
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_got_ip));
-
-    wifi_config_t wifi_config = {};
-    strncpy((char*)wifi_config.sta.ssid, WIFI_SSID, sizeof(wifi_config.sta.ssid));
-    strncpy((char*)wifi_config.sta.password, WIFI_PASS, sizeof(wifi_config.sta.password));
-
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-
-    ESP_LOGI(TAG, "wifi_init_sta finished.");
-
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
-                 WIFI_SSID, WIFI_PASS);
-    } else if (bits & WIFI_FAIL_BIT) {
-        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
-                 WIFI_SSID, WIFI_PASS);
-    } else {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
-    }
-
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-    vEventGroupDelete(s_wifi_event_group);
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  return ret;
 }
-// ...existing code...
-
-extern "C" void app_main()
-{
-    ESP_LOGI(TAG, "Starting UDP Multicast JSON Demo");
-
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    // Initialize WiFi
-    wifi_init_sta();
-
-    // Create multicast socket
-    sock = create_multicast_socket();
-    if (sock < 0)
-    {
-        ESP_LOGE(TAG, "Failed to create multicast socket");
-        return;
-    }
-
-    // Create receive task
-    xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
-
-    // Main loop to send multicast messages periodically
-    while (1)
-    {
-        char *json_str = create_sample_json();
-        send_multicast_json(sock, json_str);
-        free(json_str);
-
-        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send every 5 seconds
-    }
-}
-// ...existing code...

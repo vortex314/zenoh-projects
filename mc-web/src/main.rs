@@ -67,6 +67,8 @@ async fn main() {
     udp_socket
         .join_multicast_v4(Ipv4Addr::new(225, 0, 0, 1), Ipv4Addr::new(0, 0, 0, 0))
         .expect("Failed to join multicast group");
+    // reuse addr to allow multiple instances to bind to the same port
+
 
     let udp_socket = Arc::new(udp_socket);
     let udp_messages = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_CACHED_MESSAGES)));
