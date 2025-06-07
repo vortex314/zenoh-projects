@@ -29,7 +29,7 @@ SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
 OtaActor ota_actor("ota", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
-Th
+Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 
 Log logger;
 
@@ -108,11 +108,12 @@ extern "C" void app_main()
 
   // actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
-  actor_thread.add_actor(mc_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
   actor_thread.add_actor(ota_actor);
   actor_thread.start();
+  mc_thread.add_actor(mc_actor);
+  mc_thread.start();
 
   // log heap size, monitoring thread in main, we could exit also
   while (true)

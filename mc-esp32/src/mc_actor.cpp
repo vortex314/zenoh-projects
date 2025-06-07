@@ -14,8 +14,6 @@
 #include "esp_netif.h"
 
 static int create_multicast_socket();
-static void send_multicast_json(int sock, const Bytes &data);
-static void receive_multicast_messages(void *pvParameters);
 
 // Multicast configuration
 #define MULTICAST_IP "225.0.0.1"
@@ -38,6 +36,30 @@ McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue
     : Actor<McEvent, McCmd>(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000); // timer for publishing properties
+}
+
+void McActor::on_start()
+{
+  while (true)
+  {
+    while (connect().is_err())
+    {
+    };
+    while (true)
+    {
+      auto msg = receive();
+      if (msg.is_err())
+        break;
+      msg.inspect([&](auto data ) {
+        //TODO
+        // parse JSON and find publish and send topic + complete string  as publishbytes
+
+
+      });
+    }
+
+    disconnect();
+  }
 }
 
 void McActor::on_timer(int id)
@@ -102,7 +124,7 @@ void McActor::on_cmd(McCmd &cmd)
   }
   if (cmd.publish_bytes && _connected)
   {
-    send_multicast_json(_socket, cmd.publish_bytes.value().payload);
+    send(cmd.publish_bytes.value().payload);
   }
 }
 
@@ -113,7 +135,7 @@ Res McActor::connect(void)
   {
     return Res(-1, "Failed to create multicast socket");
   }
-  xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
+  //  xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
 
   return ResOk;
 }
@@ -196,7 +218,7 @@ static int create_multicast_socket()
   int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
   if (sock < 0)
   {
-    ERROR( "Failed to create socket: errno %d : %s", errno, strerror(errno));
+    ERROR("Failed to create socket: errno %d : %s", errno, strerror(errno));
     return -1;
   }
 
@@ -220,13 +242,13 @@ static int create_multicast_socket()
   esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
   if (netif == NULL)
   {
-    ERROR( "Failed to get network interface");
+    ERROR("Failed to get network interface");
     close(sock);
     return -1;
   }
   if (esp_netif_get_ip_info(netif, &ip_info) != ESP_OK)
   {
-    ERROR( "Failed to get IP info");
+    ERROR("Failed to get IP info");
     close(sock);
     return -1;
   }
@@ -240,7 +262,7 @@ static int create_multicast_socket()
   int rc = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq));
   if (rc < 0)
   {
-    ERROR( "Failed to join multicast group: errno %d : %s", rc, strerror(errno));
+    ERROR("Failed to join multicast group: errno %d : %s", rc, strerror(errno));
     close(sock);
     return -1;
   }
@@ -260,7 +282,7 @@ static int create_multicast_socket()
   return sock;
 }
 
-static void send_multicast_json(int sock, const Bytes &data)
+Result<Void> McActor::send(const Bytes &data)
 {
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);
@@ -268,70 +290,34 @@ static void send_multicast_json(int sock, const Bytes &data)
   dest_addr.sin_port = htons(MULTICAST_PORT);
   dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
 
-  int err = sendto(sock, data.data(), data.size(), 0,
+  int err = sendto(_socket, data.data(), data.size(), 0,
                    (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
   if (err < 0)
   {
-    ERROR("Error occurred during sending: errno %d", errno);
+    return Result<Void>(errno,"Error occurred during sending ");
   }
-  else
-  {
-    ERROR("Message sent: %d", data.size());
-  }
+  return ResOk;
 }
 
 // Function to receive multicast messages
-void McActor::receive_multicast_messages()
+Result<Bytes> McActor::receive()
 {
-  char rx_buffer[MAX_UDP_PACKET_SIZE];
+  unsigned char rx_buffer[MAX_UDP_PACKET_SIZE];
   struct sockaddr_in source_addr;
   socklen_t socklen = sizeof(source_addr);
 
-  while (1)
+  int len = recvfrom(_socket, rx_buffer, sizeof(rx_buffer) - 1, 0,
+                     (struct sockaddr *)&source_addr, &socklen);
+
+  if (len < 0)
   {
-    int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0,
-                       (struct sockaddr *)&source_addr, &socklen);
-
-    if (len < 0)
-    {
-      ERROR( "recvfrom failed: errno %d", errno);
-      break;
-    }
-    else
-    {
-      rx_buffer[len] = '\0'; // Null-terminate the received data
-      printf("Received %s\n", rx_buffer);
-
-      // Parse JSON
-      cJSON *json = cJSON_Parse(rx_buffer);
-      if (json == NULL)
-      {
-        const char *error_ptr = cJSON_GetErrorPtr();
-        if (error_ptr != NULL)
-        {
-          ERROR( "JSON parse error before: %s", error_ptr);
-        }
-      }
-      else
-      {
-        // Print the received JSON
-        char *json_str = cJSON_Print(json);
-        ERROR("Received JSON from %s:%d: %s",
-                 inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port), json_str);
-        free(json_str);
-
-        // You can access JSON fields here
-        // Example:
-        // cJSON *field = cJSON_GetObjectItemCaseSensitive(json, "field_name");
-        // if (cJSON_IsString(field) && (field->valuestring != NULL)) {
-        //     printf("field_name: %s\n", field->valuestring);
-        // }
-
-        cJSON_Delete(json);
-      }
-    }
+    return Result<Bytes>(errno, "recvfrom failed");
   }
-
-  vTaskDelete(NULL);
+  else
+  {
+    rx_buffer[len] = '\0';
+    Bytes bytes = Bytes(rx_buffer[0],rx_buffer[len+1]);
+    return Result<Bytes>(bytes);
+  }
 }

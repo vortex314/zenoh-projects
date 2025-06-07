@@ -81,8 +81,8 @@ public:
   Result<Void> connect(void);
   Result<Void> disconnect();
   // Result zenoh_publish_serializable(const char *topic, Serializable &value);
-  Result<Void>  receive_multicast_message();
-
+  Result<Bytes> receive();
+  Result<Void> send(const Bytes& data);
   Result<Void> publish_props();
 //  Result publish_props_info();
 

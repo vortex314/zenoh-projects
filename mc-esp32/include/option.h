@@ -28,6 +28,9 @@ public:
     {
         _pv = nullptr;
     }
+    static inline Option<T> None() {
+       return Option();
+    }
     inline Option(T t)
     {
         _pv = new T;
