@@ -104,7 +104,6 @@ Res SysActor::publish_props_info()
 
 Res SysMsg::serialize(Serializer &ser) const
 {
-    int idx = 0;
     ser.reset();
     ser.map_begin();
     ser.serialize(KEY("cpu"), cpu);
@@ -114,8 +113,7 @@ Res SysMsg::serialize(Serializer &ser) const
     ser.serialize(KEY("free_heap"), free_heap);
     ser.serialize(KEY("up_time"), up_time);
     ser.serialize(KEY("log_message"), log_message);
-    ser.map_end();
-    return ser.serialize(idx++, state);
+    return ser.map_end();
 }
 
 Res SysMsg::deserialize(Deserializer &des)

@@ -55,8 +55,15 @@ esp_err_t nvs_init();
 | ZENOH | = zenoh events => | ZENOH | ( publish )
 | ZENOH | = publish events => | LED | (pulse)
 */
+#include <value.h>
+
+
 extern "C" void app_main()
 {
+  testGenericValue();
+  GenericValue v;
+  v["pi"]=3.14;
+  v["the truth"]=true;
   ESP_ERROR_CHECK(nvs_init());
   mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
 

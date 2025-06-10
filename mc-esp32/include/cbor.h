@@ -49,6 +49,17 @@ public:
   Res array_end();
   Res serialize_null();
 
+    template <typename V>
+  Res serialize(const char *idx, const Option<V> &value)
+  {
+    if (value)
+    {
+      serialize(idx);
+      serialize(*value);
+    }
+    return ResOk;
+  }
+
   Res serialize(const Serializable &value);
 };
 

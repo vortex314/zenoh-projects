@@ -28,6 +28,7 @@ use tokio::{
 };
 mod logger; // Custom logger module
 mod property_cache;
+mod value;
 
 // Configuration
 const UDP_LISTEN_ADDR: &str = "0.0.0.0:6502";
@@ -58,6 +59,8 @@ struct ApiResponse {
 #[tokio::main]
 async fn main() {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
+    value::tester();
+    value::tester2();
     info!("Starting UDP/HTTP server...");
     // Create UDP socket
 
@@ -142,7 +145,7 @@ async fn handle_websocket_connection(mut socket: WebSocket, state: AppState) {
 
     // Channel for new messages
     let (tx, mut rx) = mpsc::channel(32);
-    let mut message_rx = tokio::spawn(async move {
+    let _jh = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if let Err(e) = socket.send(axum::extract::ws::Message::Text(msg)).await {
                 error!("WebSocket send error: {}", e);
@@ -167,7 +170,7 @@ async fn handle_websocket_connection(mut socket: WebSocket, state: AppState) {
         }
     }
 
-    message_rx.abort();
+  //  jh.abort();
 }
 
 // HTTP endpoint to send UDP messages

@@ -42,50 +42,32 @@ public:
   virtual Res serialize(const float f) = 0;
   virtual Res serialize(const bool b) = 0;
   virtual Res serialize(const int i) = 0;
+
+  virtual Res serialize(const char* s,const uint8_t v)=0;
+  virtual Res serialize(const char* s,const int8_t v)=0;
+  virtual Res serialize(const char* s,const int i)=0;
+  virtual Res serialize(const char* s,const bool b)=0;
+  virtual Res serialize(const char* s,const int32_t i)=0;
+  virtual Res serialize(const char* s,const uint32_t i)=0;
+  virtual Res serialize(const char* s,const int64_t i)=0;
+  virtual Res serialize(const char* s,const uint64_t i)=0;
+  virtual Res serialize(const char* s,const std::string &str)=0;
+  virtual Res serialize(const char* s,const char *str)=0;
+  virtual Res serialize(const char* s,const Bytes b)=0;
+  virtual Res serialize(const char* s,const float f)=0;
+
+
   virtual Res serialize_null() = 0;
-  template <typename V>
-  Res serialize(const std::optional<V> value)
-  {
-    if (value)
-    {
-      serialize(*value);
-    }
-    else
-    {
-      serialize_null();
+
+
+ template <typename V>
+  Res serialize(const char *idx, const Option<V> value) {
+    if ( value ) {
+      return serialize(idx,*value);
     }
     return ResOk;
   }
-  template <typename V>
-  Res serialize(const uint32_t idx, const std::optional<V> value)
-  {
-    if (value)
-    {
-      serialize(idx);
-      serialize(*value);
-    }
-    return ResOk;
-  }
-  template <typename V>
-  Res serialize(const uint32_t idx, const Option<V> &value)
-  {
-    if (value)
-    {
-      serialize(idx);
-      serialize(*value);
-    }
-    return ResOk;
-  }
-  template <typename V>
-  Res serialize(const char *idx, const Option<V> &value)
-  {
-    if (value)
-    {
-      serialize(idx);
-      serialize(*value);
-    }
-    return ResOk;
-  }
+
   template <typename V>
   Res serialize(const char *name, const std::optional<V> value)
   {
