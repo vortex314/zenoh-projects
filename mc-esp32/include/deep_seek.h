@@ -3,7 +3,7 @@
 #include <string>
 #include <variant>
 
-class GenericValue {
+class Value {
 public:
     // Add ByteArray type to supported types
     using ByteArray = std::vector<uint8_t>;
@@ -121,13 +121,13 @@ namespace Base64 {
     }
 }
 
-class GenericValue {
+class Value {
     // ... existing code ...
 
 public:
     // Add constructor for byte arrays
-    GenericValue(const ByteArray& data) : value(data) {}
-    GenericValue(ByteArray&& data) : value(std::move(data)) {}
+    Value(const ByteArray& data) : value(data) {}
+    Value(ByteArray&& data) : value(std::move(data)) {}
     
     // Add type checker
     bool isByteArray() const { return std::holds_alternative<ByteArray>(value); }
@@ -145,7 +145,7 @@ public:
 
     // Update the memoryUsage method
     size_t memoryUsage() const {
-        size_t total = sizeof(GenericValue);
+        size_t total = sizeof(Value);
         
         if (isString()) {
             total += asString().capacity();
@@ -157,7 +157,7 @@ public:
     }
 };
 
-class GenericValue {
+class Value {
     // ... existing code ...
 
 private:
@@ -179,7 +179,7 @@ private:
     }
 };
 
-class GenericValue {
+class Value {
     // ... existing code ...
 
 private:
@@ -203,10 +203,10 @@ private:
 
 int main() {
     // Create a binary payload
-    GenericValue::ByteArray binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF, 0xFE, 0xFD};
+    Value::ByteArray binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF, 0xFE, 0xFD};
     
     // Store in GenericValue
-    GenericValue data;
+    Value data;
     data["binary"] = binaryData;
     data["description"] = "Sample binary data";
     
@@ -215,7 +215,7 @@ int main() {
     std::cout << "JSON with Base64:\n" << json << "\n";
     
     // Deserialize back
-    GenericValue parsed = GenericValue::fromJson(json);
+    Value parsed = Value::fromJson(json);
     const auto& decodedData = parsed["binary"].asByteArray();
     
     std::cout << "\nDecoded binary data size: " << decodedData.size() << " bytes\n";
@@ -228,7 +228,7 @@ int main() {
 #include <cstdint>
 #include <utility>
 
-class GenericValue {
+class Value {
     // ... existing code ...
 
 public:
@@ -240,8 +240,8 @@ public:
     }
 
     // Deserialize from CBOR
-    static GenericValue fromCbor(const uint8_t* data, size_t size);
-    static GenericValue fromCbor(const std::vector<uint8_t>& data) {
+    static Value fromCbor(const uint8_t* data, size_t size);
+    static Value fromCbor(const std::vector<uint8_t>& data) {
         return fromCbor(data.data(), data.size());
     }
 
@@ -373,7 +373,7 @@ private:
 
 class CborParser {
 public:
-    static GenericValue parse(const uint8_t* data, size_t size) {
+    static Value parse(const uint8_t* data, size_t size) {
         CborParser parser(data, size);
         return parser.parseValue();
     }
@@ -382,7 +382,7 @@ private:
     CborParser(const uint8_t* data, size_t size) 
         : data(data), size(size), pos(0) {}
 
-    GenericValue parseValue() {
+    Value parseValue() {
         if (pos >= size) throw std::runtime_error("Unexpected end of CBOR data");
         
         uint8_t initialByte = data[pos++];
@@ -422,61 +422,61 @@ private:
         }
     }
 
-    GenericValue parseUnsignedInt(uint64_t value) {
-        return GenericValue(static_cast<int64_t>(value));
+    Value parseUnsignedInt(uint64_t value) {
+        return Value(static_cast<int64_t>(value));
     }
 
-    GenericValue parseNegativeInt(uint64_t value) {
-        return GenericValue(-1 - static_cast<int64_t>(value));
+    Value parseNegativeInt(uint64_t value) {
+        return Value(-1 - static_cast<int64_t>(value));
     }
 
-    GenericValue parseByteString(uint64_t length) {
+    Value parseByteString(uint64_t length) {
         checkAvailable(length);
-        GenericValue::ByteArray byteArray(data + pos, data + pos + length);
+        Value::ByteArray byteArray(data + pos, data + pos + length);
         pos += length;
-        return GenericValue(std::move(byteArray));
+        return Value(std::move(byteArray));
     }
 
-    GenericValue parseTextString(uint64_t length) {
+    Value parseTextString(uint64_t length) {
         checkAvailable(length);
         std::string str(reinterpret_cast<const char*>(data + pos), length);
         pos += length;
-        return GenericValue(std::move(str));
+        return Value(std::move(str));
     }
 
-    GenericValue parseArray(uint64_t length) {
-        GenericValue::ArrayType array;
+    Value parseArray(uint64_t length) {
+        Value::ArrayType array;
         array.reserve(length);
         for (uint64_t i = 0; i < length; i++) {
             array.push_back(parseValue());
         }
-        return GenericValue(std::move(array));
+        return Value(std::move(array));
     }
 
-    GenericValue parseMap(uint64_t length) {
-        GenericValue::ObjectType object;
+    Value parseMap(uint64_t length) {
+        Value::ObjectType object;
         for (uint64_t i = 0; i < length; i++) {
             // Key must be a string in our implementation
-            GenericValue key = parseValue();
+            Value key = parseValue();
             if (!key.isString()) {
                 throw std::runtime_error("CBOR map key must be a string");
             }
             object.emplace(key.asString(), parseValue());
         }
-        return GenericValue(std::move(object));
+        return Value(std::move(object));
     }
 
-    GenericValue parseTaggedValue(uint64_t tag) {
+    Value parseTaggedValue(uint64_t tag) {
         // For simplicity, we just skip tags in this implementation
         // A more complete implementation would handle specific tags
         return parseValue();
     }
 
-    GenericValue parseSimpleValue(uint8_t minorType, uint64_t length) {
-        if (minorType == 20) return GenericValue(false);
-        if (minorType == 21) return GenericValue(true);
-        if (minorType == 22) return GenericValue(nullptr);
-        if (minorType == 23) return GenericValue(nullptr); // undefined (treated as null)
+    Value parseSimpleValue(uint8_t minorType, uint64_t length) {
+        if (minorType == 20) return Value(false);
+        if (minorType == 21) return Value(true);
+        if (minorType == 22) return Value(nullptr);
+        if (minorType == 23) return Value(nullptr); // undefined (treated as null)
         
         if (minorType == 25) {
             // Half-precision float (not directly supported)
@@ -484,11 +484,11 @@ private:
         } else if (minorType == 26) {
             // Single-precision float
             float f = readFloat();
-            return GenericValue(static_cast<double>(f));
+            return Value(static_cast<double>(f));
         } else if (minorType == 27) {
             // Double-precision float
             double d = readDouble();
-            return GenericValue(d);
+            return Value(d);
         }
         
         throw std::runtime_error("Unsupported simple value");
@@ -553,23 +553,23 @@ private:
 };
 
 // Implement the static fromCbor method
-GenericValue GenericValue::fromCbor(const uint8_t* data, size_t size) {
+Value Value::fromCbor(const uint8_t* data, size_t size) {
     return CborParser::parse(data, size);
 }
 
 int main() {
     // Create a complex object with various types
-    GenericValue data;
+    Value data;
     data["name"] = "Test Data";
     data["version"] = 2;
     data["active"] = true;
     
     // Add a byte array
-    GenericValue::ByteArray binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF};
+    Value::ByteArray binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF};
     data["binary"] = binaryData;
     
     // Add an array
-    GenericValue::ArrayType array = {1, 2.5, "three", false};
+    Value::ArrayType array = {1, 2.5, "three", false};
     data["array"] = array;
     
     // Serialize to CBOR
@@ -577,7 +577,7 @@ int main() {
     std::cout << "CBOR size: " << cborData.size() << " bytes\n";
     
     // Deserialize back
-    GenericValue parsed = GenericValue::fromCbor(cborData);
+    Value parsed = Value::fromCbor(cborData);
     
     // Verify the binary data
     const auto& decodedBinary = parsed["binary"].asByteArray();

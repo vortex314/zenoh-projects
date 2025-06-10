@@ -61,7 +61,7 @@ esp_err_t nvs_init();
 extern "C" void app_main()
 {
   testGenericValue();
-  GenericValue v;
+  Value v;
   v["pi"]=3.14;
   v["the truth"]=true;
   ESP_ERROR_CHECK(nvs_init());
