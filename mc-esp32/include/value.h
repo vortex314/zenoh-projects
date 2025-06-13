@@ -7,17 +7,18 @@
 #include <cstdint>
 #include <memory>
 #include <type_traits>
-#include <iostream>
 #include <option.h>
-#include <sstream>
 #include <iomanip>
 #include <vector>
 #include <cstdint>
 #include <utility>
+#include <result.h>
 
+#define FLOAT_TYPE float
+// #define VAL_OR_RET(V,RF)  { auto __r=RF; if (__r.is_err()) return __r;V=__r.unwrap();}
 class Value;
 
-typedef std::shared_ptr< Value> SharedValue;
+typedef std::shared_ptr<Value> SharedValue;
 
 class Value
 {
@@ -26,7 +27,7 @@ public:
     using NullType = std::nullptr_t;
     using IntType = int64_t;
     //   using FloatType = double;
-#define FloatType double
+#define FloatType FLOAT_TYPE
     using BoolType = bool;
     using StringType = std::string;
     using BytesType = std::vector<uint8_t>;
@@ -39,7 +40,7 @@ public:
     using InnerValue = std::variant<
         NullType,
         IntType,
-        double,
+        FLOAT_TYPE,
         BoolType,
         StringType,
         BytesType,
@@ -55,7 +56,7 @@ public:
     inline Value(std::nullptr_t) : _value(NullType{}) {}
     inline Value(int v) : _value(static_cast<IntType>(v)) {}
     inline Value(int64_t v) : _value(v) {}
-    inline Value(double v) : _value(v) {}
+    inline Value(FLOAT_TYPE v) : _value(v) {}
     inline Value(bool v) : _value(v) {}
     inline Value(const char *v) : _value(StringType(v)) {}
     inline Value(const std::string &v) : _value(v) {}
@@ -82,7 +83,7 @@ public:
     }
 
     Value clone() const;
-  
+
     // Convenience methods for object access
     inline bool hasKey(const std::string &key) const
     {
@@ -98,30 +99,19 @@ public:
         return !is<NullType>();
     }
 
-    template <typename U,typename F>
-    void handle(F&& func) const {
-        if ( is<U>() ) {
-            func( as<U>() );
+    template <typename U, typename F>
+    void handle(F &&func) const
+    {
+        if (is<U>())
+        {
+            func(as<U>());
         }
     }
-
 
     void add(Value v);
 
     // Convenience methods for array access
-    inline Value &operator[](size_t index)
-    {
-        if (is<NullType>())
-        {
-            _value = ArrayType();
-        }
-        if (!is<ArrayType>())
-        {
-            PANIC(" cannot index ");
-        }
-
-        return std::get<ArrayType>(_value)[index];
-    }
+    Value &operator[](size_t index);
 
     inline const Value &operator[](size_t index) const
     {
@@ -163,10 +153,10 @@ public:
     static Result<Value> fromJson(const std::string &jsonStr);
 
     void serializeCbor(std::vector<uint8_t> &output) const;
-    void serializeJson(std::ostream &os, bool pretty, int indent) const;
-    void serializeString(std::ostream &os, const std::string &str) const;
-    void serializeArray(std::ostream &os, bool pretty, int indent) const;
-    void serializeObject(std::ostream &os, bool pretty, int indent) const;
+    void serializeJson(std::string &os, bool pretty, int indent) const;
+    void serializeJsonString(std::string &os, const std::string &str) const;
+    void serializeJsonArray(std::string &os, bool pretty, int indent) const;
+    void serializeJsonObject(std::string &os, bool pretty, int indent) const;
 };
 
 #define RET_ER(T, F)                               \
@@ -178,7 +168,10 @@ public:
 
 namespace Base64
 {
-    static const std::string chars ;
+    static const std::string chars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789+/";
 
     static inline bool is_base64(uint8_t c)
     {
@@ -189,7 +182,6 @@ namespace Base64
 
     std::vector<uint8_t> decode(const std::string &encoded_string);
 };
-
 
 void serializeCborInt(std::vector<uint8_t> &output, int64_t value);
 void serializeCborString(std::vector<uint8_t> &output, const std::string &str);
@@ -250,8 +242,7 @@ private:
         return parseValue();
     }
 
-    Result<Value> parseSimpleValue(uint8_t minorType, uint64_t length)
-    ;
+    Result<Value> parseSimpleValue(uint8_t minorType, uint64_t length);
 
     // Helper functions
     inline Result<Void> checkAvailable(size_t needed) const
@@ -312,7 +303,7 @@ private:
                                      { return *reinterpret_cast<float *>(&v); });
     }
 
-    inline Result<dmainouble> readDouble()
+    inline Result<double> readDouble()
     {
         return readUint64().and_then([&](uint64_t v)
                                      { return *reinterpret_cast<double *>(&v); });
@@ -401,9 +392,5 @@ private:
     std::string input;
     size_t pos;
 };
-
-
-
-
 
 #endif

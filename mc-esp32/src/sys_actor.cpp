@@ -58,8 +58,7 @@ void SysActor::on_timer(int id)
     if (id == _timer_publish)
     {
         std::shared_ptr<Value> sv = std::make_shared<Value>();
-        Value &publish = (*sv)["publish"];
-        publish_props(publish);
+        publish_props((*sv)["publish"]);
         emit(sv);
     }
     else

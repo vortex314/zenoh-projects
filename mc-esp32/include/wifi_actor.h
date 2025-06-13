@@ -24,7 +24,8 @@ public:
   void on_start();
   Res net_init();
   Res wifi_set_config(const char* ssid, const char* password);
-    Res fill(Value& v,esp_netif_t *esp_netif);
+    Res pubish_props(Value& v,esp_netif_t *esp_netif);
+    Res publish_info(Value& v);
 
 //  Res publish_props_info();
   static void event_handler(void *arg, esp_event_base_t event_base,

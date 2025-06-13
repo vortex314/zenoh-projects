@@ -41,7 +41,6 @@ void publish(const char *topic, Value &value)
   }
   value["topic"] = topic;
   std::string s = value.toJson();
-  Bytes buffer = Bytes(s.begin(), s.end());
   SharedValue mc_cmd = std::make_shared<Value>();
   (*mc_cmd)["publish_string"] = std::move(s);
   mc_actor.tell(mc_cmd);

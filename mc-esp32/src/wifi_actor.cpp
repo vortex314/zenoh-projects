@@ -65,8 +65,7 @@ WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t q
   wifi_ssid = "";
   wifi_password = S(WIFI_PASS);
   esp_wifi_set_ps(WIFI_PS_NONE); // no power save
-    // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
-
+                                 // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 }
 
 void WifiActor::on_start()
@@ -123,11 +122,14 @@ void WifiActor::on_timer(int timer_id)
     if (_wifi_connected)
     {
       SharedValue wifi_event = std::make_shared<Value>();
-      if ( fill((*wifi_event),esp_netif).is_err())
+
+      if (pubish_props((*wifi_event)["publish"], esp_netif).is_err())
       {
         INFO("Failed to fill wifi msg");
         return;
       }
+      publish_info((*wifi_event)["info"]);
+
       emit(wifi_event);
     }
   }
@@ -137,7 +139,7 @@ void WifiActor::on_timer(int timer_id)
     if (_wifi_connected)
     {
       INFO("Publishing WiFi properties info");
-//      publish_props_info();
+      //      publish_props_info();
     }
   }
   else
@@ -176,7 +178,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   {
     INFO("WiFi STA disconnected");
     SharedValue wifi_event = std::make_shared<Value>();
-    (*wifi_event)["connected"]=false;
+    (*wifi_event)["connected"] = false;
     actor->emit(wifi_event);
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
@@ -189,7 +191,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   {
     INFO("WiFi STA got IP address");
     SharedValue wifi_event = std::make_shared<Value>();
-    (*wifi_event)["connected"]=false;
+    (*wifi_event)["connected"] = false;
     actor->emit(wifi_event);
     actor->_wifi_connected = true;
     s_retry_count = 0;
@@ -227,13 +229,12 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-
-Res WifiActor::fill(Value& v,esp_netif_t *esp_netif)
+Res WifiActor::pubish_props(Value &v, esp_netif_t *esp_netif)
 {
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   CHECK_ESP(esp_netif_get_ip_info(esp_netif, &ip_info));
-  v["ip_address"] = ip4addr_to_str(&ip_info.ip);
+  v["ip"] = ip4addr_to_str(&ip_info.ip);
   v["gateway"] = ip4addr_to_str(&ip_info.gw);
   v["netmask"] = ip4addr_to_str(&ip_info.netmask);
   // get MAC address
@@ -242,7 +243,39 @@ Res WifiActor::fill(Value& v,esp_netif_t *esp_netif)
   char macStr[18];
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
-  v["mac_address"] = macStr;
+  v["mac"] = macStr;
+  return ResOk;
+}
+
+struct Info
+{
+  const char *name;
+  const char *type;
+  const char *desc;
+  const char *mode;
+  Option<float> min;
+  Option<float> max;
+} prop_info[] = {
+    {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
+    {"ip", "S", "IO V4 address", "R", nullptr, nullptr},
+    {"netmask", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
+    {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
+
+};
+
+constexpr int info_size = sizeof(prop_info) / sizeof(struct Info);
+
+Res WifiActor::publish_info(Value &v)
+{
+  int idx = _prop_counter % info_size;
+  struct Info &pi = prop_info[idx];
+  v[pi.name]["type"] = pi.type;
+  v[pi.name]["desc"] = pi.desc;
+  v[pi.name]["mode"] = pi.mode;
+  pi.min.inspect([&](const float &min)
+                 { v[pi.name]["min"] = min; });
+  pi.max.inspect([&](const float &max)
+                 { v[pi.name]["max"] = max; });
   return ResOk;
 }
 
@@ -431,7 +464,6 @@ Res WifiActor::scan()
   scan_config.scan_time.passive = 0;
   scan_config.home_chan_dwell_time = WIFI_SCAN_HOME_CHANNEL_DWELL_DEFAULT_TIME;
 
-
   CHECK_ESP(esp_wifi_scan_start(&scan_config, true));
 
   INFO("Max AP number ap_info can hold = %u", number);
@@ -477,7 +509,6 @@ Res WifiActor::connect()
   INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
        wifi_config.sta.password);
   CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-
 
   CHECK_ESP(esp_wifi_set_mode(WIFI_MODE_STA));
   esp_event_handler_instance_register(

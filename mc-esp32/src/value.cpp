@@ -78,13 +78,6 @@
         return as<ObjectType>().at(key);
     }
 
-    template <typename U,typename F>
-    void handle(F&& func) const {
-        if ( is<U>() ) {
-            func( as<U>() );
-        }
-    }
-
 
     void Value::add(Value v)
     {
@@ -100,7 +93,7 @@
     }
 
     // Convenience methods for array access
-    Value &operator[](size_t index)
+    Value & Value::operator[](size_t index)
     {
         if (is<NullType>())
         {
@@ -114,12 +107,7 @@
         return std::get<ArrayType>(_value)[index];
     }
 
-    const Value &operator[](size_t index) const
-    {
-        return as<ArrayType>().at(index);
-    }
-
-
+   
     size_t Value::size() const
     {
         if (is<ArrayType>())
@@ -141,10 +129,6 @@
     }
 
 
-    static const std::string Base64::chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
 
     std::string Base64::encode(const uint8_t *buf, size_t bufLen)
     {
@@ -277,10 +261,10 @@ void Value::serializeCbor(std::vector<uint8_t> &output) const
     {
         // CBOR double-precision float (0xfb)
         output.push_back(0xfb);
-        double d = as<FloatType>();
+        FLOAT_TYPE d = as<FloatType>();
         const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&d);
         // Network byte order (big-endian)
-        for (int i = sizeof(double) - 1; i >= 0; i--)
+        for (int i = sizeof(FLOAT_TYPE) - 1; i >= 0; i--)
         {
             output.push_back(bytes[i]);
         }
@@ -566,29 +550,17 @@ void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t
         {
             // Single-precision float
             return readFloat().and_then([&](auto f)
-                                        { return Value(static_cast<double>(f)); });
+                                        { return Value(static_cast<FLOAT_TYPE>(f)); });
         }
         else if (minorType == 27)
         {
             return readDouble().and_then([&](auto f)
-                                         { return Value(static_cast<double>(f)); });
+                                         { return Value(static_cast<FLOAT_TYPE>(f)); });
         }
 
         return Result<Value>(-1, "Unsupported simple value");
     }
 
-
-
-    const uint8_t *data;
-    size_t size;
-    size_t pos;
-};
-
-// Implement the static fromCbor method
-Result<Value> Value::fromCbor(const uint8_t *data, size_t size)
-{
-    return CborParser::parse(data, size);
-}
 
 #include <stack>
 #include <stdexcept>
@@ -818,7 +790,7 @@ Result<Value> Value::fromCbor(const uint8_t *data, size_t size)
                 }
             }
 
-            return Value(std::stod(numStr));
+            return Value((FLOAT_TYPE)std::stod(numStr));
         }
 
         return Value(std::stoll(numStr));
@@ -853,59 +825,69 @@ Result<Value> Value::fromJson(const std::string &jsonStr)
     return JsonParser::parse(jsonStr);
 }
 
-#include <sstream>
+//#include <sstream>
 #include <iomanip>
 
 // Serialize to JSON string
 std::string Value::toJson(bool pretty, int indent) const
 {
-    std::ostringstream oss;
+    std::string oss;
     serializeJson(oss, pretty, indent);
-    return oss.str();
+    return oss;
 }
 
 // Static method to parse JSON
 
-void Value::serializeJson(std::ostream &os, bool pretty, int indent) const
+void Value::serializeJson(std::string &os, bool pretty, int indent) const
 {
     if (is<NullType>())
     {
-        os << "null";
+       os += "null";
     }
     else if (is<BoolType>())
     {
-        os << (as<BoolType>() ? "true" : "false");
+        os += (as<BoolType>() ? "true" : "false");
     }
     else if (is<IntType>())
     {
-        os << as<IntType>();
+        char str[20];
+        sprintf(str,"%lld",as<IntType>());
+        os+=str;
     }
     else if (is<FloatType>())
     {
-        os << as<FloatType>();
+         char str[20];
+        sprintf(str,"%f",as<FloatType>());
+        os+=str;
     }
     else if (is<StringType>())
     {
-        serializeString(os, as<StringType>());
+        os += '"';
+        os+= as<StringType>();
+        os += '"';
     }
     else if (is<ArrayType>())
     {
-        serializeArray(os, pretty, indent);
+        serializeJsonArray(os, pretty, indent);
     }
     else if (is<ObjectType>())
     {
-        serializeObject(os, pretty, indent);
+        serializeJsonObject(os, pretty, indent);
     }
 }
 
-void Value::serializeString(std::ostream &os, const std::string &str) const
+void Value::serializeJsonString(std::string &os, const std::string &str) const
 {
-    os << std::quoted(str);
+    os += '"';
+    os += str;
+
+ //  std::string  s = std::quoted(str);
+   os += '"' ;
 }
 
-void Value::serializeArray(std::ostream &os, bool pretty, int indent) const
+void Value::serializeJsonArray(std::string &os, bool pretty, int indent) const
 {
-    os << "[";
+    os += "[";
     const auto &arr = as<ArrayType>();
     const size_t size = arr.size();
 
@@ -913,31 +895,31 @@ void Value::serializeArray(std::ostream &os, bool pretty, int indent) const
     {
         if (pretty && size > 1)
         {
-            os << "\n"
-               << std::string(indent + 2, ' ');
+            os += "\n";
+            os+=  std::string(indent + 2, ' ');
         }
 
         arr[i].serializeJson(os, pretty, indent + 2);
 
         if (i < size - 1)
         {
-            os << ",";
+            os +=  ",";
             if (pretty && size <= 1)
-                os << " ";
+                os +=  " ";
         }
     }
 
     if (pretty && size > 1)
     {
-        os << "\n"
-           << std::string(indent, ' ');
+        os +=  "\n";
+        os += std::string(indent, ' ');
     }
-    os << "]";
+    os +=  "]";
 }
 
-void Value::serializeObject(std::ostream &os, bool pretty, int indent) const
+void Value::serializeJsonObject(std::string &os, bool pretty, int indent) const
 {
-    os << "{";
+    os +=  "{";
     const auto &obj = as<ObjectType>();
     const size_t size = obj.size();
     size_t count = 0;
@@ -946,28 +928,28 @@ void Value::serializeObject(std::ostream &os, bool pretty, int indent) const
     {
         if (pretty && size > 1)
         {
-            os << "\n"
-               << std::string(indent + 2, ' ');
+            os +=  "\n";
+            os += std::string(indent + 2, ' ');
         }
 
-        serializeString(os, key);
-        os << (pretty ? ": " : ":");
+        serializeJsonString(os, key);
+        os +=  (pretty ? ": " : ":");
         value.serializeJson(os, pretty, indent + 2);
 
         if (++count < size)
         {
-            os << ",";
+            os +=  ",";
             if (pretty && size <= 1)
-                os << " ";
+                os +=  " ";
         }
     }
 
     if (pretty && size > 1)
     {
-        os << "\n"
-           << std::string(indent, ' ');
+        os +=  "\n";
+        os += std::string(indent, ' ');
     }
-    os << "}";
+    os +=  "}";
 }
 
 
