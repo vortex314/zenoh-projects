@@ -58,7 +58,7 @@ public:
   Result<Void> disconnect();
   // Result zenoh_publish_serializable(const char *topic, Serializable &value);
   Result<Bytes> receive();
-  Result<Void> send(const Bytes& data);
+  Result<Void> send(const std::string& data);
   Result<Void> publish_props();
 //  Result publish_props_info();
 

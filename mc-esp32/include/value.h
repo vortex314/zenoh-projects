@@ -10,6 +10,8 @@
 #include <iostream>
 #include <option.h>
 
+#pragma once
+
 class Value;
 
 typedef std::shared_ptr< Value> SharedValue;
@@ -260,35 +262,6 @@ public:
             return Result<T>(__r.rc(), __r.msg()); \
     }
 
-int testValue()
-{
-    // Create a complex nested structure
-    Value person;
-    person["name"] = "John Doe";
-    person["age"] = 42;
-    person["is_active"] = true;
-
-    // Create an array
-    Value scores = Value::ArrayType{95, 87, 91};
-    person["scores"] = scores;
-
-    // Create a nested object
-    Value address;
-    address["street"] = "123 Main St";
-    address["city"] = "Anytown";
-    person["address"] = address;
-
-    /*  // Access values
-      std::cout << "Name: " << person["name"].as<StringType>() << "\n";
-      std::cout << "First score: " << person["scores"][0].as<IntType>() << "\n";
-      std::cout << "City: " << person["address"]["city"].as<StringType>() << "\n";
-
-      // Memory usage
-      std::cout << "Approximate memory usage: " << person.memoryUsage() << " bytes\n";
-      */
-    return 0;
-}
-
 namespace Base64
 {
     static const std::string chars =
@@ -391,31 +364,6 @@ namespace Base64
 
         return ret;
     }
-}
-
-int test23()
-{
-    // Create a binary payload
-    Value::BytesType binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF, 0xFE, 0xFD};
-
-    // Store in Value
-    Value data;
-    data["binary"] = binaryData;
-    data["description"] = "Sample binary data";
-
-    // Serialize to JSON
-    std::string json = data.toJson();
-    std::cout << "JSON with Base64:\n"
-              << json << "\n";
-
-    // Deserialize back
-    Value parsed = Value::fromJson(json).unwrap();
-    const auto &decodedData = parsed["binary"].as<Value::BytesType>();
-
-    std::cout << "\nDecoded binary data size: " << decodedData.size() << " bytes\n";
-    std::cout << "First byte: 0x" << std::hex << (int)decodedData[0] << "\n";
-
-    return 0;
 }
 
 #include <vector>
@@ -859,7 +807,7 @@ private:
                                      { return *reinterpret_cast<float *>(&v); });
     }
 
-    Result<double> readDouble()
+    Result<dmainouble> readDouble()
     {
         return readUint64().and_then([&](uint64_t v)
                                      { return *reinterpret_cast<double *>(&v); });
@@ -874,41 +822,6 @@ private:
 Result<Value> Value::fromCbor(const uint8_t *data, size_t size)
 {
     return CborParser::parse(data, size);
-}
-
-int main2()
-{
-    // Create a complex object with various types
-    Value data;
-    data["name"] = "Test Data";
-    data["version"] = 2;
-    data["active"] = true;
-
-    // Add a byte array
-    Value::BytesType binaryData = {0x01, 0x02, 0x03, 0x04, 0xFF};
-    data["binary"] = binaryData;
-
-    // Add an array
-    Value::ArrayType array = {1, 2.5, "three", false};
-    data["array"] = array;
-
-    // Serialize to CBOR
-    std::vector<uint8_t> cborData = data.toCbor();
-    std::cout << "CBOR size: " << cborData.size() << " bytes\n";
-
-    // Deserialize back
-    Value parsed = Value::fromCbor(cborData).unwrap();
-
-    // Verify the binary data
-    const auto &decodedBinary = parsed["binary"].as<Value::BytesType>();
-    std::cout << "Decoded binary size: " << decodedBinary.size() << " bytes\n";
-    std::cout << "First byte: 0x" << std::hex << (int)decodedBinary[0] << "\n";
-
-    // Verify other data
-    std::cout << "Name: " << parsed["name"].as<Value::StringType>() << "\n";
-    std::cout << "Array size: " << parsed["array"].size() << "\n";
-
-    return 0;
 }
 
 #include <stack>

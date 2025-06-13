@@ -23,7 +23,7 @@ static int create_multicast_socket();
 McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
 
 McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
-    : Actor<McEvent, McCmd>(stack_size, name, priority, queue_depth)
+    : Actor(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000); // timer for publishing properties
 }
@@ -102,9 +102,9 @@ void McActor::on_cmd(SharedValue pcmd)
     }
   });
 
-  cmd["publish_string"],handle<std::string>([&](auto str){
+  cmd["publish_string"].handle<std::string>([&](auto str){
     send(str);
-  })
+  });
 }
 
 Res McActor::connect(void)
@@ -252,7 +252,7 @@ static int create_multicast_socket()
   return sock;
 }
 
-Result<Void> McActor::send(const Bytes &data)
+Result<Void> McActor::send(const std::string &data)
 {
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);

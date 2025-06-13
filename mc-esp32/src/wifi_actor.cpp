@@ -58,7 +58,7 @@ typedef enum WifiProp
 
 WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
-WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<WifiEvent, WifiCmd>(stack_size, name, priority, queue_depth)
+WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
   _timer_publish = timer_repetitive(1000);
   //  _timer_publish_props = timer_repetitive(5000);
@@ -108,9 +108,9 @@ void WifiActor::on_start()
   }
 }
 
-void WifiActor::on_cmd(WifiCmd &cmd)
+void WifiActor::on_cmd(SharedValue cmd)
 {
-  if (cmd.stop_actor)
+  if ((*cmd)["stop_actor"])
   {
     stop();
   }
@@ -122,13 +122,13 @@ void WifiActor::on_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      auto r = wifi_msg.fill(esp_netif);
-      if (r.is_err())
+      SharedValue wifi_event = std::make_shared<Value>();
+      if ( fill((*wifi_event),esp_netif).is_err())
       {
-        INFO("Failed to fill wifi msg: %s", r.msg());
+        INFO("Failed to fill wifi msg");
         return;
       }
-      emit(WifiEvent{.publish = wifi_msg });
+      emit(wifi_event);
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -175,7 +175,9 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     INFO("WiFi STA disconnected");
-    actor->emit(WifiEvent{WifiSignal::WIFI_DISCONNECTED});
+    SharedValue wifi_event = std::make_shared<Value>();
+    (*wifi_event)["connected"]=false;
+    actor->emit(wifi_event);
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
     {
@@ -186,7 +188,9 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     INFO("WiFi STA got IP address");
-    actor->emit(WifiEvent{WifiSignal::WIFI_CONNECTED});
+    SharedValue wifi_event = std::make_shared<Value>();
+    (*wifi_event)["connected"]=false;
+    actor->emit(wifi_event);
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }
@@ -224,21 +228,21 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
 }*/
 
 
-Res WifiMsg::fill(esp_netif_t *esp_netif)
+Res WifiActor::fill(Value& v,esp_netif_t *esp_netif)
 {
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   CHECK_ESP(esp_netif_get_ip_info(esp_netif, &ip_info));
-  ip_address = ip4addr_to_str(&ip_info.ip);
-  gateway = ip4addr_to_str(&ip_info.gw);
-  netmask = ip4addr_to_str(&ip_info.netmask);
+  v["ip_address"] = ip4addr_to_str(&ip_info.ip);
+  v["gateway"] = ip4addr_to_str(&ip_info.gw);
+  v["netmask"] = ip4addr_to_str(&ip_info.netmask);
   // get MAC address
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
-  mac_address = macStr;
+  v["mac_address"] = macStr;
   return ResOk;
 }
 
@@ -483,28 +487,4 @@ Res WifiActor::connect()
   CHECK_ESP(esp_wifi_start());
 
   return ResOk;
-}
-
-
-Res WifiMsg::serialize(Serializer &ser) const
-{
- // uint32_t idx = 0;
-  ser.reset();
-  ser.map_begin();
-  ser.serialize(KEY("mac"), mac_address);
-  ser.serialize(KEY("ip"), ip_address);
-  ser.serialize(KEY("gateway"), gateway);
-  ser.serialize(KEY("netmask"), netmask);
-  ser.serialize(KEY("dns"), dns);
-  ser.serialize(KEY("ssid"), ssid);
-  ser.serialize(KEY("channel"), channel);
-  ser.serialize(KEY("rssi"), rssi);
-  ser.serialize(KEY("encryption"), encryption);
-  ser.serialize(KEY("wifi_mode"), wifi_mode);
-  ser.serialize(KEY("ap"), ap_scan);
-  return ser.map_end();
-}
-Res WifiMsg::deserialize(Deserializer &des)
-{
-  return Res(-1, "Not implemented");
 }

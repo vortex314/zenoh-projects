@@ -32,19 +32,24 @@ Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 Log logger;
 
 // void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-void publish(const char *topic,  Value &value)
+void publish(const char *topic, Value &value)
 {
   if (!mc_actor.is_connected())
   {
     INFO("Mc not connected, cannot publish");
     return;
   }
-  value["topic"]=topic;
+  value["topic"] = topic;
   std::string s = value.toJson();
   Bytes buffer = Bytes(s.begin(), s.end());
-  mc_actor.tell(new McCmd{.publish_value = PublishBytes{topic, buffer}});
+  SharedValue mc_cmd = std::make_shared<Value>();
+  (*mc_cmd)["publish_string"] = std::move(s);
+  mc_actor.tell(mc_cmd);
   // pulse led when we publish
-  led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
+  SharedValue led_cmd = std::make_shared<Value>();
+  (*led_cmd)["action"] = "PULSE";
+  (*led_cmd)["duration"] = 10;
+  led_actor.tell(led_cmd);
 }
 esp_err_t nvs_init();
 /*
@@ -66,37 +71,47 @@ extern "C" void app_main()
       .topic = Option<std::string>("src/brain/ **")}); // connect to zenoh*/
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([&](SharedValue event)
-                      {
-                        (*event)["connected"].handle<bool>([&](auto connected){
+                      { (*event)["connected"].handle<bool>([&](auto connected)
+                                                           {
                           SharedValue sv = std::make_shared<Value>();
                           (*sv)["wifi_connected"]=connected;
-                          mc_actor.tell(sv);
-                        });
-                      });
+                          mc_actor.tell(sv); }); });
 
-                        // WIRING the actors together
-  wifi_actor.on_event([&](const WifiEvent &event)
-                      { event.publish.for_each([](auto msg)
-                                               { publish(SRC_DEVICE "wifi", msg); }); });
+  // WIRING the actors together
+  wifi_actor.on_event([&](SharedValue event)
+                      {
+    if ((*event)["publish"])
+    {
+      publish(SRC_DEVICE "wifi", (*event));
+    }});
   sys_actor.on_event([&](SharedValue event)
-                     { if ( (*event)["publish"])  
-                       { publish(SRC_DEVICE "sys", (*event));}
-  mc_actor.on_event([&](SharedValue event)
-                    { if ( (*event)["publish"])  
-                       { publish(SRC_DEVICE "multicast", (*event));}
-
-
-  // send commands to actors coming from zenoh, deserialize and send to the right actor
+                     {
+    if ((*event)["publish"])
+    {
+      publish(SRC_DEVICE "sys", (*event));
+    }});
   mc_actor.on_event([&](SharedValue event)
                     {
-                      Value& v= *event;
-                      if ( v["publish"].is<Value::ObjectType>() && v["topic"].is<std::string>()) {
-                          const std::string& topic = v["topic"].as<std::string>();
-                          if ( topic == DST_DEVICE "sys" ) sys_actor.tell(event);
-                          if ( topic == DST_DEVICE "wifi" ) wifi_actor.tell(event);
-                          if ( topic == DST_DEVICE "multicast" ) mc_actor.tell(event);
-                      }
-                    };
+      if ((*event)["publish"])
+      {
+        publish(SRC_DEVICE "multicast", (*event));
+      }});
+
+      // send commands to actors coming from zenoh, deserialize and send to the right actor
+  mc_actor.on_event([&](SharedValue event)
+                    {
+        Value &v = *event;
+        if (v["publish"].is<Value::ObjectType>() && v["topic"].is<std::string>())
+        {
+          const std::string &topic = v["topic"].as<std::string>();
+          if (topic == DST_DEVICE "sys")
+            sys_actor.tell(event);
+          if (topic == DST_DEVICE "wifi")
+            wifi_actor.tell(event);
+          if (topic == DST_DEVICE "multicast")
+            mc_actor.tell(event);
+        }
+                    });
  
 
   // actor_thread.add_actor(camera_actor);
@@ -110,19 +125,19 @@ extern "C" void app_main()
   // log heap size, monitoring thread in main, we could exit also
   while (true)
   {
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-    INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
 }
 
 esp_err_t nvs_init()
 {
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-  {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  return ret;
+      esp_err_t ret = nvs_flash_init();
+      if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+          ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+      {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+      }
+      return ret;
 }
