@@ -42,7 +42,7 @@
         else if (is<ObjectType>())
         {
             ObjectType newObject;
-            const auto &obj = as<ObjectType>();
+            const auto &obj = std::get<ObjectT>(_value)
             for (const auto &[key, value] : obj)
             {
                 newObject.emplace(key, value.clone());

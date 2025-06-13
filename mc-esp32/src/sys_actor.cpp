@@ -72,6 +72,39 @@ SysActor::~SysActor()
     INFO("Stopping Sys actor");
 }
 
+struct Info
+{
+  const char *name;
+  const char *type;
+  const char *desc;
+  const char *mode;
+  Option<float> min;
+  Option<float> max;
+} prop_info[] = {
+    {"cpu", "S", "CPU core", "R", nullptr, nullptr},
+    {"clock", "I", "cpu clock frequency in Hz", "R", nullptr, nullptr},
+    {"free_heap", "I", "available memory on the heap", "R", nullptr, nullptr},
+    {"uptime", "I", "millisec since last boot of system", "R", nullptr, nullptr},
+
+};
+
+constexpr int info_size = sizeof(prop_info) / sizeof(struct Info);
+
+Res SysActor::publish_info(Value &v)
+{
+  int idx = _prop_counter % info_size;
+  struct Info &pi = prop_info[idx];
+  v[pi.name]["type"] = pi.type;
+  v[pi.name]["desc"] = pi.desc;
+  v[pi.name]["mode"] = pi.mode;
+  pi.min.inspect([&](const float &min)
+                 { v[pi.name]["min"] = min; });
+  pi.max.inspect([&](const float &max)
+                 { v[pi.name]["max"] = max; });
+  return ResOk;
+}
+
+
 void SysActor::publish_props(Value &v)
 {
     v["cpu"] = "ESP32-XTENSA";

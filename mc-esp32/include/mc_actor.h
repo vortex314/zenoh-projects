@@ -63,7 +63,7 @@ public:
 //  Result publish_props_info();
 
   Result<Void> subscribe(const std::string &topic);
-  Result<Value> get_props() const;
+  void get_props(Value& v) const;
 
 
 private:

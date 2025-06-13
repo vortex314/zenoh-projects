@@ -40,12 +40,12 @@ void McActor::on_start()
       auto msg = receive();
       if (msg.is_err())
         break;
-      msg.inspect([&](auto data ) {
-        //TODO
-        // parse JSON and find publish and send topic + complete string  as publishbytes
-
-
-      });
+      msg.inspect([&](auto rx_buffer)
+                  {
+                    std::string json((const char *)rx_buffer, len);
+                    Value::fromJson(json).inspect([&](auto value)
+                                                  { emit(value); });
+                  });
     }
 
     disconnect();
@@ -64,8 +64,9 @@ void McActor::on_timer(int id)
 
 void McActor::on_cmd(SharedValue pcmd)
 {
-  Value& cmd = *pcmd;
-  cmd["wifi_connected"].handle<bool>([&](bool connected){
+  Value &cmd = *pcmd;
+  cmd["wifi_connected"].handle<bool>([&](bool connected)
+                                     {
     if ( connected ){
        if (!_connected)
       {
@@ -99,12 +100,10 @@ void McActor::on_cmd(SharedValue pcmd)
       {
         disconnect();
       }
-    }
-  });
+    } });
 
-  cmd["publish_string"].handle<std::string>([&](auto str){
-    send(str);
-  });
+  cmd["publish_string"].handle<std::string>([&](auto str)
+                                            { send(str); });
 }
 
 Res McActor::connect(void)
@@ -158,8 +157,6 @@ Res McActor::subscribe(const std::string &topic)
 McActor::~McActor()
 {
   INFO("Closing Mc Session...");
-
-  INFO("Mc session closed ");
 }
 
 Res McActor::publish_props()
@@ -168,20 +165,20 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
+  SharedValue sv = std::make_shared<Value>();
+  get_props((*sv)["publish"]);
+  emit(sv);
   return ResOk;
 }
 
 //============================================================
 
-Result<Value> McActor::get_props() const
+void McActor::get_props(Value &v) const
 {
-  Value props;
-  props["multicast"]["ip"]=MULTICAST_IP;
-  props["multicast"]["port"]=MULTICAST_PORT;
-  props["multicast"]["packet_size"]=MAX_UDP_PACKET_SIZE;
-  return props;
+  v["multicast"]["ip"] = MULTICAST_IP;
+  v["multicast"]["port"] = MULTICAST_PORT;
+  v["multicast"]["packet_size"] = MAX_UDP_PACKET_SIZE;
 }
-
 
 static int create_multicast_socket()
 {
@@ -265,7 +262,7 @@ Result<Void> McActor::send(const std::string &data)
 
   if (err < 0)
   {
-    return Result<Void>(errno,"Error occurred during sending ");
+    return Result<Void>(errno, "Error occurred during sending ");
   }
   return ResOk;
 }
@@ -287,7 +284,8 @@ Result<Bytes> McActor::receive()
   else
   {
     rx_buffer[len] = '\0';
-    Bytes bytes = Bytes(rx_buffer[0],rx_buffer[len+1]);
+
+    Bytes bytes = Bytes(rx_buffer[0], rx_buffer[len]);
     return Result<Bytes>(bytes);
   }
 }

@@ -12,7 +12,7 @@
 #include <option.h>
 #include <result.h>
 
-#include "esp_err.h"
+//#include "esp_err.h"
 
 #define BZERO(x) memset(&(x), 0, sizeof(x))
 #define STRINGIZE(x) STRINGIZE2(x)

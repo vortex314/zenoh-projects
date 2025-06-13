@@ -17,6 +17,7 @@
 #define FLOAT_TYPE float
 // #define VAL_OR_RET(V,RF)  { auto __r=RF; if (__r.is_err()) return __r;V=__r.unwrap();}
 class Value;
+#define FloatType FLOAT_TYPE
 
 typedef std::shared_ptr<Value> SharedValue;
 
@@ -27,7 +28,6 @@ public:
     using NullType = std::nullptr_t;
     using IntType = int64_t;
     //   using FloatType = double;
-#define FloatType FLOAT_TYPE
     using BoolType = bool;
     using StringType = std::string;
     using BytesType = std::vector<uint8_t>;
@@ -35,9 +35,13 @@ public:
     // Container types (using shared_ptr to minimize copying)
     using ArrayType = std::vector<Value>;
     using ObjectType = std::unordered_map<std::string, Value>;
+    struct Undefined
+    {
+    };
 
     // The actual storage type
     using InnerValue = std::variant<
+        Undefined,
         NullType,
         IntType,
         FLOAT_TYPE,
@@ -50,9 +54,34 @@ public:
 private:
     InnerValue _value;
 
+    class Proxy
+    {
+    public:
+        Proxy(Value &value, const std::string &key)
+            : value_(value), key_(key) {}
+
+        // Conversion operator for reading
+        operator Value() const
+        {
+            return value_.get(key_);
+        }
+
+        // Assignment operator for writing
+        Value &operator=(const Value &val)
+        {
+            return value_.set(key_, val);
+        }
+
+    private:
+        Value &value_;
+        std::string key_;
+    };
+
 public:
     // Constructors for primitive types
-    inline Value() : _value(NullType{}) {}
+     inline   Value() : _value(Undefined{}) {}
+
+//    inline Value() : _value(NullType{}) {}
     inline Value(std::nullptr_t) : _value(NullType{}) {}
     inline Value(int v) : _value(static_cast<IntType>(v)) {}
     inline Value(int64_t v) : _value(v) {}
@@ -61,7 +90,7 @@ public:
     inline Value(const char *v) : _value(StringType(v)) {}
     inline Value(const std::string &v) : _value(v) {}
     inline Value(const std::vector<uint8_t> &v) : _value(v) {}
-
+    inline Value(Undefined v) : _value(v) {}
     // Constructor for arrays (move semantics to minimize copies)
     inline Value(const ArrayType &arr) : _value(arr) {}
     inline Value(ArrayType &&arr) : _value(std::move(arr)) {}
@@ -69,6 +98,90 @@ public:
     // Constructor for objects (move semantics)
     inline Value(const ObjectType &obj) : _value(obj) {}
     inline Value(ObjectType &&obj) : _value(std::move(obj)) {}
+    // Get the underlying map (converts to map if not already one)
+    ObjectType &get_map()
+    {
+        if (!is<ObjectType>())
+        {
+            _value = ObjectType{};
+        }
+        return std::get<ObjectType>(_value);
+    }
+
+    // Const version of get_map
+    const ObjectType &get_map() const
+    {
+        if (!is<ObjectType>())
+        {
+            return Value(Undefined{});
+        }
+        return std::get<ObjectType>(_value);
+    }
+    // Get value (const version, returns Undefined if doesn't exist)
+    Value get(const std::string &key) const
+    {
+        if (!is<ObjectType>())
+        {
+            return Value(Undefined{});
+        }
+        const auto &map = get_map();
+        auto it = map.find(key);
+        if (it == map.end())
+        {
+            return Value(Undefined{});
+        }
+        return it->second;
+    }
+
+    // Set value (creates if doesn't exist)
+    Value &set(const std::string &key, const Value &val)
+    {
+        return get_map()[key] = val;
+    }
+
+    // Overloaded operator[] that returns a proxy
+    Proxy operator[](const std::string &key)
+    {
+        return Proxy(*this, key);
+    }
+
+    // Const version of operator[] that returns Undefined for missing keys
+    Value operator[](const std::string &key) const
+    {
+        return get(key);
+    }
+    /*
+    // Overloaded operator[] that returns a proxy
+        Proxy operator[](const std::string& key) {
+            return Proxy(*this, key);
+        }
+
+        // Get value (const version, doesn't create if doesn't exist)
+        Value get(const std::string& key) const {
+            if (!is<ObjectType>())
+                return NullType();
+            auto it = std::get<ObjectType>(_value).find(key);
+            if ( it ==  std::get<ObjectType>(_value).end() ){
+                return NullType();
+            }
+            return it->second;
+        }
+
+        // Set value (creates if doesn't exist)
+        Value& set(const std::string& key, const Value& value) {
+            if (is<NullType>())
+                _value = ObjectType();
+            if (!is<ObjectType>())
+                PANIC(" cannot index ");
+             _value
+
+            return *this;
+        }
+
+    */
+
+public:
+
 
     template <typename T>
     bool is() const
@@ -90,15 +203,15 @@ public:
         return is<ObjectType>() && as<ObjectType>().count(key) > 0;
     }
 
-    Value &operator[](const std::string &key);
+    /*    //Value &operator[](const std::string &key);
 
-    const Value &operator[](const std::string &key) const;
+        const Value &operator[](const std::string &key) const;
 
-    inline explicit operator bool()
-    {
-        return !is<NullType>();
-    }
-
+        inline explicit operator bool()
+        {
+            return !is<NullType>();
+        }
+    */
     template <typename U, typename F>
     void handle(F &&func) const
     {
