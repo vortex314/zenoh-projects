@@ -10,9 +10,9 @@
 #include <iostream>
 #include <option.h>
 
-#define STRINGIZE(x) STRINGIZE2(x)
-#define STRINGIZE2(x) #x
-#define LINE_STRING STRINGIZE(__LINE__)
+class Value;
+
+typedef std::shared_ptr< Value> SharedValue;
 
 class Value
 {
@@ -156,11 +156,44 @@ public:
         return as<ObjectType>().at(key);
     }
 
+    explicit operator bool()
+    {
+        return !is<NullType>();
+    }
+
+    template <typename U,typename F>
+    void handle(F&& func) const {
+        if ( is<U>() ) {
+            func( as<U>() );
+        }
+    }
+
+
+    void add(Value v)
+    {
+        if (is<NullType>())
+        {
+            _value = ArrayType();
+        }
+        if (!is<ArrayType>())
+        {
+            PANIC(" cannot index ");
+        }
+        std::get<ArrayType>(_value).push_back(v);
+    }
+
     // Convenience methods for array access
     Value &operator[](size_t index)
     {
         if (is<NullType>())
+        {
             _value = ArrayType();
+        }
+        if (!is<ArrayType>())
+        {
+            PANIC(" cannot index ");
+        }
+
         return std::get<ArrayType>(_value)[index];
     }
 
@@ -184,9 +217,12 @@ public:
             target = as<U>();
     }
 
-    /*template <typename U>
-    operator U()
+    operator std::string()
     {
+        return as<std::string>();
+    }
+    /*template<typename U>
+    operator U(){
         return as<U>();
     }*/
 
@@ -203,12 +239,12 @@ public:
     }
     // CBOR
     std::vector<uint8_t> toCbor() const;
-    static Value fromCbor(const uint8_t *data, size_t size);
-    static Value fromCbor(const std::vector<uint8_t> &data);
+    static Result<Value> fromCbor(const uint8_t *data, size_t size);
+    static Result<Value> fromCbor(const std::vector<uint8_t> &data);
     // JSON
     std::string toJson(bool pretty = false, int indent = 0) const;
-    static Value fromJson(const uint8_t *data, size_t size);
-    static Value fromJson(const std::string &jsonStr);
+    static Result<Value> fromJson(const uint8_t *data, size_t size);
+    static Result<Value> fromJson(const std::string &jsonStr);
 
     void serializeCbor(std::vector<uint8_t> &output) const;
     void serializeJson(std::ostream &os, bool pretty, int indent) const;
@@ -216,6 +252,13 @@ public:
     void serializeArray(std::ostream &os, bool pretty, int indent) const;
     void serializeObject(std::ostream &os, bool pretty, int indent) const;
 };
+
+#define RET_ER(T, F)                               \
+    {                                              \
+        auto __r = F;                              \
+        if (__r.is_err())                          \
+            return Result<T>(__r.rc(), __r.msg()); \
+    }
 
 int testValue()
 {
@@ -366,7 +409,7 @@ int test23()
               << json << "\n";
 
     // Deserialize back
-    Value parsed = Value::fromJson(json);
+    Value parsed = Value::fromJson(json).unwrap();
     const auto &decodedData = parsed["binary"].as<Value::BytesType>();
 
     std::cout << "\nDecoded binary data size: " << decodedData.size() << " bytes\n";
@@ -404,7 +447,7 @@ std::vector<uint8_t> Value::toCbor() const
 }
 
 // Deserialize from CBOR
-Value Value::fromCbor(const std::vector<uint8_t> &data)
+Result<Value> Value::fromCbor(const std::vector<uint8_t> &data)
 {
     return fromCbor(data.data(), data.size());
 }
@@ -582,7 +625,7 @@ void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t
 class CborParser
 {
 public:
-    static Value parse(const uint8_t *data, size_t size)
+    static Result<Value> parse(const uint8_t *data, size_t size)
     {
         CborParser parser(data, size);
         return parser.parseValue();
@@ -592,15 +635,17 @@ private:
     CborParser(const uint8_t *data, size_t size)
         : data(data), size(size), pos(0) {}
 
-    Value parseValue()
+    Result<Value> parseValue()
     {
         if (pos >= size)
-            throw std::runtime_error("Unexpected end of CBOR data");
+            return Result<Value>(-1, "Unexpected end of CBOR data");
 
         uint8_t initialByte = data[pos++];
         uint8_t majorType = initialByte >> 5;
         uint8_t minorType = initialByte & 0x1f;
-        uint64_t length = parseLength(minorType);
+        auto r = parseLength(minorType);
+        RET_ER(Value, r);
+        uint64_t length = r.unwrap();
 
         switch (majorType)
         {
@@ -621,15 +666,15 @@ private:
         case 7:
             return parseSimpleValue(minorType, length); // simple value/float
         default:
-            throw std::runtime_error("Invalid CBOR major type");
+            return Result<Value>(-1, "Invalid CBOR major type");
         }
     }
 
-    uint64_t parseLength(uint8_t minorType)
+    Result<uint64_t> parseLength(uint8_t minorType)
     {
         if (minorType < 24)
         {
-            return minorType;
+            return Result<uint64_t>(minorType);
         }
         else if (minorType == 24)
         {
@@ -650,11 +695,11 @@ private:
         else if (minorType == 31)
         {
             // Indefinite length (not fully supported here)
-            throw std::runtime_error("Indefinite length items not supported");
+            return Result<uint64_t>(-1, "Indefinite length items not supported");
         }
         else
         {
-            throw std::runtime_error("Reserved minor type");
+            return Result<uint64_t>(-1, "Reserved minor type");
         }
     }
 
@@ -668,57 +713,63 @@ private:
         return Value(-1 - static_cast<int64_t>(value));
     }
 
-    Value parseByteString(uint64_t length)
+    Result<Value> parseByteString(uint64_t length)
     {
-        checkAvailable(length);
-        Value::BytesType byteArray(data + pos, data + pos + length);
+        return checkAvailable(length).and_then([&](auto _v)
+                                               {
+            Value::BytesType byteArray(data + pos, data + pos + length);
         pos += length;
-        return Value(std::move(byteArray));
+        return Value(std::move(byteArray)); });
     }
 
-    Value parseTextString(uint64_t length)
+    Result<Value> parseTextString(uint64_t length)
     {
-        checkAvailable(length);
+        return checkAvailable(length).and_then([&](auto _v)
+                                               {
         std::string str(reinterpret_cast<const char *>(data + pos), length);
         pos += length;
-        return Value(std::move(str));
+        return Value(std::move(str)); });
     }
 
-    Value parseArray(uint64_t length)
+    Result<Value> parseArray(uint64_t length)
     {
         Value::ArrayType array;
         array.reserve(length);
         for (uint64_t i = 0; i < length; i++)
         {
-            array.push_back(parseValue());
+            auto r = parseValue().and_then([&](const Value& v)
+                                           { array.push_back(v); return 0;});
+            if (r.is_err())
+                return r;
         }
         return Value(std::move(array));
     }
 
-    Value parseMap(uint64_t length)
+    Result<Value> parseMap(uint64_t length)
     {
         Value::ObjectType object;
         for (uint64_t i = 0; i < length; i++)
         {
             // Key must be a string in our implementation
-            Value key = parseValue();
-            if (!key.is<Value::StringType>())
+            auto k = parseValue();
+            if (k.is_err() || k.unwrap().is<Value::StringType>())
             {
-                throw std::runtime_error("CBOR map key must be a string");
+                return Result<Value>(-1, "CBOR map key must be a string");
             }
-            object.emplace(key.as<Value::StringType>(), parseValue());
+            parseValue().and_then([&](auto v)
+                                  { object.emplace(k.unwrap().as<Value::StringType>(), v); return 0; });
         }
         return Value(std::move(object));
     }
 
-    Value parseTaggedValue(uint64_t tag)
+    Result<Value> parseTaggedValue(uint64_t tag)
     {
         // For simplicity, we just skip tags in this implementation
         // A more complete implementation would handle specific tags
         return parseValue();
     }
 
-    Value parseSimpleValue(uint8_t minorType, uint64_t length)
+    Result<Value> parseSimpleValue(uint8_t minorType, uint64_t length)
     {
         if (minorType == 20)
             return Value(false);
@@ -732,61 +783,64 @@ private:
         if (minorType == 25)
         {
             // Half-precision float (not directly supported)
-            throw std::runtime_error("Half-precision float not supported");
+            return Result<Value>(-1, "Half-precision float not supported");
         }
         else if (minorType == 26)
         {
             // Single-precision float
-            float f = readFloat();
-            return Value(static_cast<double>(f));
+            return readFloat().and_then([&](auto f)
+                                        { return Value(static_cast<double>(f)); });
         }
         else if (minorType == 27)
         {
-            // Double-precision float
-            double d = readDouble();
-            return Value(d);
+            return readDouble().and_then([&](auto f)
+                                         { return Value(static_cast<double>(f)); });
         }
 
-        throw std::runtime_error("Unsupported simple value");
+        return Result<Value>(-1, "Unsupported simple value");
     }
 
     // Helper functions
-    void checkAvailable(size_t needed) const
+    Result<Void> checkAvailable(size_t needed) const
     {
         if (pos + needed > size)
         {
-            throw std::runtime_error("Unexpected end of CBOR data");
+            return Result<Void>(-1, "Unexpected end of CBOR data");
         }
+        return ResOk;
     }
 
-    uint8_t readUint8()
+    Result<uint8_t> readUint8()
     {
-        checkAvailable(1);
+        RET_ER(uint8_t, checkAvailable(1));
+
         return data[pos++];
     }
 
-    uint16_t readUint16()
+    Result<uint16_t> readUint16()
     {
-        checkAvailable(2);
+        RET_ER(uint8_t, checkAvailable(2));
         uint16_t value = (static_cast<uint16_t>(data[pos]) << 8) | data[pos + 1];
         pos += 2;
         return value;
     }
 
-    uint32_t readUint32()
+    Result<uint32_t> readUint32()
     {
-        checkAvailable(4);
+        return checkAvailable(4).and_then([&](Void v)
+                                          {
         uint32_t value = (static_cast<uint32_t>(data[pos]) << 24) |
                          (static_cast<uint32_t>(data[pos + 1]) << 16) |
                          (static_cast<uint32_t>(data[pos + 2]) << 8) |
                          data[pos + 3];
         pos += 4;
-        return value;
+        return value; });
     }
 
-    uint64_t readUint64()
+    Result<uint64_t> readUint64()
     {
-        checkAvailable(8);
+        return checkAvailable(4).and_then([&](Void v)
+                                          {
         uint64_t value = (static_cast<uint64_t>(data[pos]) << 56) |
                          (static_cast<uint64_t>(data[pos + 1]) << 48) |
                          (static_cast<uint64_t>(data[pos + 2]) << 40) |
@@ -796,19 +850,19 @@ private:
                          (static_cast<uint64_t>(data[pos + 6]) << 8) |
                          data[pos + 7];
         pos += 8;
-        return value;
+        return value; });
     }
 
-    float readFloat()
+    Result<float> readFloat()
     {
-        uint32_t bits = readUint32();
-        return *reinterpret_cast<float *>(&bits);
+        return readUint32().and_then([&](uint32_t v)
+                                     { return *reinterpret_cast<float *>(&v); });
     }
 
-    double readDouble()
+    Result<double> readDouble()
     {
-        uint64_t bits = readUint64();
-        return *reinterpret_cast<double *>(&bits);
+        return readUint64().and_then([&](uint64_t v)
+                                     { return *reinterpret_cast<double *>(&v); });
     }
 
     const uint8_t *data;
@@ -817,7 +871,7 @@ private:
 };
 
 // Implement the static fromCbor method
-Value Value::fromCbor(const uint8_t *data, size_t size)
+Result<Value> Value::fromCbor(const uint8_t *data, size_t size)
 {
     return CborParser::parse(data, size);
 }
@@ -843,7 +897,7 @@ int main2()
     std::cout << "CBOR size: " << cborData.size() << " bytes\n";
 
     // Deserialize back
-    Value parsed = Value::fromCbor(cborData);
+    Value parsed = Value::fromCbor(cborData).unwrap();
 
     // Verify the binary data
     const auto &decodedBinary = parsed["binary"].as<Value::BytesType>();
@@ -863,7 +917,7 @@ int main2()
 class JsonParser
 {
 public:
-    static Value parse(const std::string &jsonStr)
+    static Result<Value> parse(const std::string &jsonStr)
     {
         JsonParser parser(jsonStr);
         return parser.parseValue();
@@ -872,7 +926,7 @@ public:
 private:
     JsonParser(const std::string &str) : input(str), pos(0) {}
 
-    Value parseValue()
+    Result<Value> parseValue()
     {
         skipWhitespace();
         char c = peekChar();
@@ -903,13 +957,13 @@ private:
         }
         else
         {
-            throw std::runtime_error("Unexpected character in JSON");
+            return Result<Value>(-1, "Unexpected character in JSON");
         }
     }
 
-    Value parseObject()
+    Result<Value> parseObject()
     {
-        expectChar('{');
+        RET_ER(Value, expectChar('{'));
         Value::ObjectType obj;
 
         skipWhitespace();
@@ -922,65 +976,71 @@ private:
         while (true)
         {
             skipWhitespace();
-            std::string key = parseString().as<Value::StringType>();
+            std::string key = parseString().unwrap().as<Value::StringType>();
 
             skipWhitespace();
             expectChar(':');
 
-            Value value = parseValue();
+            Value value = parseValue().unwrap();
             obj.emplace(std::move(key), std::move(value));
 
             skipWhitespace();
-            char c = getChar();
+            char c;
+            VAL_OR_RET(c, getChar());
             if (c == '}')
                 break;
             if (c != ',')
-                throw std::runtime_error("Expected ',' or '}' in object");
+                return Result<Value>(-1, FILE_LINE "Expected ',' or '}' in object");
         }
 
         return Value(std::move(obj));
     }
 
-    Value parseArray()
+    Result<Value> parseArray()
     {
-        expectChar('[');
+        RET_ER(Value, expectChar('['));
         Value::ArrayType arr;
 
         skipWhitespace();
         if (peekChar() == ']')
         {
-            getChar(); // consume ']'
+            char c;
+            VAL_OR_RET(c, getChar()); // consume char
+            (void)c;
             return Value(std::move(arr));
         }
 
         while (true)
         {
-            arr.push_back(parseValue());
+            RET_ER(Value, parseValue().and_then([&](auto v)
+                                                { arr.push_back(v); return 0;}));
 
             skipWhitespace();
-            char c = getChar();
+            char c;
+            VAL_OR_RET(c, getChar());
             if (c == ']')
                 break;
             if (c != ',')
-                throw std::runtime_error("Expected ',' or ']' in array");
+                return Result<Value>(-1, "Expected ',' or ']' in array");
         }
 
         return Value(std::move(arr));
     }
 
-    Value parseString()
+    Result<Value> parseString()
     {
         expectChar('"');
         std::string str;
 
         while (true)
         {
-            char c = getChar();
+            char c;
+            VAL_OR_RET(c, getChar());
             if (c == '"')
                 break;
             if (c == '\\')
             {
-                c = getChar();
+                VAL_OR_RET(c, getChar());
                 switch (c)
                 {
                 case '"':
@@ -1013,15 +1073,15 @@ private:
                     str += "\\u";
                     for (int i = 0; i < 4; i++)
                     {
-                        c = getChar();
+                        VAL_OR_RET(c, getChar());
                         if (!isxdigit(c))
-                            throw std::runtime_error("Invalid Unicode escape");
+                            return Result<Value>(-1, "Invalid Unicode escape");
                         str += c;
                     }
                     break;
                 }
                 default:
-                    throw std::runtime_error("Invalid escape sequence");
+                    return Result<Value>(-1, "Invalid escape sequence");
                 }
             }
             else
@@ -1033,46 +1093,60 @@ private:
         return Value(std::move(str));
     }
 
-    Value parseNumber()
+    Result<Value> parseNumber()
     {
         std::string numStr;
         char c = peekChar();
 
         if (c == '-')
         {
-            numStr += getChar();
+            char d;
+            VAL_OR_RET(d, getChar());
+            numStr += d;
             c = peekChar();
         }
 
         while (c >= '0' && c <= '9')
         {
-            numStr += getChar();
+            char d;
+            VAL_OR_RET(d, getChar());
+            numStr += d;
             c = peekChar();
         }
 
         if (c == '.')
         {
-            numStr += getChar();
+            char d;
+            VAL_OR_RET(d, getChar());
+            numStr += d;
             c = peekChar();
             while (c >= '0' && c <= '9')
             {
-                numStr += getChar();
+                char d;
+                VAL_OR_RET(d, getChar());
+                numStr += d;
                 c = peekChar();
             }
 
             // Check for scientific notation
             if (c == 'e' || c == 'E')
             {
-                numStr += getChar();
+                char d;
+                VAL_OR_RET(d, getChar());
+                numStr += d;
                 c = peekChar();
                 if (c == '+' || c == '-')
                 {
-                    numStr += getChar();
+                    char d;
+                    VAL_OR_RET(d, getChar());
+                    numStr += d;
                     c = peekChar();
                 }
                 while (c >= '0' && c <= '9')
                 {
-                    numStr += getChar();
+                    char d;
+                    VAL_OR_RET(d, getChar());
+                    numStr += d;
                     c = peekChar();
                 }
             }
@@ -1083,21 +1157,21 @@ private:
         return Value(std::stoll(numStr));
     }
 
-    Value parseBoolean()
+    Result<Value> parseBoolean()
     {
         if (peekChar() == 't')
         {
-            expectString("true");
+            RET_ER(Value, expectString("true"));
             return Value(true);
         }
         else
         {
-            expectString("false");
+            RET_ER(Value, expectString("false"));
             return Value(false);
         }
     }
 
-    Value parseNull()
+    Result<Value> parseNull()
     {
         expectString("null");
         return Value(nullptr);
@@ -1111,10 +1185,10 @@ private:
         return input[pos];
     }
 
-    char getChar()
+    Result<char> getChar()
     {
         if (pos >= input.size())
-            throw std::runtime_error("Unexpected end of JSON");
+            return Result<char>(-1, "Unexpected end of JSON");
         return input[pos++];
     }
 
@@ -1126,21 +1200,26 @@ private:
         }
     }
 
-    void expectChar(char expected)
+    Result<Void> expectChar(char expected)
     {
-        char c = getChar();
+        char c;
+        VAL_OR_RET(c, getChar());
         if (c != expected)
         {
-            throw std::runtime_error(std::string("Expected '") + expected + "'");
+            return Result<Void>(-1, "Expected char not found ");
         }
+        return ResOk;
     }
 
-    void expectString(const std::string &expected)
+    Result<Void> expectString(const std::string &expected)
     {
         for (char c : expected)
         {
-            expectChar(c);
+            auto r = expectChar(c);
+            if (r.is_err())
+                return r;
         }
+        return ResOk;
     }
 
     std::string input;
@@ -1148,7 +1227,7 @@ private:
 };
 
 // Implement the static fromJson method
-Value Value::fromJson(const std::string &jsonStr)
+Result<Value> Value::fromJson(const std::string &jsonStr)
 {
     return JsonParser::parse(jsonStr);
 }

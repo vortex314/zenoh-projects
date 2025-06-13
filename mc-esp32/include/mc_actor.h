@@ -16,6 +16,8 @@
 #include <util.h>
 #include <result.h>
 #include <option.h>
+#include <value.h>
+#include <memory>
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -34,35 +36,9 @@ struct McSerial
   Serializable &value;
 };*/
 
-struct McMsg : public Serializable
-{
-  Option<std::string> zid;
-  Option<std::string> what_am_i;
-  Option<std::string> peers;
-  Option<std::string> prefix;
-  Option<std::string> routers;
-  Option<std::string> connect;
-  Option<std::string> listen;
 
-  Res serialize(Serializer &ser) const;
-  Res deserialize(Deserializer &des);
-};
 
-struct McEvent
-{
-  Option<PublishBytes> publish_bytes = nullptr; // publish a message
-  Option<McMsg> publish = nullptr; // publish a serializable object
-};
-
-struct McCmd
-{
-  Option<McAction> action = nullptr;
-  Option<std::string> topic = nullptr;
-  Option<McMsg> publish = nullptr;
-  Option<PublishBytes> publish_bytes = nullptr;
-};
-
-class McActor : public Actor<McEvent, McCmd>
+class McActor : public Actor
 {
   int _timer_publish=-1;
   int _timer_publish_props=-1;
@@ -74,7 +50,7 @@ public:
   ~McActor();
   void run();
   void on_timer(int id);
-  void on_cmd(McCmd &cmd);
+  void on_cmd(SharedValue cmd);
   void on_start() override;
   void prefix(const char *prefix);
   bool is_connected() const;
@@ -87,14 +63,13 @@ public:
 //  Result publish_props_info();
 
   Result<Void> subscribe(const std::string &topic);
+  Result<Value> get_props() const;
 
 
 private:
   std::string _src_prefix;
   std::string _dst_prefix;
-  McMsg _mc_msg;
   bool _connected = false;
-
 
   std::vector<std::string> _subscribed_topics;
 

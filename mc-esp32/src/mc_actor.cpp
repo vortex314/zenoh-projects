@@ -20,17 +20,7 @@ static int create_multicast_socket();
 #define MULTICAST_PORT 6502
 #define MAX_UDP_PACKET_SIZE 1024
 
-/*InfoProp info_props_zenoh[] = {
-    InfoProp(0, "zid", "Mc ID", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(1, "what_am_i", "What am I", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(2, "peers", "Peers", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(3, "prefix", "Prefix", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(4, "routers", "Routers", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(5, "connect", "Connect", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(6, "listen", "Listen", PropType::PROP_STR, PropMode::PROP_READ),
-};*/
-
-McActor::McActor() : McActor("zenoh", 4096, 5, 5) {}
+McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
 
 McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
     : Actor<McEvent, McCmd>(stack_size, name, priority, queue_depth)
@@ -72,25 +62,19 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-void McActor::on_cmd(McCmd &cmd)
+void McActor::on_cmd(SharedValue pcmd)
 {
-  if (cmd.action)
-  {
-    switch (cmd.action.value())
-    {
-    case McAction::Subscribe:
-      subscribe(cmd.topic.value());
-      break;
-    case McAction::Connect:
-      INFO("Connecting to Mc...");
-      if (!_connected)
+  Value& cmd = *pcmd;
+  cmd["wifi_connected"].handle<bool>([&](bool connected){
+    if ( connected ){
+       if (!_connected)
       {
         Result res = connect();
         if (res.is_err())
         {
           INFO("Failed to connect to Mc: %s", res.msg());
           vTaskDelay(1000 / portTICK_PERIOD_MS);
-          tell(new McCmd{.action = McAction::Connect});
+          tell(pcmd); // tell myself to connected 
         }
         else
         {
@@ -109,23 +93,18 @@ void McActor::on_cmd(McCmd &cmd)
           }
         }
       }
-      break;
-    case McAction::Disconnect:
-      INFO("Disconnecting from Mc...");
+    } else {
+ INFO("Disconnecting from Mc...");
       if (_connected)
       {
         disconnect();
       }
-      break;
-    case McAction::Stop:
-      INFO("Stopping McActor...");
-      return;
     }
-  }
-  if (cmd.publish_bytes && _connected)
-  {
-    send(cmd.publish_bytes.value().payload);
-  }
+  });
+
+  cmd["publish_string"],handle<std::string>([&](auto str){
+    send(str);
+  })
 }
 
 Res McActor::connect(void)
@@ -194,24 +173,15 @@ Res McActor::publish_props()
 
 //============================================================
 
-Res McMsg::serialize(Serializer &ser) const
+Result<Value> McActor::get_props() const
 {
-  //  int idx = 0;
-  ser.reset();
-  ser.map_begin();
-  ser.serialize(KEY("zid"), zid);
-  ser.serialize(KEY("what_am_i"), what_am_i);
-  ser.serialize(KEY("peers"), peers);
-  ser.serialize(KEY("prefix"), prefix);
-  ser.serialize(KEY("routers"), routers);
-  ser.serialize(KEY("connect"), connect);
-  return ser.map_end();
+  Value props;
+  props["multicast"]["ip"]=MULTICAST_IP;
+  props["multicast"]["port"]=MULTICAST_PORT;
+  props["multicast"]["packet_size"]=MAX_UDP_PACKET_SIZE;
+  return props;
 }
 
-Res McMsg::deserialize(Deserializer &des)
-{
-  return Res(EAFNOSUPPORT, "not implemented");
-}
 
 static int create_multicast_socket()
 {

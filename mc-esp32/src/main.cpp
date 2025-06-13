@@ -10,7 +10,6 @@
 #include <mc_actor.h>
 #include <sys_actor.h>
 #include <led_actor.h>
-#include <ota_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -27,24 +26,23 @@ WifiActor wifi_actor("wifi", 9000, 40, 5);
 McActor mc_actor("zenoh", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
-OtaActor ota_actor("ota", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
 Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 
 Log logger;
 
 // void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-void publish(const char *topic, const Serializable &serializable)
+void publish(const char *topic,  Value &value)
 {
-  if (mc_actor.is_connected() == false)
+  if (!mc_actor.is_connected())
   {
     INFO("Mc not connected, cannot publish");
     return;
   }
-  Bytes buffer;
-  JsonSerializer ser(buffer);
-  serializable.serialize(ser);
-  mc_actor.tell(new McCmd{.publish_bytes = PublishBytes{topic, buffer}});
+  value["topic"]=topic;
+  std::string s = value.toJson();
+  Bytes buffer = Bytes(s.begin(), s.end());
+  mc_actor.tell(new McCmd{.publish_value = PublishBytes{topic, buffer}});
   // pulse led when we publish
   led_actor.tell(new LedCmd{.action = LED_PULSE, .duration = 10});
 }
@@ -57,13 +55,9 @@ esp_err_t nvs_init();
 */
 #include <value.h>
 
-
 extern "C" void app_main()
 {
-  testGenericValue();
-  Value v;
-  v["pi"]=3.14;
-  v["the truth"]=true;
+
   ESP_ERROR_CHECK(nvs_init());
   mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
 
@@ -71,53 +65,44 @@ extern "C" void app_main()
       .action = McAction::Subscribe,
       .topic = Option<std::string>("src/brain/ **")}); // connect to zenoh*/
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.on_event([&](const WifiEvent &event)
+  wifi_actor.on_event([&](SharedValue event)
                       {
-                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_CONNECTED;})
-                          .and_then([](auto sig ){  return mc_actor.tell(new McCmd{.action = McAction::Connect});});
-                        event.signal.filter([&](WifiSignal sig){ return sig == WifiSignal::WIFI_DISCONNECTED;})
-                          .and_then([](auto sig ){  return mc_actor.tell(new McCmd{.action = McAction::Disconnect});}); });
-  // WIRING the actors together
+                        (*event)["connected"].handle<bool>([&](auto connected){
+                          SharedValue sv = std::make_shared<Value>();
+                          (*sv)["wifi_connected"]=connected;
+                          mc_actor.tell(sv);
+                        });
+                      });
+
+                        // WIRING the actors together
   wifi_actor.on_event([&](const WifiEvent &event)
                       { event.publish.for_each([](auto msg)
                                                { publish(SRC_DEVICE "wifi", msg); }); });
-  sys_actor.on_event([&](SysEvent event)
-                     { event.publish >> [](auto msg)
-                       { publish(SRC_DEVICE "sys", msg); }; });
-  mc_actor.on_event([&](McEvent event)
-                       { event.publish >> [](auto msg)
-                         { publish(SRC_DEVICE "zenoh", msg); }; });
-  ota_actor.on_event([&](OtaEvent event)
-                     { event.publish >> [](auto msg)
-                       { publish(SRC_DEVICE "ota", msg); }; });
+  sys_actor.on_event([&](SharedValue event)
+                     { if ( (*event)["publish"])  
+                       { publish(SRC_DEVICE "sys", (*event));}
+  mc_actor.on_event([&](SharedValue event)
+                    { if ( (*event)["publish"])  
+                       { publish(SRC_DEVICE "multicast", (*event));}
+
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
-  mc_actor.on_event([&](McEvent event)
-                       {
-                        INFO("Mc event received %s %s", event.publish_bytes ? "publish_bytes":"-" , event.publish ? "publish" : "-" );
-                        event.publish_bytes
-                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "sys" ;})
-                          .inspect([&](auto pb){ INFO("Sys msg received %s", pb.topic.c_str() ) ;})
-                          .and_then([&](auto pb ){ return json_deserialize<SysMsg>(pb.payload);})
-                          .for_each([&](auto msg){ sys_actor.tell(new SysCmd{.publish = msg}); });
-                        event.publish_bytes
-                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "wifi" ;})
-                          .and_then([&](auto pb ){ return json_deserialize<WifiMsg>(pb.payload);})
-                          .for_each([&](auto msg){ wifi_actor.tell(new WifiCmd{.publish = msg}); });
-                        event.publish_bytes
-                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "zenoh" ;})
-                          .and_then([&](auto pb ){ return json_deserialize<McMsg>(pb.payload);})
-                          .for_each([&](auto msg){ mc_actor.tell(new McCmd{.publish = msg}); });
-                        event.publish_bytes
-                          .filter([&](auto pb){ return pb.topic == DST_DEVICE "ota" ;})
-                          .and_then([&](auto pb ){ return json_deserialize<OtaMsg>(pb.payload);})
-                          .for_each([&](auto msg){ ota_actor.tell(new OtaCmd{.publish = msg}); }); });
+  mc_actor.on_event([&](SharedValue event)
+                    {
+                      Value& v= *event;
+                      if ( v["publish"].is<Value::ObjectType>() && v["topic"].is<std::string>()) {
+                          const std::string& topic = v["topic"].as<std::string>();
+                          if ( topic == DST_DEVICE "sys" ) sys_actor.tell(event);
+                          if ( topic == DST_DEVICE "wifi" ) wifi_actor.tell(event);
+                          if ( topic == DST_DEVICE "multicast" ) mc_actor.tell(event);
+                      }
+                    };
+ 
 
   // actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
-  actor_thread.add_actor(ota_actor);
   actor_thread.start();
   mc_thread.add_actor(mc_actor);
   mc_thread.start();

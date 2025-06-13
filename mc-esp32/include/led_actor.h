@@ -27,7 +27,7 @@ struct LedEvent {
 
 
 
-class LedActor : public Actor<LedEvent, LedCmd> {
+class LedActor : public Actor {
     typedef enum State {
         LED_STATE_OFF,
         LED_STATE_ON,
@@ -43,7 +43,7 @@ public:
     LedActor();
     LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
     ~LedActor();
-    void on_cmd(LedCmd &cmd);
+    void on_cmd(SharedValue sv);
     void on_timer(int timer_id);
     void on_start();
 };

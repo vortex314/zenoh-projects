@@ -13,6 +13,8 @@
 #include <util.h>
 #include <serdes.h>
 #include <option.h>
+#include <value.h>
+#include <result.h>
 
 uint64_t current_time();
 
@@ -153,12 +155,11 @@ The base actor only passes pointers through the queue to the actor. The actor is
 
 */
 
-template <typename EVENT, typename CMD>
 class Actor : public ThreadSupport
 {
 private:
-    std::vector<std::function<void(const EVENT &)>> _handlers;
-    Channel<CMD *> _cmds;
+    std::vector<std::function<void( SharedValue &)>> _handlers;
+    Channel<SharedValue > _cmds;
     Timers _timers;
     bool _stop_actor = false;
     TaskHandle_t _task_handle;
@@ -167,7 +168,7 @@ private:
     std::string _name;
 
 public:
-    virtual void on_cmd(CMD &cmd) = 0;
+    virtual void on_cmd(SharedValue cmd) = 0;
     virtual void on_timer(int id) = 0;
 
     virtual void on_start() {};
@@ -177,11 +178,10 @@ public:
     uint64_t sleep_time() override { return _timers.sleep_time(); }
     void handle_all_cmd() override
     {
-        CMD *cmd;
+        SharedValue cmd;
         if (_cmds.receive(&cmd, 0))
         {
-            on_cmd(*cmd);
-            delete cmd;
+            on_cmd(cmd);
         }
     };
     void handle_expired_timers() override
@@ -221,13 +221,12 @@ public:
     {
         INFO("starting actor %s", name());
         on_start();
-        CMD *cmd;
         while (!_stop_actor)
         {
+            SharedValue cmd;
             if (_cmds.receive(&cmd, _timers.sleep_time()))
             {
-                on_cmd(*cmd);
-                delete cmd;
+                on_cmd(cmd);
             }
             else
             {
@@ -242,20 +241,20 @@ public:
         on_stop();
     }
 
-    void emit(const EVENT& event)
+    void emit(SharedValue event)
     {
         for (auto &handler : _handlers)
             handler(event);
     }
-    void on_event(std::function<void(const EVENT &)> handler)
+    void on_event(std::function<void( SharedValue )> handler)
     {
         _handlers.push_back(handler);
     }
-    inline bool tell(CMD *msg)
+    inline bool tell(SharedValue msg)
     {
         return _cmds.send(msg);
     }
-    inline bool tellFromIsr(CMD *msg)
+    inline bool tellFromIsr(SharedValue msg)
     {
         return _cmds.sendFromIsr(msg);
     }

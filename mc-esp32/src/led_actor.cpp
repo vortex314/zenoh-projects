@@ -5,7 +5,7 @@
 
 LedActor::LedActor() : LedActor("led", 4096, 5, 5) {}
 
-LedActor::LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor<LedEvent, LedCmd>(stack_size, name, priority, queue_depth)
+LedActor::LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
     _timer_publish = timer_repetitive(1000);
 }
@@ -14,103 +14,94 @@ LedActor::~LedActor()
 {
 }
 
-void LedActor::on_cmd(LedCmd &cmd)
+void LedActor::on_cmd(SharedValue pcmd)
 {
-    cmd.action.for_each([&](auto action){
-        switch (action)
-        {
-        case LED_ON:
+    Value &cmd = *pcmd;
+    cmd["action"].handle<std::string>([&](const std::string &action)
+                                      {
+        if (action == "ON")
         {
             _state = LED_STATE_ON;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
-            break;
         }
-        case LED_OFF:
+        else if (action == "OFF")
         {
             _state = LED_STATE_OFF;
             gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-            break;
         }
-        case LED_PULSE:
+        else if (action == "PULSE")
         {
-            _state = LED_STATE_PULSE;
+            cmd["duration"].handle<int64_t>([&](auto duration)
+                                            {
+             _state = LED_STATE_PULSE;
             gpio_set_level(GPIO_LED, LED_ON_VALUE);
             _led_is_on = true;
-            cmd.duration.for_each([&](auto duration){
-                _duration = duration;
-                timer_fire(_timer_publish, _duration);
-            });
-            break;
+            _duration = duration;
+            timer_fire(_timer_publish, _duration); });
         }
-        case LED_BLINK:
+        else if (action == "BLINK")
         {
-            _state = LED_STATE_BLINK;
-            _led_is_on = true;
-            gpio_set_level(GPIO_LED, LED_ON_VALUE);
-            cmd.duration.for_each([&](auto duration){
-                _duration = *cmd.duration;
-                timer_fire(_timer_publish, _duration);
-            });
-            break;
-        }
-        }
+            cmd["duration"].handle<int64_t>([&](auto duration)
+                                            {
+               _state = LED_STATE_BLINK;
+                _led_is_on = true;
+                gpio_set_level(GPIO_LED, LED_ON_VALUE);
+                 _duration = duration;
+                timer_fire(_timer_publish, _duration); });
+        } 
     });
-    if (cmd.action)
-    {
-        
-    }
 }
 
 void LedActor::on_timer(int timer_id)
 {
-    if (timer_id == _timer_publish)
-    {
-        switch (_state)
+        if (timer_id == _timer_publish)
         {
-        case LED_STATE_OFF:
-        {
-            gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-            timer_stop(1);
-            break;
-        }
-
-        case LED_STATE_ON:
-        {
-            gpio_set_level(GPIO_LED, LED_ON_VALUE);
-            timer_stop(1);
-            break;
-        }
-        case LED_STATE_BLINK:
-        {
-            if (_led_is_on)
+            switch (_state)
+            {
+            case LED_STATE_OFF:
             {
                 gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-                _led_is_on = false;
+                timer_stop(1);
+                break;
             }
-            else
+
+            case LED_STATE_ON:
             {
                 gpio_set_level(GPIO_LED, LED_ON_VALUE);
-                _led_is_on = true;
+                timer_stop(1);
+                break;
             }
-            break;
+            case LED_STATE_BLINK:
+            {
+                if (_led_is_on)
+                {
+                    gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+                    _led_is_on = false;
+                }
+                else
+                {
+                    gpio_set_level(GPIO_LED, LED_ON_VALUE);
+                    _led_is_on = true;
+                }
+                break;
+            }
+            case LED_STATE_PULSE:
+            {
+                _led_is_on = false;
+                gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+                timer_stop(1);
+                break;
+            }
+            }
         }
-        case LED_STATE_PULSE:
+        else
         {
-            _led_is_on = false;
-            gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-            timer_stop(1);
-            break;
+            INFO("timer_id %d not handled", timer_id);
         }
-        }
-    }
-    else
-    {
-        INFO("timer_id %d not handled", timer_id);
-    }
 }
 
 void LedActor::on_start()
 {
-    gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+        gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
+        gpio_set_level(GPIO_LED, LED_OFF_VALUE);
 }

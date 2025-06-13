@@ -7,14 +7,11 @@
 #include <utility>
 #include <variant>
 #include <stdint.h>
+#include <util.h>
 
 // void panic_here(const char *s){ printf(" ===> PANIC : %s\n", s);fflush(stdout); }
 
-#define STRINGIZE(x) STRINGIZE2(x)
-#define STRINGIZE2(x) #x
-#define LINE_STRING STRINGIZE(__LINE__)
-#define PANIC(S) panic_here(__FILE__ ":" LINE_STRING " " S)
-#define LOG(S) { printf(__FILE__ ":" LINE_STRING " " S "\n");fflush(stdout);}
+#define VAL_OR_RET(L,F) { auto v = F; if (v.is_err()) return v; L=std::move(v.unwrap());}
 
 template <typename T>
 class Result {
@@ -31,6 +28,17 @@ public:
         _rc=0;
         _pv = new T;
         *_pv = value;
+    }
+
+    template <typename U>
+    Result(Result<U> r){
+        if ( r.is_err()) {
+            _rc = r.rc(),
+            _msg = new std::string(r.msg());
+        } else {
+            _pv = new T;
+           *_pv = r.unwrap();
+        }
     }
 
     Result() {
@@ -63,9 +71,10 @@ public:
         if (is_err()) {
             PANIC("Attempted to unwrap an error result");
         }
-        LOG("std::get");
         return *_pv;
     }
+
+
     
     const T& ref() const {
         if (is_err()) {

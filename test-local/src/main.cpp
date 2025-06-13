@@ -9,17 +9,26 @@ int main()
     v["int"] = 10;
     v["string"] = "Hello world string";
     v["publish"]["rpm_target"] = 2300;
-    if ( v["publish"].is<Value::ObjectType>() ){
+    if (v["publish"].is<Value::ObjectType>())
+    {
         printf(" is object type\n");
     }
     auto publish = v["publish"];
     v["publish"]["rpm_measured"] = 2023.5;
-    v["publish"]["rpm_measured"].inspect<double>([](auto f ){ printf(" inspect %f \n",f);});
+    v["name"] = "a String vaue";
+    v["arr"].add("hi");
+    v["arr"].add(123.5);
+    v["arr"].add(true);
+    v["publis"].inspect<Value::ObjectType>([](Value publish)
+                                            { printf(" inspect %f \n", publish["rpm_measured"].as<double>()); });
     double rpm_measured;
     v["publish"]["rpm_measured"].set(rpm_measured);
-    rpm_measured = v["publish"]["rpm_measured"].as<double>();
-    
-    printf(" setting rpm_measured %f \n",rpm_measured);
+    std::string s;
+    s = v["name"];
+    Value w;
+    w.add(23.44);
+
+    printf(" setting rpm_measured %f \n", rpm_measured);
 
     auto v1 = v;
     auto v2 = v["publish"];
@@ -33,7 +42,6 @@ int main()
     printf(" toJson v1 %s \n", v1.toJson(true).c_str());
     printf(" toJson v2 %s \n", v2.toJson(true).c_str());
     printf(" toJson v3 %s \n", v3.toJson(true).c_str());
-
 }
 
 void panic_here(const char *s)
