@@ -6,27 +6,6 @@
 #define GPIO_LED GPIO_NUM_2
 #endif
 
-struct LedMsg{};
-
-enum LedAction {
-    LED_ON,
-    LED_OFF,
-    LED_BLINK,
-    LED_PULSE
-};
-
-struct LedCmd {
-    Option<LedAction> action = nullptr;
-    Option<int> duration = nullptr;
-    Option<LedMsg> serdes = nullptr;
-};
-
-struct LedEvent {
-    Option<LedAction> action = nullptr;
-};  
-
-
-
 class LedActor : public Actor {
     typedef enum State {
         LED_STATE_OFF,

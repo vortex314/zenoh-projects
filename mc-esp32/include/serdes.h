@@ -197,7 +197,7 @@ public:
     else
     {
       ERROR("Expected map %d", map_type);
-      return Res(0, "Expected map");
+      return Res(-1, "Expected map");
     }
 
     while (true && (count++ < map_size))
@@ -209,13 +209,13 @@ public:
       uint32_t key;
 #ifdef KEY_TYPE_STR
       if (type != SerialType::SER_STR)
-        return Res(0, "Expected key str");
+        return Res(-1, "Expected key str");
       std::string key_str;
       RET_ERR(deserialize(key_str), "Failed to decode key str in map");
       key = H(key_str.c_str());
 #else
       if (type != SerialType::SER_UINT)
-        return Res(0, "Expected key uint");
+        return Res(-1, "Expected key uint");
       RET_ERR(deserialize(key), "Failed to decode key in map");
 #endif
       RET_ERR(func(*this, key), "Failed to process map entry");

@@ -27,35 +27,6 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-typedef enum WifiProp
-{
-  MAC_ADDRESS = 0,
-  IP_ADDRESS,
-  GATEWAY,
-  NETMASK,
-  DNS,
-  SSID,
-  CHANNEL,
-  RSSI,
-  ENCRYPTION,
-  WIFI_MODE,
-  AP_SCAN
-} WifiProp;
-
-/*InfoProp info_props_wifi[11] = {
-    InfoProp(WifiProp::MAC_ADDRESS, "mac_address", "MAC Address", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::IP_ADDRESS, "ip_address", "IP Address", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::GATEWAY, "gateway", "Gateway", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::NETMASK, "netmask", "Netmask", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::DNS, "dns", "DNS", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::SSID, "ssid", "SSID", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::CHANNEL, "channel", "Channel", PropType::PROP_UINT, PropMode::PROP_READ),
-    InfoProp(WifiProp::RSSI, "rssi", "RSSI", PropType::PROP_SINT, PropMode::PROP_READ),
-    InfoProp(WifiProp::ENCRYPTION, "encryption", "Encryption", PropType::PROP_STR, PropMode::PROP_READ),
-    InfoProp(WifiProp::WIFI_MODE, "wifi_mode", "Wifi Mode", PropType::PROP_UINT, PropMode::PROP_READ),
-    InfoProp(WifiProp::AP_SCAN, "ap_scan", "AP Scan", PropType::PROP_ARRAY, PropMode::PROP_READ),
-};*/
-
 WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
 WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
@@ -123,12 +94,13 @@ void WifiActor::on_timer(int timer_id)
     {
       SharedValue wifi_event = std::make_shared<Value>();
 
-      if (pubish_props((*wifi_event)["publish"], esp_netif).is_err())
-      {
-        INFO("Failed to fill wifi msg");
-        return;
-      }
-      publish_info((*wifi_event)["info"]);
+      pubish_props(esp_netif).inspect([&](const Value &info)
+                                      { (*wifi_event)["publish"] = info; });
+
+      publish_info().inspect([&](const Value &info)
+                             { (*wifi_event)["info"] = info; });
+
+      (*wifi_event)["connected"] = _wifi_connected;
 
       emit(wifi_event);
     }
@@ -191,7 +163,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   {
     INFO("WiFi STA got IP address");
     SharedValue wifi_event = std::make_shared<Value>();
-    (*wifi_event)["connected"] = false;
+    (*wifi_event)["connected"] = true;
     actor->emit(wifi_event);
     actor->_wifi_connected = true;
     s_retry_count = 0;
@@ -229,8 +201,9 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-Res WifiActor::pubish_props(Value &v, esp_netif_t *esp_netif)
+Result<Value> WifiActor::pubish_props(esp_netif_t *esp_netif)
 {
+  Value v;
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   CHECK_ESP(esp_netif_get_ip_info(esp_netif, &ip_info));
@@ -244,31 +217,23 @@ Res WifiActor::pubish_props(Value &v, esp_netif_t *esp_netif)
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
   v["mac"] = macStr;
-  return ResOk;
+  return Result<Value>(v);
 }
 
-struct Info
-{
-  const char *name;
-  const char *type;
-  const char *desc;
-  const char *mode;
-  Option<float> min;
-  Option<float> max;
-} prop_info[] = {
+static PropInfo wifi_prop_info[] = {
     {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
     {"ip", "S", "IO V4 address", "R", nullptr, nullptr},
     {"netmask", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
     {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
-
 };
 
-constexpr int info_size = sizeof(prop_info) / sizeof(struct Info);
+static constexpr int info_size = sizeof(wifi_prop_info) / sizeof(PropInfo);
 
-Res WifiActor::publish_info(Value &v)
+Result<Value> WifiActor::publish_info()
 {
+  Value v;
   int idx = _prop_counter % info_size;
-  struct Info &pi = prop_info[idx];
+  PropInfo &pi = wifi_prop_info[idx];
   v[pi.name]["type"] = pi.type;
   v[pi.name]["desc"] = pi.desc;
   v[pi.name]["mode"] = pi.mode;
@@ -276,7 +241,8 @@ Res WifiActor::publish_info(Value &v)
                  { v[pi.name]["min"] = min; });
   pi.max.inspect([&](const float &max)
                  { v[pi.name]["max"] = max; });
-  return ResOk;
+  _prop_counter++;
+  return Result<Value>(v);
 }
 
 /*const InfoProp *WifiMsg::info(int idx)

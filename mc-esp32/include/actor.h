@@ -135,6 +135,7 @@ public:
     virtual void handle_all_cmd() = 0;
     virtual void handle_expired_timers() = 0;
     virtual const char *name() = 0;
+    virtual ~ThreadSupport() = default;
 };
 
 /*
@@ -179,6 +180,10 @@ public:
     void handle_all_cmd() override
     {
         SharedValue cmd;
+        if ( cmd.use_count() == 0 ) {
+            INFO("SHaredValue is empty, skipping handle_all_cmd");
+            return;
+        }
         if (_cmds.receive(&cmd, 0))
         {
             on_cmd(cmd);
@@ -201,6 +206,7 @@ public:
 
     ~Actor()
     {
+        INFO("Destroying actor %s", name());
         stop();
         vTaskDelay(1000);
         // xTaskDelete(_task_handle);
@@ -252,7 +258,9 @@ public:
     }
     inline bool tell(SharedValue msg)
     {
-        return _cmds.send(msg);
+        std::shared_ptr<Value>* ptrCopy = new std::shared_ptr<Value>(*msg);
+
+        return _cmds.send(ptrCopy);
     }
     inline bool tellFromIsr(SharedValue msg)
     {
@@ -404,10 +412,18 @@ struct Property : public PropertyCommon
             setter.value()(value);
             return ResOk;
         }
-        return Res(0, "No setter");
+        return Res(-1, "No setter");
     }
 };
 
-
+typedef struct PropInfo
+{
+  const char *name;
+  const char *type;
+  const char *desc;
+  const char *mode;
+  Option<float> min;
+  Option<float> max;
+} PropInfo;
 
 #endif

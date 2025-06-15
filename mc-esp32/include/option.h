@@ -36,7 +36,7 @@ public:
         _pv = new T;
         *_pv = t;
     }
-    inline Option(nullptr_t)
+    inline  Option(nullptr_t)
     {
         _pv = nullptr;
     }

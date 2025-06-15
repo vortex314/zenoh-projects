@@ -58,7 +58,10 @@ private:
     {
     public:
         Proxy(Value &value, const std::string &key)
-            : value_(value), key_(key) {}
+            : value_(value), key_(key)
+        {
+            // printf("Proxy created for key: %s\n", key.c_str());
+        }
 
         // Conversion operator for reading
         operator Value() const
@@ -72,6 +75,45 @@ private:
             return value_.set(key_, val);
         }
 
+        // Overloaded operator[] to allow nested access
+        Proxy operator[](const std::string &key)
+        {
+            // Ensure the current value is a map
+            if (value_.get(key_).is<Undefined>())
+            {
+                value_.set(key_, Value(ObjectType{}));
+            }
+            return Proxy(value_.get_map()[key_], key);
+        }
+
+        template <typename U, typename F>
+        void handle(F &&func) const
+        {
+            if ( !value_.get(key_).is<U>())
+            {
+                return; // No action if type doesn't match
+            }
+            value_.get(key_).handle<U>([&](const U &v)
+                             { func(v); });
+        }
+
+
+        template <typename U>
+        bool is() const
+        {
+            return value_.get(key_).is<U>();
+        }
+        template <typename U>
+        const U &as() const
+        {
+            return value_.get(key_).as<U>();
+        }
+
+                inline explicit operator bool()
+        {
+            return !value_.is<NullType>();
+        }
+
     private:
         Value &value_;
         std::string key_;
@@ -79,9 +121,9 @@ private:
 
 public:
     // Constructors for primitive types
-     inline   Value() : _value(Undefined{}) {}
+    inline Value() : _value(Undefined{}) {}
 
-//    inline Value() : _value(NullType{}) {}
+    //    inline Value() : _value(NullType{}) {}
     inline Value(std::nullptr_t) : _value(NullType{}) {}
     inline Value(int v) : _value(static_cast<IntType>(v)) {}
     inline Value(int64_t v) : _value(v) {}
@@ -113,7 +155,7 @@ public:
     {
         if (!is<ObjectType>())
         {
-            return Value(Undefined{});
+            // return Value(Undefined{});
         }
         return std::get<ObjectType>(_value);
     }
@@ -181,8 +223,6 @@ public:
     */
 
 public:
-
-
     template <typename T>
     bool is() const
     {

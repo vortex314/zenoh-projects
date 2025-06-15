@@ -58,7 +58,8 @@ void SysActor::on_timer(int id)
     if (id == _timer_publish)
     {
         std::shared_ptr<Value> sv = std::make_shared<Value>();
-        publish_props((*sv)["publish"]);
+        publish_props().inspect([&](const Value &props)
+                                { (*sv)["props"] = props; });
         emit(sv);
     }
     else
@@ -72,15 +73,7 @@ SysActor::~SysActor()
     INFO("Stopping Sys actor");
 }
 
-struct Info
-{
-  const char *name;
-  const char *type;
-  const char *desc;
-  const char *mode;
-  Option<float> min;
-  Option<float> max;
-} prop_info[] = {
+PropInfo prop_info[] = {
     {"cpu", "S", "CPU core", "R", nullptr, nullptr},
     {"clock", "I", "cpu clock frequency in Hz", "R", nullptr, nullptr},
     {"free_heap", "I", "available memory on the heap", "R", nullptr, nullptr},
@@ -88,27 +81,29 @@ struct Info
 
 };
 
-constexpr int info_size = sizeof(prop_info) / sizeof(struct Info);
+constexpr int info_size = sizeof(prop_info) / sizeof(PropInfo);
 
-Res SysActor::publish_info(Value &v)
+Result<Value> SysActor::publish_info()
 {
-  int idx = _prop_counter % info_size;
-  struct Info &pi = prop_info[idx];
-  v[pi.name]["type"] = pi.type;
-  v[pi.name]["desc"] = pi.desc;
-  v[pi.name]["mode"] = pi.mode;
-  pi.min.inspect([&](const float &min)
-                 { v[pi.name]["min"] = min; });
-  pi.max.inspect([&](const float &max)
-                 { v[pi.name]["max"] = max; });
-  return ResOk;
+    Value v;
+    int idx = _prop_counter % info_size;
+    PropInfo &pi = prop_info[idx];
+    v[pi.name]["type"] = pi.type;
+    v[pi.name]["desc"] = pi.desc;
+    v[pi.name]["mode"] = pi.mode;
+    pi.min.inspect([&](const float &min)
+                   { v[pi.name]["min"] = min; });
+    pi.max.inspect([&](const float &max)
+                   { v[pi.name]["max"] = max; });
+    return Result<Value>(v);
 }
 
-
-void SysActor::publish_props(Value &v)
+Result<Value> SysActor::publish_props()
 {
+    Value v;
     v["cpu"] = "ESP32-XTENSA";
     v["clock"] = 240000000;
     v["free_heap"] = (int64_t)esp_get_free_heap_size();
     v["uptime"] = esp_timer_get_time() / 1000;
+    return Result<Value>(v);
 }

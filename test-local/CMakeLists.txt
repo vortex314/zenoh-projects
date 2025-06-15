@@ -10,7 +10,8 @@ add_executable(test_local)
 
 target_sources(test_local PRIVATE 
     src/main.cpp 
-    ../mc-esp32/include/value.h
+ #   ../mc-esp32/include/value.h
+    ../mc-esp32/src/value.cpp
     ) 
 
 # added paho.mqtt.c/src for paho-mqtt-c header files

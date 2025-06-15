@@ -30,26 +30,6 @@ McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue
 
 void McActor::on_start()
 {
-  while (true)
-  {
-    while (connect().is_err())
-    {
-    };
-    while (true)
-    {
-      auto msg = receive();
-      if (msg.is_err())
-        break;
-      msg.inspect([&](auto rx_buffer)
-                  {
-                    std::string json((const char *)rx_buffer, len);
-                    Value::fromJson(json).inspect([&](auto value)
-                                                  { emit(value); });
-                  });
-    }
-
-    disconnect();
-  }
 }
 
 void McActor::on_timer(int id)
@@ -64,7 +44,29 @@ void McActor::on_timer(int id)
 
 void McActor::on_cmd(SharedValue pcmd)
 {
+  /*while (true)
+  {
+    while (connect().is_err())
+    {
+    };
+    while (true)
+    {
+      auto msg = receive();
+      if (msg.is_err())
+        break;
+      msg.inspect([&](auto rx_buffer)
+                  {
+                    std::string json(std::string(rx_buffer.begin(), rx_buffer.end()));
+                    Value::fromJson(json).inspect([&](auto value)
+                                                  {
+                                                    SharedValue sv = std::make_shared<Value>(value);
+                                                    emit(sv); }); });
+    }
+
+    disconnect();
+  }*/
   Value &cmd = *pcmd;
+  INFO("Received command: %s", cmd.toJson().c_str());
   cmd["wifi_connected"].handle<bool>([&](bool connected)
                                      {
     if ( connected ){
@@ -114,7 +116,8 @@ Res McActor::connect(void)
     return Res(-1, "Failed to create multicast socket");
   }
   //  xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
-
+  _connected = true;
+  INFO("Connected to Mc on %s:%d", MULTICAST_IP, MULTICAST_PORT);
   return ResOk;
 }
 
@@ -166,7 +169,9 @@ Res McActor::publish_props()
     return Res(ENOTCONN, "Not connected to Mc");
   }
   SharedValue sv = std::make_shared<Value>();
-  get_props((*sv)["publish"]);
+  Value publish;
+  get_props(publish);
+  (*sv)["publish"] = publish;
   emit(sv);
   return ResOk;
 }

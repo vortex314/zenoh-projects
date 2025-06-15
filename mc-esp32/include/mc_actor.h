@@ -40,10 +40,16 @@ struct McSerial
 
 class McActor : public Actor
 {
+  private:
+  std::string _src_prefix;
+  std::string _dst_prefix;
+  bool _connected = false;
+  std::vector<std::string> _subscribed_topics;
   int _timer_publish=-1;
   int _timer_publish_props=-1;
   int _prop_counter = 0;
   int _socket = -1; // socket for multicast communication
+
 public:
   McActor();
   McActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
@@ -66,13 +72,6 @@ public:
   void get_props(Value& v) const;
 
 
-private:
-  std::string _src_prefix;
-  std::string _dst_prefix;
-  bool _connected = false;
 
-  std::vector<std::string> _subscribed_topics;
-
-  std::map<std::string, PropertyCommon *> _properties;
 };
 #endif

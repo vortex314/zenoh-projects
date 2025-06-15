@@ -1,5 +1,5 @@
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#pragma GCC diagnostic ignored "-Wunused-variable"
+// #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+// #pragma GCC diagnostic ignored "-Wunused-variable"
 
 #include <nvs_flash.h>
 #include <optional>
@@ -63,15 +63,19 @@ extern "C" void app_main()
 {
 
   ESP_ERROR_CHECK(nvs_init());
-  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
+  //  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
+  printf("Starting %ld\n", esp_get_free_heap_size());
+  uxTaskGetStackHighWaterMark(NULL); // get the stack high water mark of the main task
+  INFO("Free heap size: %ld", esp_get_free_heap_size());
+  INFO("Stack high water mark: %ld", uxTaskGetStackHighWaterMark(NULL));
 
-  /*mc_actor.tell(new McCmd{
-      .action = McAction::Subscribe,
-      .topic = Option<std::string>("src/brain/ **")}); // connect to zenoh*/
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([&](SharedValue event)
-                      { (*event)["connected"].handle<bool>([&](auto connected)
+                      { 
+                        INFO("Received WiFi event: %s", (*event).toJson().c_str());
+                        (*event)["connected"].handle<bool>([&](auto connected)
                                                            {
+                                                            INFO("WiFi connected: %d", connected);
                           SharedValue sv = std::make_shared<Value>();
                           (*sv)["wifi_connected"]=connected;
                           mc_actor.tell(sv); }); });
@@ -82,21 +86,21 @@ extern "C" void app_main()
     if ((*event)["publish"])
     {
       publish(SRC_DEVICE "wifi", (*event));
-    }});
+    } });
   sys_actor.on_event([&](SharedValue event)
                      {
     if ((*event)["publish"])
     {
       publish(SRC_DEVICE "sys", (*event));
-    }});
+    } });
   mc_actor.on_event([&](SharedValue event)
                     {
       if ((*event)["publish"])
       {
         publish(SRC_DEVICE "multicast", (*event));
-      }});
+      } });
 
-      // send commands to actors coming from zenoh, deserialize and send to the right actor
+  // send commands to actors coming from zenoh, deserialize and send to the right actor
   mc_actor.on_event([&](SharedValue event)
                     {
         Value &v = *event;
@@ -109,11 +113,8 @@ extern "C" void app_main()
             wifi_actor.tell(event);
           if (topic == DST_DEVICE "multicast")
             mc_actor.tell(event);
-        }
-                    });
- 
+        } });
 
-  // actor_thread.add_actor(camera_actor);
   actor_thread.add_actor(wifi_actor);
   actor_thread.add_actor(sys_actor);
   actor_thread.add_actor(led_actor);
@@ -124,19 +125,19 @@ extern "C" void app_main()
   // log heap size, monitoring thread in main, we could exit also
   while (true)
   {
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
   }
 }
 
 esp_err_t nvs_init()
 {
-      esp_err_t ret = nvs_flash_init();
-      if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-          ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-      {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-      }
-      return ret;
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  return ret;
 }

@@ -1,20 +1,21 @@
 
 #include <actor.h>
 
-void panic_here(const char *s) {
-    printf("PANIC : %s \n",s);
+void panic_here(const char *s)
+{
+    printf("PANIC : %s \n", s);
     // force coredump
-    int* p=0;
+    int *p = 0;
     *p = 0;
 }
 
-PublishSerdes ::PublishSerdes(Serializable& pl) : payload(pl) {
+PublishSerdes ::PublishSerdes(Serializable &pl) : payload(pl)
+{
 }
 
-PublishSerdes ::PublishSerdes(Option<std::string> topic,Serializable& pl) : topic(topic),payload(pl) {
+PublishSerdes ::PublishSerdes(Option<std::string> topic, Serializable &pl) : topic(topic), payload(pl)
+{
 }
-
-
 
 uint64_t current_time() { return esp_timer_get_time() / 1000; }
 
@@ -60,8 +61,6 @@ void Timer::make_repetitive(uint64_t period)
     _period = period;
     _expires_at = current_time() + period;
 }
-
-
 
 bool Timer::is_expired(uint64_t now) const & { return now >= _expires_at; }
 
@@ -131,7 +130,7 @@ std::vector<int> Timers::get_expired_timers()
 void Timers::refresh(int id)
 {
     _timers[id].refresh(current_time());
-}   
+}
 
 void Timers::refresh_expired_timers()
 {
@@ -146,7 +145,7 @@ int Timers::create_one_shot(uint64_t delay)
     _timers.push_back(Timer::OneShot(delay));
     return _timers.size() - 1;
 }
-int Timers::create_repetitive( uint64_t period)
+int Timers::create_repetitive(uint64_t period)
 {
     _timers.push_back(Timer::Repetitive(period));
     return _timers.size() - 1;
@@ -201,11 +200,12 @@ Res Thread::start()
 
 Res Thread::add_actor(ThreadSupport &actor)
 {
+    INFO("Adding actor %s:%X to thread %s", actor.name(),&actor, name());
     _actors.push_back(&actor);
     auto r = xQueueAddToSet(actor.queue_handle(), _queue_set);
     if (r != pdPASS)
     {
-        return Res(0, "Failed to add actor to queue set");
+        return Res(-1, "Failed to add actor to queue set");
     }
     return ResOk;
 }
@@ -236,7 +236,7 @@ void Thread::step()
             min_sleep_msec = actor->sleep_time();
         }
     }
-    /* QueueSetMemberHandle_t queue = */xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
+    /* QueueSetMemberHandle_t queue = */ xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
     for (auto actor : _actors)
     {
         actor->handle_all_cmd();

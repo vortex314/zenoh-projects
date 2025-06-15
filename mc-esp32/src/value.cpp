@@ -42,7 +42,7 @@
         else if (is<ObjectType>())
         {
             ObjectType newObject;
-            const auto &obj = std::get<ObjectT>(_value)
+            const auto &obj = std::get<ObjectType>(_value);
             for (const auto &[key, value] : obj)
             {
                 newObject.emplace(key, value.clone());
@@ -64,7 +64,7 @@
 
     
 
-    Value& Value::operator[](const std::string &key)
+   /* Value& Value::operator[](const std::string &key)
     {
         if (is<NullType>())
             _value = ObjectType();
@@ -76,7 +76,7 @@
     const Value & Value::operator[](const std::string &key) const
     {
         return as<ObjectType>().at(key);
-    }
+    }*/
 
 
     void Value::add(Value v)
@@ -793,7 +793,7 @@ void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t
             return Value((FLOAT_TYPE)std::stod(numStr));
         }
 
-        return Value(std::stoll(numStr));
+        return Value((int64_t)std::stoll(numStr));
     }
 
     Result<Value> JsonParser::parseBoolean()
