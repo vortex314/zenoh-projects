@@ -210,13 +210,13 @@ Res Thread::add_actor(ThreadSupport &actor)
     return ResOk;
 }
 
-void Thread::handle_all_cmd()
+/*void Thread::handle_all_cmd()
 {
     for (auto actor : _actors)
     {
         actor->handle_all_cmd();
     }
-}
+}*/
 
 void Thread::handle_expired_timers()
 {

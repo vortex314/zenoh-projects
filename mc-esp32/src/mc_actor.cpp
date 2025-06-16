@@ -241,8 +241,8 @@ static int create_multicast_socket()
   struct in_addr if_addr;
   if_addr.s_addr = htonl(INADDR_ANY);
   T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &if_addr, sizeof(if_addr)));
-  // Enable loopback so we receive our own packets (for testing)
-  int loop = 1;
+  // Disable loopback so we receive our own packets (for testing)
+  int loop = 0;
   T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)));
 
   // Set multicast TTL (time to live)

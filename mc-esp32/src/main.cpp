@@ -23,7 +23,7 @@
 // threads can be run separately or share a thread
 // Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
 WifiActor wifi_actor("wifi", 9000, 40, 5);
-McActor mc_actor("zenoh", 9000, 40, 5);
+McActor mc_actor("multicast", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
 Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);

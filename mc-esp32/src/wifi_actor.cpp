@@ -89,15 +89,15 @@ void WifiActor::on_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      Value* wifi_event = new Value;
+      Value wifi_event ;
 
       pubish_props(esp_netif).inspect([&](const Value &info)
-                                      { (*wifi_event)["publish"] = info; });
+                                      { wifi_event["publish"] = info; });
 
       publish_info().inspect([&](const Value &info)
-                             { (*wifi_event)["info"] = info; });
+                             { wifi_event["info"] = info; });
 
-      (*wifi_event)["connected"] = _wifi_connected;
+      wifi_event["connected"] = _wifi_connected;
 
       emit(wifi_event);
     }
@@ -146,8 +146,8 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     INFO("WiFi STA disconnected");
-    Value* wifi_event = new Value;
-    (*wifi_event)["connected"] = false;
+    Value wifi_event ;
+    wifi_event["connected"] = false;
     actor->emit(wifi_event);
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
@@ -159,8 +159,8 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     INFO("WiFi STA got IP address");
-    Value* wifi_event = new Value;
-    (*wifi_event)["connected"] = true;
+    Value wifi_event;
+    wifi_event["connected"] = true;
     actor->emit(wifi_event);
     actor->_wifi_connected = true;
     s_retry_count = 0;

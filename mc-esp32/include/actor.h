@@ -182,7 +182,8 @@ public:
         const Value* cmd;
         if (_cmds.receive(&cmd, 0))
         {
-            on_cmd(cmd);
+            INFO("%s <= %s", name(), cmd->toJson().c_str());
+            on_cmd(*cmd);
         }
     };
     void handle_expired_timers() override
@@ -228,6 +229,7 @@ public:
             const Value* pcmd;
             if (_cmds.receive(&pcmd, _timers.sleep_time()))
             {
+                INFO("Actor %s received command: %s", name(), pcmd->toJson().c_str());
                 on_cmd(*pcmd);
                 delete pcmd;
             }
