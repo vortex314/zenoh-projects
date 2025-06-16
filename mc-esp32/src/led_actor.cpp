@@ -14,9 +14,8 @@ LedActor::~LedActor()
 {
 }
 
-void LedActor::on_cmd(SharedValue pcmd)
+void LedActor::on_cmd(const Value& cmd)
 {
-    Value &cmd = *pcmd;
     cmd["action"].handle<std::string>([&](const std::string &action)
                                       {
         if (action == "ON")

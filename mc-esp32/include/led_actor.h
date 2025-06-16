@@ -22,7 +22,7 @@ public:
     LedActor();
     LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
     ~LedActor();
-    void on_cmd(SharedValue sv);
+    void on_cmd(const Value& sv);
     void on_timer(int timer_id);
     void on_start();
 };

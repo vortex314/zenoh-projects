@@ -25,7 +25,7 @@ public:
   WifiActor();
   WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~WifiActor();
-  void on_cmd(SharedValue cmd);
+  void on_cmd(const Value& cmd);
   void on_timer(int timer_id);
   void on_start();
   Res net_init();

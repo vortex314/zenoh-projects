@@ -56,7 +56,7 @@ public:
   ~McActor();
   void run();
   void on_timer(int id);
-  void on_cmd(SharedValue cmd);
+  void on_cmd(const Value& );
   void on_start() override;
   void prefix(const char *prefix);
   bool is_connected() const;

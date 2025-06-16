@@ -17,7 +17,7 @@ public:
   SysActor();
   SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~SysActor();
-  void on_cmd(SharedValue sv);
+  void on_cmd(const Value&  );
   void on_timer(int timer_id);
   Result<Value> publish_props();
   void set_utc(int64_t utc);

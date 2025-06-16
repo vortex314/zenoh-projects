@@ -159,8 +159,8 @@ The base actor only passes pointers through the queue to the actor. The actor is
 class Actor : public ThreadSupport
 {
 private:
-    std::vector<std::function<void( SharedValue &)>> _handlers;
-    Channel<SharedValue > _cmds;
+    std::vector<std::function<void( const Value& )>> _handlers;
+    Channel<const Value* > _cmds;
     Timers _timers;
     bool _stop_actor = false;
     TaskHandle_t _task_handle;
@@ -169,7 +169,7 @@ private:
     std::string _name;
 
 public:
-    virtual void on_cmd(SharedValue cmd) = 0;
+    virtual void on_cmd(const Value& cmd) = 0;
     virtual void on_timer(int id) = 0;
 
     virtual void on_start() {};
@@ -179,11 +179,7 @@ public:
     uint64_t sleep_time() override { return _timers.sleep_time(); }
     void handle_all_cmd() override
     {
-        SharedValue cmd;
-        if ( cmd.use_count() == 0 ) {
-            INFO("SHaredValue is empty, skipping handle_all_cmd");
-            return;
-        }
+        const Value* cmd;
         if (_cmds.receive(&cmd, 0))
         {
             on_cmd(cmd);
@@ -229,10 +225,11 @@ public:
         on_start();
         while (!_stop_actor)
         {
-            SharedValue cmd;
-            if (_cmds.receive(&cmd, _timers.sleep_time()))
+            const Value* pcmd;
+            if (_cmds.receive(&pcmd, _timers.sleep_time()))
             {
-                on_cmd(cmd);
+                on_cmd(*pcmd);
+                delete pcmd;
             }
             else
             {
@@ -247,24 +244,26 @@ public:
         on_stop();
     }
 
-    void emit(SharedValue event)
+    void emit(const Value& event)
     {
         for (auto &handler : _handlers)
             handler(event);
     }
-    void on_event(std::function<void( SharedValue )> handler)
+    void on_event(std::function<void( const Value& )> handler)
     {
         _handlers.push_back(handler);
     }
-    inline bool tell(SharedValue msg)
+    inline bool tell(const Value& msg)
     {
-        std::shared_ptr<Value>* ptrCopy = new std::shared_ptr<Value>(*msg);
-
-        return _cmds.send(ptrCopy);
+        Value* pmsg = new Value;
+        *pmsg = std::move(msg);
+        return _cmds.send(pmsg);
     }
-    inline bool tellFromIsr(SharedValue msg)
+    inline bool tellFromIsr(const Value& msg)
     {
-        return _cmds.sendFromIsr(msg);
+        Value* pmsg = new Value;
+        *pmsg = std::move(msg);
+        return _cmds.sendFromIsr(pmsg);
     }
     void stop()
     {

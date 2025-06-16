@@ -78,12 +78,9 @@ void WifiActor::on_start()
   }
 }
 
-void WifiActor::on_cmd(SharedValue cmd)
+void WifiActor::on_cmd(const Value& cmd)
 {
-  if ((*cmd)["stop_actor"])
-  {
-    stop();
-  }
+ cmd["stop_actor"].handle<bool>([&](auto b ){stop();});
 }
 
 void WifiActor::on_timer(int timer_id)
@@ -92,7 +89,7 @@ void WifiActor::on_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      SharedValue wifi_event = std::make_shared<Value>();
+      Value* wifi_event = new Value;
 
       pubish_props(esp_netif).inspect([&](const Value &info)
                                       { (*wifi_event)["publish"] = info; });
@@ -149,7 +146,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     INFO("WiFi STA disconnected");
-    SharedValue wifi_event = std::make_shared<Value>();
+    Value* wifi_event = new Value;
     (*wifi_event)["connected"] = false;
     actor->emit(wifi_event);
     actor->_wifi_connected = false;
@@ -162,7 +159,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     INFO("WiFi STA got IP address");
-    SharedValue wifi_event = std::make_shared<Value>();
+    Value* wifi_event = new Value;
     (*wifi_event)["connected"] = true;
     actor->emit(wifi_event);
     actor->_wifi_connected = true;

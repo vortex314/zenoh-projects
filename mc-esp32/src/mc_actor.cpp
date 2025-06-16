@@ -42,7 +42,7 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-void McActor::on_cmd(SharedValue pcmd)
+void McActor::on_cmd(const Value& cmd)
 {
   /*while (true)
   {
@@ -65,7 +65,6 @@ void McActor::on_cmd(SharedValue pcmd)
 
     disconnect();
   }*/
-  Value &cmd = *pcmd;
   INFO("Received command: %s", cmd.toJson().c_str());
   cmd["wifi_connected"].handle<bool>([&](bool connected)
                                      {
@@ -77,7 +76,7 @@ void McActor::on_cmd(SharedValue pcmd)
         {
           INFO("Failed to connect to Mc: %s", res.msg());
           vTaskDelay(1000 / portTICK_PERIOD_MS);
-          tell(pcmd); // tell myself to connected 
+          tell(cmd); // tell myself to connected 
         }
         else
         {
@@ -168,11 +167,10 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
-  SharedValue sv = std::make_shared<Value>();
-  Value publish;
+  Value v,publish;
   get_props(publish);
-  (*sv)["publish"] = publish;
-  emit(sv);
+  v["publish"] = publish;
+  emit(v);
   return ResOk;
 }
 

@@ -44,9 +44,8 @@ void SysActor::set_utc(int64_t utc)
     INFO("Current time: %s", buffer);
 }
 
-void SysActor::on_cmd(SharedValue pcmd)
+void SysActor::on_cmd(const Value& cmd)
 {
-    const Value &cmd = *pcmd;
     cmd["action"]["reboot"].handle<bool>([&](auto value)
                                          { esp_restart(); });
 
@@ -57,10 +56,10 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        std::shared_ptr<Value> sv = std::make_shared<Value>();
+        Value v ;
         publish_props().inspect([&](const Value &props)
-                                { (*sv)["props"] = props; });
-        emit(sv);
+                                { v["props"] = props; });
+        emit(v);
     }
     else
     {
@@ -73,7 +72,7 @@ SysActor::~SysActor()
     INFO("Stopping Sys actor");
 }
 
-PropInfo prop_info[] = {
+static PropInfo prop_info[] = {
     {"cpu", "S", "CPU core", "R", nullptr, nullptr},
     {"clock", "I", "cpu clock frequency in Hz", "R", nullptr, nullptr},
     {"free_heap", "I", "available memory on the heap", "R", nullptr, nullptr},

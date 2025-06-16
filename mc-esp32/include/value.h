@@ -19,7 +19,7 @@
 class Value;
 #define FloatType FLOAT_TYPE
 
-typedef std::shared_ptr<Value> SharedValue;
+typedef const Value *SharedValue;
 
 class Value
 {
@@ -70,7 +70,7 @@ private:
         }
 
         // Assignment operator for writing
-        Value &operator=(const Value &val)
+        Value operator=(const Value &val)
         {
             return value_.set(key_, val);
         }
@@ -89,14 +89,13 @@ private:
         template <typename U, typename F>
         void handle(F &&func) const
         {
-            if ( !value_.get(key_).is<U>())
+            if (!value_.get(key_).is<U>())
             {
                 return; // No action if type doesn't match
             }
             value_.get(key_).handle<U>([&](const U &v)
-                             { func(v); });
+                                       { func(v); });
         }
-
 
         template <typename U>
         bool is() const
@@ -109,7 +108,7 @@ private:
             return value_.get(key_).as<U>();
         }
 
-                inline explicit operator bool()
+        inline explicit operator bool()
         {
             return !value_.is<NullType>();
         }
@@ -122,6 +121,17 @@ private:
 public:
     // Constructors for primitive types
     inline Value() : _value(Undefined{}) {}
+    /*
+    Value &operator=(Value &&other)
+    {
+        _value = std::move(other._value);
+        other._value = Value(Undefined{});
+        return *this;
+    }
+
+    Value(const Value& other){
+        _value = other._value;
+    }*/
 
     //    inline Value() : _value(NullType{}) {}
     inline Value(std::nullptr_t) : _value(NullType{}) {}
@@ -176,7 +186,7 @@ public:
     }
 
     // Set value (creates if doesn't exist)
-    Value &set(const std::string &key, const Value &val)
+    Value set(const std::string &key, Value val)
     {
         return get_map()[key] = val;
     }
@@ -243,6 +253,11 @@ public:
         return is<ObjectType>() && as<ObjectType>().count(key) > 0;
     }
 
+    inline explicit operator bool()
+    {
+        return !is<Undefined>();
+    }
+
     /*    //Value &operator[](const std::string &key);
 
         const Value &operator[](const std::string &key) const;
@@ -284,6 +299,7 @@ public:
     {
         if (is<U>())
             target = as<U>();
+        return *this;
     }
 
     inline operator std::string()

@@ -32,7 +32,7 @@ Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 Log logger;
 
 // void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-void publish(const char *topic, Value &value)
+void publish(const char *topic, const Value &value)
 {
   if (!mc_actor.is_connected())
   {
@@ -41,13 +41,13 @@ void publish(const char *topic, Value &value)
   }
   value["topic"] = topic;
   std::string s = value.toJson();
-  SharedValue mc_cmd = std::make_shared<Value>();
-  (*mc_cmd)["publish_string"] = std::move(s);
-  mc_actor.tell(mc_cmd);
+  Value mc_cmd ;
+  mc_cmd["publish_string"] = std::move(s);
+  mc_actor.tell(mc_cmd); 
   // pulse led when we publish
-  SharedValue led_cmd = std::make_shared<Value>();
-  (*led_cmd)["action"] = "PULSE";
-  (*led_cmd)["duration"] = 10;
+  Value led_cmd;
+  led_cmd["action"] = "PULSE";
+  led_cmd["duration"] = 10;
   led_actor.tell(led_cmd);
 }
 esp_err_t nvs_init();
@@ -64,55 +64,45 @@ extern "C" void app_main()
 
   ESP_ERROR_CHECK(nvs_init());
   //  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
-  printf("Starting %ld\n", esp_get_free_heap_size());
+  printf("Starting %ld  sizeof Value %d \n", esp_get_free_heap_size(),sizeof(Value));
   uxTaskGetStackHighWaterMark(NULL); // get the stack high water mark of the main task
-  INFO("Free heap size: %ld", esp_get_free_heap_size());
-  INFO("Stack high water mark: %ld", uxTaskGetStackHighWaterMark(NULL));
+  INFO("Free heap size: %ld ", esp_get_free_heap_size());
+  INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
   // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.on_event([&](SharedValue event)
+  wifi_actor.on_event([&](const Value &event)
                       { 
-                        INFO("Received WiFi event: %s", (*event).toJson().c_str());
-                        (*event)["connected"].handle<bool>([&](auto connected)
+                        INFO("Received WiFi event: %s", event.toJson().c_str());
+                        event["connected"].handle<bool>([&](auto connected)
                                                            {
                                                             INFO("WiFi connected: %d", connected);
-                          SharedValue sv = std::make_shared<Value>();
-                          (*sv)["wifi_connected"]=connected;
-                          mc_actor.tell(sv); }); });
+                          Value v;
+                          v["wifi_connected"]=connected;
+                          mc_actor.tell(v); }); });
 
   // WIRING the actors together
-  wifi_actor.on_event([&](SharedValue event)
-                      {
-    if ((*event)["publish"])
-    {
-      publish(SRC_DEVICE "wifi", (*event));
-    } });
-  sys_actor.on_event([&](SharedValue event)
-                     {
-    if ((*event)["publish"])
-    {
-      publish(SRC_DEVICE "sys", (*event));
-    } });
-  mc_actor.on_event([&](SharedValue event)
-                    {
-      if ((*event)["publish"])
-      {
-        publish(SRC_DEVICE "multicast", (*event));
-      } });
+  wifi_actor.on_event([&](const Value &event)
+                      { event["publish"].handle<Value::ObjectType>([&](auto v)
+                                                                   { publish(SRC_DEVICE "wifi", event); }); });
+  sys_actor.on_event([&](const Value &event)
+                     {event["publish"].handle<Value::ObjectType>([&](auto v)
+                                                                   { publish(SRC_DEVICE "sys", event); }); });
+  mc_actor.on_event([&](const Value &event)
+                    {event["publish"].handle<Value::ObjectType>([&](auto v)
+                                                                   { publish(SRC_DEVICE "multicast", event); }); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
-  mc_actor.on_event([&](SharedValue event)
+  mc_actor.on_event([&](const Value &v)
                     {
-        Value &v = *event;
         if (v["publish"].is<Value::ObjectType>() && v["topic"].is<std::string>())
         {
-          const std::string &topic = v["topic"].as<std::string>();
+          const std::string topic = v["topic"].as<std::string>();
           if (topic == DST_DEVICE "sys")
-            sys_actor.tell(event);
+            sys_actor.tell(v);
           if (topic == DST_DEVICE "wifi")
-            wifi_actor.tell(event);
+            wifi_actor.tell(v);
           if (topic == DST_DEVICE "multicast")
-            mc_actor.tell(event);
+            mc_actor.tell(v);
         } });
 
   actor_thread.add_actor(wifi_actor);
