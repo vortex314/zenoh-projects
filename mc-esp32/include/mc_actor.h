@@ -36,22 +36,15 @@
 
 extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
-
-
 class McActor : public Actor
 {
 private:
-  std::string _src_prefix;
-  std::string _dst_prefix;
   bool _connected = false;
-  std::vector<std::string> _subscribed_topics;
   int _timer_publish = -1;
-  int _timer_publish_props = -1;
   int _prop_counter = 0;
   int _socket = -1; // socket for multicast communication
-   TaskHandle_t _task_handle = NULL;
-     unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
-
+  TaskHandle_t _task_handle = NULL;
+  unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
 
 public:
   McActor();
@@ -65,15 +58,13 @@ public:
   bool is_connected() const;
   Result<Void> connect(void);
   Result<Void> disconnect();
-  // Result zenoh_publish_serializable(const char *topic, Serializable &value);
   Result<Bytes> receive();
   Result<Void> send(const std::string &data);
   Result<Void> publish_props();
-  //  Result publish_props_info();
 
   Result<Void> subscribe(const std::string &topic);
   void get_props(Value &v) const;
   Result<TaskHandle_t> start_receiver();
-  static void receive_multicast_messages(void*);
+  static void receive_multicast_messages(void *);
 };
 #endif

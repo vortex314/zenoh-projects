@@ -16,6 +16,7 @@ LedActor::~LedActor()
 
 void LedActor::on_cmd(const Value& cmd)
 {
+    INFO("Led Received command: %s", cmd.toJson().c_str());
     cmd["action"].handle<std::string>([&](const std::string &action)
                                       {
         if (action == "ON")

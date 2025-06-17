@@ -16,7 +16,7 @@
 #include <esp_coexist.h>
 #include <esp_event.h>
 
-#define DEVICE_NAME "mtr1"
+#define DEVICE_NAME "esp1"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
@@ -26,7 +26,7 @@ WifiActor wifi_actor("wifi", 9000, 40, 5);
 McActor mc_actor("multicast", 9000, 40, 5);
 SysActor sys_actor("sys", 9000, 40, 5);
 LedActor led_actor("led", 9000, 40, 5);
-Thread actor_thread("actors", 9000, 40, 23, Cpu::CPU0);
+Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
 Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 
 Log logger;
@@ -39,11 +39,10 @@ void publish(const char *topic, const Value &value)
     INFO("Mc not connected, cannot publish");
     return;
   }
-  value["topic"] = topic;
-  std::string s = value.toJson();
-  Value mc_cmd ;
-  mc_cmd["publish_string"] = std::move(s);
-  mc_actor.tell(mc_cmd); 
+  Value mc_cmd;
+  mc_cmd["publish_string"] = std::move(value);
+  mc_cmd["publish_string"]["src"] = topic;
+  mc_actor.tell(mc_cmd);
   // pulse led when we publish
   Value led_cmd;
   led_cmd["action"] = "PULSE";
@@ -64,18 +63,15 @@ extern "C" void app_main()
 
   ESP_ERROR_CHECK(nvs_init());
   //  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
-  printf("Starting %ld  sizeof Value %d \n", esp_get_free_heap_size(),sizeof(Value));
+  printf("Starting %ld  sizeof Value %d \n", esp_get_free_heap_size(), sizeof(Value));
   uxTaskGetStackHighWaterMark(NULL); // get the stack high water mark of the main task
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([&](const Value &event)
-                      { 
-                        INFO("Received WiFi event: %s", event.toJson().c_str());
-                        event["connected"].handle<bool>([&](auto connected)
-                                                           {
-                                                            INFO("WiFi connected: %d", connected);
+                      { event["connected"].handle<bool>([&](auto connected)
+                                                        {
                           Value v;
                           v["wifi_connected"]=connected;
                           mc_actor.tell(v); }); });
@@ -85,18 +81,18 @@ extern "C" void app_main()
                       { event["publish"].handle<Value::ObjectType>([&](auto v)
                                                                    { publish(SRC_DEVICE "wifi", event); }); });
   sys_actor.on_event([&](const Value &event)
-                     {event["publish"].handle<Value::ObjectType>([&](auto v)
-                                                                   { publish(SRC_DEVICE "sys", event); }); });
+                     { event["publish"].handle<Value::ObjectType>([&](auto v)
+                                                                  { publish(SRC_DEVICE "sys", event); }); });
   mc_actor.on_event([&](const Value &event)
-                    {event["publish"].handle<Value::ObjectType>([&](auto v)
-                                                                   { publish(SRC_DEVICE "multicast", event); }); });
+                    { event["publish"].handle<Value::ObjectType>([&](auto v)
+                                                                 { publish(SRC_DEVICE "multicast", event); }); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   mc_actor.on_event([&](const Value &v)
                     {
-        if (v["publish"].is<Value::ObjectType>() && v["topic"].is<std::string>())
+        if (v["publish"].is<Value::ObjectType>() && v["dst"].is<std::string>())
         {
-          const std::string topic = v["topic"].as<std::string>();
+          const std::string topic = v["dst"].as<std::string>();
           if (topic == DST_DEVICE "sys")
             sys_actor.tell(v);
           if (topic == DST_DEVICE "wifi")

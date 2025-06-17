@@ -9,13 +9,6 @@ void panic_here(const char *s)
     *p = 0;
 }
 
-PublishSerdes ::PublishSerdes(Serializable &pl) : payload(pl)
-{
-}
-
-PublishSerdes ::PublishSerdes(Option<std::string> topic, Serializable &pl) : topic(topic), payload(pl)
-{
-}
 
 uint64_t current_time() { return esp_timer_get_time() / 1000; }
 
@@ -66,6 +59,7 @@ bool Timer::is_expired(uint64_t now) const & { return now >= _expires_at; }
 
 void Timer::refresh(uint64_t now)
 {
+//    INFO("Refreshing timer, now %lld, expires at %lld period %lld active %d auto_reload %d  ", now, _expires_at,_period,_active, _auto_reload);
     if (_active)
     {
         if (_auto_reload && _period > 0)
@@ -119,6 +113,7 @@ std::vector<int> Timers::get_expired_timers()
     std::vector<int> expired_timers;
     for (int idx = 0; idx < _timers.size(); idx++)
     {
+ //       INFO("Checking timer %d, expires at %ld, now %ld", idx, _timers[idx]._expires_at, now);
         if (_timers[idx].is_expired(now))
         {
             expired_timers.push_back(idx);
@@ -217,14 +212,14 @@ Res Thread::add_actor(ThreadSupport &actor)
         actor->handle_all_cmd();
     }
 }*/
-
+/*
 void Thread::handle_expired_timers()
 {
     for (auto actor : _actors)
     {
         actor->handle_expired_timers();
     }
-}
+}*/
 
 void Thread::step()
 {
@@ -260,7 +255,7 @@ void Thread::run()
             }
         }
         // Wait for either a message or timer expiration
-
+//        INFO("Thread %s waiting for %ld msec", name(), min_sleep_msec);
         QueueSetMemberHandle_t queue = xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
         // Handle commands for the actor that received a message
 
@@ -270,6 +265,7 @@ void Thread::run()
             {
                 if (actor->queue_handle() == queue)
                 {
+ //                   INFO("Thread %s handling command for actor %s", name(), actor->name());
                     actor->handle_all_cmd();
                     break; // Found the actor, no need to continue loop
                 }
@@ -277,7 +273,8 @@ void Thread::run()
         }
         // Always check timers after queue check or timeout
         for (auto actor : _actors)
-        {
+        {   
+//            INFO("Thread %s handling expired timers for actor %s", name(), actor->name());
             actor->handle_expired_timers();
         }
     }

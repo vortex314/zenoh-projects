@@ -31,7 +31,7 @@ WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
 WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
-  _timer_publish = timer_repetitive(1000);
+  _timer_publish = timer_repetitive(5000);
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
   wifi_password = S(WIFI_PASS);
@@ -94,10 +94,8 @@ void WifiActor::on_timer(int timer_id)
       pubish_props(esp_netif).inspect([&](const Value &info)
                                       { wifi_event["publish"] = info; });
 
-      publish_info().inspect([&](const Value &info)
-                             { wifi_event["info"] = info; });
-
-      wifi_event["connected"] = _wifi_connected;
+      /*publish_info().inspect([&](const Value &info)
+                             { wifi_event["info"] = info; });*/
 
       emit(wifi_event);
     }

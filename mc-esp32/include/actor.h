@@ -32,14 +32,12 @@ public:
         INFO("Channel created [%d][%d]", depth, sizeof(T));
     }
 
+    int getDepth() const { return _depth; }
+    int getSize() const { return uxQueueMessagesWaiting(queue); }
+
     bool send(const T message, TickType_t timeout = portMAX_DELAY)
     {
-        auto ok = xQueueSend(queue, &message, timeout) == pdTRUE;
-        if (!ok)
-        {
-            ERROR("Failed to send message to channel");
-        }
-        return ok;
+        return xQueueSend(queue, &message, timeout) == pdTRUE ? true : false;
     }
 
     bool sendFromIsr(const T message, TickType_t timeout = portMAX_DELAY)
@@ -130,7 +128,7 @@ public:
     virtual void on_start() = 0;
     virtual void on_stop() = 0;
     virtual QueueHandle_t queue_handle() = 0;
-    Option<QueueHandle_t> additional_queue() { return Option<QueueHandle_t>::None() ; }
+    Option<QueueHandle_t> additional_queue() { return Option<QueueHandle_t>::None(); }
     virtual uint64_t sleep_time() = 0;
     virtual void handle_all_cmd() = 0;
     virtual void handle_expired_timers() = 0;
@@ -159,8 +157,8 @@ The base actor only passes pointers through the queue to the actor. The actor is
 class Actor : public ThreadSupport
 {
 private:
-    std::vector<std::function<void( const Value& )>> _handlers;
-    Channel<const Value* > _cmds;
+    std::vector<std::function<void(const Value &)>> _handlers;
+    Channel<const Value *> _cmds;
     Timers _timers;
     bool _stop_actor = false;
     TaskHandle_t _task_handle;
@@ -169,7 +167,7 @@ private:
     std::string _name;
 
 public:
-    virtual void on_cmd(const Value& cmd) = 0;
+    virtual void on_cmd(const Value &cmd) = 0;
     virtual void on_timer(int id) = 0;
 
     virtual void on_start() {};
@@ -179,10 +177,10 @@ public:
     uint64_t sleep_time() override { return _timers.sleep_time(); }
     void handle_all_cmd() override
     {
-        const Value* cmd;
+        const Value *cmd;
         if (_cmds.receive(&cmd, 0))
         {
-            INFO("%s <= %s", name(), cmd->toJson().c_str());
+ //           INFO("%s <= %s", name(), cmd->toJson().c_str());
             on_cmd(*cmd);
         }
     };
@@ -226,7 +224,8 @@ public:
         on_start();
         while (!_stop_actor)
         {
-            const Value* pcmd;
+            const Value *pcmd;
+            INFO("Actor %s waiting for command during %d", name(), _timers.sleep_time());
             if (_cmds.receive(&pcmd, _timers.sleep_time()))
             {
                 INFO("Actor %s received command: %s", name(), pcmd->toJson().c_str());
@@ -246,26 +245,38 @@ public:
         on_stop();
     }
 
-    void emit(const Value& event)
+    void emit(const Value &event)
     {
         for (auto &handler : _handlers)
             handler(event);
     }
-    void on_event(std::function<void( const Value& )> handler)
+    void on_event(std::function<void(const Value &)> handler)
     {
         _handlers.push_back(handler);
     }
-    inline bool tell(const Value& msg)
+    inline bool tell(const Value &msg)
     {
-        Value* pmsg = new Value;
+        Value *pmsg = new Value;
         *pmsg = std::move(msg);
-        return _cmds.send(pmsg);
+        bool ok = _cmds.send(pmsg, pdMS_TO_TICKS(10));
+        if (!ok)
+        {
+            ERROR("Failed to send message to actor %s [%d/%d]", name(), _cmds.getSize(), _cmds.getDepth());
+            delete pmsg; // Clean up if send failed
+        }
+        return ok;
     }
-    inline bool tellFromIsr(const Value& msg)
+    inline bool tellFromIsr(const Value &msg)
     {
-        Value* pmsg = new Value;
+        Value *pmsg = new Value;
         *pmsg = std::move(msg);
-        return _cmds.sendFromIsr(pmsg);
+        bool ok =  _cmds.sendFromIsr(pmsg);
+        if (!ok)
+        {
+            ERROR("Failed to send message to actor %s [%d/%d]", name(), _cmds.getSize(), _cmds.getDepth());
+            delete pmsg; // Clean up if send failed
+        }
+        return ok;
     }
     void stop()
     {
@@ -338,93 +349,15 @@ public:
     void handle_expired_timers();
 };
 
-// when receiving a message, the actor will call the on_cmd method with envelope
-struct PublishBytes
-{
-    std::string topic;
-    Bytes payload;
-};
-struct PublishSerdes
-{
-    Option<std::string> topic=nullptr;
-    Serializable &payload;
-    PublishSerdes(Serializable& pl);
-    PublishSerdes(Option<std::string> topic,Serializable &payload);
-};
-
-class PropertyCommon : public Serializable
-{
-public:
-    std::string name;
-    std::string description;
-    PropertyCommon(std::string name = "", std::string description = "") : name(name), description(description) {}
-    Res serialize_info(Serializer &ser)
-    {
-        ser.serialize(name);
-        ser.serialize(description);
-        return ResOk;
-    }
-    virtual Res serialize(Serializer &ser) = 0;
-    virtual Res deserialize(Deserializer &des) = 0;
-};
-
-template <typename T>
-struct Property : public PropertyCommon
-{
-    T value;
-    Option<std::function<T()>> getter;
-    Option<std::function<void(T)>> setter;
-    Property(std::string name = "", std::string description = "") : PropertyCommon(name, description) {}
-    Res serialize(Serializer &ser) override
-    {
-        if (getter)
-        {
-            T t = getter.value()();
-            return ser.serialize(t);
-        }
-        return ser.serialize(value);
-    }
-    Res deserialize(Deserializer &des) override
-    {
-        if (setter)
-        {
-            T value;
-            des.deserialize(value);
-            setter.value()(value);
-            return ResOk;
-        }
-        des.deserialize(value);
-        return ResOk;
-    }
-    Res get_value(T &v)
-    {
-        if (getter)
-        {
-            v = getter.value()();
-            return ResOk;
-        }
-        v = value;
-        return ResOk;
-    }
-    Res set_value(T value)
-    {
-        if (setter)
-        {
-            setter.value()(value);
-            return ResOk;
-        }
-        return Res(-1, "No setter");
-    }
-};
 
 typedef struct PropInfo
 {
-  const char *name;
-  const char *type;
-  const char *desc;
-  const char *mode;
-  Option<float> min;
-  Option<float> max;
+    const char *name;
+    const char *type;
+    const char *desc;
+    const char *mode;
+    Option<float> min;
+    Option<float> max;
 } PropInfo;
 
 #endif
