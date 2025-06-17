@@ -18,37 +18,40 @@
 #include <option.h>
 #include <value.h>
 #include <memory>
+#include <freertos/FreeRTOS.h>
+#include <freertos/mpu_wrappers.h>
+#include <freertos/portmacro.h>
+#include <freertos/queue.h>
+#include <freertos/timers.h>
+#include <freertos/task.h>
+#include <esp_wifi.h>
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"
 
-enum McAction
-{
-  Connect,
-  Disconnect,
-  Subscribe,
-  Stop
-};
-/*
-struct McSerial
-{
-  std::string topic;
-  Serializable &value;
-};*/
+// Multicast configuration
+#define MULTICAST_IP "225.0.0.1"
+#define MULTICAST_PORT 6502
+#define MAX_UDP_PACKET_SIZE 1024
+
+extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
 
 
 class McActor : public Actor
 {
-  private:
+private:
   std::string _src_prefix;
   std::string _dst_prefix;
   bool _connected = false;
   std::vector<std::string> _subscribed_topics;
-  int _timer_publish=-1;
-  int _timer_publish_props=-1;
+  int _timer_publish = -1;
+  int _timer_publish_props = -1;
   int _prop_counter = 0;
   int _socket = -1; // socket for multicast communication
+   TaskHandle_t _task_handle = NULL;
+     unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
+
 
 public:
   McActor();
@@ -56,7 +59,7 @@ public:
   ~McActor();
   void run();
   void on_timer(int id);
-  void on_cmd(const Value& );
+  void on_cmd(const Value &);
   void on_start() override;
   void prefix(const char *prefix);
   bool is_connected() const;
@@ -64,14 +67,13 @@ public:
   Result<Void> disconnect();
   // Result zenoh_publish_serializable(const char *topic, Serializable &value);
   Result<Bytes> receive();
-  Result<Void> send(const std::string& data);
+  Result<Void> send(const std::string &data);
   Result<Void> publish_props();
-//  Result publish_props_info();
+  //  Result publish_props_info();
 
   Result<Void> subscribe(const std::string &topic);
-  void get_props(Value& v) const;
-
-
-
+  void get_props(Value &v) const;
+  Result<TaskHandle_t> start_receiver();
+  static void receive_multicast_messages(void*);
 };
 #endif

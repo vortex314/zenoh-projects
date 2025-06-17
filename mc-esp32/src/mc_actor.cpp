@@ -15,11 +15,6 @@
 
 static int create_multicast_socket();
 
-// Multicast configuration
-#define MULTICAST_IP "225.0.0.1"
-#define MULTICAST_PORT 6502
-#define MAX_UDP_PACKET_SIZE 1024
-
 McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
 
 McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
@@ -30,6 +25,12 @@ McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue
 
 void McActor::on_start()
 {
+  auto r = start_receiver();
+  if ( r.is_ok()) {
+    _task_handle = r.unwrap();
+  } else {
+    ERROR(" starting multicast receiver failed ");
+  }
 }
 
 void McActor::on_timer(int id)
@@ -42,29 +43,9 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-void McActor::on_cmd(const Value& cmd)
+void McActor::on_cmd(const Value &cmd)
 {
-  /*while (true)
-  {
-    while (connect().is_err())
-    {
-    };
-    while (true)
-    {
-      auto msg = receive();
-      if (msg.is_err())
-        break;
-      msg.inspect([&](auto rx_buffer)
-                  {
-                    std::string json(std::string(rx_buffer.begin(), rx_buffer.end()));
-                    Value::fromJson(json).inspect([&](auto value)
-                                                  {
-                                                    SharedValue sv = std::make_shared<Value>(value);
-                                                    emit(sv); }); });
-    }
 
-    disconnect();
-  }*/
   INFO("Received command: %s", cmd.toJson().c_str());
   cmd["wifi_connected"].handle<bool>([&](bool connected)
                                      {
@@ -107,26 +88,68 @@ void McActor::on_cmd(const Value& cmd)
                                             { send(str); });
 }
 
+Result<TaskHandle_t> McActor::start_receiver()
+{
+  TaskHandle_t task_handle;
+  BaseType_t rc = xTaskCreate(receive_multicast_messages, "udp_rx", 4096, this, 5, &task_handle);
+  if (rc == pdPASS)
+    return Result<TaskHandle_t>(task_handle);
+  return Result<TaskHandle_t>(rc, "xTaskCreate failed");
+}
+
+
+void McActor::receive_multicast_messages(void *pv)
+{
+  McActor *mc_actor = (McActor *)pv;
+  struct sockaddr_in source_addr;
+  socklen_t socklen = sizeof(source_addr);
+
+  while (true)
+  {
+    while (mc_actor->_socket < 0)
+    {
+      vTaskDelay(10);
+    }
+    while (true)
+    {
+      int len = recvfrom(mc_actor->_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
+                         (struct sockaddr *)&source_addr, &socklen);
+      if (len < 0)
+      {
+        ERROR(" Multicast recv failed. Retrying....");
+        vTaskDelay(1000);
+      }
+      else
+      {
+        mc_actor->_rx_buffer[len] = '\0';
+        auto res_msg = Value::fromJson((const char *)mc_actor->_rx_buffer);
+        esp_ip4_addr_t * ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
+        res_msg.inspect([&](auto v) {
+          v["from_ip"]=ip4addr_to_str(ip_addr);
+          mc_actor->emit(v);
+        });
+      }
+    }
+  }
+}
+
 Res McActor::connect(void)
 {
   _socket = create_multicast_socket();
   if (_socket < 0)
   {
-    return Res(-1, "Failed to create multicast socket");
+    return Res(errno, "Failed to create multicast socket");
   }
-  //  xTaskCreate(receive_multicast_messages, "udp_rx", 4096, NULL, 5, NULL);
   _connected = true;
-  INFO("Connected to Mc on %s:%d", MULTICAST_IP, MULTICAST_PORT);
+  INFO("UDP Listening on %s:%d", MULTICAST_IP, MULTICAST_PORT);
   return ResOk;
 }
 
 Res McActor::disconnect()
 {
   INFO("Closing Mc Session...");
-
   _connected = false;
-
-  INFO("Mc session closed ");
+  _socket = -1;
   return ResOk;
 }
 
@@ -167,7 +190,7 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
-  Value v,publish;
+  Value v, publish;
   get_props(publish);
   v["publish"] = publish;
   emit(v);
