@@ -9,7 +9,6 @@ void panic_here(const char *s)
     *p = 0;
 }
 
-
 uint64_t current_time() { return esp_timer_get_time() / 1000; }
 
 Timer::Timer(bool auto_reload, bool active, uint64_t period,
@@ -59,7 +58,7 @@ bool Timer::is_expired(uint64_t now) const & { return now >= _expires_at; }
 
 void Timer::refresh(uint64_t now)
 {
-//    INFO("Refreshing timer, now %lld, expires at %lld period %lld active %d auto_reload %d  ", now, _expires_at,_period,_active, _auto_reload);
+    //    INFO("Refreshing timer, now %lld, expires at %lld period %lld active %d auto_reload %d  ", now, _expires_at,_period,_active, _auto_reload);
     if (_active)
     {
         if (_auto_reload && _period > 0)
@@ -113,7 +112,7 @@ std::vector<int> Timers::get_expired_timers()
     std::vector<int> expired_timers;
     for (int idx = 0; idx < _timers.size(); idx++)
     {
- //       INFO("Checking timer %d, expires at %ld, now %ld", idx, _timers[idx]._expires_at, now);
+        //       INFO("Checking timer %d, expires at %ld, now %ld", idx, _timers[idx]._expires_at, now);
         if (_timers[idx].is_expired(now))
         {
             expired_timers.push_back(idx);
@@ -177,6 +176,17 @@ Res Thread::start()
         xCoreID = tskNO_AFFINITY;
     }
     INFO(" starting Thread %s on core %d ", name(), xCoreID);
+    _queue_set = xQueueCreateSet(_queue_set_size);
+    for (ThreadSupport* actor : _actors)
+    {
+        auto r = xQueueAddToSet(actor->queue_handle(), _queue_set);
+        if (r != pdPASS)
+        {
+            panic_here("Failed to add actor to queue set");
+
+            return Res(-1,"xQueueAddToSet failed" );
+        }
+    }
 
     CHECK(0 == xTaskCreatePinnedToCore([](void *arg)
                                        {
@@ -195,13 +205,9 @@ Res Thread::start()
 
 Res Thread::add_actor(ThreadSupport &actor)
 {
-    INFO("Adding actor %s:%X to thread %s", actor.name(),&actor, name());
+    INFO("Adding actor %s:%X to thread %s", actor.name(), &actor, name());
     _actors.push_back(&actor);
-    auto r = xQueueAddToSet(actor.queue_handle(), _queue_set);
-    if (r != pdPASS)
-    {
-        return Res(-1, "Failed to add actor to queue set");
-    }
+
     return ResOk;
 }
 
@@ -255,7 +261,7 @@ void Thread::run()
             }
         }
         // Wait for either a message or timer expiration
-//        INFO("Thread %s waiting for %ld msec", name(), min_sleep_msec);
+        //        INFO("Thread %s waiting for %ld msec", name(), min_sleep_msec);
         QueueSetMemberHandle_t queue = xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
         // Handle commands for the actor that received a message
 
@@ -265,7 +271,7 @@ void Thread::run()
             {
                 if (actor->queue_handle() == queue)
                 {
- //                   INFO("Thread %s handling command for actor %s", name(), actor->name());
+                    //                   INFO("Thread %s handling command for actor %s", name(), actor->name());
                     actor->handle_all_cmd();
                     break; // Found the actor, no need to continue loop
                 }
@@ -273,8 +279,8 @@ void Thread::run()
         }
         // Always check timers after queue check or timeout
         for (auto actor : _actors)
-        {   
-//            INFO("Thread %s handling expired timers for actor %s", name(), actor->name());
+        {
+            //            INFO("Thread %s handling expired timers for actor %s", name(), actor->name());
             actor->handle_expired_timers();
         }
     }

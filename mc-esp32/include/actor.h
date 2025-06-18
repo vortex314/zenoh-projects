@@ -331,14 +331,15 @@ class Thread
     bool _stop_thread = false;
     int _priority;
     Cpu _preferred_cpu;
+    size_t _queue_set_size;
 
 public:
     Thread(const char *name, size_t stack_size, size_t queue_set_size, int priority = 5, Cpu preferred_cpu = Cpu::CPU_ANY) : _name(name),
                                                                                                                              _stack_size(stack_size),
                                                                                                                              _priority(priority),
-                                                                                                                             _preferred_cpu(preferred_cpu)
+                                                                                                                             _preferred_cpu(preferred_cpu),
+                                                                                                                             _queue_set_size(queue_set_size)
     {
-        _queue_set = xQueueCreateSet(queue_set_size);
     }
     const char *name() { return _name.c_str(); }
     Res start();

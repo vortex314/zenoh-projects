@@ -95,9 +95,9 @@ extern "C" void app_main()
           const std::string topic = v["dst"].as<std::string>();
           if (topic == DST_DEVICE "sys")
             sys_actor.tell(v);
-          if (topic == DST_DEVICE "wifi")
+          else if (topic == DST_DEVICE "wifi")
             wifi_actor.tell(v);
-          if (topic == DST_DEVICE "multicast")
+          else if (topic == DST_DEVICE "multicast")
             mc_actor.tell(v);
         } });
 

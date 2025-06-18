@@ -50,17 +50,17 @@ void McActor::on_cmd(const Value &cmd)
 {
 
   //  INFO("Received command: %s", cmd.toJson().c_str());
-  cmd["wifi_connected"].handle<bool>([&](bool connected)
+  cmd["wifi_connected"].handle<bool>([&](bool wifi_connected)
                                      {
-    if ( connected ){
+    if ( wifi_connected ){
        if (!_connected)
       {
         Result res = connect();
         if (res.is_err())
         {
           INFO("Failed to connect to Mc: %s", res.msg());
-          vTaskDelay(1000 / portTICK_PERIOD_MS);
-          tell(cmd); // tell myself to connected 
+//          vTaskDelay(1000 / portTICK_PERIOD_MS);
+          tell(cmd); // tell myself to get connected  
         }
         else
         {
@@ -93,7 +93,7 @@ Result<TaskHandle_t> McActor::start_receiver()
     return Result<TaskHandle_t>(task_handle);
   return Result<TaskHandle_t>(rc, "xTaskCreate failed");
 }
-
+// FreeRTOS task to receive udp messages 
 void McActor::receive_multicast_messages(void *pv)
 {
   McActor *mc_actor = (McActor *)pv;
@@ -120,7 +120,7 @@ void McActor::receive_multicast_messages(void *pv)
       else
       {
         mc_actor->_rx_buffer[len] = '\0';
-        INFO("Received multicast message: %s", mc_actor->_rx_buffer);
+        INFO("UDP RXD [%d]: %s", len,mc_actor->_rx_buffer);
         auto res_msg = Value::fromJson((const char *)mc_actor->_rx_buffer);
         if (!res_msg.is_ok())
         {
@@ -163,12 +163,10 @@ bool McActor::is_connected() const
   return _connected;
 }
 
-void McActor::prefix(const char *prefix)
-{
-}
 
 McActor::~McActor()
 {
+  if ( _socket > 0) close(_socket);
   INFO("Closing Mc Session...");
 }
 

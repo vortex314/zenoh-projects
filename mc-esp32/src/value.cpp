@@ -261,10 +261,10 @@ void Value::serializeCbor(std::vector<uint8_t> &output) const
     {
         // CBOR double-precision float (0xfb)
         output.push_back(0xfb);
-        FLOAT_TYPE d = as<FloatType>();
+        FloatType d = as<FloatType>();
         const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&d);
         // Network byte order (big-endian)
-        for (int i = sizeof(FLOAT_TYPE) - 1; i >= 0; i--)
+        for (int i = sizeof(FloatType) - 1; i >= 0; i--)
         {
             output.push_back(bytes[i]);
         }
@@ -550,12 +550,12 @@ void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t
         {
             // Single-precision float
             return readFloat().and_then([&](auto f)
-                                        { return Value(static_cast<FLOAT_TYPE>(f)); });
+                                        { return Value(static_cast<Value::FloatType>(f)); });
         }
         else if (minorType == 27)
         {
             return readDouble().and_then([&](auto f)
-                                         { return Value(static_cast<FLOAT_TYPE>(f)); });
+                                         { return Value(static_cast<Value::FloatType>(f)); });
         }
 
         return Result<Value>(-1, "Unsupported simple value");

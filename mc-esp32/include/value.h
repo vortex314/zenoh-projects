@@ -17,7 +17,6 @@
 #define FLOAT_TYPE float
 // #define VAL_OR_RET(V,RF)  { auto __r=RF; if (__r.is_err()) return __r;V=__r.unwrap();}
 class Value;
-#define FloatType FLOAT_TYPE
 
 typedef const Value *SharedValue;
 
@@ -27,7 +26,7 @@ public:
     // Primitive types we support
     using NullType = std::nullptr_t;
     using IntType = int64_t;
-    //   using FloatType = double;
+    using FloatType = FLOAT_TYPE;
     using BoolType = bool;
     using StringType = std::string;
     using BytesType = std::vector<uint8_t>;
@@ -44,7 +43,7 @@ public:
         Undefined,
         NullType,
         IntType,
-        FLOAT_TYPE,
+        FloatType,
         BoolType,
         StringType,
         BytesType,
@@ -137,7 +136,7 @@ public:
     inline Value(std::nullptr_t) : _value(NullType{}) {}
     inline Value(int v) : _value(static_cast<IntType>(v)) {}
     inline Value(int64_t v) : _value(v) {}
-    inline Value(FLOAT_TYPE v) : _value(v) {}
+    inline Value(FloatType v) : _value(v) {}
     inline Value(bool v) : _value(v) {}
     inline Value(const char *v) : _value(StringType(v)) {}
     inline Value(const std::string &v) : _value(v) {}
