@@ -182,6 +182,7 @@ public:
         {
  //           INFO("%s <= %s", name(), cmd->toJson().c_str());
             on_cmd(*cmd);
+            delete cmd; // Clean up the command after processing
         }
     };
     void handle_expired_timers() override

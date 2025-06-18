@@ -31,7 +31,7 @@ WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
 
 WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
-  _timer_publish = timer_repetitive(5000);
+  _timer_publish = timer_repetitive(100);
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
   wifi_password = S(WIFI_PASS);
