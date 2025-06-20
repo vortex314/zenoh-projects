@@ -9,9 +9,7 @@ SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
     _timer_publish = timer_repetitive(100);
-    //   _timer_publish_props = timer_repetitive(5000);
 }
-
 void SysActor::set_utc(int64_t utc)
 {
     INFO("Setting UTC time to %lld", utc);
@@ -43,7 +41,6 @@ void SysActor::set_utc(int64_t utc)
     // Print with microseconds
     INFO("Current time: %s", buffer);
 }
-
 void SysActor::on_cmd(const Value& cmd)
 {
     cmd["action"]["reboot"].handle<bool>([&](auto value)
@@ -65,11 +62,6 @@ void SysActor::on_timer(int id)
     {
         INFO("Unknown timer id: %d", id);
     }
-}
-
-SysActor::~SysActor()
-{
-    INFO("Stopping Sys actor");
 }
 
 static PropInfo prop_info[] = {

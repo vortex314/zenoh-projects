@@ -8,9 +8,7 @@
 class SysActor : public Actor
 {
 private:
-  void init_properties();
   int _timer_publish = -1;
-  int _timer_publish_props = -1;
   int _prop_counter = 0;
 
 public:

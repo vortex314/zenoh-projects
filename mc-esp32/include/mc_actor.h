@@ -64,7 +64,7 @@ public:
 
   Result<Void> subscribe(const std::string &topic);
   void get_props(Value &v) const;
-  Result<TaskHandle_t> start_receiver();
-  static void receive_multicast_messages(void *);
+  Result<TaskHandle_t> start_receiver_task();
+  static void receiver_task(void *);
 };
 #endif

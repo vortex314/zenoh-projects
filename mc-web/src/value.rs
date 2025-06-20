@@ -45,8 +45,9 @@ impl Value {
         Value::Array(a.into())
     }
 
-    pub fn object<O: Into<HashMap<String, Value>>>(o: O) -> Self {
-        Value::Object(o.into())
+        pub fn object() -> Self {
+            let hm = HashMap::<String, Value>::new();
+        Value::Object( hm )
     }
 
     // Type checking
@@ -102,6 +103,7 @@ impl Value {
             _ => None,
         }
     }
+
 
     pub fn as_float(&self) -> Option<f32> {
         match self {
@@ -457,7 +459,7 @@ impl IndexMut<usize> for Value {
 }
 pub fn tester2() {
     // Create an object
-    let mut obj = Value::object(HashMap::new());
+    let mut obj = Value::object();
     obj["name"] = "Alice".into();
     obj["age"] = 30.into();
     obj["pi"] = 3.14.into();
@@ -515,4 +517,8 @@ pub fn value_handler(request: Value) -> Option<Value> {
     request["publish"]["rpm_target"].as_int().inspect(|v| { rpm_target = *v as i32 ; });
 
     None
+}
+
+trait Handler<T> {
+    fn handle(v: Value , Fn()) {}
 }

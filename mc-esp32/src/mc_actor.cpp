@@ -25,7 +25,7 @@ McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue
 
 void McActor::on_start()
 {
-  auto r = start_receiver();
+  auto r = start_receiver_task();
   if (r.is_ok())
   {
     _task_handle = r.unwrap();
@@ -85,16 +85,16 @@ void McActor::on_cmd(const Value &cmd)
                                                 } });
 }
 
-Result<TaskHandle_t> McActor::start_receiver()
+Result<TaskHandle_t> McActor::start_receiver_task()
 {
   TaskHandle_t task_handle;
-  BaseType_t rc = xTaskCreate(receive_multicast_messages, "udp_rx", 4096, this, 5, &task_handle);
+  BaseType_t rc = xTaskCreate(receiver_task, "udp_rx", 4096, this, 5, &task_handle);
   if (rc == pdPASS)
     return Result<TaskHandle_t>(task_handle);
   return Result<TaskHandle_t>(rc, "xTaskCreate failed");
 }
 // FreeRTOS task to receive udp messages 
-void McActor::receive_multicast_messages(void *pv)
+void McActor::receiver_task(void *pv)
 {
   McActor *mc_actor = (McActor *)pv;
   struct sockaddr_in source_addr;
@@ -109,7 +109,6 @@ void McActor::receive_multicast_messages(void *pv)
     }
     while (true)
     {
-      INFO("Waiting for multicast message...");
       int len = recvfrom(mc_actor->_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
                          (struct sockaddr *)&source_addr, &socklen);
       if (len < 0)

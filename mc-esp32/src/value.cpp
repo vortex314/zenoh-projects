@@ -1,5 +1,7 @@
 #include <value.h>
-
+#include <vector>
+#include <cstdint>
+#include <utility>
    
 
     Value Value::clone() const
@@ -81,7 +83,7 @@
 
     void Value::add(Value v)
     {
-        if (is<NullType>())
+        if (is<Undefined>())
         {
             _value = ArrayType();
         }
@@ -95,7 +97,7 @@
     // Convenience methods for array access
     Value & Value::operator[](size_t index)
     {
-        if (is<NullType>())
+        if (is<Undefined>())
         {
             _value = ArrayType();
         }
@@ -222,9 +224,7 @@
     }
 
 
-#include <vector>
-#include <cstdint>
-#include <utility>
+
 
 
 // Serialize to CBOR binary data
@@ -409,7 +409,7 @@ void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t
     }
 }
 
-#include <stdexcept>
+//#include <stdexcept>
 
 
     Result<Value> CborParser::parseValue()

@@ -3,13 +3,13 @@
 #![allow(unused_must_use)]
 #![allow(dead_code)] // Allow dead code for now
 use axum::{
-    Json, Router,
     extract::{
-        State,
         ws::{WebSocket, WebSocketUpgrade},
+        State,
     },
     response::IntoResponse,
     routing::{get, post},
+    Json, Router,
 };
 use futures::{SinkExt, StreamExt};
 use log::debug;
@@ -17,15 +17,21 @@ use log::error;
 use log::{info, logger};
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     error::Error,
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
+    time::Duration,
 };
 use tokio::{
     net::UdpSocket,
-    sync::{Mutex, mpsc},
+    select,
+    sync::{mpsc, Mutex},
+    time::{self, Instant},
 };
+
+use crate::{actor::{test_actors, Actor}, value::Value};
+mod actor;
 mod logger; // Custom logger module
 mod property_cache;
 mod value;
@@ -56,11 +62,25 @@ struct ApiResponse {
     message: String,
 }
 
+struct MeasureSample {
+    sample: i64,
+    timestamp: Instant,
+}
+
+impl MeasureSample {
+    fn duration_since(&self, prev: Instant) -> Duration {
+        return prev.duration_since(self.timestamp);
+    }
+    fn inc(&mut self) {}
+}
+
 #[tokio::main]
 async fn main() {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
-    value::tester();
-    value::tester2();
+                    //   value::tester();
+                    //   value::tester2();
+    test_actors();
+
     info!("Starting UDP/HTTP server...");
     // Create UDP socket
 
@@ -72,7 +92,6 @@ async fn main() {
         .expect("Failed to join multicast group");
     // reuse addr to allow multiple instances to bind to the same port
 
-
     let udp_socket = Arc::new(udp_socket);
     let udp_messages = Arc::new(Mutex::new(VecDeque::with_capacity(MAX_CACHED_MESSAGES)));
 
@@ -82,9 +101,12 @@ async fn main() {
 
     // Spawn UDP receiver task
     tokio::spawn(async move {
+
         let mut buf = [0; 1024];
         loop {
-            match udp_receiver_socket.recv_from(&mut buf).await {
+            select! {
+                r = udp_receiver_socket.recv_from(&mut buf) => {
+                    match r {
                 Ok((len, src)) => {
                     let message = String::from_utf8_lossy(&buf[..len]).to_string();
                     info!("Received UDP from {}: {}", src, message);
@@ -94,9 +116,15 @@ async fn main() {
                         messages.pop_front();
                     }
                     messages.push_back(message);
-                }
+
+                },
                 Err(e) => error!("UDP receive error: {}", e),
             }
+                },
+                _ = time::sleep(Duration::from_secs(1)) => {
+
+                }
+            };
         }
     });
 
@@ -170,7 +198,7 @@ async fn handle_websocket_connection(mut socket: WebSocket, state: AppState) {
         }
     }
 
-  //  jh.abort();
+    //  jh.abort();
 }
 
 // HTTP endpoint to send UDP messages

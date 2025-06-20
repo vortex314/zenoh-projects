@@ -7,16 +7,16 @@ LedActor::LedActor() : LedActor("led", 4096, 5, 5) {}
 
 LedActor::LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(1000);
+    _timer_led = timer_repetitive(_duration);
 }
 
 LedActor::~LedActor()
 {
 }
 
-void LedActor::on_cmd(const Value& cmd)
+void LedActor::on_cmd(const Value &cmd)
 {
- //   INFO("Led Received command: %s", cmd.toJson().c_str());
+    //   INFO("Led Received command: %s", cmd.toJson().c_str());
     cmd["action"].handle<std::string>([&](const std::string &action)
                                       {
         if (action == "ON")
@@ -31,77 +31,72 @@ void LedActor::on_cmd(const Value& cmd)
         }
         else if (action == "PULSE")
         {
-            cmd["duration"].handle<int64_t>([&](auto duration)
-                                            {
+            cmd["duration"].set<int64_t>(_duration);
              _state = LED_STATE_PULSE;
-            gpio_set_level(GPIO_LED, LED_ON_VALUE);
             _led_is_on = true;
-            _duration = duration;
-            timer_fire(_timer_publish, _duration); });
+            gpio_set_level(GPIO_LED, LED_ON_VALUE);
+            timer_fire(_timer_led, _duration); 
         }
         else if (action == "BLINK")
         {
-            cmd["duration"].handle<int64_t>([&](auto duration)
-                                            {
-               _state = LED_STATE_BLINK;
-                _led_is_on = true;
-                gpio_set_level(GPIO_LED, LED_ON_VALUE);
-                 _duration = duration;
-                timer_fire(_timer_publish, _duration); });
-        } 
-    });
+            cmd["duration"].set<int64_t>(_duration);
+            _state = LED_STATE_BLINK;
+            _led_is_on = true;
+            gpio_set_level(GPIO_LED, LED_ON_VALUE);
+            timer_fire(_timer_led, _duration); 
+        } });
 }
 
 void LedActor::on_timer(int timer_id)
 {
-        if (timer_id == _timer_publish)
+    if (timer_id == _timer_led)
+    {
+        switch (_state)
         {
-            switch (_state)
-            {
-            case LED_STATE_OFF:
+        case LED_STATE_OFF:
+        {
+            gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+            timer_stop(_timer_led);
+            break;
+        }
+
+        case LED_STATE_ON:
+        {
+            gpio_set_level(GPIO_LED, LED_ON_VALUE);
+            timer_stop(_timer_led);
+            break;
+        }
+        case LED_STATE_BLINK:
+        {
+            if (_led_is_on)
             {
                 gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-                timer_stop(1);
-                break;
+                _led_is_on = false;
             }
-
-            case LED_STATE_ON:
+            else
             {
                 gpio_set_level(GPIO_LED, LED_ON_VALUE);
-                timer_stop(1);
-                break;
+                _led_is_on = true;
             }
-            case LED_STATE_BLINK:
-            {
-                if (_led_is_on)
-                {
-                    gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-                    _led_is_on = false;
-                }
-                else
-                {
-                    gpio_set_level(GPIO_LED, LED_ON_VALUE);
-                    _led_is_on = true;
-                }
-                break;
-            }
-            case LED_STATE_PULSE:
-            {
-                _led_is_on = false;
-                gpio_set_level(GPIO_LED, LED_OFF_VALUE);
-                timer_stop(1);
-                break;
-            }
-            }
+            break;
         }
-        else
+        case LED_STATE_PULSE:
         {
-            INFO("timer_id %d not handled", timer_id);
+            _led_is_on = false;
+            gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+            timer_stop(_timer_led);
+            break;
         }
+        }
+    }
+    else
+    {
+        INFO("timer_id %d not handled", timer_id);
+    }
 }
 
 void LedActor::on_start()
 {
-        gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
-        gpio_set_level(GPIO_LED, LED_OFF_VALUE);
+    gpio_set_direction(GPIO_LED, GPIO_MODE_OUTPUT);
+    gpio_set_level(GPIO_LED, LED_OFF_VALUE);
 }

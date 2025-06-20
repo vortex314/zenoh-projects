@@ -14,10 +14,10 @@ class LedActor : public Actor {
         LED_STATE_PULSE
     } State;
     State _state = LED_STATE_BLINK;
-    int _duration = 100;
+    int64_t _duration = 100;
     int _gpio_led = GPIO_LED;
     bool _led_is_on = false;
-    int _timer_publish = -1;
+    int _timer_led = -1;
 public:
     LedActor();
     LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
