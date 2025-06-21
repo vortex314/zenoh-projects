@@ -79,7 +79,7 @@ async fn main() {
     logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`);
                     //   value::tester();
                     //   value::tester2();
-    test_actors();
+    test_actors().await; // Test actor system
 
     info!("Starting UDP/HTTP server...");
     // Create UDP socket

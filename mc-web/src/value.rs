@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::fmt;
 
+struct Undefined{}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum Value {
     #[default]
+    Undefined,
     Null,
     Bool(bool),
     Int(i64),
@@ -16,6 +19,45 @@ pub enum Value {
 }
 
 impl Value {
+    // check type 
+    pub fn is<T: 'static>(&self) -> bool {
+        match self {
+            Value::Undefined => false,
+            Value::Null => false,
+            Value::Bool(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<bool>() => true,
+            Value::Int(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<i64>() => true,
+            Value::Float(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f32>() => true,
+            Value::Double(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f64>() => true,
+            Value::String(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<String>() => true,
+            Value::Bytes(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<u8>>() => true,
+            Value::Array(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<Value>>() => true,
+            Value::Object(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<HashMap<String, Value>>() => true,
+            _ => false,
+        }
+    }
+    // convert to type
+    pub fn as_<T: 'static>(&self) -> Option<&T> {
+        use std::any::Any;
+        match self {
+            Value::Undefined => None,
+            Value::Null => None,
+            Value::Bool(b) => (b as &dyn Any).downcast_ref::<T>(),
+            Value::Int(i) => (i as &dyn Any).downcast_ref::<T>(),
+            Value::Float(f) => (f as &dyn Any).downcast_ref::<T>(),
+            Value::Double(d) => (d as &dyn Any).downcast_ref::<T>(),
+            Value::String(s) => (s as &dyn Any).downcast_ref::<T>(),
+            Value::Bytes(b) => (b as &dyn Any).downcast_ref::<T>(),
+            Value::Array(a) => (a as &dyn Any).downcast_ref::<T>(),
+            Value::Object(o) => (o as &dyn Any).downcast_ref::<T>(),
+        }
+    }
+
+    // handle with closure if it is of a type
+    pub fn handle<T: 'static, F: Fn(&T)>(&self, f: F) {
+        if let Some(value) = self.as_::<T>() {
+            f(value);
+        }
+    }
     // Constructors
     pub fn null() -> Self {
         Value::Null
@@ -185,6 +227,7 @@ impl From<f32> for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Value::Undefined => write!(f, "undefined"),
             Value::Null => write!(f, "null"),
             Value::Bool(b) => write!(f, "{}", b),
             Value::Int(i) => write!(f, "{}", i),
@@ -217,6 +260,7 @@ impl fmt::Display for Value {
 }
 
 use base64::{engine::general_purpose, Engine as _};
+use log::error;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -226,6 +270,7 @@ impl Serialize for Value {
         S: Serializer,
     {
         match self {
+            Value::Undefined => serializer.serialize_unit(),
             Value::Null => serializer.serialize_none(),
             Value::Bool(b) => serializer.serialize_bool(*b),
             Value::Int(i) => serializer.serialize_i64(*i),
@@ -413,8 +458,8 @@ impl Index<&str> for Value {
         match self {
             Value::Object(map) => map
                 .get(index)
-                .unwrap_or_else(|| panic!("Key '{}' not found", index)),
-            _ => panic!("Cannot index non-object with string"),
+                .unwrap_or(&Value::Undefined),
+            _ => &Value::Undefined,
         }
     }
 }
@@ -425,7 +470,7 @@ impl Index<usize> for Value {
     fn index(&self, index: usize) -> &Self::Output {
         match self {
             Value::Array(vec) => &vec[index],
-            _ => panic!("Cannot index non-array with usize"),
+            _ => &Value::Undefined,
         }
     }
 }
@@ -444,7 +489,7 @@ impl IndexMut<&str> for Value {
                 }
                 map.get_mut(index).unwrap()
             }
-            _ => panic!("Cannot index non-object with string"),
+            _ => panic!("Cannot index non-object with &str"),
         }
     }
 }
@@ -510,15 +555,21 @@ impl Value {
             _ => None,
         }
     }
+        pub fn set(&mut self, key: &str, value: Value) {
+        if let Value::Object(map) = self {
+            map.insert(key.to_string(), value);
+        } else {
+            error!("Cannot set key on non-object value");
+        }
+    }
+
+    pub fn push(&mut self, value: Value) {
+        if let Value::Array(vec) = self {
+            vec.push(value);
+        } else {
+            error!("Cannot push to non-array value");
+        }
+    }
 }
 
-pub fn value_handler(request: Value) -> Option<Value> {
-    let mut rpm_target = 0;
-    request["publish"]["rpm_target"].as_int().inspect(|v| { rpm_target = *v as i32 ; });
 
-    None
-}
-
-trait Handler<T> {
-    fn handle(v: Value , Fn()) {}
-}
