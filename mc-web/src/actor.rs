@@ -4,6 +4,7 @@ use axum::serve::Listener;
 use log::info;
 use tokio::{
     io::AsyncReadExt,
+    select,
     sync::mpsc::{Receiver, Sender, channel},
 };
 
@@ -18,7 +19,6 @@ static REPO: Lazy<Arc<Mutex<ActorRefRepo>>> = Lazy::new(|| {
         actor_refs: Vec::new(),
     }))
 });
-
 
 #[derive(Clone)]
 struct ActorRefRepo {
@@ -42,7 +42,6 @@ pub struct ActorRef {
     name: String,
 }
 
-
 impl ActorRef {
     pub fn name(&self) -> &str {
         &self.name
@@ -57,9 +56,8 @@ impl ActorRef {
         }
     }
     pub fn new(name: &str) -> Self {
-        // Create a new ActorRef with the given name 
-        REPO
-            .lock()
+        // Create a new ActorRef with the given name
+        REPO.lock()
             .unwrap()
             .find_by_name(name)
             .unwrap_or_else(|| ActorRef::create_new(name))
@@ -71,10 +69,12 @@ impl ActorRef {
                 .lock()
                 .unwrap()
                 .find_by_name(&self.name)
-                .and_then(|actor_ref| actor_ref.sender.clone());
+                .and_then(|actor_ref| {
+                    actor_ref.sender.clone()
+                });
         }
         if let Some(s) = self.sender.as_ref() {
-            let _ = s.try_send(v);
+            let _ = s.send(v).await;
         } else {
             info!("ActorRef {} not found", self.name);
         }
@@ -128,7 +128,6 @@ impl<T: ActorImpl> Actor<T> {
         self.actor.on_start().await;
         loop {
             let v = self.receiver.recv().await;
-            info!("Actor {} received command: {:?}", self.name, v);
             if let Some(val) = v {
                 self.actor.on_cmd(&val).await;
             }
@@ -159,17 +158,19 @@ impl ActorImpl for Peer {
     async fn on_cmd(&mut self, cmd: &Value) {
         // Example logic, adjust as needed
         if cmd["opponent"].is_string() {
-            self.opponent = Some(ActorRef::new(
-                cmd["opponent"].as<String>().unwrap_or_else(|| "unknown".to_string(),
-            ));
-        }
+            self.opponent = Some(ActorRef::new(cmd["opponent"].as_string().unwrap()));
+        };
         if cmd["cmd"].is_string() && cmd["cmd"].as_string().unwrap() == "start" {
-            self.opponent
-                .as_mut()
-                .map(|opponent| opponent.tell(Value::object()));
-        }
 
-        // Do something with the command
+            let mut cmd_clone = cmd.clone();
+            let i = cmd["counter"].as_::<i64>().unwrap_or(&0);
+            cmd_clone["counter"] = ( i + 1 ).into();
+            cmd_clone["test"] = "test".into();
+            if let Some(opponent) = self.opponent.as_mut() {
+                info!("tell to opponent {}",i);
+                opponent.tell(cmd_clone).await;
+            }
+        }
     }
     async fn on_timer(&mut self, _timer_id: u32) {
         // Timer logic here
@@ -181,13 +182,33 @@ impl ActorImpl for Peer {
 pub async fn test_actors() {
     let mut pong = Actor::new("pong", Peer::new());
     let mut ping = Actor::new("ping", Peer::new());
+
+
     let mut msg = Value::object();
     msg["opponent"] = "pong".into();
     ping.tell(msg).await;
-    let mut msg = Value::object();
+    
+    let mut msg: Value = Value::object();
+    msg["opponent"] = "ping".into();
+    pong.tell(msg).await;
+
+
+    let mut msg: Value = Value::object();
     msg["cmd"] = "start".into();
+    msg["counter"] = 0.into();
     ping.tell(msg).await;
+
+
     loop {
-        tokio::join!(ping.run(), pong.run());
+        select! {
+            _ = ping.run() => {
+                info!("Ping actor stopped");
+                break;
+            },
+            _ = pong.run() => {
+                info!("Pong actor stopped");
+                break;
+            }
+        }
     }
 }
