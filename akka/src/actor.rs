@@ -1,266 +1,391 @@
+// AI generated with timers and ask
+
+use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::sync::Arc;
+use tokio::sync::oneshot;
+use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
+use tokio::time::{interval, sleep, Instant,Duration};
+use tokio::sync::mpsc;
 
-use std::time::Duration;
-use tokio::sync::{mpsc, oneshot};
-use tokio::time::{sleep, timeout};
 
-/// Trait that defines the lifecycle methods for an actor
-#[async_trait::async_trait]
-pub trait Actor: Send + Sized + 'static {
-    type Message: Send + 'static;
-    type Error: Send + Debug + 'static;
+// Core trait for messages that can be sent to actors
+pub trait Message: Send + Sync + 'static + Debug {}
+impl<T: Send + Sync + 'static + Debug> Message for T {}
 
-    /// Called before the actor starts processing messages
-    async fn prestart(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    /// Called after the actor stops processing messages
-    async fn poststop(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-
-    /// Handle incoming messages
-    async fn handle_message(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>) -> Result<(), Self::Error>;
-
-    /// Handle timer events
-    async fn handle_timer(&mut self, _timer_id: TimerId, _ctx: &mut ActorContext<Self>) -> Result<(), Self::Error> {
-        // Default implementation does nothing
-        Ok(())
-    }
-}
-
-/// Trait for messages that can be "asked" (request-response pattern)
-pub trait Ask<A: Actor>: Send + 'static {
-    type Response: Send + 'static;
-    
-    /// Convert this askable message into a regular actor message
-    fn into_message(self, respond_to: oneshot::Sender<Self::Response>) -> A::Message;
-}
-
-/// Errors that can occur during ask operations
-#[derive(Debug, thiserror::Error)]
-pub enum AskError {
-    #[error("Actor is unreachable (channel closed)")]
-    ActorUnreachable,
-    #[error("Request timed out after {timeout:?}")]
-    Timeout { timeout: Duration },
-    #[error("Actor did not respond (channel closed)")]
-    NoResponse,
-}
-
-/// Default timeout for ask operations
-pub const DEFAULT_ASK_TIMEOUT: Duration = Duration::from_secs(5);
-
-/// Unique identifier for timers
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TimerId(pub u64);
-
-/// Timer information
-#[derive(Debug, Clone)]
-pub struct Timer {
-    pub id: TimerId,
-    pub delay: Duration,
-    pub repeat: bool,
-}
-
-/// Internal actor messages
+// Timer handle for cancelling scheduled tasks
 #[derive(Debug)]
-pub enum InternalMessage<M> {
-    UserMessage(M),
-    Timer(TimerId),
-    Stop,
+pub struct TimerHandle {
+    id: String,
+    cancel_tx: Option<oneshot::Sender<()>>,
 }
 
-/// Actor context that provides access to timers and other actor facilities
-pub struct ActorContext<A: Actor> {
-    sender: mpsc::Sender<InternalMessage<A::Message>>,
-    timers: HashMap<TimerId, Timer>,
-    next_timer_id: u64,
-}
-
-impl<A: Actor> ActorContext<A> {
-    fn new(sender: mpsc::Sender<InternalMessage<A::Message>>) -> Self {
-        Self {
-            sender,
-            timers: HashMap::new(),
-            next_timer_id: 0,
+impl TimerHandle {
+    pub fn cancel(mut self) {
+        if let Some(tx) = self.cancel_tx.take() {
+            let _ = tx.send(());
         }
     }
 
-    /// Schedule a one-time timer
-    pub fn schedule_once(&mut self, delay: Duration) -> TimerId {
-        let timer_id = TimerId(self.next_timer_id);
-        self.next_timer_id += 1;
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
 
-        let timer = Timer {
-            id: timer_id,
-            delay,
-            repeat: false,
-        };
-        
-        self.timers.insert(timer_id, timer.clone());
-        self.spawn_timer(timer);
-        timer_id
+// Scheduler for managing timed tasks
+#[derive(Clone)]
+pub struct Scheduler {
+    next_timer_id: Arc<RwLock<u64>>,
+}
+
+impl Scheduler {
+    pub fn new() -> Self {
+        Self {
+            next_timer_id: Arc::new(RwLock::new(0)),
+        }
     }
 
-    /// Schedule a repeating timer
-    pub fn schedule_repeating(&mut self, delay: Duration) -> TimerId {
-        let timer_id = TimerId(self.next_timer_id);
-        self.next_timer_id += 1;
+    // Schedule a one-time message after a delay
+    pub async fn schedule_once<M: Message>(
+        &self,
+        delay: Duration,
+        actor_ref: ActorRef,
+        message: M,
+    ) -> TimerHandle {
+        let timer_id = self.generate_timer_id().await;
+        let (cancel_tx, cancel_rx) = oneshot::channel();
 
-        let timer = Timer {
-            id: timer_id,
-            delay,
-            repeat: true,
-        };
-        
-        self.timers.insert(timer_id, timer.clone());
-        self.spawn_timer(timer);
-        timer_id
-    }
-
-    /// Cancel a timer
-    pub fn cancel_timer(&mut self, timer_id: TimerId) {
-        self.timers.remove(&timer_id);
-    }
-
-    /// Stop the actor
-    pub async fn stop(&self) {
-        let _ = self.sender.send(InternalMessage::Stop).await;
-    }
-
-    fn spawn_timer(&self, timer: Timer) {
-        let sender = self.sender.clone();
         tokio::spawn(async move {
+            tokio::select! {
+                _ = sleep(delay) => {
+                    actor_ref.tell(message).await;
+                }
+                _ = cancel_rx => {
+                    // Timer was cancelled
+                }
+            }
+        });
+
+        TimerHandle {
+            id: timer_id,
+            cancel_tx: Some(cancel_tx),
+        }
+    }
+
+    // Schedule a recurring message with fixed interval
+    pub async fn schedule_with_fixed_delay<M: Message + Clone>(
+        &self,
+        initial_delay: Duration,
+        duration: Duration,
+        actor_ref: ActorRef,
+        message: M,
+    ) -> TimerHandle {
+        let timer_id = self.generate_timer_id().await;
+        let (cancel_tx, mut cancel_rx) = oneshot::channel();
+
+        tokio::spawn(async move {
+            // Initial delay
+            tokio::select! {
+                _ = sleep(initial_delay) => {}
+                _ = &mut cancel_rx => return,
+            }
+
+            let mut timer = interval(duration);
             loop {
-                sleep(timer.delay).await;
+                tokio::select! {
+                    _ = timer.tick() => {
+                        actor_ref.tell(message.clone()).await;
+                    }
+                    _ = &mut cancel_rx => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        TimerHandle {
+            id: timer_id,
+            cancel_tx: Some(cancel_tx),
+        }
+    }
+
+    // Schedule at fixed rate (compensates for processing time)
+    pub async fn schedule_at_fixed_rate<M: Message + Clone>(
+        &self,
+        initial_delay: Duration,
+        period: Duration,
+        actor_ref: ActorRef,
+        message: M,
+    ) -> TimerHandle {
+        let timer_id = self.generate_timer_id().await;
+        let (cancel_tx, mut cancel_rx) = oneshot::channel();
+
+        tokio::spawn(async move {
+            // Initial delay
+            tokio::select! {
+                _ = sleep(initial_delay) => {}
+                _ = &mut cancel_rx => return,
+            }
+
+            let start_time = Instant::now();
+            let mut tick_count = 0u64;
+
+            loop {
+                let next_tick = start_time + period * (tick_count + 1) as u32;
+                let now = Instant::now();
                 
-                // Send timer message
-                if sender.send(InternalMessage::Timer(timer.id)).await.is_err() {
-                    // Actor is dead, stop timer
-                    break;
+                if next_tick > now {
+                    tokio::select! {
+                        _ = sleep(next_tick - now) => {}
+                        _ = &mut cancel_rx => break,
+                    }
                 }
 
-                if !timer.repeat {
+                actor_ref.tell(message.clone()).await;
+                tick_count += 1;
+
+                // Check for cancellation after sending message
+                if cancel_rx.try_recv().is_ok() {
                     break;
                 }
             }
         });
-    }
-}
 
-/// Handle to communicate with an actor - can be cloned and shared
-pub struct ActorRef<A: Actor> {
-    sender: mpsc::Sender<InternalMessage<A::Message>>,
-}
-
-impl<A: Actor> Clone for ActorRef<A> {
-    fn clone(&self) -> Self {
-        Self {
-            sender: self.sender.clone(),
-        }
-    }
-}
-
-impl<A: Actor> ActorRef<A> {
-    /// Send a message to the actor
-    pub async fn send(&self, msg: A::Message) -> Result<(), mpsc::error::SendError<InternalMessage<A::Message>>> {
-        self.sender.send(InternalMessage::UserMessage(msg)).await
-    }
-
-    /// Try to send a message without waiting
-    pub fn try_send(&self, msg: A::Message) -> Result<(), mpsc::error::TrySendError<InternalMessage<A::Message>>> {
-        self.sender.try_send(InternalMessage::UserMessage(msg))
-    }
-
-    /// Ask the actor with a message and wait for a response with default timeout
-    pub async fn ask<Q>(&self, question: Q) -> Result<Q::Response, AskError>
-    where
-        Q: Ask<A>,
-    {
-        self.ask_with_timeout(question, DEFAULT_ASK_TIMEOUT).await
-    }
-
-    /// Ask the actor with a message and wait for a response with custom timeout
-    pub async fn ask_with_timeout<Q>(&self, question: Q, timeout_duration: Duration) -> Result<Q::Response, AskError>
-    where
-        Q: Ask<A>,
-    {
-        let (tx, rx) = oneshot::channel();
-        let message = question.into_message(tx);
-        
-        // Send the message
-        self.sender
-            .send(InternalMessage::UserMessage(message))
-            .await
-            .map_err(|_| AskError::ActorUnreachable)?;
-        
-        // Wait for response with timeout
-        match timeout(timeout_duration, rx).await {
-            Ok(Ok(response)) => Ok(response),
-            Ok(Err(_)) => Err(AskError::NoResponse),
-            Err(_) => Err(AskError::Timeout { timeout: timeout_duration }),
+        TimerHandle {
+            id: timer_id,
+            cancel_tx: Some(cancel_tx),
         }
     }
 
-    /// Stop the actor
-    pub async fn stop(&self) -> Result<(), mpsc::error::SendError<InternalMessage<A::Message>>> {
-        self.sender.send(InternalMessage::Stop).await
+    async fn generate_timer_id(&self) -> String {
+        let mut next_id = self.next_timer_id.write().await;
+        *next_id += 1;
+        format!("timer-{}", *next_id)
     }
 }
 
-/// Spawns an actor and returns a handle to it
-pub fn spawn_actor<A: Actor>(mut actor: A, buffer_size: usize) -> ActorRef<A> {
-    let (sender, mut receiver) = mpsc::channel(buffer_size);
-    let actor_ref = ActorRef { sender: sender.clone() };
+// Actor context provides access to system functionality
+#[derive(Clone)]
+pub struct ActorContext {
+    pub system: ActorSystem,
+    pub self_ref: ActorRef,
+    pub scheduler: Scheduler,
+}
+
+impl ActorContext {
+    pub async fn spawn<A: Actor + 'static>(&self, actor: A) -> ActorRef {
+        self.system.spawn(actor).await
+    }
+
+    pub async fn stop(&self, actor_ref: &ActorRef) {
+        self.system.stop(actor_ref).await;
+    }
+
+    // Timer convenience methods
+    pub async fn schedule_once<M: Message>(
+        &self,
+        delay: Duration,
+        message: M,
+    ) -> TimerHandle {
+        self.scheduler.schedule_once(delay, self.self_ref.clone(), message).await
+    }
+
+    pub async fn schedule_with_fixed_delay<M: Message + Clone>(
+        &self,
+        initial_delay: Duration,
+        interval: Duration,
+        message: M,
+    ) -> TimerHandle {
+        self.scheduler.schedule_with_fixed_delay(initial_delay, interval, self.self_ref.clone(), message).await
+    }
+
+    pub async fn schedule_at_fixed_rate<M: Message + Clone>(
+        &self,
+        initial_delay: Duration,
+        period: Duration,
+        message: M,
+    ) -> TimerHandle {
+        self.scheduler.schedule_at_fixed_rate(initial_delay, period, self.self_ref.clone(), message).await
+    }
+
+    // Schedule to other actors
+    pub async fn schedule_once_to<M: Message>(
+        &self,
+        delay: Duration,
+        actor_ref: ActorRef,
+        message: M,
+    ) -> TimerHandle {
+        self.scheduler.schedule_once(delay, actor_ref, message).await
+    }
+
+    pub async fn schedule_with_fixed_delay_to<M: Message + Clone>(
+        &self,
+        initial_delay: Duration,
+        interval: Duration,
+        actor_ref: ActorRef,
+        message: M,
+    ) -> TimerHandle {
+        self.scheduler.schedule_with_fixed_delay(initial_delay, interval, actor_ref, message).await
+    }
+}
+
+// Core Actor trait
+#[async_trait::async_trait]
+pub trait Actor: Send + Sync {
+    async fn receive(&mut self, msg: Box<dyn Any + Send>, ctx: &ActorContext);
     
-    tokio::spawn(async move {
-        let mut ctx = ActorContext::new(sender);
-        
-        // Call prestart
-        if let Err(e) = actor.prestart().await {
-            eprintln!("Actor prestart failed: {:?}", e);
-            return;
-        }
+    async fn pre_start(&mut self, _ctx: &ActorContext) {}
+    async fn post_stop(&mut self, _ctx: &ActorContext) {}
+}
 
-        // Main message loop
-        while let Some(msg) = receiver.recv().await {
-            match msg {
-                InternalMessage::UserMessage(user_msg) => {
-                    if let Err(e) = actor.handle_message(user_msg, &mut ctx).await {
-                        eprintln!("Actor message handling failed: {:?}", e);
+// Actor reference for sending messages
+#[derive(Clone, Debug)]
+pub struct ActorRef {
+    id: String,
+    sender: mpsc::UnboundedSender<ActorMessage>,
+}
+
+impl ActorRef {
+    pub async fn tell<M: Message>(&self, msg: M) {
+        let boxed_msg = Box::new(msg) as Box<dyn Any + Send>;
+        let actor_msg = ActorMessage::UserMessage(boxed_msg);
+        let _ = self.sender.send(actor_msg);
+    }
+
+    pub async fn ask<M: Message, R: Send + 'static>(&self, msg: M) -> Result<R, ActorError> {
+        let (tx, rx) = oneshot::channel();
+        let boxed_msg = Box::new(msg) as Box<dyn Any + Send>;
+        let actor_msg = ActorMessage::Ask(boxed_msg, tx);
+        
+        self.sender.send(actor_msg)
+            .map_err(|_| ActorError::ActorNotFound)?;
+            
+        let response = rx.await.map_err(|_| ActorError::Timeout)?;
+        response.downcast::<R>()
+            .map(|r| *r)
+            .map_err(|_| ActorError::InvalidResponse)
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+// Internal actor messages
+enum ActorMessage {
+    UserMessage(Box<dyn Any + Send>),
+    Ask(Box<dyn Any + Send>, oneshot::Sender<Box<dyn Any + Send>>),
+    Stop,
+}
+
+// Actor system errors
+#[derive(Debug, thiserror::Error)]
+pub enum ActorError {
+    #[error("Actor not found")]
+    ActorNotFound,
+    #[error("Request timeout")]
+    Timeout,
+    #[error("Invalid response type")]
+    InvalidResponse,
+    #[error("Actor system shutdown")]
+    SystemShutdown,
+}
+
+// Actor system manages all actors
+#[derive(Clone)]
+pub struct ActorSystem {
+    actors: Arc<RwLock<HashMap<String, JoinHandle<()>>>>,
+    next_id: Arc<RwLock<u64>>,
+    scheduler: Scheduler,
+}
+
+impl ActorSystem {
+    pub fn new() -> Self {
+        Self {
+            actors: Arc::new(RwLock::new(HashMap::new())),
+            next_id: Arc::new(RwLock::new(0)),
+            scheduler : Scheduler::new(),
+        }
+    }
+
+    pub async fn spawn<A: Actor + 'static>(&self, mut actor: A) -> ActorRef {
+        let id = self.generate_id().await;
+        let (tx, mut rx) = mpsc::unbounded_channel::<ActorMessage>();
+        
+        let actor_ref = ActorRef {
+            id: id.clone(),
+            sender: tx,
+        };
+
+        let ctx = ActorContext {
+            system: self.clone(),
+            self_ref: actor_ref.clone(),
+            scheduler:Scheduler::new(),
+        };
+
+        let handle = tokio::spawn(async move {
+            // Call pre_start
+            actor.pre_start(&ctx).await;
+
+            // Main message loop
+            while let Some(msg) = rx.recv().await {
+                match msg {
+                    ActorMessage::UserMessage(msg) => {
+                        actor.receive(msg, &ctx).await;
+                    }
+                    ActorMessage::Ask(msg, response_tx) => {
+                        // For ask pattern, we need a way to capture responses
+                        // This is a simplified implementation
+                        actor.receive(msg, &ctx).await;
+                        // In a real implementation, the actor would need to send back a response
+                        let _ = response_tx.send(Box::new(()) as Box<dyn Any + Send>);
+                    }
+                    ActorMessage::Stop => {
                         break;
                     }
                 }
-                InternalMessage::Timer(timer_id) => {
-                    // Check if timer is still active
-                    if ctx.timers.contains_key(&timer_id) {
-                        if let Err(e) = actor.handle_timer(timer_id, &mut ctx).await {
-                            eprintln!("Actor timer handling failed: {:?}", e);
-                            break;
-                        }
-                        
-                        // Remove one-time timers
-                        if let Some(timer) = ctx.timers.get(&timer_id) {
-                            if !timer.repeat {
-                                ctx.timers.remove(&timer_id);
-                            }
-                        }
-                    }
-                }
-                InternalMessage::Stop => {
-                    break;
-                }
             }
-        }
 
-        // Call poststop
-        if let Err(e) = actor.poststop().await {
-            eprintln!("Actor poststop failed: {:?}", e);
-        }
-    });
+            // Call post_stop
+            actor.post_stop(&ctx).await;
+        });
 
-    actor_ref
+        self.actors.write().await.insert(id.clone(), handle);
+        actor_ref
+    }
+
+    pub async fn stop(&self, actor_ref: &ActorRef) {
+        let _ = actor_ref.sender.send(ActorMessage::Stop);
+        if let Some(handle) = self.actors.write().await.remove(&actor_ref.id) {
+            let _ = handle.await;
+        }
+    }
+
+    pub async fn shutdown(&self) {
+        let mut actors = self.actors.write().await;
+        for (_, handle) in actors.drain() {
+            handle.abort();
+            let _ = handle.await;
+        }
+    }
+
+    async fn generate_id(&self) -> String {
+        let mut next_id = self.next_id.write().await;
+        *next_id += 1;
+        format!("actor-{}", *next_id)
+    }
+}
+
+// Convenient macro for implementing typed message handlers
+#[macro_export]
+macro_rules! handle_message {
+    ($msg:expr, $ctx:expr, $($msg_type:ty => $handler:expr),+ $(,)?) => {
+        $(
+            if let Some(typed_msg) = $msg.downcast_ref::<$msg_type>() {
+                return $handler(typed_msg, $ctx);
+            }
+        )+
+    };
 }
