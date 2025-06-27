@@ -1,8 +1,10 @@
+use anyhow::Result;
 use log::debug;
 use log::error;
 use log::{info, logger};
 
 use serde::{Deserialize, Serialize};
+use std::any::Any;
 use std::str::FromStr;
 use std::{
     collections::{HashMap, VecDeque},
@@ -18,11 +20,10 @@ use tokio::{
     time::{self, Instant},
 };
 
-use crate::value::Value;
-
 use crate::actor::Actor;
 use crate::actor::ActorContext;
 use crate::actor::ActorRef;
+use crate::value::Value;
 // Configuration
 const UDP_LISTEN_ADDR: &str = "0.0.0.0:6502";
 const UDP_LISTEN_PORT: u16 = 6502;
@@ -32,38 +33,67 @@ const HTTP_SERVER_ADDR: &str = "0.0.0.0:3000";
 const MAX_CACHED_MESSAGES: usize = 100;
 
 fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
-    Ipv4Addr::from_str(ip4_str)
+    let x = Ipv4Addr::from_str(ip4_str)?;
+    Ok(x)
 }
+pub trait CommonMessage {}
 
-enum McMessage {
-    AddListener(ActorRef<McActor>),
+#[derive(Debug)]
+pub enum McMessage {
+    AddListener(ActorRef),
     Received(Value),
     ReceivedInternal(Value),
     Send(Value),
+    ConnectionLost,
+    ConnectionEstablished,
 }
 
+impl CommonMessage for McMessage {}
+
 pub struct McActor {
-    udp_socket: Mutex<Option<UdpSocket>>,
-    listeners: Vec<ActorRef<McMessage>>,
+    udp_socket: Arc<UdpSocket>,
+    listeners: Vec<ActorRef>,
 }
 
 impl McActor {
-    pub fn new() {
-
+    pub fn new() -> McActor {
+        McActor {
+            udp_socket: None,
+            listeners: Vec::new(),
+        }
     }
 }
 
-
-
-#[cfg_attr(feature = "async-trait", ractor::async_trait)]
+#[async_trait::async_trait]
 impl Actor for McActor {
-    // An actor has a message type
-    type Message = McMessage;
-        type Error=String;
+    async fn receive(&mut self, msg: Box<dyn Any + Send>, _ctx: &ActorContext) {
+        if let Some(m) = msg.downcast_ref::<McMessage>() {
+            match m {
+                McMessage::Received(_v) => {} // only as output
+                McMessage::ReceivedInternal(v) => {
+                    // broadcast
+                    self.listeners
+                        .iter()
+                        .map(|l| l.tell(McMessage::Received(v.clone())))
+                        .map(async |f| f.await);
+                }
+                McMessage::Send(_v) => {
+                    info!("UDP send {}", _v.to_json());
+                    let buf = _v.to_json().into_bytes();
+                    self.udp_socket.send(&buf);
+                }
+                McMessage::AddListener(ar) => self.listeners.push(ar.clone()),
+                _ => {}
+            }
+        }
+    }
+
+    async fn post_stop(&mut self, _ctx: &ActorContext) {}
 
     // and (optionally) internal state
 
-    async fn prestart(&mut self) -> Result<(), Self::Error> {
+    async fn pre_start(&mut self, _ctx: &ActorContext) {
+        info!(" pre_start ");
         let udp_socket = UdpSocket::bind(UDP_LISTEN_ADDR)
             .await
             .expect("Failed to create std UDP socket");
@@ -79,90 +109,37 @@ impl Actor for McActor {
         // Clone for UDP receiver task
         let udp_receiver_socket = udp_socket.clone();
 
+        self.udp_socket=udp_socket;
+
+        let self_ref = _ctx.self_ref.clone();
+
         tokio::spawn(async move {
             let mut buf = [0; 1024];
             loop {
+                info!("UDP recv...");
                 select! {
                     r = udp_receiver_socket.recv_from(&mut buf) => {
                         match r {
                     Ok((len, src)) => {
-                         let message = String::from_utf8_lossy(&buf[..len]).to_string();
+                         let message = String::from_utf8_lossy(&buf[..len]);
                             info!("Received UDP from {}: {}", src, message);
 
-                        let value = Value::from_json(message);
-                        myself.cast(McMessage::ReceivedInternal(value.unwrap()));
+                        let value = Value::from_json(&message[..]);
+                        self_ref.tell(McMessage::ReceivedInternal(value.unwrap())).await;
 
 
                     },
-                    Err(e) => error!("UDP receive error: {}", e),
+                    Err(e) => {
+                        error!("UDP receive error: {}", e);
+                        self_ref.tell(McMessage::ConnectionLost).await;
+                    },
                 }
                     },
                     _ = time::sleep(Duration::from_secs(1)) => {
-
+                        info!("timeout.");
                     }
                 };
             }
         });
-
-        Ok(McActor {
-            udp_socket,
-            listeners: Vec::new(),
-        });
-        Ok(())
     }
-        async fn handle_message(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>) -> Result<(), Self::Error>
- {
-        match msg {
-            McMessage::Received(v) => {} // only as output
-            McMessage::ReceivedInternal(v) => {
-                // broadcast
-                for listener in self.listeners {
-                    listener.send_message(McMessage::Received(v));
-                }
-            }
-            McMessage::Send(v) => {}
-            McMessage::AddListener(ar) => state.listeners.push(ar),
-        }
-        Ok(())
-    }
-
-    #[doc = " Invoked when an actor is being started by the system."]
-    #[doc = ""]
-    #[doc = " Any initialization inherent to the actor\'s role should be"]
-    #[doc = " performed here hence why it returns the initial state."]
-    #[doc = ""]
-    #[doc = " Panics in `pre_start` do not invoke the"]
-    #[doc = " supervision strategy and the actor won\'t be started. [Actor]::`spawn`"]
-    #[doc = " will return an error to the caller"]
-    #[doc = ""]
-    #[doc = " * `myself` - A handle to the [ActorCell] representing this actor"]
-    #[doc = " * `args` - Arguments that are passed in the spawning of the actor which might"]
-    #[doc = " be necessary to construct the initial state"]
-    #[doc = ""]
-    #[doc = " Returns an initial [Actor::State] to bootstrap the actor"]
-    #[cfg(feature = "async-trait")]
-    #[must_use]
-    #[allow(
-        elided_named_lifetimes,
-        clippy::type_complexity,
-        clippy::type_repetition_in_bounds
-    )]
-    fn pre_start<'life0, 'async_trait>(
-        &'life0 self,
-        myself: ActorRef<Self::Msg>,
-        args: Self::Arguments,
-    ) -> ::core::pin::Pin<
-        Box<
-            dyn ::core::future::Future<Output = Result<Self::State, ActorProcessingErr>>
-                + ::core::marker::Send
-                + 'async_trait,
-        >,
-    >
-    where
-        'life0: 'async_trait,
-        Self: 'async_trait,
-    {
-        todo!()
-    }
-    
 }

@@ -3,49 +3,54 @@
 #![allow(unused_imports)]
 #![allow(unused_must_use)]
 #![allow(dead_code)] // Allow dead code for now
+use log::info;
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
-use tokio::time::{Duration, Instant, interval, sleep};
+use tokio::time::{interval, sleep, Duration, Instant};
 
 use crate::actor::Actor;
 use crate::actor::ActorContext;
 use crate::actor::ActorSystem;
+use crate::multicast::McActor;
+use crate::multicast::McMessage;
+use crate::value::Value;
 
 mod actor;
 mod logger;
+mod multicast;
+mod value;
 
 // Main function demonstrating usage
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting Akka-style Actor System in Rust");
+    logger::init();
+    info!("Starting Akka-style Actor System in Rust");
 
     let system = ActorSystem::new();
 
-    // Create actors
-    let greeter1 = system.spawn(GreeterActor::new("Alice".to_string())).await;
-    let greeter2 = system.spawn(GreeterActor::new("Bob".to_string())).await;
-    let counter = system.spawn(CounterActor::new()).await;
 
-    // Send some messages
-    greeter1.tell(HelloMessage("Rust".to_string())).await;
-    greeter2.tell(HelloMessage("Tokio".to_string())).await;
-    greeter1.tell("How are you?".to_string()).await;
+    let mc = system.spawn(McActor::new()).await;
 
-    counter.tell(CountMessage).await;
-    counter.tell(CountMessage).await;
-    counter.tell(CountMessage).await;
-    counter.tell(GetCountMessage).await;
+
+
+    let mut v = Value::object();
+    v["src"]="master/brain".into();
+    v["pub"]=Value::object();
+    v["pub"]["rpm_target"]=1234.5.into();
+
+    mc.tell(McMessage::Send(v)).await;
+
 
     // Let actors process messages
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    tokio::time::sleep(Duration::from_millis(10000)).await;
 
-    println!("Shutting down actor system...");
+    info!("Shutting down actor system...");
     system.shutdown().await;
 
     Ok(())
@@ -76,20 +81,20 @@ impl Actor for GreeterActor {
     async fn receive(&mut self, msg: Box<dyn Any + Send>, _ctx: &ActorContext) {
         handle_message!(msg, _ctx,
             HelloMessage => |m: &HelloMessage, _ctx: &ActorContext|  {
-                println!("{} says: Hello, {}!", self.name, m.0);
+                info!("{} says: Hello, {}!", self.name, m.0);
             },
             String => |m: &String, _ctx: &ActorContext|  {
-                println!("{} received: {}", self.name, m);
+                info!("{} received: {}", self.name, m);
             }
         );
     }
 
     async fn pre_start(&mut self, _ctx: &ActorContext) {
-        println!("GreeterActor {} starting up", self.name);
+        info!("GreeterActor {} starting up", self.name);
     }
 
     async fn post_stop(&mut self, _ctx: &ActorContext) {
-        println!("GreeterActor {} shutting down", self.name);
+        info!("GreeterActor {} shutting down", self.name);
     }
 }
 
@@ -109,10 +114,10 @@ impl Actor for CounterActor {
         handle_message!(msg, _ctx,
             CountMessage => |_: &CountMessage, _ctx: &ActorContext|  {
                 self.count += 1;
-                println!("Count incremented to: {}", self.count);
+                info!("Count incremented to: {}", self.count);
             },
             GetCountMessage => |_: &GetCountMessage, _ctx: &ActorContext|  {
-                println!("Current count: {}", self.count);
+                info!("Current count: {}", self.count);
             }
         );
     }
@@ -122,7 +127,7 @@ impl Actor for CounterActor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::{Duration, sleep};
+    use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_actor_system() {
@@ -170,14 +175,14 @@ mod tests {
                             .tell(HelloMessage("from supervisor".to_string()))
                             .await;
                     }
-                    _ => println!("Supervisor received unknown message"),
+                    _ => info!("Supervisor received unknown message"),
                 }
             }
             async fn pre_start(&mut self, _ctx: &ActorContext) {
-                println!("SupervisorActor starting up");
+                info!("SupervisorActor starting up");
             }
             async fn post_stop(&mut self, _ctx: &ActorContext) {
-                println!("SupervisorActor shutting down");
+                info!("SupervisorActor shutting down");
             }
         }
 
