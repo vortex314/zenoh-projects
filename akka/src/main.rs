@@ -26,6 +26,46 @@ mod logger;
 mod multicast;
 mod value;
 
+struct PrinterActor;
+
+impl PrinterActor {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+#[async_trait::async_trait]
+impl Actor for PrinterActor {
+    async fn receive(&mut self, msg: Box<dyn Any + Send>, _ctx: &ActorContext) {
+        info!("PrinterActor received a message");
+        if let Some(s) = msg.downcast_ref::<String>() {
+            info!("PrinterActor received: {}", s);
+        } else if let Some(mc) = msg.downcast_ref::<McMessage>() {
+            match mc {
+                McMessage::Received(v) => {
+                    info!("PrinterActor received McMessage::Received: {}", v.to_json());
+                }
+                McMessage::AddListener(_) => {
+                    info!("PrinterActor received McMessage::AddListener");
+                }
+                McMessage::Send(v) => {
+                    info!("PrinterActor received McMessage::Send: {}", v.to_json());
+                }
+                _ => {
+                    info!("PrinterActor received unknown McMessage type");
+                }
+            }
+        } else {
+            info!("PrinterActor received unknown message type");
+        }
+    }   
+    async fn pre_start(&mut self, _ctx: &ActorContext) {
+        info!("PrinterActor starting up");
+    }
+    async fn post_stop(&mut self, _ctx: &ActorContext) {
+        info!("PrinterActor shutting down");
+    }
+}
+
 // Main function demonstrating usage
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -36,6 +76,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     let mc = system.spawn(McActor::new()).await;
+    let printer = system.spawn(PrinterActor::new()).await;
+    mc.tell(McMessage::AddListener(printer.clone())).await;
 
 
 
@@ -48,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // Let actors process messages
-    tokio::time::sleep(Duration::from_millis(10000)).await;
+    tokio::time::sleep(Duration::from_millis(100000)).await;
 
     info!("Shutting down actor system...");
     system.shutdown().await;

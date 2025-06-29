@@ -235,7 +235,6 @@ impl ActorContext {
 #[async_trait::async_trait]
 pub trait Actor: Send + Sync {
     async fn receive(&mut self, msg: Box<dyn Any + Send>, ctx: &ActorContext);
-    
     async fn pre_start(&mut self, _ctx: &ActorContext) {}
     async fn post_stop(&mut self, _ctx: &ActorContext) {}
 }
