@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::executor::block_on;
 use log::debug;
 use log::error;
 use log::{info, logger};
@@ -22,14 +23,12 @@ use std::{
 use tokio::{
     net::UdpSocket,
     select,
-    sync::{Mutex, mpsc},
+    sync::{mpsc, Mutex},
     time::{self, Instant},
 };
 
-use crate::actor::Actor;
-use crate::actor::ActorContext;
-use crate::actor::ActorRef;
 use crate::value::Value;
+use actix::prelude::*;
 // Configuration
 const UDP_LISTEN_ADDR: &str = "0.0.0.0:6502";
 const UDP_LISTEN_PORT: u16 = 6502;
@@ -44,21 +43,28 @@ fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
 }
 pub trait CommonMessage {}
 
-#[derive(Debug)]
-pub enum McMessage {
-    AddListener(ActorRef),
-    Received(Value),
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
+pub enum McCmd {
+    AddListener(Recipient<McEvent>),
     ReceivedInternal(Value),
     Send(Value),
+    Reconnect,
+}
+
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
+pub enum McEvent {
+    Received(Value),
     ConnectionLost,
     ConnectionEstablished,
 }
 
-impl CommonMessage for McMessage {}
+impl CommonMessage for McCmd {}
 
 pub struct McActor {
     udp_socket: Option<Arc<UdpSocket>>,
-    listeners: Vec<ActorRef>,
+    listeners: Vec<Recipient<McEvent>>,
 }
 
 impl McActor {
@@ -70,44 +76,10 @@ impl McActor {
     }
 }
 
-#[async_trait::async_trait]
 impl Actor for McActor {
-    async fn receive(&mut self, msg: Box<dyn Any + Send>, _ctx: &ActorContext) {
-        if let Some(m) = msg.downcast_ref::<McMessage>() {
-            match m {
-                McMessage::Received(_v) => {} // only as output
-                McMessage::ReceivedInternal(v) => {
-                    info!(
-                        "UDP received internal {} for {} listeners",
-                        v.to_json(),
-                        self.listeners.len()
-                    );
-                    // broadcast
-                    join_all(self.listeners.iter().map(|l| {
-                        debug!("Sending to listener: {:?}", l);
-                        l.tell(McMessage::Received(v.clone()))
-                    }))
-                    .await;
-                }
-                McMessage::Send(_v) => {
-                    info!("UDP send {}", _v.to_json());
-                    let buf = _v.to_json().into_bytes();
-                    self.udp_socket.as_mut().map(|s| s.send(&buf));
-                }
-                McMessage::AddListener(ar) => {
-                    info!("Adding listener: {:?}", ar);
-                    self.listeners.push(ar.clone())
-                }
-                _ => {}
-            }
-        }
-    }
+    type Context = Context<Self>;
 
-    async fn post_stop(&mut self, _ctx: &ActorContext) {}
-
-    // and (optionally) internal state
-
-    async fn pre_start(&mut self, _ctx: &ActorContext) {
+    fn started(&mut self, ctx: &mut Context<Self>) {
         info!(" pre_start ");
         let addr = SocketAddr::from_str(UDP_LISTEN_ADDR).unwrap();
 
@@ -122,9 +94,13 @@ impl Actor for McActor {
 
         socket.bind(&SockAddr::from(addr));
 
+        let rt = actix_rt::Runtime::new().unwrap();
+        let _tokio_rt = rt.tokio_runtime();
+        let fut =
+            async move { UdpSocket::from_std(socket.into()).expect("Failed to create tokio UdpSocket") };
+
+        let udp_socket = _tokio_rt.block_on(fut);
         // Wrap the socket with tokio
-        let udp_socket =
-            UdpSocket::from_std(socket.into()).expect("Failed to create tokio UdpSocket");
 
         udp_socket
             .join_multicast_v4(
@@ -140,34 +116,69 @@ impl Actor for McActor {
 
         self.udp_socket = Some(udp_socket);
 
-        let self_ref = _ctx.self_ref.clone();
+        let self_ref = ctx.address();
 
-        tokio::spawn(async move {
+        let receiver = async move {
             let mut buf = [0; 1024];
             loop {
+                info!(" UDP receive ");
                 select! {
-                                    r = udp_receiver_socket.recv_from(&mut buf) => {
-                                        match r {
-                                    Ok((len, src)) => {
-                                         let message = String::from_utf8_lossy(&buf[..len]);
-                //                            info!("Received UDP from {}: {}", src, message);
+                    r = udp_receiver_socket.recv_from(&mut buf) => {
+                        match r {
+                    Ok((len, src)) => {
+                         let message = String::from_utf8_lossy(&buf[..len]);
+                            info!("Received UDP from {}: {}", src, message);
 
-                                        let value = Value::from_json(&message[..]);
-                                        self_ref.tell(McMessage::ReceivedInternal(value.unwrap())).await;
+                        let value = Value::from_json(&message[..]);
+                        self_ref.send(McCmd::ReceivedInternal(value.unwrap())).await;
 
 
-                                    },
-                                    Err(e) => {
-                                        error!("UDP receive error: {}", e);
-                                        self_ref.tell(McMessage::ConnectionLost).await;
-                                    },
-                                }
-                                    },
-                                    _ = time::sleep(Duration::from_secs(1)) => {
-                                        info!("timeout.");
-                                    }
-                                };
+                    },
+                    Err(e) => {
+                        error!("UDP receive error: {}", e);
+                        self_ref.send(McCmd::Reconnect).await;
+                    },
+                }
+                    },
+                    _ = time::sleep(Duration::from_secs(1)) => {
+                        info!("timeout.");
+                    }
+                };
             }
-        });
+        };
+        let success = Arbiter::current().spawn(receiver);
+        info!("Spawn returned {}",success);
+    }
+}
+
+impl Handler<McCmd> for McActor {
+    // type Result = Result<(),dyn std::error::Error +'static >;
+    type Result = ();
+
+    fn handle(&mut self, msg: McCmd, _: &mut Self::Context) {
+        match msg {
+            McCmd::ReceivedInternal(v) => {
+                info!(
+                    "UDP received internal {} for {} listeners",
+                    v.to_json(),
+                    self.listeners.len()
+                );
+                // broadcast
+                join_all(self.listeners.iter().map(async |l| {
+                    debug!("Sending to listener: {:?}", l);
+                    l.send(McEvent::Received(v.clone())).await
+                }));
+            }
+            McCmd::Send(_v) => {
+                info!("UDP send {}", _v.to_json());
+                let buf = _v.to_json().into_bytes();
+                self.udp_socket.as_mut().map(|s| s.send(&buf));
+            }
+            McCmd::AddListener(ar) => {
+                info!("Adding listener: {:?}", ar);
+                self.listeners.push(ar.clone())
+            }
+            _ => {}
+        }
     }
 }
