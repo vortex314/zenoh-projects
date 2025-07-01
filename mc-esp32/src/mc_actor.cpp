@@ -20,7 +20,7 @@ McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
 McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
     : Actor(stack_size, name, priority, queue_depth)
 {
-  _timer_publish = timer_repetitive(100); // timer for publishing properties
+  _timer_publish = timer_repetitive(1000); // timer for publishing properties
 }
 
 void McActor::on_start()
@@ -178,7 +178,7 @@ Res McActor::publish_props()
   }
   Value v, publish;
   get_props(publish);
-  v["publish"] = publish;
+  v["pub"] = publish;
   emit(v);
   return ResOk;
 }

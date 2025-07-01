@@ -8,7 +8,12 @@ SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 
 SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
 {
-    _timer_publish = timer_repetitive(100);
+    _timer_publish = timer_repetitive(1000);
+}
+
+SysActor::~SysActor()
+{
+    INFO("Destroying SysActor");
 }
 void SysActor::set_utc(int64_t utc)
 {
@@ -46,7 +51,7 @@ void SysActor::on_cmd(const Value& cmd)
     cmd["action"]["reboot"].handle<bool>([&](auto value)
                                          { esp_restart(); });
 
-    cmd["publish"]["utc"].handle<int64_t>([&](const int64_t &utc)
+    cmd["pub"]["utc"].handle<int64_t>([&](const int64_t &utc)
                                           { set_utc(utc); });
 }
 void SysActor::on_timer(int id)
@@ -55,7 +60,7 @@ void SysActor::on_timer(int id)
     {
         Value v ;
         publish_props().inspect([&](const Value &props)
-                                { v["publish"] = props; });
+                                { v["pub"] = props; });
         emit(v);
     }
     else

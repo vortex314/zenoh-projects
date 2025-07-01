@@ -17,6 +17,7 @@
 #include <esp_event.h>
 
 #define DEVICE_NAME "esp1"
+#define DEVICE_PREFIX DEVICE_NAME "/"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
@@ -78,26 +79,26 @@ extern "C" void app_main()
 
   // WIRING the actors together
   wifi_actor.on_event([&](const Value &event)
-                      { event["publish"].handle<Value::ObjectType>([&](auto v)
-                                                                   { publish(SRC_DEVICE "wifi", event); }); });
+                      { event["pub"].handle<Value::ObjectType>([&](auto v)
+                                                                   { publish(DEVICE_PREFIX "wifi", event); }); });
   sys_actor.on_event([&](const Value &event)
-                     { event["publish"].handle<Value::ObjectType>([&](auto v)
-                                                                  { publish(SRC_DEVICE "sys", event); }); });
+                     { event["pub"].handle<Value::ObjectType>([&](auto v)
+                                                                  { publish(DEVICE_PREFIX "sys", event); }); });
   mc_actor.on_event([&](const Value &event)
-                    { event["publish"].handle<Value::ObjectType>([&](auto v)
-                                                                 { publish(SRC_DEVICE "multicast", event); }); });
+                    { event["pub"].handle<Value::ObjectType>([&](auto v)
+                                                                 { publish(DEVICE_PREFIX "multicast", event); }); });
 
   // send commands to actors coming from zenoh, deserialize and send to the right actor
   mc_actor.on_event([&](const Value &v)
                     {
-        if (v["publish"].is<Value::ObjectType>() && v["dst"].is<std::string>())
+        if (v["pub"].is<Value::ObjectType>() && v["dst"].is<std::string>())
         {
           const std::string topic = v["dst"].as<std::string>();
-          if (topic == DST_DEVICE "sys")
+          if (topic == DEVICE_PREFIX "sys")
             sys_actor.tell(v);
-          else if (topic == DST_DEVICE "wifi")
+          else if (topic == DEVICE_PREFIX "wifi")
             wifi_actor.tell(v);
-          else if (topic == DST_DEVICE "multicast")
+          else if (topic == DEVICE_PREFIX "multicast")
             mc_actor.tell(v);
         } });
 
