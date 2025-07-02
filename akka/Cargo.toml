@@ -9,7 +9,7 @@ async-trait="0.1.88"
 thiserror="*"
 actix="0.13.5"
 actix-rt ="*"
-ractor={ version = "0.15.6",features = ["async-trait"]}
+# ractor={ version = "0.15.6",features = ["async-trait"]}
 env_logger="*"
 log="*"
 chrono="*"

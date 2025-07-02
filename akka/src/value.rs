@@ -53,7 +53,8 @@ impl Value {
     }
 
     // handle with closure if it is of a type
-    pub fn handle<T: 'static, F: Fn(&T)>(&self, f: F) {
+    pub fn handle<T: 'static, F>(&self, mut f: F) 
+    where F : FnMut(&T) {
         if let Some(value) = self.as_::<T>() {
             f(value);
         }
@@ -215,6 +216,12 @@ impl From<i64> for Value {
 impl From<&str> for Value {
     fn from(v: &str) -> Self {
         Value::String(v.to_string())
+    }
+}
+
+impl From<String> for Value {
+    fn from(v: String) -> Self {
+        Value::String(v)
     }
 }
 

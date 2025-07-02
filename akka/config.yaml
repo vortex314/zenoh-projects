@@ -1,0 +1,16 @@
+---
+brain:
+  drive: esp1/drive
+  compass: esp2/compass
+  alert:
+  - src: esp1/sys
+    free_heap:
+      lt: 10000
+    temp:
+      gt: 50
+  - src: esp2/sys
+    temp:
+      gt: 50
+path:
+- [23.1,44.2]
+- [27.1,44.2]

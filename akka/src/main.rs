@@ -7,11 +7,12 @@ mod logger;
 mod multicast;
 mod value;
 mod brain;
+mod alive;
 use actix::prelude::*;
 use log::info;
 use std::time::Duration;
 
-use crate::{multicast::McActor, value::Value};
+use crate::{brain::Brain, multicast::McActor, value::Value};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -65,6 +66,7 @@ impl Handler<ListenerCmd> for Listener {
 
     let listener = Listener::new().start();
     let _mc_addr: Addr<McActor> = McActor::new().start();
+    let _brain = Brain::new().start();
 
     let listener_clone = listener.clone();
 
