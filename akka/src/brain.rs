@@ -8,7 +8,7 @@ use crate::{
     value::Value,
 };
 
-struct Property<T> {
+pub struct Property<T> {
     pub value: T,
     pub last_updated: std::time::SystemTime,
 }
@@ -26,7 +26,7 @@ impl<T> Property<T> {
     }
 }
 
-struct Drive {
+pub struct Drive {
     pub src: String,
     pub speed: f64,
     pub direction: f64,

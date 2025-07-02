@@ -36,7 +36,7 @@ impl AliveActor {
 impl Actor for AliveActor {
     type Context = Context<Self>;
 
-    fn started(&mut self, ctx: &mut Context<Self>) {
+    fn started(&mut self, _: &mut Context<Self>) {
         // spawn task for expiration, check every sec
         
     }
