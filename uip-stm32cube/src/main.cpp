@@ -4,6 +4,8 @@
 #include <stm32f1xx_hal_cortex.h> // Include the HAL Cortex functions for STM32F1 series
 #include <stm32f1xx_hal_rcc.h>    // Include the HAL RCC functions for STM32F1 series
 #include <stm32f1xx_hal_uart.h>
+#include <cstring>
+#include <cstdio>
 
 void UART3_Init(void); // Function prototype for UART2 initialization
 void SystemClock_Config(void);
@@ -18,8 +20,15 @@ DMA_HandleTypeDef hdma_usart3_tx;
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
 #define RX_BUFFER_SIZE 64       // Define the size of the receive buffer
 u8 rx_buffer_R[RX_BUFFER_SIZE]; // Receive buffer for UART2
+
+const char* line ="The quick brown fox jumps over the lazy dog. 1234567890\n\r"; // Define a line ending for UART communication
 
 extern "C" int main()
 {
@@ -49,10 +58,14 @@ extern "C" int main()
   UART_DisableRxErrors(&huart3);
   // This is a simple C++ program that does nothing.
   // It serves as a placeholder for future development.
+  u32 count=0;
   while (1)
   {
     // transmit character 'A' every 1000 ms
-    HAL_UART_Transmit_DMA(&huart3, (uint8_t *)"A", 1);
+    char buffer[128];
+    count ++;
+    snprintf(buffer, sizeof(buffer), "[%lu] %s", count,line);
+    HAL_UART_Transmit_DMA(&huart3, (uint8_t *)buffer, strlen(buffer));
     HAL_Delay(100); // Delay for 100
   }
   return 0;
