@@ -3,7 +3,6 @@
 #include <stm32f1xx_hal_def.h>    // Include the HAL definitions for STM32F1 series
 #include <stm32f1xx_hal_cortex.h> // Include the HAL Cortex functions for STM32F1 series
 #include <stm32f1xx_hal_rcc.h>    // Include the HAL RCC functions for STM32F1 series
-
 #include <stm32f1xx_hal_uart.h>
 
 void UART3_Init(void); // Function prototype for UART2 initialization
@@ -59,9 +58,6 @@ extern "C" int main()
   return 0;
 }
 
-// ===========================================================
-/** System Clock Configuration
- */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct;
@@ -105,8 +101,10 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-
-// configure uart in stm32cube handmade
+extern "C" void SysTick_Handler(void) {
+  HAL_IncTick();
+  HAL_SYSTICK_IRQHandler();
+}
 
 void UART3_Init(void)
 {
@@ -200,34 +198,33 @@ extern "C" void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
 extern "C" void DMA1_Channel2_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel2_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart3_tx);
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel2_IRQn 1 */
 }
 
-/**
-  * @brief This function handles DMA1 channel3 global interrupt.
-  */
 extern "C" void DMA1_Channel3_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Channel3_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel3_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart3_rx);
-  /* USER CODE BEGIN DMA1_Channel3_IRQn 1 */
+}
 
-  /* USER CODE END DMA1_Channel3_IRQn 1 */
+extern "C" void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
+{
+  if(uartHandle->Instance==USART3)
+  {
+      /* Peripheral clock disable */
+      __HAL_RCC_USART3_CLK_DISABLE();
+      /**USART3 GPIO Configuration    
+      PB10     ------> USART3_TX
+      PB11     ------> USART3_RX 
+      */
+      HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10|GPIO_PIN_11);
+      HAL_DMA_DeInit(uartHandle->hdmarx);
+      HAL_DMA_DeInit(uartHandle->hdmatx);
+      HAL_NVIC_DisableIRQ(USART3_IRQn);
+  }
 }
 
 extern "C" void USART3_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART2_IRQn 1 */
   if(RESET != __HAL_UART_GET_IT_SOURCE(&huart3, UART_IT_IDLE)) {  // Check for IDLE line interrupt  
@@ -263,37 +260,6 @@ extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     // For example, you can reset the UART or log the error
   }
 }
-
-extern "C" void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
-{
-  if(uartHandle->Instance==USART3)
-  {
-    /* USER CODE BEGIN USART3_MspDeInit 0 */
-
-    /* USER CODE END USART3_MspDeInit 0 */
-      /* Peripheral clock disable */
-      __HAL_RCC_USART3_CLK_DISABLE();
-  
-      /**USART3 GPIO Configuration    
-      PB10     ------> USART3_TX
-      PB11     ------> USART3_RX 
-      */
-      HAL_GPIO_DeInit(GPIOB, GPIO_PIN_10|GPIO_PIN_11);
-
-      /* USART3 DMA DeInit */
-      HAL_DMA_DeInit(uartHandle->hdmarx);
-      HAL_DMA_DeInit(uartHandle->hdmatx);
-
-      /* USART3 interrupt Deinit */
-      HAL_NVIC_DisableIRQ(USART3_IRQn);
-    /* USER CODE BEGIN USART3_MspDeInit 1 */
-
-    /* USER CODE END USART3_MspDeInit 1 */
-  }
-}
-
-
-
 
 
 
