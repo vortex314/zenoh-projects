@@ -1,0 +1,59 @@
+{
+    "name": "uip",
+    "version": "1.0.0",
+    "description": "uip as platformio library.",
+    "keywords": [
+        "tcp",
+        "udp",
+        "ip",
+        "network",
+        "socket",
+        "uip"
+    ],
+    "homepage": "https://uip/",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/adamdunkels/uip.git"
+    },
+    "authors": {
+        "name": "Limero",
+        "email": "",
+        "url": "",
+        "maintainer": true
+    },
+    "license": "Apache-2.0 OR EPL-2.0",
+    "frameworks": [
+        "arduino",
+        "libopencm3",
+        "stm32cube",
+        "espidf",
+        "mbed",
+        "zephyr",
+        "spl"
+    ],
+    "platforms": "*",
+    "headers": [
+        "uip/"
+    ],
+    "examples": [
+        "examples"
+    ],
+    "dependencies": {},
+    "build": {
+        "includeDir": "./uip/",
+        "srcDir": ".",
+        "srcFilter": [
+            "+<lib/",
+            "+<uip/>",
+            "+<*>",
+            "-<apps/>",
+            "-<uip/hello-world.c>",
+            "-<doc/>"
+        ],
+        "flags": [],
+        "libArchive": true,
+        "libArchiveExclude": [
+            "uipopts.h"
+        ]
+    }
+}
