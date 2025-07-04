@@ -36,7 +36,7 @@
         "uip/"
     ],
     "examples": [
-        "examples"
+        "doc"
     ],
     "dependencies": {},
     "build": {
@@ -44,16 +44,20 @@
         "srcDir": ".",
         "srcFilter": [
             "+<lib/",
-            "+<uip/>",
+            "+<uip/*>",
             "+<*>",
             "-<apps/>",
             "-<uip/hello-world.c>",
-            "-<doc/>"
+            "-<doc/>",
+            "-<unix/>"
         ],
-        "flags": [],
+        "flags": [
+            "-Wunused-but-set-variable",
+            "-I port",
+            "-I uip"
+        ],
         "libArchive": true,
         "libArchiveExclude": [
-            "uipopts.h"
         ]
     }
 }

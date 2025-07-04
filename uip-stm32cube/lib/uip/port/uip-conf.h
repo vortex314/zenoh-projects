@@ -1,7 +1,13 @@
+#ifndef __UIP_CONF_H__
+#define __UIP_CONF_H__ 
 /**
  * \addtogroup uipopt
  * @{
  */
+typedef struct {} uip_tcp_appstate_t;
+void uip_callback(void);
+#define UIP_APPCALL     uip_callback
+
 
 /**
  * \name Project-specific configuration options
@@ -125,7 +131,7 @@ typedef unsigned short uip_stats_t;
  *
  * \hideinitializer
  */
-#define UIP_CONF_UDP             0
+#define UIP_CONF_UDP             1
 
 /**
  * UDP checksums on or off
@@ -155,3 +161,4 @@ typedef unsigned short uip_stats_t;
 
 /** @} */
 /** @} */
+#endif
