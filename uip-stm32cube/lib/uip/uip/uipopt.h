@@ -11,7 +11,9 @@
  * \note Most of the configuration options in the uipopt.h should not
  * be changed, but rather the per-project uip-conf.h file.
  */
+void uip_callback(void);
 #define UIP_APPCALL     uip_callback
+#define UIP_UDP_APPCALL uip_callback
 
 /**
  * \file

@@ -3,6 +3,9 @@
  * @{
  */
 typedef struct {} uip_tcp_appstate_t;
+typedef struct {} uip_udp_appstate_t;
+#include <stdio.h>
+
 #define UIP_CONF_UDP 1
 /**
  * \name Project-specific configuration options

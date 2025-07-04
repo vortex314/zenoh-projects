@@ -12,6 +12,7 @@ extern "C"
 
 #include <timer.h>
 };
+
 void UART3_Init(void); // Function prototype for UART2 initialization
 void SystemClock_Config(void);
 void UART_DisableRxErrors(UART_HandleTypeDef *huart);
@@ -36,14 +37,70 @@ u8 rx_buffer_R[RX_BUFFER_SIZE]; // Receive buffer for UART2
 const char *line = "The quick brown fox jumps over the lazy dog. 1234567890\n\r"; // Define a line ending for UART communication
 
 extern "C" void uip_callback() {}
-void network_device_init() {}
-void network_device_send() {
 
-  // ret = write(fd, uip_buf, uip_len);
+extern "C" void uip_log(char *s) {}
 
+
+
+
+#include <ppp.cpp>
+// Example platform-specific implementation
+class PPP_Serial : public PPP {
+public:
+    void serial_send(const uint8_t* data, uint16_t len) override {
+         HAL_UART_Transmit_DMA(&huart3, data, len);
+
+    }
+    
+    void uip_input_packet(const uint8_t* packet, uint16_t len) override {
+        // Forward packet to uIP stack
+        // memcpy(uip_buf, packet, len);
+        // uip_len = len;
+        uip_input();
+    }
+};
+PPP_Serial ppp_serial; // Create an instance of the PPP_Serial class
+
+void network_device_init()
+{
+  HAL_Init();
+  __HAL_RCC_AFIO_CLK_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+  /* System interrupt init*/
+  /* MemoryManagement_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);
+  /* BusFault_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
+  /* UsageFault_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
+  /* SVCall_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(SVCall_IRQn, 0, 0);
+  /* DebugMonitor_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
+  /* PendSV_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(PendSV_IRQn, 0, 0);
+  /* SysTick_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+  SystemClock_Config();
+
+  __HAL_RCC_DMA1_CLK_DISABLE();
+  UART3_Init(); // Initialize UART2 with the defined settings
+  HAL_UART_Receive_DMA(&huart3, (uint8_t *)rx_buffer_R, sizeof(rx_buffer_R));
+  UART_DisableRxErrors(&huart3);
+  // This is a simple C++ program that does nothing.
+  // It serves as a placeholder for future development.
+  ppp_serial.init(); // Initialize the PPP instance
+  // Set the PPP state to establish connection
+  
 }
-int network_device_read() { return 0;}
-extern "C" void uip_log(char* s) {}
+
+void network_device_send()
+{
+  ppp_serial.send_frame(PPP_IP, uip_buf, uip_len);
+}
+
+int network_device_read() { return 0; }
+
 
 extern "C" int main()
 {
@@ -103,40 +160,10 @@ extern "C" int main()
     }
   }
 
-  HAL_Init();
-  __HAL_RCC_AFIO_CLK_ENABLE();
-  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-  /* System interrupt init*/
-  /* MemoryManagement_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);
-  /* BusFault_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
-  /* UsageFault_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
-  /* SVCall_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SVCall_IRQn, 0, 0);
-  /* DebugMonitor_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-  /* PendSV_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(PendSV_IRQn, 0, 0);
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-  SystemClock_Config();
-
-  __HAL_RCC_DMA1_CLK_DISABLE();
-  UART3_Init(); // Initialize UART2 with the defined settings
-  HAL_UART_Receive_DMA(&huart3, (uint8_t *)rx_buffer_R, sizeof(rx_buffer_R));
-  UART_DisableRxErrors(&huart3);
-  // This is a simple C++ program that does nothing.
-  // It serves as a placeholder for future development.
-  u32 count = 0;
   while (1)
   {
     // transmit character 'A' every 1000 ms
-    char buffer[128];
-    count++;
-    snprintf(buffer, sizeof(buffer), "[%lu] %s", count, line);
-    HAL_UART_Transmit_DMA(&huart3, (uint8_t *)buffer, strlen(buffer));
+    
     HAL_Delay(100); // Delay for 100
   }
   return 0;
