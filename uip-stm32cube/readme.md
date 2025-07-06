@@ -1,4 +1,16 @@
 
+## architecture
+- main 
+-- uip_input
+-- uip_output ? 
+- uip
+-- ppp.send_ip_packet
+- ppp
+-- ppp.serial_send 
+- uart comm
+
+MAIN -> uip_send -> UIP -> ppp.send_ip_packet -> PPP -> ppp.serial_send -> UART
+UART -> process_rx_bytes -> ppp.process_bytes -> PPP -> uip.
 
 ## Build challenges
 ### Error: libusb_open() failed with LIBUSB_ERROR_ACCESS
