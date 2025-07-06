@@ -26,14 +26,13 @@ extern "C" void uip_callback() {
 
 extern "C" void uip_log(char *s) {}
 
-#include <ppp.cpp>
 // Example platform-specific implementation
 class PPP_Serial : public PPP
 {
 public:
   void serial_send(const uint8_t *data, uint16_t len) override
   {
-    HAL_UART_Transmit_DMA(&huart3, data, len);
+    volatile HAL_StatusTypeDef rc = HAL_UART_Transmit_DMA(&huart3, data, len);
   }
 
   void uip_input_packet(const uint8_t *packet, uint16_t len) override
@@ -91,6 +90,12 @@ void network_device_init()
 
 extern "C" int main()
 {
+  struct V {
+    uip_ipaddr_t ipaddr;
+    uip_ipaddr_t netmask;
+    uip_ipaddr_t gw;
+  } v;
+  struct V *vp = new struct V;
   uip_ipaddr_t ipaddr;
   struct timer periodic_timer;
   timer_set(&periodic_timer, CLOCK_SECOND / 2);
@@ -103,12 +108,7 @@ extern "C" int main()
   while (1)
   {
     ppp_serial.tick(HAL_GetTick()); // Call the PPP tick function to handle timeouts and retransmissions
-    if (ppp_frame_ready)
-    {
-      ppp_frame_ready = false; // Reset the flag
-      // Process the received PPP frame
-      ppp_serial.process_frame();
-    }
+
     /*uip_len = network_device_read();
     if (uip_len > 0)
     {

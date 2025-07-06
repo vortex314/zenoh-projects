@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <string.h>
-
 // PPP Protocol Constants
 #define PPP_FLAG 0x7E   // Flag sequence
 #define PPP_ESCAPE 0x7D // Control escape
@@ -38,6 +37,8 @@ struct ppp_frame
     uint8_t data[]; // Information field
 };
 
+
+
 class PPP
 {
 private:
@@ -52,250 +53,42 @@ private:
     uint8_t lcp_retries;
 
     // CRC-16 calculation for PPP
-    uint16_t crc16(const uint8_t *data, uint16_t len)
-    {
-        uint16_t crc = 0xFFFF;
-        for (uint16_t i = 0; i < len; i++)
-        {
-            crc ^= data[i];
-            for (int j = 0; j < 8; j++)
-            {
-                if (crc & 1)
-                {
-                    crc = (crc >> 1) ^ 0x8408;
-                }
-                else
-                {
-                    crc >>= 1;
-                }
-            }
-        }
-        return ~crc;
-    }
+    uint16_t crc16(const uint8_t *data, uint16_t len);
 
     // Escape byte for PPP HDLC framing
-    void escape_byte(uint8_t byte)
-    {
-        if (byte == PPP_FLAG || byte == PPP_ESCAPE || byte < 0x20)
-        {
-            tx_buffer[tx_index++] = PPP_ESCAPE;
-            tx_buffer[tx_index++] = byte ^ PPP_TRANS;
-        }
-        else
-        {
-            tx_buffer[tx_index++] = byte;
-        }
-    }
+    void escape_byte(uint8_t byte);
 
     // Send PPP frame with HDLC framing
-    void send_frame(uint16_t proto, const uint8_t *data, uint16_t len)
-    {
-        tx_index = 0;
-
-        // Start flag
-        tx_buffer[tx_index++] = PPP_FLAG;
-
-        // Address and Control
-        escape_byte(0xFF);
-        escape_byte(0x03);
-
-        // Protocol
-        escape_byte(proto >> 8);
-        escape_byte(proto & 0xFF);
-
-        // Data
-        for (uint16_t i = 0; i < len; i++)
-        {
-            escape_byte(data[i]);
-        }
-
-        // CRC
-        uint16_t crc = crc16(tx_buffer + 1, tx_index - 1);
-        escape_byte(crc & 0xFF);
-        escape_byte(crc >> 8);
-
-        // End flag
-        tx_buffer[tx_index++] = PPP_FLAG;
-
-        // Send to serial port (implement this based on your platform)
-        serial_send(tx_buffer, tx_index);
-    }
+    void send_frame(uint16_t proto, const uint8_t *data, uint16_t len);
 
     // Process LCP packet
-    void process_lcp(const uint8_t *data, uint16_t len)
-    {
-        if (len < 4)
-            return;
-
-        uint8_t code = data[0];
-        uint8_t id = data[1];
-
-        switch (code)
-        {
-        case PPP_CONFREQ:
-            // Send Configuration Ack
-            send_lcp_ack(id);
-            if (state == PPP_ESTABLISH)
-            {
-                state = PPP_NETWORK;
-            }
-            break;
-
-        case PPP_CONFACK:
-            if (state == PPP_ESTABLISH)
-            {
-                state = PPP_NETWORK;
-            }
-            break;
-
-        case PPP_TERMREQ:
-            send_lcp_term_ack(id);
-            state = PPP_DEAD;
-            break;
-        }
-    }
-
+    void process_lcp(const uint8_t *data, uint16_t len);
     // Send LCP Configuration Ack
-    void send_lcp_ack(uint8_t id)
-    {
-        uint8_t lcp_ack[] = {PPP_CONFACK, id, 0x00, 0x04};
-        send_frame(PPP_LCP, lcp_ack, sizeof(lcp_ack));
-    }
-
+    void send_lcp_ack(uint8_t id);
     // Send LCP Termination Ack
-    void send_lcp_term_ack(uint8_t id)
-    {
-        uint8_t lcp_term[] = {PPP_TERMACK, id, 0x00, 0x04};
-        send_frame(PPP_LCP, lcp_term, sizeof(lcp_term));
-    }
+    void send_lcp_term_ack(uint8_t id);
 
     // Process IPCP packet
-    void process_ipcp(const uint8_t *data, uint16_t len)
-    {
-        if (len < 4)
-            return;
-
-        uint8_t code = data[0];
-        uint8_t id = data[1];
-
-        switch (code)
-        {
-        case PPP_CONFREQ:
-            // Send Configuration Ack (simplified)
-            send_ipcp_ack(id);
-            break;
-        }
-    }
+    void process_ipcp(const uint8_t *data, uint16_t len);
 
     // Send IPCP Configuration Ack
-    void send_ipcp_ack(uint8_t id)
-    {
-        uint8_t ipcp_ack[] = {PPP_CONFACK, id, 0x00, 0x04};
-        send_frame(PPP_IPCP, ipcp_ack, sizeof(ipcp_ack));
-    }
+    void send_ipcp_ack(uint8_t id);
 
 public:
     // Process received frame
-    void process_frame()
-    {
-        if (rx_index < 6)
-            return; // Minimum frame size
-
-        // Extract protocol
-        uint16_t proto = (rx_buffer[2] << 8) | rx_buffer[3];
-        uint8_t *data = rx_buffer + 4;
-        uint16_t data_len = rx_index - 6; // Exclude addr, ctrl, proto, and CRC
-
-        switch (proto)
-        {
-        case PPP_LCP:
-            process_lcp(data, data_len);
-            break;
-
-        case PPP_IPCP:
-            process_ipcp(data, data_len);
-            break;
-
-        case PPP_IP:
-            if (state == PPP_NETWORK)
-            {
-                // Forward IP packet to uIP
-                uip_input_packet(data, data_len);
-            }
-            break;
-        }
-    }
-
+    void process_frame();
 public:
     PPP() : rx_index(0), tx_index(0), escape_flag(false), state(PPP_DEAD), req_id(1) {}
 
-    void tick(uint32_t now_ms) {
-        // Example: retransmit LCP request every 3 seconds, max 5 tries
-        if (state == PPP_ESTABLISH && now_ms - lcp_timer > 3000 && lcp_retries < 5000) {
-            uint8_t lcp_req[] = {PPP_CONFREQ, req_id++, 0x00, 0x04};
-            send_frame(PPP_LCP, lcp_req, sizeof(lcp_req));
-            lcp_timer = now_ms;
-            lcp_retries++;
-        }
-        // Add more timer-based logic as needed
-    }
-
-    void init() {
-        state = PPP_ESTABLISH;
-        req_id = 1;
-        lcp_retries = 0;
-        lcp_timer = HAL_GetTick(); // or your system time function
-        uint8_t lcp_req[] = {PPP_CONFREQ, req_id++, 0x00, 0x04};
-        send_frame(PPP_LCP, lcp_req, sizeof(lcp_req));
-    }
-
+    void tick(uint32_t now_ms) ;
+    void init();
     // Process received byte from serial port
-    void process_byte(uint8_t byte)
-    {
-        if (byte == PPP_FLAG)
-        {
-            if (rx_index > 0)
-            {
-                // End of frame
-                process_frame();
-            }
-            rx_index = 0;
-            escape_flag = false;
-            return;
-        }
-
-        if (byte == PPP_ESCAPE)
-        {
-            escape_flag = true;
-            return;
-        }
-
-        if (escape_flag)
-        {
-            byte ^= PPP_TRANS;
-            escape_flag = false;
-        }
-
-        if (rx_index < sizeof(rx_buffer))
-        {
-            rx_buffer[rx_index++] = byte;
-        }
-    }
-
+    void process_byte(uint8_t byte);
     // Send IP packet through PPP
-    void send_ip_packet(const uint8_t *packet, uint16_t len)
-    {
-        if (state == PPP_NETWORK)
-        {
-            send_frame(PPP_IP, packet, len);
-        }
-    }
+    void send_ip_packet(const uint8_t *packet, uint16_t len);
 
     // Get current PPP state
-    ppp_state get_state() const
-    {
-        return state;
-    }
+    ppp_state get_state() const;
 
     // Platform-specific functions to implement
     virtual void serial_send(const uint8_t *data, uint16_t len) = 0;
@@ -303,25 +96,3 @@ public:
 };
 
 #endif // PPP_H
-
-// Usage example:
-/*
-PPP_Serial ppp;
-
-void setup() {
-    ppp.init();
-}
-
-void loop() {
-    // Process incoming serial data
-    if (serial_available()) {
-        uint8_t byte = serial_read();
-        ppp.process_byte(byte);
-    }
-
-    // Send IP packet when needed
-    if (ppp.get_state() == PPP_NETWORK && have_ip_packet()) {
-        ppp.send_ip_packet(ip_packet, ip_packet_len);
-    }
-}
-*/
