@@ -1,3 +1,4 @@
 {
-    "idf.pythonInstallPath": "/usr/bin/python"
+    "idf.pythonInstallPath": "/usr/bin/python",
+    "idf.port": "/dev/ttyUSB0"
 }

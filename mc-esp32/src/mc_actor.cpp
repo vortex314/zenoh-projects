@@ -99,6 +99,7 @@ void McActor::receiver_task(void *pv)
   McActor *mc_actor = (McActor *)pv;
   struct sockaddr_in source_addr;
   socklen_t socklen = sizeof(source_addr);
+  INFO("Starting multicast receiver task...");
 
   while (true)
   {
@@ -106,6 +107,7 @@ void McActor::receiver_task(void *pv)
     {
       INFO("Waiting for multicast socket to be created...");
       vTaskDelay(1000 / portTICK_PERIOD_MS);
+      mc_actor->_socket = create_multicast_socket();
     }
     while (true)
     {
@@ -126,6 +128,7 @@ void McActor::receiver_task(void *pv)
           ERROR("Failed to parse multicast message: %s", res_msg.msg());
           continue;
         }
+
         esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
         res_msg.inspect([&](auto v)
                         {
