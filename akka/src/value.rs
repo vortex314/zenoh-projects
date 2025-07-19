@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use std::fmt;
 
-struct Undefined{}
+struct Undefined {}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum Value {
@@ -15,11 +15,11 @@ pub enum Value {
     String(String),
     Bytes(Vec<u8>),
     Array(Vec<Value>),
-    Object(HashMap<String, Value>),
+    Object(IndexMap<String, Value>),
 }
 
 impl Value {
-    // check type 
+    // check type
     pub fn is<T: 'static>(&self) -> bool {
         match self {
             Value::Undefined => false,
@@ -27,11 +27,26 @@ impl Value {
             Value::Bool(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<bool>() => true,
             Value::Int(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<i64>() => true,
             Value::Float(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f32>() => true,
-            Value::Double(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f64>() => true,
-            Value::String(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<String>() => true,
-            Value::Bytes(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<u8>>() => true,
-            Value::Array(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<Value>>() => true,
-            Value::Object(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<HashMap<String, Value>>() => true,
+            Value::Double(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<f64>() => {
+                true
+            }
+            Value::String(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<String>() => {
+                true
+            }
+            Value::Bytes(_) if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<u8>>() => {
+                true
+            }
+            Value::Array(_)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<Vec<Value>>() =>
+            {
+                true
+            }
+            Value::Object(_)
+                if std::any::TypeId::of::<T>()
+                    == std::any::TypeId::of::<IndexMap<String, Value>>() =>
+            {
+                true
+            }
             _ => false,
         }
     }
@@ -53,8 +68,10 @@ impl Value {
     }
 
     // handle with closure if it is of a type
-    pub fn handle<T: 'static, F>(&self, mut f: F) 
-    where F : FnMut(&T) {
+    pub fn handle<T: 'static, F>(&self, mut f: F)
+    where
+        F: FnMut(&T),
+    {
         if let Some(value) = self.as_::<T>() {
             f(value);
         }
@@ -84,13 +101,17 @@ impl Value {
         Value::Bytes(b.into())
     }
 
-    pub fn array<A: Into<Vec<Value>>>(a: A) -> Self {
-        Value::Array(a.into())
+    pub fn from_array(arr: Vec<Value>) -> Self {
+        Value::Array(arr)
     }
 
-        pub fn object() -> Self {
-            let hm = HashMap::<String, Value>::new();
-        Value::Object( hm )
+    pub fn array() -> Self {
+        Value::Array(vec![])
+    }
+
+    pub fn object() -> Self {
+        let hm = IndexMap::<String, Value>::new();
+        Value::Object(hm)
     }
 
     // Type checking
@@ -147,12 +168,11 @@ impl Value {
         }
     }
 
-
     pub fn as_float(&self) -> Option<f32> {
         match self {
             Value::Int(i) => Some(*i as f32),
             Value::Float(f) => Some(*f),
-            Value::Double(d) => Some( *d as f32 ),
+            Value::Double(d) => Some(*d as f32),
             _ => None,
         }
     }
@@ -181,7 +201,7 @@ impl Value {
         }
     }
 
-    pub fn as_object(&self) -> Option<&HashMap<String, Value>> {
+    pub fn as_object(&self) -> Option<&IndexMap<String, Value>> {
         if let Value::Object(o) = self {
             Some(o)
         } else {
@@ -198,7 +218,7 @@ impl Value {
         }
     }
 
-    pub fn as_object_mut(&mut self) -> Option<&mut HashMap<String, Value>> {
+    pub fn as_object_mut(&mut self) -> Option<&mut IndexMap<String, Value>> {
         if let Value::Object(o) = self {
             Some(o)
         } else {
@@ -266,33 +286,10 @@ impl fmt::Display for Value {
     }
 }
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use log::error;
 use serde::de::{self, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
-impl Serialize for Value {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            Value::Undefined => serializer.serialize_unit(),
-            Value::Null => serializer.serialize_none(),
-            Value::Bool(b) => serializer.serialize_bool(*b),
-            Value::Int(i) => serializer.serialize_i64(*i),
-            Value::Float(n) => serializer.serialize_f32(*n ),
-            Value::Double(n)=> serializer.serialize_f64(*n ),
-            Value::String(s) => serializer.serialize_str(s),
-            Value::Bytes(b) => {
-                let base64 = general_purpose::STANDARD.encode(b);
-                serializer.serialize_str(&base64)
-            }
-            Value::Array(a) => a.serialize(serializer),
-            Value::Object(o) => o.serialize(serializer),
-        }
-    }
-}
 
 struct ValueVisitor;
 
@@ -319,7 +316,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
         Ok(Value::Double(value))
     }
 
-        fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E> {
+    fn visit_f32<E>(self, value: f32) -> Result<Self::Value, E> {
         Ok(Value::Float(value))
     }
 
@@ -365,7 +362,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
     where
         A: de::MapAccess<'de>,
     {
-        let mut hashmap = HashMap::new();
+        let mut hashmap = IndexMap::new();
         while let Some((key, value)) = map.next_entry()? {
             hashmap.insert(key, value);
         }
@@ -382,13 +379,80 @@ impl<'de> Deserialize<'de> for Value {
     }
 }
 
+fn escape_json_string(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '"' => result.push_str("\\\""),
+            '\\' => result.push_str("\\\\"),
+            '\x08' => result.push_str("\\b"),
+            '\x0C' => result.push_str("\\f"),
+            '\n' => result.push_str("\\n"),
+            '\r' => result.push_str("\\r"),
+            '\t' => result.push_str("\\t"),
+            c if c.is_control() => result.push_str(&format!("\\u{:04x}", c as u32)),
+            c => result.push(c),
+        }
+    }
+    result
+}
+
 impl Value {
     pub fn to_json(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        self.to_json_internal()
     }
 
-    pub fn to_json_pretty(&self) -> String {
-        serde_json::to_string_pretty(self).unwrap()
+    fn to_json_internal(&self) -> String {
+        match self {
+            Value::Undefined => "null".to_string(),
+            Value::Null => "null".to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Int(i) => i.to_string(),
+            Value::Float(f) => {
+                // Handle special float values
+                if f.is_nan() || f.is_infinite() {
+                    "null".to_string()
+                } else {
+                    let s = f.to_string();
+                    // Ensure float doesn't get serialized as integer
+                    if s.contains('.') || s.contains('e') || s.contains('E') {
+                        s
+                    } else {
+                        format!("{}.0", s)
+                    }
+                }
+            }
+            Value::Double(d) => {
+                // Handle special double values
+                if d.is_nan() || d.is_infinite() {
+                    "null".to_string()
+                } else {
+                    let s = d.to_string();
+                    // Ensure double doesn't get serialized as integer
+                    if s.contains('.') || s.contains('e') || s.contains('E') {
+                        s
+                    } else {
+                        format!("{}.0", s)
+                    }
+                }
+            }
+            Value::String(s) => format!("\"{}\"", escape_json_string(s)),
+            Value::Bytes(b) => {
+                let base64 = general_purpose::STANDARD.encode(b);
+                format!("\"{}\"", escape_json_string(&base64))
+            }
+            Value::Array(arr) => {
+                let items: Vec<String> = arr.iter().map(|v| v.to_json_internal()).collect();
+                format!("[{}]", items.join(","))
+            }
+            Value::Object(obj) => {
+                let items: Vec<String> = obj
+                    .iter()
+                    .map(|(k, v)| format!("\"{}\":{}", escape_json_string(k), v.to_json_internal()))
+                    .collect();
+                format!("{{{}}}", items.join(","))
+            }
+        }
     }
 
     pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
@@ -399,11 +463,74 @@ impl Value {
 use serde_cbor::error::Error as CborError;
 use serde_cbor::{Deserializer as CborDeserializer, Serializer as CborSerializer};
 
+fn encode_unsigned(n: u64, major: u8, buf: &mut Vec<u8>) {
+    if n < 24 {
+        buf.push(major | (n as u8));
+    } else if n < 256 {
+        buf.push(major | 24);
+        buf.push(n as u8);
+    } else if n < 65536 {
+        buf.push(major | 25);
+        buf.extend_from_slice(&(n as u16).to_be_bytes());
+    } else if n < 4294967296 {
+        buf.push(major | 26);
+        buf.extend_from_slice(&(n as u32).to_be_bytes());
+    } else {
+        buf.push(major | 27);
+        buf.extend_from_slice(&n.to_be_bytes());
+    }
+}
+
+fn encode_value_to_cbor(value: &Value, buf: &mut Vec<u8>) {
+    match value {
+        Value::Null | Value::Undefined => buf.push(0xf6), // CBOR null
+        Value::Bool(true) => buf.push(0xf5),
+        Value::Bool(false) => buf.push(0xf4),
+        Value::Int(i) => {
+            if *i >= 0 {
+                encode_unsigned(*i as u64, 0x00, buf);
+            } else {
+                encode_unsigned((-1 - *i) as u64, 0x20, buf);
+            }
+        }
+        Value::Float(f) => {
+            buf.push(0xfa);
+            buf.extend_from_slice(&f.to_bits().to_be_bytes());
+        }
+        Value::Double(d) => {
+            buf.push(0xfb);
+            buf.extend_from_slice(&d.to_bits().to_be_bytes());
+        }
+        Value::String(s) => {
+            encode_unsigned(s.len() as u64, 0x60, buf);
+            buf.extend_from_slice(s.as_bytes());
+        }
+        Value::Bytes(b) => {
+            encode_unsigned(b.len() as u64, 0x40, buf);
+            buf.extend_from_slice(b);
+        }
+        Value::Array(arr) => {
+            encode_unsigned(arr.len() as u64, 0x80, buf);
+            for v in arr {
+                encode_value_to_cbor(v, buf);
+            }
+        }
+        Value::Object(obj) => {
+            encode_unsigned(obj.len() as u64, 0xa0, buf);
+            for (k, v) in obj {
+                encode_unsigned(k.len() as u64, 0x60, buf);
+                buf.extend_from_slice(k.as_bytes());
+                encode_value_to_cbor(v, buf);
+            }
+        }
+    }
+}
+
 impl Value {
     pub fn to_cbor(&self) -> Vec<u8> {
-        let mut serializer = CborSerializer::new(Vec::new());
-        self.serialize(&mut serializer).unwrap();
-        serializer.into_inner()
+        let mut buf = Vec::new();
+        encode_value_to_cbor(self, &mut buf);
+        buf
     }
 
     pub fn from_cbor(data: &[u8]) -> Result<Self, CborError> {
@@ -414,37 +541,29 @@ impl Value {
 
 pub fn tester() {
     // Create a complex value
-    let mut value = Value::Object(HashMap::new());
+    let mut value = Value::Object(IndexMap::new());
     if let Value::Object(ref mut map) = value {
         map.insert("name".to_string(), Value::string("John Doe"));
         map.insert("age".to_string(), Value::int(42));
         map.insert("active".to_string(), Value::bool(true));
 
-        let mut address = Value::Object(HashMap::new());
+        let mut address = Value::Object(IndexMap::new());
         if let Value::Object(ref mut addr_map) = address {
             addr_map.insert("street".to_string(), Value::string("123 Main St"));
             addr_map.insert("city".to_string(), Value::string("Anytown"));
         }
         map.insert("address".to_string(), address);
-
-        map.insert(
-            "scores".to_string(),
-            Value::array(vec![Value::int(95), Value::int(87), Value::int(91)]),
-        );
+        let mut v = Value::array();
+        v += Value::int(95);
+        v += Value::int(87);
+        v += Value::int(91);
+        map.insert("scores".to_string(), v);
 
         map.insert(
             "binary".to_string(),
             Value::bytes(vec![0x01, 0x02, 0x03, 0xFF]),
         );
     }
-
-    // Serialize to JSON
-    let json = value.to_json_pretty();
-    println!("JSON:\n{}\n", json);
-
-    // Deserialize from JSON
-    let parsed_from_json = Value::from_json(&json).unwrap();
-    println!("Parsed from JSON: {}", parsed_from_json);
 
     // Serialize to CBOR
     let cbor = value.to_cbor();
@@ -463,9 +582,7 @@ impl Index<&str> for Value {
 
     fn index(&self, index: &str) -> &Self::Output {
         match self {
-            Value::Object(map) => map
-                .get(index)
-                .unwrap_or(&Value::Undefined),
+            Value::Object(map) => map.get(index).unwrap_or(&Value::Undefined),
             _ => &Value::Undefined,
         }
     }
@@ -486,7 +603,7 @@ impl Index<usize> for Value {
 impl IndexMut<&str> for Value {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
         if self.is_null() {
-            *self = Value::Object(HashMap::new());
+            *self = Value::Object(IndexMap::new());
         }
 
         match self {
@@ -501,11 +618,28 @@ impl IndexMut<&str> for Value {
     }
 }
 
-impl IndexMut<usize> for Value {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+// permit += value for a Value Array
+
+use std::ops::AddAssign;
+
+impl AddAssign<Value> for Value {
+    fn add_assign(&mut self, rhs: Value) {
         match self {
-            Value::Array(vec) => &mut vec[index],
-            _ => panic!("Cannot index non-array with usize"),
+            Value::Array(arr) => {
+                arr.push(rhs);
+            }
+            _ => panic!("+= operation only supported for Value::Array"),
+        }
+    }
+}
+
+impl AddAssign<&Value> for Value {
+    fn add_assign(&mut self, rhs: &Value) {
+        match self {
+            Value::Array(arr) => {
+                arr.push(rhs.clone());
+            }
+            _ => panic!("+= operation only supported for Value::Array"),
         }
     }
 }
@@ -517,7 +651,7 @@ pub fn tester2() {
     obj["pi"] = 3.14.into();
 
     // Create an array
-    let mut arr = Value::array(vec![Value::int(1), Value::int(2), Value::int(3)]);
+    let mut arr = Value::from_array(vec![Value::int(1), Value::int(2), Value::int(3)]);
 
     // Access values
     println!("Name: {}", obj["name"].as_string().unwrap());
@@ -526,7 +660,7 @@ pub fn tester2() {
     println!("First element: {}", arr[0].as_int().unwrap());
 
     // Modify values
-    arr[1] = Value::int(20);
+    arr += Value::int(20);
     obj["age"] = Value::int(31);
 
     // This will panic:
@@ -562,7 +696,7 @@ impl Value {
             _ => None,
         }
     }
-        pub fn set(&mut self, key: &str, value: Value) {
+    pub fn set(&mut self, key: &str, value: Value) {
         if let Value::Object(map) = self {
             map.insert(key.to_string(), value);
         } else {
@@ -578,5 +712,3 @@ impl Value {
         }
     }
 }
-
-

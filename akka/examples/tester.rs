@@ -116,7 +116,11 @@ async fn main() -> std::io::Result<()> {
             announce["type"] = Value::string("device");
             announce["ip"] = Value::string(local_ip().unwrap().to_string());
             announce["port"] = Value::int(udp_port as i64);
-            info!("MC  {:?}", announce.to_json());
+            announce["sub"] = Value::object();
+            announce["sub"]["pattern"] = Value::array();
+            announce["sub"]["pattern"]+= Value::string("esp1/sys");
+
+            info!("MC  {}", announce.to_json());
             // Create and send multicast announcement
             let announce_bytes = announce.to_json().into_bytes();
 
@@ -126,7 +130,6 @@ async fn main() -> std::io::Result<()> {
                 .send_to(&announce_bytes, mcast_addr)
                 .await
                 .unwrap();
-            info!("Sent multicast announcement");
         }
     });
 
@@ -140,19 +143,14 @@ async fn main() -> std::io::Result<()> {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_secs();
-            let pub_data = serde_json::json!({
-                "free_heap": 524288, // Simulated
-                "uptime": uptime,
-                "cpu": "x86_64"
-            });
-            let pub_msg = PublishMessage {
-                src: DEVICE_NAME.to_string(),
-                pub_data,
-            };
-            let pub_bytes = serde_json::to_vec(&pub_msg).unwrap();
-            // log the published message
-            info!("Publishing system info: {:?}", pub_msg);
-            socket_clone.send_to(&pub_bytes, broker_addr).await.unwrap();
+            let mut v = Value::object();
+            v["src"] = Value::string(DEVICE_NAME);
+            let mut p = Value::object();
+            p["uptime"] = Value::int(uptime as i64);
+            p["cpu"] = Value::string("x86_64");
+            v["pub"] = p;
+            info!("PUB {}", v.to_json());
+            socket_clone.send_to(&v.to_json().as_bytes(), broker_addr).await.unwrap();
         }
     });
 

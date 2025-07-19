@@ -50,6 +50,10 @@ pub enum BrokerCmd {
     ReceivedInternal(Value),
     Send(Value),
     Reconnect,
+    Subscribe {
+        pattern: Pattern,
+        endpoint: Endpoint,
+    },
 }
 
 #[derive(Debug, Message)]
@@ -139,7 +143,7 @@ pub struct BrokerActor {
     udp_port: u16,
     udp_socket: Option<Arc<UdpSocket>>,
     listeners: Vec<Recipient<BrokerEvent>>,
-    subscribers: Arc<Mutex<HashMap<Pattern, Endpoint>>>, // changed
+    subscribers: Arc<Mutex<HashMap<Pattern, Vec<Endpoint>>>>, // changed
 }
 
 impl BrokerActor {
@@ -151,10 +155,17 @@ impl BrokerActor {
             subscribers: Arc::new(Mutex::new(HashMap::new())), // changed
         }
     }
+
+        fn add_subscriber(&mut self , pattern: Pattern, endpoint: Endpoint) {
+        let mut subs = self.subscribers.lock().unwrap(); // lock for access
+        subs.entry(pattern).or_insert_with(Vec::new).push(endpoint);
+    }
 }
 
 impl Actor for BrokerActor {
     type Context = Context<Self>;
+
+
 
     fn started(&mut self, ctx: &mut Context<Self>) {
         info!(" pre_start ");
@@ -195,6 +206,11 @@ impl Actor for BrokerActor {
         {
             let mut subs = subscribers.try_lock().unwrap(); // lock for access
             subs.insert(pattern, endpoint);
+            if subs.find(&pattern).is_none() {
+                error!("Pattern not found in subscribers");
+            } else {
+                info!("Pattern found in subscribers");
+            }
         }
 
         let receiver = async move {
@@ -263,6 +279,11 @@ impl Handler<BrokerCmd> for BrokerActor {
             BrokerCmd::AddListener(ar) => {
                 info!("Adding listener: {:?}", ar);
                 self.listeners.push(ar.clone())
+            }
+            BrokerCmd::Subscribe { pattern, endpoint } => {
+                info!("Adding subscriber: {:?} to endpoint: {:?}", pattern, endpoint);
+                let mut subs = self.subscribers.lock().unwrap(); // lock for access
+                subs.insert(pattern, endpoint);
             }
             _ => {}
         }
