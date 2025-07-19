@@ -60,12 +60,14 @@ pub enum BrokerEvent {
     ConnectionEstablished,
 }
 
+#[derive(Debug)]
 struct Endpoint {
     ip: Ipv4Addr,
     port: u16,
     object: String,
 }
 
+#[derive(Eq, Hash, PartialEq,Debug)]
 struct Pattern {
     src_pattern: Option<String>,
     dst_pattern: Option<String>,
@@ -156,7 +158,7 @@ impl Actor for BrokerActor {
 
     fn started(&mut self, ctx: &mut Context<Self>) {
         info!(" pre_start ");
-        let udp_listen_addr = format!("0.0.0.0:{}", self.udp_port);  
+        let udp_listen_addr = format!("0.0.0.0:{}", self.udp_port);
         let addr = SocketAddr::from_str(&udp_listen_addr).unwrap();
 
         // Create a UDP socket with socket2
@@ -183,6 +185,17 @@ impl Actor for BrokerActor {
 
         let self_ref = ctx.address();
         let subscribers = self.subscribers.clone(); // clone Arc for async move
+        let mut pattern = Pattern::new();
+        pattern.set_src_pattern("pclenovo/tester".to_string());
+        let mut endpoint = Endpoint {
+            ip: str_to_ip4_addr("192.168.0.148").unwrap(),
+            port: 6504,
+            object: "pclenovo/tester".to_string(),
+        };
+        {
+            let mut subs = subscribers.try_lock().unwrap(); // lock for access
+            subs.insert(pattern, endpoint);
+        }
 
         let receiver = async move {
             let mut buf = [0; 1024];
@@ -198,6 +211,8 @@ impl Actor for BrokerActor {
                                 let subs = subscribers.lock().await; // lock for access
                                 for (pattern, endpoint) in subs.iter() {
                                     if pattern.matches(&value) {
+                                        info!("Matched pattern: {:?}", &pattern);
+                                        info!("Sending to endpoint: {:?}", &endpoint);
                                         udp_receiver_socket.send_to(
                                             value.to_json().as_bytes(),
                                             SocketAddr::new(endpoint.ip.into(), endpoint.port),

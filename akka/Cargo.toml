@@ -22,3 +22,4 @@ socket2={ version="0.6.0", features = ["all"] }
 local-ip-address = "0.6.5"
 gethostname = "1.0.2"
 serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.5.26", features = ["derive"] }

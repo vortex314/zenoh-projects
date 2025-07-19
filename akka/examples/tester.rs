@@ -1,3 +1,4 @@
+use clap::Parser;
 use local_ip_address::local_ip;
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -5,6 +6,12 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::UdpSocket;
 use tokio::time::{Duration, interval};
+use log::info;
+
+// import necessary modules
+
+use akka::logger::{self, init};
+use akka::Value;
 
 // Configuration
 const DEVICE_NAME: &str = "pclenovo/tester";
@@ -61,10 +68,25 @@ enum Message {
     Response(ResponseMessage),
 }
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Optional name to operate on
+    ///     #[arg(short, long, value_name = "FILE")]
+    #[arg(short, long, default_value = "6504")]
+    udp_port: Option<u16>,
+
+}
+
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    // Parse command line arguments
+    logger::init();
+    let cli = Cli::parse();
+    let udp_port = cli.udp_port.unwrap_or(TESTER_PORT);
+    info!("UDP Port: {}", udp_port);
     // Initialize UDP socket
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", TESTER_PORT)).await?;
+    let socket = UdpSocket::bind(format!("0.0.0.0:{}", udp_port)).await?;
     socket.join_multicast_v4(
         MULTICAST_IP.parse::<Ipv4Addr>().unwrap(),
         Ipv4Addr::new(0, 0, 0, 0),
@@ -81,7 +103,7 @@ async fn main() -> std::io::Result<()> {
     };
     let sub_bytes = serde_json::to_vec(&sub_msg)?;
     socket.send_to(&sub_bytes, broker_addr).await?;
-    println!("Subscribed to esp1/sys");
+    info!("Subscribed to esp1/sys");
 
     // Spawn task for sending multicast announcements
     let socket_clone = socket.clone();
@@ -89,20 +111,22 @@ async fn main() -> std::io::Result<()> {
         let mut interval = interval(Duration::from_secs(5));
         loop {
             interval.tick().await;
-            let announce = MulticastAnnounce {
-                src: DEVICE_NAME.to_string(),
-                msg_type: "device".to_string(),
-                ip: local_ip().unwrap().to_string(),
-                port: TESTER_PORT,
-            };
-            let announce_bytes = serde_json::to_vec(&announce).unwrap();
+            let mut announce = Value::object();
+            announce["src"] = Value::string(DEVICE_NAME);
+            announce["type"] = Value::string("device");
+            announce["ip"] = Value::string(local_ip().unwrap().to_string());
+            announce["port"] = Value::int(udp_port as i64);
+            info!("MC  {:?}", announce.to_json());
+            // Create and send multicast announcement
+            let announce_bytes = announce.to_json().into_bytes();
+
             let mcast_addr =
                 SocketAddrV4::new(MULTICAST_IP.parse::<Ipv4Addr>().unwrap(), MULTICAST_PORT);
             socket_clone
                 .send_to(&announce_bytes, mcast_addr)
                 .await
                 .unwrap();
-            println!("Sent multicast announcement");
+            info!("Sent multicast announcement");
         }
     });
 
@@ -126,8 +150,9 @@ async fn main() -> std::io::Result<()> {
                 pub_data,
             };
             let pub_bytes = serde_json::to_vec(&pub_msg).unwrap();
+            // log the published message
+            info!("Publishing system info: {:?}", pub_msg);
             socket_clone.send_to(&pub_bytes, broker_addr).await.unwrap();
-            println!("Published system info");
         }
     });
 
@@ -136,9 +161,11 @@ async fn main() -> std::io::Result<()> {
     loop {
         let (len, src) = socket.recv_from(&mut buf).await?;
         let data = &buf[..len];
+        let str : &str = std::str::from_utf8(data).unwrap_or("");
+        info!("Received from {}: {}", src, str);
         match serde_json::from_slice::<Message>(data) {
             Ok(Message::Publish(pub_msg)) => {
-                println!(
+                info!(
                     "Received publish from {}: {}",
                     pub_msg.src, pub_msg.pub_data
                 );
@@ -155,12 +182,12 @@ async fn main() -> std::io::Result<()> {
                         };
                         let rep_bytes = serde_json::to_vec(&rep_msg)?;
                         socket.send_to(&rep_bytes, src).await?;
-                        println!("Sent response: rebooting");
+                        info!("Sent response: rebooting");
                     }
                 }
             }
             Ok(_) => {} // Ignore other messages
-            Err(e) => println!("Failed to parse message: {}", e),
+            Err(e) => info!("Failed to parse message: {}", e),
         }
     }
 }

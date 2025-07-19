@@ -1,6 +1,5 @@
 use actix::{Actor, Addr, Context, Handler};
 use log::info;
-use tokio::{runtime::Handle, time::Instant};
 
 use crate::{
     alive::{AliveActor, AliveEvent},
