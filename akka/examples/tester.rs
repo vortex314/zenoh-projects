@@ -1,8 +1,10 @@
 use actix::Addr;
 use actix::Actor;
 use akka::McCmd;
+use akka::McEvent;
 use akka::UdpActor;
 use akka::UdpCmd;
+use clap::builder::Str;
 use clap::Parser;
 use local_ip_address::local_ip;
 use log::info;
@@ -27,6 +29,42 @@ const MULTICAST_IP: &str = "225.0.0.1";
 const MULTICAST_PORT: u16 = 6502;
 const TESTER_PORT: u16 = 6504;
 const TESTER_IP: &str = "0.0.0.0";
+
+struct Orchestrator {
+    udp_actor: Addr<UdpActor>,
+    mc_actor: Addr<McActor>,
+}
+
+impl Actor for Orchestrator {
+    type Context = Context<Self>;
+}
+
+impl Orchestrator {
+    fn new(udp_actor: Addr<UdpActor>, mc_actor: Addr<McActor>) -> Self {
+        Orchestrator { udp_actor, mc_actor }
+    }
+}
+
+impl Handler<McEvent> for Orchestrator {
+    type Result = ();
+
+    fn handle(&mut self, msg: McEvent, _: &mut Self::Context) -> Self::Result {
+        match msg {
+            McEvent::ReceivedValue(value) => {
+                value["type"].handle::<String>().map(|v| {
+                    if v == "device" {
+                        info!("Received device announcement: {}", value.to_json());
+                        // Handle device announcement
+                    } else {
+                        info!("Received unknown type: {}", v);
+                    }
+                }).unwrap_or_else(|_| {
+                    error!("Failed to parse value type");
+                });
+            }
+        }
+    }
+}
 
 
 #[derive(Parser)]

@@ -40,6 +40,7 @@ pub enum UdpCmd {
         socket_addr: SocketAddr,
         value: Value,
     },
+    SetBrokerAddr(SocketAddr),
     Reconnect,
 }
 
