@@ -461,7 +461,7 @@ impl Value {
 }
 
 use serde_cbor::error::Error as CborError;
-use serde_cbor::{Deserializer as CborDeserializer, Serializer as CborSerializer};
+use serde_cbor::{Deserializer as CborDeserializer};
 
 fn encode_unsigned(n: u64, major: u8, buf: &mut Vec<u8>) {
     if n < 24 {

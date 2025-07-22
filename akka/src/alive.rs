@@ -3,7 +3,6 @@ use actix::Message;
 use tokio::time::Instant;
 
 use crate::multicast::McEvent;
-use crate::value::Value;
 use actix::Context;
 use actix::Handler;
 
@@ -47,7 +46,7 @@ impl Handler<McEvent> for AliveActor {
 
     fn handle(&mut self, msg: McEvent, _: &mut Self::Context) -> Self::Result {
         match msg {
-            McEvent::Received(value) => {
+            McEvent::ReceivedValue(value) => {
                 value["src"].handle(|src: &String| {
                     self.objects.iter_mut().for_each(|object| {
                         if object.object == *src {
@@ -56,7 +55,6 @@ impl Handler<McEvent> for AliveActor {
                     });
                 });
             }
-            _ => {}
         }
     }
 }

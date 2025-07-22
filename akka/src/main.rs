@@ -9,6 +9,7 @@ mod broker;
 mod logger;
 mod multicast;
 mod value;
+mod udp;
 use actix::prelude::*;
 use local_ip_address::local_ip;
 use log::{debug, info};
@@ -36,19 +37,14 @@ impl Handler<multicast::McEvent> for Listener {
 
     fn handle(&mut self, msg: multicast::McEvent, _: &mut Self::Context) -> Self::Result {
         match msg {
-            multicast::McEvent::Received(value) => {
+            multicast::McEvent::ReceivedValue(value) => {
                 if value["src"] == Value::from("esp1/sys") {
                     debug!("Received value for esp1/sys: {}", value["pub"]["free_heap"]);
                 } else {
                     // info!("Received value for other destination: {:?}", value);
                 }
             }
-            multicast::McEvent::ConnectionLost => {
-                info!("Connection lost");
-            }
-            multicast::McEvent::ConnectionEstablished => {
-                info!("Connection established");
-            }
+
         }
     }
 }
@@ -90,7 +86,7 @@ async fn main() {
         announce["ip"] = local_ip().unwrap().to_string().into();
         announce["port"] = (BROKER_PORT as i64).into();
         announce["type"] = "broker".into();
-        _mc_addr.do_send(multicast::McCmd::Send(announce));
+        _mc_addr.do_send(multicast::McCmd::SendValue(announce));
     }
 
 

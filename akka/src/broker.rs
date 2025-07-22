@@ -65,14 +65,14 @@ pub enum BrokerEvent {
 }
 
 #[derive(Debug)]
-struct Endpoint {
+pub struct Endpoint {
     ip: Ipv4Addr,
     port: u16,
     object: String,
 }
 
-#[derive(Eq, Hash, PartialEq,Debug)]
-struct Pattern {
+#[derive(Eq, Hash, PartialEq, Debug)]
+pub struct Pattern {
     src_pattern: Option<String>,
     dst_pattern: Option<String>,
     verb_pattern: Option<String>,
@@ -156,16 +156,14 @@ impl BrokerActor {
         }
     }
 
-        fn add_subscriber(&mut self , pattern: Pattern, endpoint: Endpoint) {
-        let mut subs = self.subscribers.lock().unwrap(); // lock for access
+    async fn add_subscriber(&mut self, pattern: Pattern, endpoint: Endpoint) {
+        let mut subs = self.subscribers.lock().await; // lock for access
         subs.entry(pattern).or_insert_with(Vec::new).push(endpoint);
     }
 }
 
 impl Actor for BrokerActor {
     type Context = Context<Self>;
-
-
 
     fn started(&mut self, ctx: &mut Context<Self>) {
         info!(" pre_start ");
@@ -198,21 +196,12 @@ impl Actor for BrokerActor {
         let subscribers = self.subscribers.clone(); // clone Arc for async move
         let mut pattern = Pattern::new();
         pattern.set_src_pattern("pclenovo/tester".to_string());
-        let mut endpoint = Endpoint {
+        let endpoint = Endpoint {
             ip: str_to_ip4_addr("192.168.0.148").unwrap(),
             port: 6504,
             object: "pclenovo/tester".to_string(),
         };
-        {
-            let mut subs = subscribers.try_lock().unwrap(); // lock for access
-            subs.insert(pattern, endpoint);
-            if subs.find(&pattern).is_none() {
-                error!("Pattern not found in subscribers");
-            } else {
-                info!("Pattern found in subscribers");
-            }
-        }
-
+        self.add_subscriber(pattern, endpoint);
         let receiver = async move {
             let mut buf = [0; 1024];
             loop {
@@ -229,10 +218,13 @@ impl Actor for BrokerActor {
                                     if pattern.matches(&value) {
                                         info!("Matched pattern: {:?}", &pattern);
                                         info!("Sending to endpoint: {:?}", &endpoint);
-                                        udp_receiver_socket.send_to(
-                                            value.to_json().as_bytes(),
-                                            SocketAddr::new(endpoint.ip.into(), endpoint.port),
-                                        ).await.expect("Failed to send UDP message");
+                                        for ep in endpoint {
+                                            let addr = SocketAddr::new(ep.ip.into(), ep.port);
+                                            udp_receiver_socket.send_to(
+                                                value.to_json().as_bytes(),
+                                                addr,
+                                            ).await.expect("Failed to send UDP message");
+                                        }
                                     }
                                 }
                             },
@@ -281,9 +273,11 @@ impl Handler<BrokerCmd> for BrokerActor {
                 self.listeners.push(ar.clone())
             }
             BrokerCmd::Subscribe { pattern, endpoint } => {
-                info!("Adding subscriber: {:?} to endpoint: {:?}", pattern, endpoint);
-                let mut subs = self.subscribers.lock().unwrap(); // lock for access
-                subs.insert(pattern, endpoint);
+                info!(
+                    "Adding subscriber: {:?} to endpoint: {:?}",
+                    pattern, endpoint
+                );
+                self.add_subscriber(pattern, endpoint);
             }
             _ => {}
         }

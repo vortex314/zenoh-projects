@@ -84,18 +84,12 @@ impl Handler<McEvent> for Brain {
 
     fn handle(&mut self, msg: McEvent, _: &mut Self::Context) -> Self::Result {
         match msg {
-            McEvent::Received(value) => {
+            McEvent::ReceivedValue(value) => {
                 if value["src"].as_string().unwrap() == self.drive.src.as_str() {
                     self.drive.update_from_value(&value["pub"]);
                 } else {
                     info!("Received non-drive value: {}", value);
                 }
-            }
-            McEvent::ConnectionLost => {
-                info!("Brain connection lost");
-            }
-            McEvent::ConnectionEstablished => {
-                info!("Brain connection established");
             }
         }
     }

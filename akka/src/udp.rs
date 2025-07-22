@@ -1,4 +1,5 @@
 use anyhow::Result;
+use futures::executor::block_on;
 use log::debug;
 use log::error;
 use log::info;
@@ -32,41 +33,40 @@ fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
 
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
-pub enum McCmd {
-    AddListener(Recipient<McEvent>),
+pub enum UdpCmd {
+    AddListener(Recipient<UdpEvent>),
     ReceivedInternal(Value),
-    SendValue(Value),
+    SendValue {
+        socket_addr: SocketAddr,
+        value: Value,
+    },
     Reconnect,
 }
 
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
-pub enum McEvent {
+pub enum UdpEvent {
     ReceivedValue(Value),
 }
 
-
-pub struct McActor {
-    multicast_ip: String,
-    multicast_port: u16,
+pub struct UdpActor {
+    udp_ip: String,
+    udp_port: u16,
     udp_socket: Option<Arc<UdpSocket>>,
-    listeners: Vec<Recipient<McEvent>>,
+    listeners: Vec<Recipient<UdpEvent>>,
 }
 
-impl McActor {
-    pub fn new(multicast_ip: &str, multicast_port: u16) -> McActor {
-        McActor {
-            multicast_ip: multicast_ip.to_string(),
-            multicast_port,
+impl UdpActor {
+    pub fn new(udp_ip: &str, udp_port: u16) -> UdpActor {
+        UdpActor {
+            udp_ip: udp_ip.to_string(),
+            udp_port,
             udp_socket: None,
             listeners: Vec::new(),
         }
     }
-    pub fn create_multicast_socket(
-        multicast_ip: &str,
-        multicast_port: u16,
-    ) -> Result<Arc<UdpSocket>> {
-        let addr = SocketAddr::from_str(&format!("{}:{}", multicast_ip, multicast_port))?;
+    pub fn create_udp_socket(udp_ip: &str, udp_port: u16) -> Result<Arc<UdpSocket>> {
+        let addr = SocketAddr::from_str(&format!("{}:{}", udp_ip, udp_port))?;
         let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
         socket.set_reuse_address(true)?;
         socket.set_reuse_port(true)?;
@@ -74,27 +74,23 @@ impl McActor {
         socket.bind(&SockAddr::from(addr))?;
 
         let udp_socket = UdpSocket::from_std(socket.into())?;
-        udp_socket.join_multicast_v4(
-            Ipv4Addr::from_str(multicast_ip)?,
-            Ipv4Addr::from_str(INTERFACE_ALL)?,
-        )?;
 
         Ok(Arc::new(udp_socket))
     }
 
-    pub fn emit(&self, event: McEvent) {
+    pub fn emit(&self, event: UdpEvent) {
         for listener in &self.listeners {
             listener.do_send(event.clone());
         }
     }
 }
 
-impl Actor for McActor {
+impl Actor for UdpActor {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Context<Self>) {
         info!(" pre_start ");
-        let udp_socket = Self::create_multicast_socket(&self.multicast_ip, self.multicast_port)
+        let udp_socket = Self::create_udp_socket(&self.udp_ip, self.udp_port)
             .expect("Failed to create multicast socket");
 
         // Clone for UDP receiver task
@@ -115,13 +111,13 @@ impl Actor for McActor {
                             info!("MC recv {} => {}", src, message);
 
                         let value = Value::from_json(&message[..]);
-                        self_ref.send(McCmd::ReceivedInternal(value.unwrap())).await.expect("Failed to send ReceivedInternal message");
+                        self_ref.send(UdpCmd::ReceivedInternal(value.unwrap())).await.expect("Failed to send ReceivedInternal message");
 
 
                     },
                     Err(e) => {
                         error!("UDP receive error: {}", e);
-                        self_ref.send(McCmd::Reconnect).await.expect("Failed to send Reconnect message");
+                        self_ref.send(UdpCmd::Reconnect).await.expect("Failed to send Reconnect message");
                     },
                 }
                     },
@@ -136,27 +132,32 @@ impl Actor for McActor {
     }
 }
 
-impl Handler<McCmd> for McActor {
+impl Handler<UdpCmd> for UdpActor {
     // type Result = Result<(),dyn std::error::Error +'static >;
     type Result = ();
 
-    fn handle(&mut self, msg: McCmd, _: &mut Self::Context) {
+    fn handle(&mut self, msg: UdpCmd, _: &mut Self::Context) {
         match msg {
-            McCmd::ReceivedInternal(v) => {
+            UdpCmd::ReceivedInternal(v) => {
                 debug!(
                     "UDP received internal {} for {} listeners",
                     v.to_json(),
                     self.listeners.len()
                 );
                 // broadcast
-                self.emit(McEvent::ReceivedValue(v.clone()));
+                self.emit(UdpEvent::ReceivedValue(v.clone()));
             }
-            McCmd::SendValue(_v) => {
-                info!("MC send {}", _v.to_json());
-                let buf = _v.to_json().into_bytes();
-                self.udp_socket.as_mut().map(|s| s.send(&buf));
+            UdpCmd::SendValue { socket_addr, value } => {
+                info!("MC send {}", value.to_json());
+                let buf = value.to_json().into_bytes();
+                self.udp_socket
+                    .as_mut()
+                    .map(|s| {
+                        let _ = s.try_send_to(&buf, socket_addr);
+                    })
+                    .expect("Failed to send UDP message");
             }
-            McCmd::AddListener(ar) => {
+            UdpCmd::AddListener(ar) => {
                 info!("Adding listener: {:?}", ar);
                 self.listeners.push(ar.clone())
             }
