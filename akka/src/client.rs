@@ -38,7 +38,7 @@ pub enum ClientCmd {
     SendMc(Value), //..
     Reconnect,
     Publish(Value),
-    Subscribe(Value),
+    Subscribe { dst:Option<String>,src:Option<String> }, // Subscribe to a specific destination
 }
 
 #[derive(Debug, Message, Clone)]
@@ -50,6 +50,7 @@ pub enum ClientEvent {
 }
 
 pub struct ClientActor {
+    object_name: String,
     multicast_ip: String,
     multicast_port: u16,
     udp_ip: String,
@@ -64,12 +65,14 @@ pub struct ClientActor {
 
 impl ClientActor {
     pub fn new(
+        object_name: String,
         multicast_ip: &str,
         multicast_port: u16,
         udp_ip: &str,
         udp_port: u16,
     ) -> ClientActor {
         ClientActor {
+            object_name,
             multicast_ip: multicast_ip.to_string(),
             multicast_port,
             udp_ip: udp_ip.to_string(),
@@ -204,8 +207,8 @@ impl Handler<ClientCmd> for ClientActor {
                 let broker_port = value["port"].as_::<i64>();
                 if dev_type.is_some() && broker_ip.is_some() && broker_port.is_some() {
                     if dev_type.unwrap() =="broker" {
-                        self.broker_addr = Some(SocketAddr::new(ip, broker_port.unwrap() as u16));
-
+                        info!("Received broker announcement: {}:{}", broker_ip.unwrap(), broker_port.unwrap());
+                        self.broker_addr = Some( SocketAddr::from_str(&format!("{}:{}", broker_ip.unwrap(), broker_port.unwrap())).unwrap());
                     }
                 }
             }
@@ -221,8 +224,7 @@ impl Handler<ClientCmd> for ClientActor {
             ClientCmd::Publish(_v) => {
                 info!("MC send {}", _v.to_json());
                 let buf = _v.to_json().into_bytes();
-                self.udp_socket.as_mut().map(|s| s.send(&buf));
-                self.udp_socket.as_mut().map(|s| s.send_to(buf, broker_addr.unrap()))
+                self.udp_socket.as_mut().map(|s| s.send_to(&buf, self.broker_addr.unwrap()));
             }
             ClientCmd::AddListener(ar) => {
                 info!("Adding listener: {:?}", ar);

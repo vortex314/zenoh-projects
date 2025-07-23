@@ -11,4 +11,5 @@ pub use logger::init;
 pub use multicast::{McActor, McEvent,McCmd};
 pub use brain::{Brain, Drive, Property};
 pub use udp::{UdpActor, UdpCmd, UdpEvent};
+pub use client::{ClientActor, ClientCmd, ClientEvent};
 
