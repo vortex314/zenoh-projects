@@ -12,13 +12,10 @@ use std::str::FromStr;
 use std::{
     net::{Ipv4Addr, SocketAddr},
     sync::Arc,
-    time::Duration,
 };
-use tokio::{
-    net::UdpSocket,
-    select,
-    time::{self},
-};
+use tokio::
+    net::UdpSocket
+;
 
 use crate::multicast;
 use crate::value::Value;
@@ -37,16 +34,19 @@ pub enum ClientCmd {
     AddListener(Recipient<ClientEvent>),
     ReceivedUdpInternal(Value),
     ReceivedMcInternal(Value),
-    SendUdp(Value),
-    SendMc(Value),
+    SendUdp(Value), // unnecessary
+    SendMc(Value), //..
     Reconnect,
+    Publish(Value),
+    Subscribe(Value),
 }
 
 #[derive(Debug, Message, Clone)]
 #[rtype(result = "()")]
 pub enum ClientEvent {
-    ReceivedMc(Value),
-    ReceivedUdp(Value),
+    ReceivedMc(Value), //..
+    ReceivedUdp(Value), //..
+    Publish(Value),
 }
 
 pub struct ClientActor {
@@ -58,6 +58,7 @@ pub struct ClientActor {
     broker_port: Option<u16>,
     udp_socket: Option<Arc<UdpSocket>>,
     multicast_socket: Option<Arc<UdpSocket>>,
+    broker_addr : Option<SocketAddr>,
     listeners: Vec<Recipient<ClientEvent>>,
 }
 
@@ -77,6 +78,7 @@ impl ClientActor {
             broker_port: None,
             udp_socket: None,
             multicast_socket: None,
+            broker_addr:None,
             listeners: Vec::new(),
         }
     }
@@ -139,44 +141,41 @@ impl Actor for ClientActor {
         self.multicast_socket = Some(multicast_socket);
 
         let self_ref = ctx.address();
+        let self_ref2 = ctx.address();
 
-        let udp_receiver = async move {
+        let udp_receiver = async move  {
             let mut buf = [0; 1024];
             loop {
-                let r = udp_receiver_socket.recv_from(&mut buf).await;
-                if let Ok((size, socket_addr)) = r {
+                let res = udp_receiver_socket.recv_from(&mut buf).await;
+                if let Ok((size, socket_addr)) = res {
                     if size > 0 {
-                        let value = Value::from_json(&String::from_utf8_lossy(&buf[..size])).iter().for_each(
-                           async 
-                                info!("Received UDP value: {}", v.to_json());
-                                self_ref
-                                    .send(ClientCmd::ReceivedUdpInternal(v.clone()))
-                                    .await
-                                    .expect("Failed to send ReceivedUdpInternal message");
-                            },
-                        );
+                        Value::from_json(&String::from_utf8_lossy(&buf[..size]))
+                            .iter()
+                            .for_each( |v: &Value| {
+                                info!("Received UDP value: {} from {}", v.to_json(),socket_addr);
+                                self_ref2
+                                    .do_send(ClientCmd::ReceivedUdpInternal(v.clone()));
+                            });
                     }
                 } else {
-                    error!("UDP receive error: {}", r.unwrap_err());
+                    error!("UDP receive error: {}", res.unwrap_err());
                     break;
                 }
             }
-            };
+        };
         let mc_receiver = async move {
             let mut buf = [0; 1024];
             loop {
                 let r = multicast_receiver_socket.recv_from(&mut buf).await;
                 if let Ok((size, socket_addr)) = r {
                     if size > 0 {
-                        let value = Value::from_json(&String::from_utf8_lossy(&buf[..size]))
+                        Value::from_json(&String::from_utf8_lossy(&buf[..size]))
                             .iter()
                             .for_each(
-                                f | v | {
-                                    info!("Received multicast value: {}", v.to_json());
+                                 | value:&Value | {
+                                    info!("MC {} => {}", socket_addr,value.to_json());
                                     self_ref
-                                        .send(ClientCmd::ReceivedMcInternal(value))
-                                        .await
-                                        .expect("Failed to send ReceivedMcInternal message");
+                                        .do_send(ClientCmd::ReceivedMcInternal(value.clone()));
                                 },
                             );
                     }
@@ -199,19 +198,31 @@ impl Handler<ClientCmd> for ClientActor {
 
     fn handle(&mut self, msg: ClientCmd, _: &mut Self::Context) {
         match msg {
-            ClientCmd::ReceivedInternal(v) => {
+            ClientCmd::ReceivedMcInternal(value) => {
+                let dev_type = value["type"].as_::<String>();
+                let broker_ip = value["ip"].as_::<String>();
+                let broker_port = value["port"].as_::<i64>();
+                if dev_type.is_some() && broker_ip.is_some() && broker_port.is_some() {
+                    if dev_type.unwrap() =="broker" {
+                        self.broker_addr = Some(SocketAddr::new(ip, broker_port.unwrap() as u16));
+
+                    }
+                }
+            }
+            ClientCmd::ReceivedUdpInternal(v) => {
                 debug!(
                     "UDP received internal {} for {} listeners",
                     v.to_json(),
                     self.listeners.len()
                 );
                 // broadcast
-                self.emit(ClientEvent::ReceivedValue(v.clone()));
+                self.emit(ClientEvent::ReceivedUdp(v.clone()));
             }
-            ClientCmd::SendValue(_v) => {
+            ClientCmd::Publish(_v) => {
                 info!("MC send {}", _v.to_json());
                 let buf = _v.to_json().into_bytes();
                 self.udp_socket.as_mut().map(|s| s.send(&buf));
+                self.udp_socket.as_mut().map(|s| s.send_to(buf, broker_addr.unrap()))
             }
             ClientCmd::AddListener(ar) => {
                 info!("Adding listener: {:?}", ar);
