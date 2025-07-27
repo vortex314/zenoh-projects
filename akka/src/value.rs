@@ -289,7 +289,7 @@ impl fmt::Display for Value {
 use base64::{Engine as _, engine::general_purpose};
 use log::error;
 use serde::de::{self, Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer};
 
 struct ValueVisitor;
 

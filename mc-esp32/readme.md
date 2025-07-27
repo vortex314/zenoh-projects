@@ -12,14 +12,18 @@
 - developer language should be rust for linux and c++ for microcontroller
 - for the linux broker use async and actix actors
 
-# Multicast 
+# Multicast announce + subscribe
 
 ```json
 {
     "src":"pclenovo/broker",
     "type":"broker",
     "ip":"192.168.0.13",
-    "port":6502
+    "port":6502,
+    "sub":{
+        "src":["esp1","/sys"],
+        "dst":["tester"]
+    }
 }
 ```
 
@@ -34,18 +38,7 @@
     }
 }
 ```
-# Subscribe
-```json
-{
-    "dst":"pclenovo/brain",
-    "sub":"pclenovo/brain",
-}
 
-{
-    "dst":"pclenovo/brain",
-    "sub":"esp1/motor",
-}
-```
 # Request 
 ```json
 {
