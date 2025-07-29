@@ -81,7 +81,7 @@ async fn main() {
 
         // Send an announce message to the multicast group
         let mut announce = Value::object();
-        announce["src"] = "pc/broker".into();
+        announce["src"] = "broker".into();
         // get the local IP address
         announce["ip"] = local_ip().unwrap().to_string().into();
         announce["port"] = (BROKER_PORT as i64).into();

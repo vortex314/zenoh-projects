@@ -15,7 +15,7 @@ use log::info;
 
 use std::net::Ipv4Addr;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 // import necessary modules
 
@@ -77,6 +77,12 @@ impl Tester {
         }
     }
 
+    fn register(&mut self) {
+        let subscription = Subscription::new(self.name.clone(), "client".to_string());
+        subscription.dst_pattern.push(self.name.clone());
+        self.client.do_send(ClientCmd::Register(subscription));
+    }
+
     fn publish(&mut self) {
         let mut value = Value::object();
         value["src"] = self.name.clone().into();
@@ -90,11 +96,7 @@ impl Actor for Tester {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        self.client.do_send(ClientCmd::Register({
-            name:self.name,
-            dst: Some(self.name.clone()),
-            src: Some("esp1".to_string()),
-        });
+        self.register();
         let self_ref = ctx.address();
         let publisher = async move {
             loop {
@@ -155,6 +157,13 @@ async fn main() -> std::io::Result<()> {
 
     let tester_actor = Tester::new(object_name.clone(), client_actor_1.recipient()).start();
 
+    client_actor
+        .send(ClientCmd::Register {
+            subscription: Subscription::new(object_name.clone(), "client".to_string()),
+            actor: tester_actor.recipient(),
+        })
+        .await
+        .unwrap();
     loop {
         // Wait for a while before sending the announce message
         tokio::time::sleep(Duration::from_millis(1000)).await;

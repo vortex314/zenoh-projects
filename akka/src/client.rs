@@ -30,14 +30,16 @@ fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
 #[derive(Debug)]
 pub struct Subscription {
     object_name: String,
+    obj_type: String, 
     dst_pattern: Vec<String>,
     src_pattern: Vec<String>,
 }
 
 impl Subscription {
-    fn new(object_name: String) -> Self {
+    fn new(object_name: String,obj_type:String) -> Self {
         Self {
             object_name,
+            obj_type,
             dst_pattern: vec![],
             src_pattern: vec![],
         }
@@ -53,7 +55,7 @@ pub enum ClientCmd {
     SendUdp(Value), // unnecessary
     SendMc(Value),  //..
     Reconnect,
-    Register(Subscription),
+    Register{ subscription : Subscription, actor : Recipient<ClientEvent> },
     Publish(Value),
     PublishSubscriptions,
 }
