@@ -36,13 +36,40 @@
 
 extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
+struct McSend : Message
+{
+  constexpr static uint32_t _id = FILE_LINE_HASH;
+  uint32_t type_id() const { return _id; }
+  McSend() = default;
+  McSend(const std::string &topic, const Value &value) : topic(topic), value(value) {}
+  std::string topic;
+  Value value;
+};
+
+void send()
+{
+  auto msg = McSend("test/topic",  Value("Hello, World!"));
+  msg.topic = "test/topic";
+  msg.value = Value("Hello, World!");
+  if (msg.type_id() == McSend::_id)
+  {
+    INFO("Message ID matches McSend ID");
+  }
+  else
+  {
+    INFO("Message ID does not match McSend ID");
+  }
+  INFO("Sending message: %s", msg.value.toJson().c_str());
+}
+
 class McActor : public Actor
 {
 private:
   bool _connected = false;
   int _timer_publish = -1;
   int _prop_counter = 0;
-  int _socket = -1; // socket for multicast communication
+  int _mc_socket = -1;  // socket for multicast communication
+  int _udp_socket = -1; // socket for UDP communication
   TaskHandle_t _task_handle = NULL;
   unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
 

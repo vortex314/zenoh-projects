@@ -9,6 +9,7 @@ use socket2::Protocol;
 use socket2::SockAddr;
 use socket2::Socket;
 use socket2::Type;
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::{
     net::{Ipv4Addr, SocketAddr},
@@ -27,36 +28,32 @@ fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
     Ok(x)
 }
 
-#[derive(Debug)]
-pub struct Subscription {
-    object_name: String,
-    obj_type: String, 
-    dst_pattern: Vec<String>,
-    src_pattern: Vec<String>,
-}
-
-impl Subscription {
-    fn new(object_name: String,obj_type:String) -> Self {
-        Self {
-            object_name,
-            obj_type,
-            dst_pattern: vec![],
-            src_pattern: vec![],
-        }
-    }
-}
-
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
 pub enum ClientCmd {
-    AddListener(Recipient<ClientEvent>),
-    ReceivedUdpInternal(Value),
-    ReceivedMcInternal(Value),
-    SendUdp(Value), // unnecessary
-    SendMc(Value),  //..
-    Reconnect,
-    Register{ subscription : Subscription, actor : Recipient<ClientEvent> },
-    Publish(Value),
+    AddListener {
+        src: String,
+        recipient: Recipient<ClientEvent>,
+    },
+    ReceivedUdpInternal {
+        src: SocketAddr,
+        value: Value,
+    },
+    ReceivedMcInternal {
+        src: SocketAddr,
+        value: Value,
+    },
+    SendUdp {
+        dst: SocketAddr,
+        value: Value,
+    },
+    SendMc {
+        value: Value,
+    }, //..
+    Publish {
+        src: String,
+        value: Value,
+    },
     PublishSubscriptions,
 }
 
@@ -68,42 +65,90 @@ pub enum ClientEvent {
     Publish(Value),
 }
 
+struct ObjectInfo {
+    name: String,
+    addr: SocketAddr,
+    timestamp: std::time::SystemTime,
+}
+
+enum Destination {
+    Local(Recipient<ClientEvent>),
+    Remote(ObjectInfo),
+}
+
+#[derive(Debug, Clone, Hash)]
+enum Pattern {
+    Src(String),
+    Dst(String),
+}
+
+impl Pattern {
+    fn src(src: String) -> Self {
+        Pattern::Src(src)
+    }
+    fn dst(dst: String) -> Self {
+        Pattern::Dst(dst)
+    }
+    fn matches(&self, value: &Value) -> bool {
+        match self {
+            Pattern::Src(src) => value["src"] == Value::from(src.to_string()),
+            Pattern::Dst(dst) => value["dst"] == Value::from(dst.to_string()),
+        }
+    }
+    fn to_string(&self) -> String {
+        match self {
+            Pattern::Src(src) => format!("{}", src),
+            Pattern::Dst(dst) => format!("{}", dst),
+        }
+    }
+}
+
+impl PartialEq for Pattern {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Pattern::Src(src1), Pattern::Src(src2)) => src1 == src2,
+            (Pattern::Dst(dst1), Pattern::Dst(dst2)) => dst1 == dst2,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Pattern {}
+
+#[derive(Debug)]
+pub struct Subscription {
+    dst: HashSet<String>,
+    expiration: std::time::SystemTime,
+}
+
 pub struct ClientActor {
-    object_name: String,
     multicast_ip: String,
     multicast_port: u16,
     udp_ip: String,
     udp_port: u16,
-    broker_ip: Option<String>,
-    broker_port: Option<u16>,
     udp_socket: Option<Arc<UdpSocket>>,
     multicast_socket: Option<Arc<UdpSocket>>,
-    broker_addr: Option<SocketAddr>,
-    listeners: Vec<Recipient<ClientEvent>>,
-    subscriptions: Vec<Subscription>,
+    destinations: IndexMap<String, Destination>,
+    subscriptions: IndexMap<Pattern, Vec<String>>,
 }
 
 impl ClientActor {
     pub fn new(
-        object_name: String,
         multicast_ip: &str,
         multicast_port: u16,
         udp_ip: &str,
         udp_port: u16,
     ) -> ClientActor {
         ClientActor {
-            object_name,
             multicast_ip: multicast_ip.to_string(),
             multicast_port,
             udp_ip: udp_ip.to_string(),
             udp_port,
-            broker_ip: None,
-            broker_port: None,
+
             udp_socket: None,
             multicast_socket: None,
-            broker_addr: None,
-            listeners: Vec::new(),
-            subscriptions: Vec::new(),
+            destinations: IndexMap::new(),
+            subscriptions: IndexMap::new(),
         }
     }
     pub fn create_multicast_socket(
@@ -138,12 +183,6 @@ impl ClientActor {
 
         Ok(Arc::new(udp_socket))
     }
-
-    pub fn emit(&self, event: ClientEvent) {
-        for listener in &self.listeners {
-            listener.do_send(event.clone());
-        }
-    }
 }
 
 impl Actor for ClientActor {
@@ -165,7 +204,6 @@ impl Actor for ClientActor {
         self.multicast_socket = Some(multicast_socket);
 
         let self_ref = ctx.address();
-        let self_ref_1 = ctx.address();
         let self_ref2 = ctx.address();
 
         let udp_receiver = async move {
@@ -177,7 +215,10 @@ impl Actor for ClientActor {
                         .iter()
                         .for_each(|v: &Value| {
                             info!("Received UDP value: {} from {}", v.to_json(), socket_addr);
-                            self_ref2.do_send(ClientCmd::ReceivedUdpInternal(v.clone()));
+                            self_ref2.do_send(ClientCmd::ReceivedUdpInternal {
+                                src: socket_addr,
+                                value: v.clone(),
+                            });
                         });
                 } else {
                     error!("UDP receive error: {}", res.unwrap_err());
@@ -194,7 +235,10 @@ impl Actor for ClientActor {
                         .iter()
                         .for_each(|value: &Value| {
                             info!("MC {} => {}", socket_addr, value.to_json());
-                            self_ref.do_send(ClientCmd::ReceivedMcInternal(value.clone()));
+                            self_ref.do_send(ClientCmd::ReceivedMcInternal {
+                                src: socket_addr,
+                                value: value.clone(),
+                            });
                         });
                 } else {
                     error!("Multicast receive error: {}", r.unwrap_err());
@@ -205,7 +249,6 @@ impl Actor for ClientActor {
         let subscriptions_sender = async move {
             loop {
                 tokio::time::sleep(Duration::from_millis(1000)).await;
-                self_ref_1.do_send(ClientCmd::PublishSubscriptions);
             }
         };
         Arbiter::current().spawn(udp_receiver);
@@ -218,75 +261,78 @@ impl Handler<ClientCmd> for ClientActor {
     // type Result = Result<(),dyn std::error::Error +'static >;
     type Result = ();
 
-    fn handle(&mut self, msg: ClientCmd, _: &mut Self::Context) {
+    fn handle(&mut self, msg: ClientCmd, ctx: &mut Self::Context) {
         match msg {
-            ClientCmd::ReceivedMcInternal(value) => {
-                let dev_type = value["type"].as_::<String>();
-                let broker_ip = value["ip"].as_::<String>();
-                let broker_port = value["port"].as_::<i64>();
-                if dev_type.is_some() && broker_ip.is_some() && broker_port.is_some() {
-                    if dev_type.unwrap() == "broker" {
-                        info!(
-                            "Received broker announcement: {}:{}",
-                            broker_ip.unwrap(),
-                            broker_port.unwrap()
-                        );
-
-                        self.broker_ip = Some(broker_ip.unwrap().to_string());
-                        self.broker_port = Some(*broker_port.unwrap() as u16);
-                        self.broker_addr = Some(
-                            SocketAddr::from_str(&format!(
-                                "{}:{}",
-                                self.broker_ip.clone().unwrap(),
-                                self.broker_port.unwrap()
-                            ))
-                            .unwrap(),
-                        );
-                    }
-                }
-            }
-            ClientCmd::ReceivedUdpInternal(v) => {
-                v["pub"].handle::<IndexMap<String, Value>, _>(|_| {
-                    self.emit(ClientEvent::Publish(v.clone()));
+            ClientCmd::ReceivedMcInternal {
+                src: src_addr,
+                value,
+            } => {
+                value["src"].handle::<String, _>(|_key| {
+                    self.destinations.insert(
+                        _key.clone(),
+                        Destination::Remote(ObjectInfo {
+                            name: _key.clone(),
+                            addr: src_addr,
+                            timestamp: std::time::SystemTime::now(),
+                        }),
+                    );
                 });
-                debug!(
-                    "UDP received internal {} for {} listeners",
-                    v.to_json(),
-                    self.listeners.len()
-                );
             }
-            ClientCmd::Publish(_v) => {
-                if self.broker_addr.is_some() {
-                    info!("MC send {}", _v.to_json());
-                    let buf = _v.to_json().into_bytes();
-                    self.udp_socket
-                        .as_mut()
-                        .map(|s| s.send_to(&buf, self.broker_addr.unwrap()));
-                }
+            ClientCmd::ReceivedUdpInternal { src, value } => {}
+
+            ClientCmd::Publish { src, value } => {
+                info!("Publishing value: {} from {}", value.to_json(), src);
+                self.subscriptions
+                    .iter()
+                    .filter(|(pattern, _)| pattern.matches(&value))
+                    .for_each(|(_, dsts)| {
+                        for dst in dsts {
+                            match self.destinations.get(dst) {
+                                Some(Destination::Local(recipient)) => {
+                                    recipient.do_send(ClientEvent::Publish(value.clone()));
+                                }
+                                Some(Destination::Remote(object_info)) => {
+                                    let mut msg = Value::object();
+                                    msg["src"] = src.clone().into();
+                                    msg["pub"] = value.clone();
+                                    ctx.address().do_send(ClientCmd::SendUdp {
+                                        dst: object_info.addr,
+                                        value: msg,
+                                    });
+                                }
+                                None => {
+                                    error!("No destination found for {}", dst);
+                                }
+                            }
+                        }
+                    });
             }
-            ClientCmd::Register(subscription) => {
-                self.subscriptions.push(subscription);
-            }
-            ClientCmd::AddListener(ar) => {
-                info!("Adding listener: {:?}", ar);
-                self.listeners.push(ar.clone())
+
+            ClientCmd::AddListener { src, recipient } => {
+                let src1 = src.clone();
+                let src2 = src.clone();
+                self.destinations
+                    .insert(src1, Destination::Local(recipient));
+                self.subscriptions
+                    .entry(Pattern::Dst(src2))
+                    .or_default()
+                    .push(src.clone());
             }
             ClientCmd::PublishSubscriptions => {
-                for subscription in self.subscriptions.iter() {
-                    let mut msg = Value::object();
-                    msg["src"] = subscription.object_name.clone().into();
-                    msg["sub"] = Value::object();
-                    msg["sub"]["src"] = Value::array();
-                    for src in subscription.src_pattern.iter() {
-                        msg["sub"]["src"].push(src.clone().into());
+                for (pattern, dsts) in &self.subscriptions {
+                    for dst in dsts {
+                        if let Some(Destination::Remote(object_info)) = self.destinations.get(dst) {
+                            let mut value = Value::object();
+                            value["src"] = pattern.to_string().into();
+                            value["dst"] = object_info.name.clone().into();
+                            value["sub"] = Value::object();
+
+                            ctx.address().do_send(ClientCmd::SendUdp {
+                                dst: object_info.addr,
+                                value,
+                            });
+                        }
                     }
-                    for dst in subscription.dst_pattern.iter() {
-                        msg["sub"]["dst"].push(dst.clone().into());
-                    }
-                    //TODO add type , ip and port
-                    self.multicast_socket.as_mut().inspect(|s| {
-                        s.try_send(msg.to_json().as_bytes());
-                    });
                 }
             }
             _ => {}

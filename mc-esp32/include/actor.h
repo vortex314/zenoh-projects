@@ -18,6 +18,24 @@
 
 uint64_t current_time();
 
+class Message {
+
+public:
+    virtual uint32_t type_id() const = 0;
+    virtual ~Message() = default;
+};
+
+class Msg : Message {
+private:
+    static constexpr uint32_t _id = FILE_LINE_HASH; // Unique ID based on file and line number
+public:
+    uint32_t type_id() const override { return _id; } // Default implementation, can be overridden
+    Msg() {}
+    ~Msg() = default;
+};
+
+
+
 template <typename T>
 class Channel
 {
@@ -168,6 +186,7 @@ private:
 
 public:
     virtual void on_cmd(const Value &cmd) = 0;
+    virtual void on_msg(const Message &msg) {};
     virtual void on_timer(int id) = 0;
 
     virtual void on_start() {};

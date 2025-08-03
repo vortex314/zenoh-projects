@@ -1,5 +1,4 @@
 use anyhow::Result;
-use futures::executor::block_on;
 use log::debug;
 use log::error;
 use log::info;

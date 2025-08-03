@@ -103,15 +103,15 @@ void McActor::receiver_task(void *pv)
 
   while (true)
   {
-    while (mc_actor->_socket < 0)
+    while (mc_actor->_mc_socket < 0)
     {
       INFO("Waiting for multicast socket to be created...");
       vTaskDelay(1000 / portTICK_PERIOD_MS);
-      mc_actor->_socket = create_multicast_socket();
+      mc_actor->_mc_socket = create_multicast_socket();
     }
     while (true)
     {
-      int len = recvfrom(mc_actor->_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
+      int len = recvfrom(mc_actor->_mc_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
                          (struct sockaddr *)&source_addr, &socklen);
       if (len < 0)
       {
@@ -141,8 +141,8 @@ void McActor::receiver_task(void *pv)
 
 Res McActor::connect(void)
 {
-  _socket = create_multicast_socket();
-  if (_socket < 0)
+  _mc_socket = create_multicast_socket();
+  if (_mc_socket < 0)
   {
     return Res(errno, "Failed to create multicast socket");
   }
@@ -154,9 +154,9 @@ Res McActor::connect(void)
 Res McActor::disconnect()
 {
   INFO("Closing Mc Session...");
-  close(_socket);
+  close(_mc_socket);
   _connected = false;
-  _socket = -1;
+  _mc_socket = -1;
   return ResOk;
 }
 
@@ -168,7 +168,7 @@ bool McActor::is_connected() const
 
 McActor::~McActor()
 {
-  if ( _socket > 0) close(_socket);
+  if ( _mc_socket > 0) close(_mc_socket);
   INFO("Closing Mc Session...");
 }
 
@@ -264,6 +264,62 @@ static int create_multicast_socket()
   return sock;
 }
 
+
+static int create_udp_socket(uint16_t port)
+{
+  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+  if (sock < 0)
+  {
+    ERROR("Failed to create socket: errno %d : %s", errno, strerror(errno));
+    return -1;
+  }
+
+  // Set socket options
+  int opt = 1;
+  setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+  // Bind the socket to any address
+  struct sockaddr_in saddr;
+  BZERO(saddr);
+  saddr.sin_family = AF_INET;
+  saddr.sin_port = htons(port);
+  saddr.sin_addr = (struct in_addr){
+      .s_addr = htonl(INADDR_ANY) // Bind to all interfaces
+  };
+
+  T_ESP(bind(sock, (struct sockaddr *)&saddr, sizeof(saddr)));
+
+  // Get the actual network interface IP address
+  esp_netif_ip_info_t ip_info;
+  esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  if (netif == NULL)
+  {
+    ERROR("Failed to get network interface");
+    close(sock);
+    return -1;
+  }
+  if (esp_netif_get_ip_info(netif, &ip_info) != ESP_OK)
+  {
+    ERROR("Failed to get IP info");
+    close(sock);
+    return -1;
+  }
+
+  // Set multicast interface
+  struct in_addr if_addr;
+  if_addr.s_addr = htonl(INADDR_ANY);
+  T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &if_addr, sizeof(if_addr)));
+  // Disable loopback so we receive our own packets (for testing)
+  int loop = 0;
+  T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop)));
+
+  // Set multicast TTL (time to live)
+  int ttl = 32;
+  T_ESP(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)));
+
+  return sock;
+}
+
 Result<Void> McActor::send(const std::string &data)
 {
   struct sockaddr_in dest_addr;
@@ -272,7 +328,7 @@ Result<Void> McActor::send(const std::string &data)
   dest_addr.sin_port = htons(MULTICAST_PORT);
   dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
 
-  int err = sendto(_socket, data.data(), data.size(), 0,
+  int err = sendto(_mc_socket, data.data(), data.size(), 0,
                    (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 
   if (err < 0)

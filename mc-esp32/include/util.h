@@ -153,6 +153,9 @@ void for_each(std::optional<T> &opt, std::function<void()> action)
 #define FNV_OFFSET 14695981039346656037ull
 #endif
 
+#define FILE_LINE_STR ( __FILE__ ":" STRINGIZE(__LINE__) " " )
+#define FILE_LINE_HASH ( H(__FILE__ ":" STRINGIZE(__LINE__)) )
+
 constexpr uint32_t fnv1(uint32_t h, const char *s)
 {
     return (*s == 0) ? h
