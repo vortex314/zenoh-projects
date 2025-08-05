@@ -4,23 +4,23 @@
 
 // CRTP base class for messages
 template <typename Derived>
-struct MessageBase {
+struct Message {
     Derived& asDerived() { return static_cast<Derived&>(*this); }
     const Derived& asDerived() const { return static_cast<const Derived&>(*this); }
 };
 
 // Specific message types
-struct StartMessage : MessageBase<StartMessage> {
+struct StartMessage : Message<StartMessage> {
     uint32_t priority;
     StartMessage(uint32_t p) : priority(p) {}
 };
 
-struct StopMessage : MessageBase<StopMessage> {
+struct StopMessage : Message<StopMessage> {
     bool force;
     StopMessage(bool f) : force(f) {}
 };
 
-struct DataMessage : MessageBase<DataMessage> {
+struct DataMessage : Message<DataMessage> {
     int32_t value;
     DataMessage(int32_t v) : value(v) {}
 };
@@ -54,12 +54,14 @@ public:
     }
 };
 
+
+template <typename ActorType>
 // Generic message queue
 class MessageQueue {
     // Abstract message handler (type-erased dispatcher)
     class MessageHandler {
     public:
-        virtual void dispatch(MyActor& actor) const = 0;
+        virtual void dispatch(ActorType& actor) const = 0;
         virtual ~MessageHandler() = default;
     };
 
@@ -69,7 +71,7 @@ class MessageQueue {
         T msg;
     public:
         ConcreteMessageHandler(const T& m) : msg(m) {}
-        void dispatch(MyActor& actor) const override {
+        void dispatch(ActorType& actor) const override {
             actor.process(msg);
         }
     };
@@ -112,7 +114,7 @@ public:
 // Example usage
 void runActorWithGenericQueue() {
     MyActor actor;
-    MessageQueue queue;
+    MessageQueue<MyActor> queue;
 
     // Push different message types
     queue.push(StartMessage(1));
