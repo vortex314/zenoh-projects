@@ -418,7 +418,7 @@ typedef struct PropInfo
 } PropInfo;
 
 MSG(StopActorMsg);
-
+MSG(PublishMsg,std::string topic;Value v);
 
 
 #endif
