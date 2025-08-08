@@ -15,6 +15,22 @@
 
 static int create_multicast_socket();
 
+void send()
+{
+  auto msg = McSend("test/topic",  Value("Hello, World!"));
+  msg.topic = "test/topic";
+  msg.value = Value("Hello, World!");
+  if (msg.type_id() == McSend::_id)
+  {
+    INFO("Message ID matches McSend ID");
+  }
+  else
+  {
+    INFO("Message ID does not match McSend ID");
+  }
+  INFO("Sending message: %s", msg.value.toJson().c_str());
+}
+
 McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
 
 McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)

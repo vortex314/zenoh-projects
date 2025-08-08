@@ -14,12 +14,14 @@
 
 # Multicast announce 
 - From IP/PORT
+- if ip and port not given , take the UDP address.
 
 ```json
 {
     "src":"motor",
-    "announce":{
-        "desc":"Motor control of cutter"
+    "address":{
+        "ip":"192.168.2.3",
+        "port":6502
     }
 }
 ```
@@ -42,7 +44,7 @@
 - From IP/port
 ```json
 {
-    "src":"esp1/sys",
+    "src":"esp1_sys",
     "pub": {
         "free_heap":126700,
         "uptime":23566,
@@ -79,7 +81,7 @@ Commands
 # Response 
 ```json
 {
-    "dst":"pclenovo/brain",
+    "dst":"brain",
     "src":"esp1/sys",
     "rep":{
         "action":"rebooting"

@@ -69,6 +69,9 @@ extern "C" void app_main()
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
+  wifi_actor.ref().tell( new AddListenerMsg( mc_actor.ref() ) );
+
+
   // WiFi connectivity starts and stops zenoh connection
   wifi_actor.on_event([&](const Value &event)
                       { event["connected"].handle<bool>([&](auto connected)

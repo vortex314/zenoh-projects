@@ -15,36 +15,50 @@
 #include <option.h>
 #include <value.h>
 #include <result.h>
+#include <memory>
+#pragma once
 
 uint64_t current_time();
 
-class Message {
-
+class Msg
+{
 public:
     virtual uint32_t type_id() const = 0;
-    virtual ~Message() = default;
+    virtual ~Msg() = default;
 };
 
-class Msg : Message {
-private:
-    static constexpr uint32_t _id = FILE_LINE_HASH; // Unique ID based on file and line number
-public:
-    uint32_t type_id() const override { return _id; } // Default implementation, can be overridden
-    Msg() {}
-    ~Msg() = default;
-};
+#define MSG(MSG_TYPE, ...)                                   \
+  class MSG_TYPE : public Msg                                \
+  {                                                          \
+  public:                                                    \
+    static constexpr uint32_t id = H(STRINGIZE(MSG_TYPE));   \
+    inline uint32_t type_id() const override { return id; }; \
+    ~MSG_TYPE() = default;                                   \
+    __VA_ARGS__;                                             \
+  }
 
-
+MSG(TimerMsg,int timer_id);
 
 template <typename T>
-class Channel
+void handle(const Msg &message, std::function<void(const T &)> f)
+{
+    if (message.type_id() == T::id)
+    {
+        T &msg = (T &)message;
+        f(msg);
+    }
+}
+
+
+template <class T>
+class Queue
 {
 private:
     QueueHandle_t queue;
     size_t _depth;
 
 public:
-    Channel(size_t depth) : _depth(depth)
+    Queue(size_t depth) : _depth(depth)
     {
         queue = xQueueCreate(depth, sizeof(T));
         INFO("Channel created [%d][%d]", depth, sizeof(T));
@@ -53,22 +67,26 @@ public:
     int getDepth() const { return _depth; }
     int getSize() const { return uxQueueMessagesWaiting(queue); }
 
-    bool send(const T message, TickType_t timeout = portMAX_DELAY)
+    bool send(T qt, TickType_t timeout = portMAX_DELAY)
     {
-        return xQueueSend(queue, &message, timeout) == pdTRUE ? true : false;
+        return xQueueSend(queue, &qt, timeout) == pdTRUE ? true : false;
     }
 
-    bool sendFromIsr(const T message, TickType_t timeout = portMAX_DELAY)
+    bool sendFromIsr(T qt, TickType_t timeout = portMAX_DELAY)
     {
-        return xQueueSendFromISR(queue, &message, nullptr) == pdTRUE;
+        return xQueueSendFromISR(queue, &qt, nullptr) == pdTRUE;
     }
 
-    bool receive(T *message, TickType_t timeout = portMAX_DELAY)
+    bool receive(T &qt, TickType_t timeout = portMAX_DELAY)
     {
-        return xQueueReceive(queue, message, timeout) == pdTRUE;
+        if (xQueueReceive(queue, &qt, timeout) == pdTRUE)
+        {
+            return true;
+        };
+        return false;
     }
     size_t size() { return uxQueueMessagesWaiting(queue); }
-    ~Channel() { vQueueDelete(queue); }
+    ~Queue() { vQueueDelete(queue); }
     QueueHandle_t getQueue() { return queue; }
     size_t getQueueDepth() { return _depth; }
 };
@@ -171,12 +189,37 @@ The start method creates a thread dedicated to the actor. The actor will run in 
 The base actor only passes pointers through the queue to the actor. The actor is responsible for deleting the message.
 
 */
+typedef struct MsgContext
+{
+    std::shared_ptr<Queue<MsgContext *>> sender_queue;
+    Msg *pmsg;
+
+    MsgContext(std::shared_ptr<Queue<MsgContext *>> sender_queue, Msg *pmsg) : sender_queue(sender_queue), pmsg(pmsg) {};
+} MsgContext;
+
+class ActorRef
+{
+    std::shared_ptr<Queue<MsgContext *>> queue;
+
+public:
+    bool tell(ActorRef& me, Msg *ms)
+    {
+        auto v = new MsgContext(me.queue, ms);
+        return queue->send(v);
+    }
+    ActorRef(std::shared_ptr<Queue<MsgContext *>> queue) : queue(queue) {}
+};
+
+MSG(AddListener,ActorRef listener);
+
 
 class Actor : public ThreadSupport
 {
 private:
-    std::vector<std::function<void(const Value &)>> _handlers;
-    Channel<const Value *> _cmds;
+    std::shared_ptr<Queue<MsgContext *>> _queue;
+    ActorRef _self;
+    std::vector<ActorRef> _listeners;
+
     Timers _timers;
     bool _stop_actor = false;
     TaskHandle_t _task_handle;
@@ -185,39 +228,63 @@ private:
     std::string _name;
 
 public:
-    virtual void on_cmd(const Value &cmd) = 0;
-    virtual void on_msg(const Message &msg) {};
-    virtual void on_timer(int id) = 0;
+    virtual void on_start() { INFO("actor %s default started.", _name.c_str()); }
+    virtual void on_stop() { INFO("actor %s default stopped.", _name.c_str()); }
+    virtual void on_message(ActorRef &sender, const Msg &message)
+    {
+        WARN(" No message handler for actor %s ", _name.c_str());
+    }
 
-    virtual void on_start() {};
-    virtual void on_stop() {};
+    Actor(size_t stack_size, const char *name, int priority, size_t queue_depth)
+        : _queue(std::make_shared<Queue<MsgContext *>>(queue_depth)),
+          _self(ActorRef(_queue)),
+          _stack_size(stack_size),
+          _priority(priority),
+          _name(name)
+    {
+    }
 
-    QueueHandle_t queue_handle() override { return _cmds.getQueue(); }
+    ActorRef ref()
+    {
+        return _self;
+    }
+
+    QueueHandle_t queue_handle() override { return _queue->getQueue(); }
     uint64_t sleep_time() override { return _timers.sleep_time(); }
     void handle_all_cmd() override
     {
-        const Value *cmd;
-        if (_cmds.receive(&cmd, 0))
+        MsgContext *msg_context;
+        if (_queue->receive(msg_context))
         {
- //           INFO("%s <= %s", name(), cmd->toJson().c_str());
-            on_cmd(*cmd);
-            delete cmd; // Clean up the command after processing
+            auto ref = ActorRef(msg_context->sender_queue);
+            handle<AddListener>(*msg_context->pmsg,[&](const AddListener& msg ){
+                _listeners.push_back(msg.listener);
+            });
+            on_message(ref, *msg_context->pmsg);
+            delete msg_context->pmsg;
+            delete msg_context; // Clean up the command after processing
         }
     };
     void handle_expired_timers() override
     {
         for (int id : _timers.get_expired_timers())
         {
-            on_timer(id);
+            TimerMsg timer_msg;
+            timer_msg.timer_id =id;
+            on_message(_self, timer_msg);
             _timers.refresh(id);
         }
     };
 
+    void emit(Msg& msg){
+        for ( ActorRef listener : _listeners ){
+            listener.tell(_self,&msg); //TODO will lead to double free
+        }
+    }
+
     const char *name() { return _name.c_str(); }
 
-    Actor(size_t stack_size, const char *name, int priority, size_t queue_depth) : _cmds(queue_depth), _stack_size(stack_size), _priority(priority), _name(name)
-    {
-    }
+    Actor(size_t queue_depth) : Actor(1024, FILE_LINE_STR, 1, queue_depth) {}
 
     ~Actor()
     {
@@ -244,19 +311,21 @@ public:
         on_start();
         while (!_stop_actor)
         {
-            const Value *pcmd;
+            MsgContext *msg_context;
             INFO("Actor %s waiting for command during %d", name(), _timers.sleep_time());
-            if (_cmds.receive(&pcmd, _timers.sleep_time()))
+            if (_queue->receive(msg_context, _timers.sleep_time()))
             {
-                INFO("Actor %s received command: %s", name(), pcmd->toJson().c_str());
-                on_cmd(*pcmd);
-                delete pcmd;
+                auto ref = ActorRef(msg_context->sender_queue);
+                on_message(ref, *msg_context->pmsg);
+                delete msg_context; // Clean up the command after processing
             }
             else
             {
                 for (int id : _timers.get_expired_timers())
                 {
-                    on_timer(id);
+                    TimerMsg timer_msg;
+                    timer_msg.timer_id=id;
+                    on_message(_self, timer_msg);
                     _timers.refresh(id);
                 }
             }
@@ -265,39 +334,6 @@ public:
         on_stop();
     }
 
-    void emit(const Value &event)
-    {
-        for (auto &handler : _handlers)
-            handler(event);
-    }
-    void on_event(std::function<void(const Value &)> handler)
-    {
-        _handlers.push_back(handler);
-    }
-    inline bool tell(const Value &msg)
-    {
-        Value *pmsg = new Value;
-        *pmsg = std::move(msg);
-        bool ok = _cmds.send(pmsg, pdMS_TO_TICKS(10));
-        if (!ok)
-        {
-            ERROR("Failed to send message to actor %s [%d/%d]", name(), _cmds.getSize(), _cmds.getDepth());
-            delete pmsg; // Clean up if send failed
-        }
-        return ok;
-    }
-    inline bool tellFromIsr(const Value &msg)
-    {
-        Value *pmsg = new Value;
-        *pmsg = std::move(msg);
-        bool ok =  _cmds.sendFromIsr(pmsg);
-        if (!ok)
-        {
-            ERROR("Failed to send message to actor %s [%d/%d]", name(), _cmds.getSize(), _cmds.getDepth());
-            delete pmsg; // Clean up if send failed
-        }
-        return ok;
-    }
     void stop()
     {
         _stop_actor = true;
@@ -328,6 +364,8 @@ public:
     }
 };
 
+typedef MsgContext *QueueType;
+
 /*
 
 A thread is created to manage multiple actors. The thread will wait for the actor with the lowest sleep time and handle the command or timer event.
@@ -357,8 +395,7 @@ public:
     Thread(const char *name, size_t stack_size, size_t queue_set_size, int priority = 5, Cpu preferred_cpu = Cpu::CPU_ANY) : _name(name),
                                                                                                                              _stack_size(stack_size),
                                                                                                                              _priority(priority),
-                                                                                                                             _preferred_cpu(preferred_cpu),
-                                                                                                                             _queue_set_size(queue_set_size)
+                                                                                                                             _preferred_cpu(preferred_cpu), _queue_set_size(queue_set_size)
     {
     }
     const char *name() { return _name.c_str(); }
@@ -370,7 +407,6 @@ public:
     void handle_expired_timers();
 };
 
-
 typedef struct PropInfo
 {
     const char *name;
@@ -380,5 +416,9 @@ typedef struct PropInfo
     Option<float> min;
     Option<float> max;
 } PropInfo;
+
+MSG(StopActorMsg);
+
+
 
 #endif

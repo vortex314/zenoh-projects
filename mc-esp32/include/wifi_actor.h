@@ -6,6 +6,13 @@
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
+
+
+
+MSG(WifiFire, float temp;  float speed;);
+MSG(WifiConnected,std::string ip);
+MSG(WifiDisconnected);
+
 class WifiActor : public Actor
 {
 private:
@@ -25,9 +32,9 @@ public:
   WifiActor();
   WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~WifiActor();
-  void on_cmd(const Value& cmd);
-  void on_timer(int timer_id);
+  void on_message(ActorRef &sender, const Msg &message);
   void on_start();
+  void handle_timer(int id);
   Res net_init();
   Res wifi_set_config(const char *ssid, const char *password);
   Result<Value> pubish_props(esp_netif_t *esp_netif);

@@ -1,5 +1,48 @@
 
 #include <actor.h>
+#include <queue>
+
+class SpeedMsg : public Msg
+{
+public:
+    static constexpr uint32_t id = FILE_LINE_HASH;          // Unique ID based on file and line number
+    inline uint32_t type_id() const override { return id; } // Default implementation, can be overridden
+    ~SpeedMsg() = default;
+    float speed;
+    float direction;
+    SpeedMsg(float speed, float direction) : speed(speed), direction(direction) {};
+};
+
+class NullActor : public Actor
+{
+public:
+    NullActor(size_t qd) : Actor(qd) {}
+    void on_start()
+    {
+        INFO(" NullActor started")
+    }
+    void on_message(ActorRef &sender, const Msg &msg)
+    {
+        handle<Msg>(msg, [](const Msg &msg)
+                    { INFO("Message for NullActor "); });
+        handle<TimerMsg>(msg, [](const TimerMsg &msg)
+                         { INFO("Message for NullActor "); });
+    };
+};
+
+NullActor null_actor(0);
+
+void tester1()
+{
+    Queue<MsgContext*> channel(8);
+    MsgContext* mc = new MsgContext(null_actor.ref(),new TimerMsg(10));
+    channel.send(mc, 100);
+    MsgContext* msg_context;
+    channel.receive(msg_context, 100);
+    handle<TimerMsg>(*msg_context->pmsg, [](const TimerMsg &v) {});
+    delete msg_context->pmsg;
+    delete msg_context;
+}
 
 void panic_here(const char *s)
 {
@@ -177,14 +220,14 @@ Res Thread::start()
     }
     INFO(" starting Thread %s on core %d ", name(), xCoreID);
     _queue_set = xQueueCreateSet(_queue_set_size);
-    for (ThreadSupport* actor : _actors)
+    for (ThreadSupport *actor : _actors)
     {
         auto r = xQueueAddToSet(actor->queue_handle(), _queue_set);
         if (r != pdPASS)
         {
             panic_here("Failed to add actor to queue set");
 
-            return Res(-1,"xQueueAddToSet failed" );
+            return Res(-1, "xQueueAddToSet failed");
         }
     }
 
