@@ -16,14 +16,33 @@
 #include <value.h>
 #include <result.h>
 #include <memory>
+#include <stdint.h>
 #pragma once
 
 uint64_t current_time();
 
+class ActorRef
+{
+    const char *_actor_name;
+
+public:
+    ActorRef() = delete;
+    constexpr ActorRef(const char *name) : _actor_name(name) {};
+    ActorRef(const ActorRef &other) : _actor_name(other._actor_name) {};
+    bool operator==(ActorRef &other) { return _actor_name == other._actor_name; }; // matches same id
+    void operator=(ActorRef other) { _actor_name = other._actor_name; }
+    bool match_name(ActorRef &other) { return strcmp(_actor_name, other._actor_name) == 0; };
+    inline const char *name() const { return _actor_name; };
+};
+
+ActorRef NULL_ACTOR = ActorRef("null");
+
 class Msg
 {
 public:
-    virtual const char*  type_id() const = 0;
+    ActorRef src = ActorRef("null");
+    ActorRef dst = ActorRef("null");
+    virtual const char *type_id() const = 0;
     virtual ~Msg() = default;
     template <typename T>
     void handle(std::function<void(const T &)> f) const
@@ -36,14 +55,14 @@ public:
     }
 };
 
-#define MSG(MSG_TYPE, ...)                                       \
-    class MSG_TYPE : public Msg                                  \
-    {                                                            \
-    public:                                                      \
-        static constexpr const char* id = STRINGIZE(MSG_TYPE);   \
-        inline const char* type_id() const override { return id; }; \
-        ~MSG_TYPE() = default;                                   \
-        __VA_ARGS__;                                             \
+#define MSG(MSG_TYPE, ...)                                          \
+    class MSG_TYPE : public Msg                                     \
+    {                                                               \
+    public:                                                         \
+        static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
+        inline const char *type_id() const override { return id; }; \
+        ~MSG_TYPE() = default;                                      \
+        __VA_ARGS__;                                                \
     }
 
 MSG(TimerMsg, int timer_id);
@@ -85,9 +104,9 @@ public:
         return xQueueSendFromISR(queue, &qt, nullptr) == pdTRUE;
     }
 
-    bool receive(T &qt, TickType_t timeout = portMAX_DELAY)
+    bool receive(T *qt, TickType_t timeout = portMAX_DELAY)
     {
-        if (xQueueReceive(queue, &qt, timeout) == pdTRUE)
+        if (xQueueReceive(queue, qt, timeout) == pdTRUE)
         {
             return true;
         };
@@ -174,168 +193,91 @@ public:
     virtual QueueHandle_t queue_handle() = 0;
     Option<QueueHandle_t> additional_queue() { return Option<QueueHandle_t>::None(); }
     virtual uint64_t sleep_time() = 0;
-    virtual void handle_all_cmd() = 0;
     virtual void handle_expired_timers() = 0;
     virtual const char *name() = 0;
     virtual ~ThreadSupport() = default;
 };
 
-class ActorRef;
-typedef struct MsgContext
-{
-    std::shared_ptr<Queue<MsgContext *>> sender_queue;
-    Msg *pmsg;
-
-    MsgContext(std::shared_ptr<Queue<MsgContext *>> sender_queue, Msg *pmsg) : sender_queue(sender_queue), pmsg(pmsg) {};
-    MsgContext(const MsgContext &other)
-    {
-        sender_queue = other.sender_queue;
-        pmsg = other.pmsg; // Shallow copy, assuming pmsg is managed elsewhere
-    }
-    MsgContext(ActorRef sender, Msg *pmsg) ;
-} MsgContext;
-
-class ActorRef
-{
-public:
-    std::shared_ptr<Queue<MsgContext *>> queue;
-
-    bool tell(ActorRef me, Msg *ms)
-    {
-        auto v = new MsgContext(me.queue, ms);
-        return queue->send(v);
-    }
-    ActorRef(std::shared_ptr<Queue<MsgContext *>> queue) : queue(queue) {}
-};
-
-MSG(AddListener);
-
-
-class Actor : public ThreadSupport
+class Actor
 {
 private:
-    std::shared_ptr<Queue<MsgContext *>> _queue;
     ActorRef _self;
-    std::vector<ActorRef> _listeners;
-
     Timers _timers;
-    bool _stop_actor = false;
-    TaskHandle_t _task_handle;
-    size_t _stack_size;
-    int _priority;
-    std::string _name;
+    EventBus* eventbus=nullptr;
 
 public:
-    virtual void on_start() { INFO("actor %s default started.", _name.c_str()); }
-    virtual void on_stop() { INFO("actor %s default stopped.", _name.c_str()); }
-    virtual void on_message(ActorRef &sender, const Msg &message)
+    virtual void on_start() { INFO("actor %s default started.", _self.name()); }
+    virtual void on_stop() { INFO("actor %s default stopped.", _self.name()); }
+    virtual void on_message(const Msg &message)
     {
-        WARN(" No message handler for actor %s ", _name.c_str());
+        WARN(" No message handler for actor %s ", _self.name());
     }
+    void emit(const Msg* msg);
+    void set_eventbus(EventBus* eventbus);
 
-    Actor(size_t stack_size, const char *name, int priority, size_t queue_depth)
-        : _queue(std::make_shared<Queue<MsgContext *>>(queue_depth)),
-          _self(ActorRef(_queue)),
-          _stack_size(stack_size),
-          _priority(priority),
-          _name(name)
-    {
-    }
+    Actor(const char *name) : _self(name) {};
 
     ActorRef ref()
     {
         return _self;
     }
 
-    QueueHandle_t queue_handle() override { return _queue->getQueue(); }
-    uint64_t sleep_time() override { return _timers.sleep_time(); }
-    void handle_all_cmd() override
-    {
-        MsgContext *msg_context;
-        if (_queue->receive(msg_context))
-        {
-            auto ref = ActorRef(msg_context->sender_queue);
-            msg_context->pmsg->handle<AddListener>([&](const AddListener &msg)
-                                                   { _listeners.push_back(msg.listener); });
-            on_message(ref, *msg_context->pmsg);
-            delete msg_context->pmsg;
-            delete msg_context; // Clean up the command after processing
-        }
-    };
-    void handle_expired_timers() override
+    uint64_t sleep_time() { return _timers.sleep_time(); }
+
+    void handle_expired_timers()
     {
         for (int id : _timers.get_expired_timers())
         {
             TimerMsg timer_msg;
             timer_msg.timer_id = id;
-            on_message(_self, timer_msg);
+            timer_msg.src = NULL_ACTOR;
+            on_message(timer_msg);
             _timers.refresh(id);
         }
     };
 
-    void emit(Msg &msg)
-    {
-        for (ActorRef listener : _listeners)
-        {
-            listener.tell(_self, &msg); // TODO will lead to double free
-        }
-    }
+    void emit(Msg &msg);
 
-    const char *name() { return _name.c_str(); }
-
-    Actor(size_t queue_depth) : Actor(1024, FILE_LINE_STR, 1, queue_depth) {}
+    const char *name() { return _self.name(); }
 
     ~Actor()
     {
         INFO("Destroying actor %s", name());
-        stop();
-        vTaskDelay(1000);
-        // xTaskDelete(_task_handle);
     }
 
-    void start()
-    {
-        xTaskCreate(
-            [](void *arg)
-            {
-                auto self = static_cast<Actor *>(arg);
-                self->loop();
-            },
-            name(), _stack_size, this, 5, &_task_handle);
-    }
-
-    void loop()
-    {
-        INFO("starting actor %s", name());
-        on_start();
-        while (!_stop_actor)
+    void loop() {};
+    /*
+        void loop()
         {
-            MsgContext *msg_context;
-            INFO("Actor %s waiting for command during %d", name(), _timers.sleep_time());
-            if (_queue->receive(msg_context, _timers.sleep_time()))
+            INFO("starting actor %s", name());
+            on_start();
+            while (!_stop_actor)
             {
-                auto ref = ActorRef(msg_context->sender_queue);
-                on_message(ref, *msg_context->pmsg);
-                delete msg_context; // Clean up the command after processing
-            }
-            else
-            {
-                for (int id : _timers.get_expired_timers())
+                MsgContext *msg_context;
+                INFO("Actor %s waiting for command during %d", name(), _timers.sleep_time());
+                if (_queue->receive(msg_context, _timers.sleep_time()))
                 {
-                    TimerMsg timer_msg;
-                    timer_msg.timer_id = id;
-                    on_message(_self, timer_msg);
-                    _timers.refresh(id);
+                    auto ref = ActorRef(msg_context->sender_queue);
+                    on_message(ref, *msg_context->pmsg);
+                    delete msg_context; // Clean up the command after processing
+                }
+                else
+                {
+                    for (int id : _timers.get_expired_timers())
+                    {
+                        TimerMsg timer_msg;
+                        timer_msg.timer_id = id;
+                        on_message(_self, timer_msg);
+                        _timers.refresh(id);
+                    }
                 }
             }
+            INFO("stopping actor %s", name());
+            on_stop();
         }
-        INFO("stopping actor %s", name());
-        on_stop();
-    }
-
+    */
     void stop()
     {
-        _stop_actor = true;
     }
     int timer_one_shot(uint64_t delay)
     {
@@ -362,8 +304,6 @@ public:
         _timers.fire(id, delay);
     }
 };
-
-typedef MsgContext *QueueType;
 
 /*
 
@@ -402,7 +342,6 @@ public:
     Res add_actor(ThreadSupport &actor);
     void run();
     void step();
-    void handle_all_cmd();
     void handle_expired_timers();
 };
 
@@ -416,8 +355,82 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
+class EventBus : public Queue<Msg *>
+{
+    std::vector<Actor *> _actors;
+    size_t _stack_size = 1024;
+    TaskHandle_t _task_handle;
+
+public:
+    EventBus(size_t size);
+    void push(Msg *msg);
+    void register_actor(Actor *);
+    void loop();
+    void start();
+};
+
+EventBus::EventBus(size_t size) : Queue<Msg *>(size) {};
+
+void EventBus::push(Msg *msg)
+{
+    send(msg);
+}
+
+void EventBus::loop()
+{
+    Msg *pmsg;
+    for (Actor *actor : _actors)
+    {
+        actor->on_start();
+    }
+    while (true)
+    {
+        if (receive(&pmsg, 100))
+        {
+            for (Actor *actor : _actors)
+            {
+                actor->on_message(*pmsg);
+            }
+            delete pmsg;
+        }
+    }
+}
+
+void EventBus::start()
+{
+    xTaskCreate(
+        [](void *arg)
+        {
+            auto self = static_cast<EventBus *>(arg);
+            self->loop();
+        },
+        "EventBus", _stack_size, this, 5, &_task_handle);
+}
+
+template <typename T>
+TaskHandle_t start_freertos_task(T *this_ptr, const char *task_name, uint32_t stack_depth = 2048, uint32_t priority = 5, )
+{
+    TaskHandle_t _task_handle;
+    xTaskCreate(
+        [](void *arg)
+        {
+            auto self = static_cast<T *>(arg);
+            self->loop();
+        },
+        task_name, _stack_size, this, 5, &_task_handle);
+    return _task_handle;
+}
+
+void EventBus::register_actor(Actor *actor)
+{
+    _actors.push_back(actor);
+    actor->set_eventbus(this);
+}
+
+extern EventBus eventbus;
+
 MSG(StopActorMsg);
-MSG(PublishMsg, std::string topic; Value v);
+MSG(PublishMsg, std::string topic; Value value);
 MSG(SubscribeMsg, std::string topic);
 
 #endif

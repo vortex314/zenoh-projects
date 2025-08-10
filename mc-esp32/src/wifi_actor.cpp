@@ -27,9 +27,9 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : WifiActor("wifi", 4096, 5, 5) {}
+WifiActor::WifiActor() : WifiActor("wifi") {}
 
-WifiActor::WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
+WifiActor::WifiActor(const char *name) : Actor(name)
 {
   _timer_publish = timer_repetitive(1000);
   //  _timer_publish_props = timer_repetitive(5000);
@@ -80,8 +80,6 @@ void WifiActor::on_start()
 
 void WifiActor::on_message(ActorRef &sender, const Msg &message)
 {
-
-
   message.handle<TimerMsg>([&](const TimerMsg &msg)
                            { handle_timer(msg.timer_id); });
 }

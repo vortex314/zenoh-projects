@@ -62,7 +62,7 @@ pub enum ClientCmd {
 pub enum ClientEvent {
     ReceivedMc(Value),  //..
     ReceivedUdp(Value), //..
-    Publish(Value),
+    Publish(String,Value),
 }
 
 struct ObjectInfo {

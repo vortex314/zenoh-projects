@@ -46,22 +46,24 @@ void SysActor::set_utc(int64_t utc)
     // Print with microseconds
     INFO("Current time: %s", buffer);
 }
-void SysActor::on_cmd(const Value& cmd)
+void SysActor::on_message(const Msg &msg)
 {
-    cmd["action"]["reboot"].handle<bool>([&](auto value)
-                                         { esp_restart(); });
-
-    cmd["pub"]["utc"].handle<int64_t>([&](const int64_t &utc)
-                                          { set_utc(utc); });
+    msg.handle<SysReboot>([](auto v)
+                          { esp_restart(); });
+    msg.handle<PublishMsg>([&](auto publish)
+                           { publish.value["pub"]["utc"].handle<int64_t>([&](const int64_t &utc)
+                                                                         { set_utc(utc); }); });
 }
 void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        Value v ;
-        publish_props().inspect([&](const Value &props)
-                                { v["pub"] = props; });
-        emit(new PublishMsg {"my_topic",v }));
+        PublishMsg* pm = new PublishMsg();
+        pm->src = ref();
+        pm->topic = ref().name();
+        pm->value = publish_props().unwrap();
+
+        emit(pm);
     }
     else
     {

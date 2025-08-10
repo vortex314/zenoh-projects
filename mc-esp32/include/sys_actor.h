@@ -5,6 +5,8 @@
 #include <vector>
 #include <value.h>
 
+MSG(SysReboot);
+
 class SysActor : public Actor
 {
 private:
@@ -15,7 +17,7 @@ public:
   SysActor();
   SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~SysActor();
-  void on_cmd(const Value&  );
+  void on_message(const Msg& msg);
   void on_timer(int timer_id);
   Result<Value> publish_props();
   void set_utc(int64_t utc);

@@ -6,6 +6,11 @@
 #define GPIO_LED GPIO_NUM_2
 #endif
 
+MSG(LedBlink,uint32_t interval_msec);
+MSG(LedOff);
+MSG(LedOn);
+MSG(LedPulse,uint32_t duration_msec);
+
 class LedActor : public Actor {
     typedef enum State {
         LED_STATE_OFF,
@@ -19,10 +24,9 @@ class LedActor : public Actor {
     bool _led_is_on = false;
     int _timer_led = -1;
 public:
-    LedActor();
-    LedActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+    LedActor(const char* name);
     ~LedActor();
-    void on_cmd(const Value& sv);
+    void on_message(const Msg& msg);
     void on_timer(int timer_id);
     void on_start();
 };

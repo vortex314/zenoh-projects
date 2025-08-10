@@ -2,48 +2,24 @@
 #include <actor.h>
 #include <queue>
 
-MsgContext::MsgContext(ActorRef sender, Msg *pmsg) : sender_queue(sender.queue), pmsg(pmsg) {};
+MSG(TestMsg,float speed;uint32_t rpm);
 
-class SpeedMsg : public Msg
-{
-public:
-    static constexpr uint32_t id = FILE_LINE_HASH;          // Unique ID based on file and line number
-    inline uint32_t type_id() const override { return id; } // Default implementation, can be overridden
-    ~SpeedMsg() = default;
-    float speed;
-    float direction;
-    SpeedMsg(float speed, float direction) : speed(speed), direction(direction) {};
+class TestActor : public Actor {
+    public: 
+        TestActor(const char* name) : Actor(name) {};
+        void on_message(const Msg& msg) {
+            INFO("Msg %s => %s : %s ",msg.src.name(),msg.dst.name(),msg.type_id());
+        }
 };
-
-class NullActor : public Actor
-{
-public:
-    NullActor(size_t qd) : Actor(qd) {}
-    void on_start()
-    {
-        INFO(" NullActor started")
-    }
-    void on_message(ActorRef &sender, const Msg &msg)
-    {
-
-        msg.handle<TimerMsg>([](const TimerMsg &msg)
-                         { INFO("Message for NullActor "); });
-    };
-};
-
-NullActor null_actor(0);
 
 void tester1()
 {
-    Queue<MsgContext *> channel(8);
-    MsgContext *mc = new MsgContext(null_actor.ref(), new TimerMsg());
-    channel.send(mc, 100);
-    MsgContext *msg_context;
-    channel.receive(msg_context, 100);
-    msg_context->pmsg->handle<SpeedMsg>([](const SpeedMsg &v)
-                                        { INFO("Speed: %f, Direction: %f", v.speed, v.direction); });
-    delete msg_context->pmsg;
-    delete msg_context;
+    EventBus eb(10);
+    eb.register_actor(new TestActor("tester"));
+
+    eb.push(new TestMsg);
+    eb.loop();
+
 }
 
 void panic_here(const char *s)
