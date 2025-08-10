@@ -64,8 +64,7 @@ public:
   McActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
   ~McActor();
   void run();
-  void on_timer(int id);
-  void on_cmd(const Value &);
+  void on_message(ActorRef &sender, const Msg &message) override;
   void on_start() override;
   void prefix(const char *prefix);
   bool is_connected() const;

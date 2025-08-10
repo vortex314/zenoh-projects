@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_event.h"
 #include "nvs_flash.h"
+#include <wifi_actor.h>
 #include "esp_netif.h"
 
 static int create_multicast_socket();
@@ -60,6 +61,25 @@ void McActor::on_timer(int id)
   }
   else
     INFO("Unknown timer id: %d", id);
+}
+
+void McActor::on_message(ActorRef &sender, const Msg &message)
+{
+  message.handle<McSend>([&](const McSend &msg)
+                         {
+    INFO("Received multicast message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
+    emit(msg.value); // Emit the received value to listeners
+  });
+
+  message.handle<TimerMsg>([&](const TimerMsg &msg)
+                           {
+    on_timer(msg.timer_id);
+  });
+
+  message.handle<WifiConnected>([&](const Value &cmd)
+                        {
+    on_cmd(cmd);
+  });
 }
 
 void McActor::on_cmd(const Value &cmd)

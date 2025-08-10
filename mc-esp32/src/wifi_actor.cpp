@@ -78,10 +78,14 @@ void WifiActor::on_start()
   }
 }
 
-void WifiActor::on_cmd(const Value& cmd)
+void WifiActor::on_message(ActorRef &sender, const Msg &message)
 {
- cmd["stop_actor"].handle<bool>([&](auto b ){stop();});
+
+
+  message.handle<TimerMsg>([&](const TimerMsg &msg)
+                           { handle_timer(msg.timer_id); });
 }
+
 
 void WifiActor::handle_timer(int timer_id)
 {
@@ -144,7 +148,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     INFO("WiFi STA disconnected");
-    actor->emit(new WifiDisconnected );
+    actor->emit(new WifiDisconnected() );
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
     {

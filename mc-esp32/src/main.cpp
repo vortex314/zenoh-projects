@@ -33,7 +33,7 @@ Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 Log logger;
 
 // void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-void publish(const char *topic, const Value &value)
+/*void publish(const char *topic, const Value &value)
 {
   if (!mc_actor.is_connected())
   {
@@ -43,13 +43,13 @@ void publish(const char *topic, const Value &value)
   Value mc_cmd;
   mc_cmd["publish_string"] = std::move(value);
   mc_cmd["publish_string"]["src"] = topic;
-  mc_actor.tell(mc_cmd);
+  mc_actor.ref().tell(new PublishMsg{std::string(topic), mc_cmd});
   // pulse led when we publish
   Value led_cmd;
   led_cmd["action"] = "PULSE";
   led_cmd["duration"] = 10;
   led_actor.tell(led_cmd);
-}
+}*/
 esp_err_t nvs_init();
 /*
 | WIFI | = connect/disconnect => | ZENOH | ( set up session )
@@ -69,7 +69,9 @@ extern "C" void app_main()
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
-  wifi_actor.ref().tell( new AddListenerMsg( mc_actor.ref() ) );
+  wifi_actor.ref().tell( mc_actor.ref(),new AddListener() );
+  sys_actor.ref().tell( mc_actor.ref(),new AddListener() );
+  
 
 
   // WiFi connectivity starts and stops zenoh connection

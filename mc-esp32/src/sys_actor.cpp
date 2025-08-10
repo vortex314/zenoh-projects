@@ -61,7 +61,7 @@ void SysActor::on_timer(int id)
         Value v ;
         publish_props().inspect([&](const Value &props)
                                 { v["pub"] = props; });
-        emit(new PublishMsg("my_topic"),v);
+        emit(new PublishMsg {"my_topic",v }));
     }
     else
     {

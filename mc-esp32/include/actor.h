@@ -23,23 +23,32 @@ uint64_t current_time();
 class Msg
 {
 public:
-    virtual uint32_t type_id() const = 0;
+    virtual const char*  type_id() const = 0;
     virtual ~Msg() = default;
+    template <typename T>
+    void handle(std::function<void(const T &)> f) const
+    {
+        if (type_id() == T::id)
+        {
+            const T &msg = static_cast<const T &>(*this);
+            f(msg);
+        }
+    }
 };
 
-#define MSG(MSG_TYPE, ...)                                   \
-  class MSG_TYPE : public Msg                                \
-  {                                                          \
-  public:                                                    \
-    static constexpr uint32_t id = H(STRINGIZE(MSG_TYPE));   \
-    inline uint32_t type_id() const override { return id; }; \
-    ~MSG_TYPE() = default;                                   \
-    __VA_ARGS__;                                             \
-  }
+#define MSG(MSG_TYPE, ...)                                       \
+    class MSG_TYPE : public Msg                                  \
+    {                                                            \
+    public:                                                      \
+        static constexpr const char* id = STRINGIZE(MSG_TYPE);   \
+        inline const char* type_id() const override { return id; }; \
+        ~MSG_TYPE() = default;                                   \
+        __VA_ARGS__;                                             \
+    }
 
-MSG(TimerMsg,int timer_id);
+MSG(TimerMsg, int timer_id);
 
-template <typename T>
+/*template <typename T>
 void handle(const Msg &message, std::function<void(const T &)> f)
 {
     if (message.type_id() == T::id)
@@ -47,8 +56,7 @@ void handle(const Msg &message, std::function<void(const T &)> f)
         T &msg = (T &)message;
         f(msg);
     }
-}
-
+}*/
 
 template <class T>
 class Queue
@@ -172,37 +180,27 @@ public:
     virtual ~ThreadSupport() = default;
 };
 
-/*
-
-Actor usage as independent threads
-
-Create actor - Run actor
-
-
-Actor actor = Actor(4000, "actor", 5, 10);
-actor.on_event([](Event &event) {
-    INFO("Event received");
-});
-actor.start();
-
-The start method creates a thread dedicated to the actor. The actor will run in the thread until the stop method is called.
-The base actor only passes pointers through the queue to the actor. The actor is responsible for deleting the message.
-
-*/
+class ActorRef;
 typedef struct MsgContext
 {
     std::shared_ptr<Queue<MsgContext *>> sender_queue;
     Msg *pmsg;
 
     MsgContext(std::shared_ptr<Queue<MsgContext *>> sender_queue, Msg *pmsg) : sender_queue(sender_queue), pmsg(pmsg) {};
+    MsgContext(const MsgContext &other)
+    {
+        sender_queue = other.sender_queue;
+        pmsg = other.pmsg; // Shallow copy, assuming pmsg is managed elsewhere
+    }
+    MsgContext(ActorRef sender, Msg *pmsg) ;
 } MsgContext;
 
 class ActorRef
 {
+public:
     std::shared_ptr<Queue<MsgContext *>> queue;
 
-public:
-    bool tell(ActorRef& me, Msg *ms)
+    bool tell(ActorRef me, Msg *ms)
     {
         auto v = new MsgContext(me.queue, ms);
         return queue->send(v);
@@ -210,7 +208,7 @@ public:
     ActorRef(std::shared_ptr<Queue<MsgContext *>> queue) : queue(queue) {}
 };
 
-MSG(AddListener,ActorRef listener);
+MSG(AddListener);
 
 
 class Actor : public ThreadSupport
@@ -257,9 +255,8 @@ public:
         if (_queue->receive(msg_context))
         {
             auto ref = ActorRef(msg_context->sender_queue);
-            handle<AddListener>(*msg_context->pmsg,[&](const AddListener& msg ){
-                _listeners.push_back(msg.listener);
-            });
+            msg_context->pmsg->handle<AddListener>([&](const AddListener &msg)
+                                                   { _listeners.push_back(msg.listener); });
             on_message(ref, *msg_context->pmsg);
             delete msg_context->pmsg;
             delete msg_context; // Clean up the command after processing
@@ -270,15 +267,17 @@ public:
         for (int id : _timers.get_expired_timers())
         {
             TimerMsg timer_msg;
-            timer_msg.timer_id =id;
+            timer_msg.timer_id = id;
             on_message(_self, timer_msg);
             _timers.refresh(id);
         }
     };
 
-    void emit(Msg& msg){
-        for ( ActorRef listener : _listeners ){
-            listener.tell(_self,&msg); //TODO will lead to double free
+    void emit(Msg &msg)
+    {
+        for (ActorRef listener : _listeners)
+        {
+            listener.tell(_self, &msg); // TODO will lead to double free
         }
     }
 
@@ -324,7 +323,7 @@ public:
                 for (int id : _timers.get_expired_timers())
                 {
                     TimerMsg timer_msg;
-                    timer_msg.timer_id=id;
+                    timer_msg.timer_id = id;
                     on_message(_self, timer_msg);
                     _timers.refresh(id);
                 }
@@ -418,7 +417,7 @@ typedef struct PropInfo
 } PropInfo;
 
 MSG(StopActorMsg);
-MSG(PublishMsg,std::string topic;Value v);
-
+MSG(PublishMsg, std::string topic; Value v);
+MSG(SubscribeMsg, std::string topic);
 
 #endif

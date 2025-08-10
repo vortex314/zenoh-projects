@@ -2,6 +2,8 @@
 #include <actor.h>
 #include <queue>
 
+MsgContext::MsgContext(ActorRef sender, Msg *pmsg) : sender_queue(sender.queue), pmsg(pmsg) {};
+
 class SpeedMsg : public Msg
 {
 public:
@@ -23,9 +25,8 @@ public:
     }
     void on_message(ActorRef &sender, const Msg &msg)
     {
-        handle<Msg>(msg, [](const Msg &msg)
-                    { INFO("Message for NullActor "); });
-        handle<TimerMsg>(msg, [](const TimerMsg &msg)
+
+        msg.handle<TimerMsg>([](const TimerMsg &msg)
                          { INFO("Message for NullActor "); });
     };
 };
@@ -34,12 +35,13 @@ NullActor null_actor(0);
 
 void tester1()
 {
-    Queue<MsgContext*> channel(8);
-    MsgContext* mc = new MsgContext(null_actor.ref(),new TimerMsg(10));
+    Queue<MsgContext *> channel(8);
+    MsgContext *mc = new MsgContext(null_actor.ref(), new TimerMsg());
     channel.send(mc, 100);
-    MsgContext* msg_context;
+    MsgContext *msg_context;
     channel.receive(msg_context, 100);
-    handle<TimerMsg>(*msg_context->pmsg, [](const TimerMsg &v) {});
+    msg_context->pmsg->handle<SpeedMsg>([](const SpeedMsg &v)
+                                        { INFO("Speed: %f, Direction: %f", v.speed, v.direction); });
     delete msg_context->pmsg;
     delete msg_context;
 }
