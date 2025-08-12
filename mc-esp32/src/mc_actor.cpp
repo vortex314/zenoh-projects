@@ -1,19 +1,5 @@
 #include <mc_actor.h>
 
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_log.h"
-#include "esp_event.h"
-#include "nvs_flash.h"
-#include <wifi_actor.h>
-#include "esp_netif.h"
-
 static int create_multicast_socket();
 
 void send()
@@ -21,15 +7,10 @@ void send()
   auto msg = McSend("test/topic", Value("Hello, World!"));
   msg.topic = "test/topic";
   msg.value = Value("Hello, World!");
-  if (msg.type_id() == McSend::_id)
-  {
-    INFO("Message ID matches McSend ID");
-  }
-  else
-  {
-    INFO("Message ID does not match McSend ID");
-  }
-  INFO("Sending message: %s", msg.value.toJson().c_str());
+  msg.handle<McSend>([&](const McSend& m){
+    INFO("Sending message: %s", msg.value.toJson().c_str());
+  });
+  
 }
 
 McActor::McActor(const char *name)
@@ -72,7 +53,7 @@ void McActor::on_message(const Msg &message)
   message.handle<WifiConnected>([&](auto _)
                                 { on_wifi_connected(); });
   message.handle<WifiDisconnected>([&](auto _)
-                                { disconnect(); });
+                                   { disconnect(); });
 }
 
 void McActor::on_wifi_connected()
@@ -84,7 +65,7 @@ void McActor::on_wifi_connected()
     {
       INFO("Failed to connect to Mc: %s", res.msg());
       //          vTaskDelay(1000 / portTICK_PERIOD_MS);
-      //tell(cmd); // tell myself to get connected
+      // tell(cmd); // tell myself to get connected
     }
     else
     {
@@ -92,8 +73,6 @@ void McActor::on_wifi_connected()
     }
   }
 }
-
-
 
 Result<TaskHandle_t> McActor::start_receiver_task()
 {
@@ -143,7 +122,7 @@ void McActor::receiver_task(void *pv)
         res_msg.inspect([&](auto v)
                         {
           v["from_ip"]=ip4addr_to_str(ip_addr);
-          std::string topic = v["src"].as<std::string>();
+          std::string topic = v["src"].as<Value::StringType>();
           mc_actor->emit(new PublishMsg(mc_actor->ref(),topic,v)); });
       }
     }
@@ -192,8 +171,7 @@ Res McActor::publish_props()
   }
   Value v, publish;
   get_props(publish);
-  v["pub"] = publish;
-  emit(v);
+  emit(new PublishMsg(ref(), "multicast", publish));
   return ResOk;
 }
 

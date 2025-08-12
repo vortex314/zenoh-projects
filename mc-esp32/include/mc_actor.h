@@ -25,6 +25,18 @@
 #include <freertos/timers.h>
 #include <freertos/task.h>
 #include <esp_wifi.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#include "esp_log.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include <wifi_actor.h>
+#include "esp_netif.h"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -36,15 +48,7 @@
 
 extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
-struct McSend : Msg
-{
-  constexpr static const char*  _id = "McSend";
-  const char* type_id() const { return _id; }
-  McSend() = default;
-  McSend(const std::string &topic, const Value &value) : topic(topic), value(value) {}
-  std::string topic;
-  Value value;
-};
+MSG(McSend, std::string topic; Value value; McSend(const std::string &topic, const Value &value) : topic(topic), value(value){});
 
 void send();
 

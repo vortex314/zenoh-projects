@@ -1,3 +1,5 @@
+#ifndef _WIFI_ACTOR_H_
+#define _WIFI_ACTOR_H_
 #include <actor.h>
 #include <esp_event.h>
 #include <esp_wifi.h>
@@ -39,3 +41,5 @@ public:
   Res scan();
   Res connect();
 };
+
+#endif
