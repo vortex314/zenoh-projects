@@ -1,3 +1,6 @@
+#ifndef LED_ACTOR_H
+#define LED_ACTOR_H
+
 #include <actor.h>
 #include <driver/gpio.h>
 #include <soc/gpio_num.h>
@@ -9,7 +12,7 @@
 MSG(LedBlink,uint32_t interval_msec);
 MSG(LedOff);
 MSG(LedOn);
-MSG(LedPulse,uint32_t duration_msec);
+MSG(LedPulse,uint32_t duration_msec;LedPulse(const ActorRef &src, uint32_t duration_msec) : duration_msec(duration_msec) { this->src = src; });
 
 class LedActor : public Actor {
     typedef enum State {
@@ -31,3 +34,4 @@ public:
     void on_start();
 };
     
+#endif

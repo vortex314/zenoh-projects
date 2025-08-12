@@ -35,13 +35,13 @@ public:
     inline const char *name() const { return _actor_name; };
 };
 
-ActorRef NULL_ACTOR = ActorRef("null");
+extern ActorRef NULL_ACTOR ;
 
 class Msg
 {
 public:
-    ActorRef src = ActorRef("null");
-    ActorRef dst = ActorRef("null");
+    ActorRef src = NULL_ACTOR;
+    ActorRef dst = NULL_ACTOR;
     virtual const char *type_id() const = 0;
     virtual ~Msg() = default;
     template <typename T>
@@ -201,16 +201,21 @@ public:
 
 class Actor;
 
-class EventBus : public Queue<Msg *>
+class EventBus : public Queue<const Msg *>
 {
     std::vector<Actor *> _actors;
+    std::vector<std::function<void(const Msg &)>> _message_handlers;
     size_t _stack_size = 1024;
     TaskHandle_t _task_handle;
 
 public:
     EventBus(size_t size);
-    void push(Msg *msg);
+    void push(const Msg *msg);
     void register_actor(Actor *);
+    void register_message_handler(std::function<void(const Msg &)> handler)
+    {
+        _message_handlers.push_back(handler);
+    }
     void loop();
     void start();
 };
@@ -232,6 +237,7 @@ public:
     {
         WARN(" No message handler for actor %s ", _self.name());
     }
+    std::vector<int> get_expired_timers() { return _timers.get_expired_timers(); }
     void emit(const Msg *msg);
     void set_eventbus(EventBus *eventbus);
 
@@ -250,7 +256,7 @@ public:
         {
             TimerMsg timer_msg;
             timer_msg.timer_id = id;
-            timer_msg.src = NULL_ACTOR;
+            timer_msg.dst = ref();
             on_message(timer_msg);
             _timers.refresh(id);
         }
@@ -375,56 +381,10 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
-extern EventBus eventbus;
-
-
-EventBus::EventBus(size_t size) : Queue<Msg *>(size) {};
-
-void EventBus::push(Msg *msg)
-{
-    send(msg);
-}
-
-void EventBus::loop()
-{
-    Msg *pmsg;
-    for (Actor *actor : _actors)
-    {
-        actor->on_start();
-    }
-    while (true)
-    {
-        if (receive(&pmsg, 100))
-        {
-            for (Actor *actor : _actors)
-            {
-                actor->on_message(*pmsg);
-            }
-            delete pmsg;
-        }
-    }
-}
-
-void EventBus::start()
-{
-    xTaskCreate(
-        [](void *arg)
-        {
-            auto self = static_cast<EventBus *>(arg);
-            self->loop();
-        },
-        "EventBus", _stack_size, this, 5, &_task_handle);
-}
-
-void EventBus::register_actor(Actor *actor)
-{
-    _actors.push_back(actor);
-    actor->set_eventbus(this);
-}
-
 
 MSG(StopActorMsg);
 MSG(PublishMsg, std::string topic; Value value; PublishMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
+MSG(PublishRxdMsg, std::string topic; Value value; PublishRxdMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
 MSG(SubscribeMsg, std::string topic);
 
 #endif

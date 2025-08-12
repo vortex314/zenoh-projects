@@ -37,6 +37,7 @@
 #include "nvs_flash.h"
 #include <wifi_actor.h>
 #include "esp_netif.h"
+#include <led_actor.h>
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"

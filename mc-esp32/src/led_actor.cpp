@@ -3,7 +3,7 @@
 #define LED_ON_VALUE 1
 #define LED_OFF_VALUE 0
 
-LedActor::LedActor(const char* name) : Actor(name) { _timer_led = timer_repetitive(_duration); }
+LedActor::LedActor(const char *name) : Actor(name) { _timer_led = timer_repetitive(_duration); }
 
 LedActor::~LedActor()
 {
@@ -36,6 +36,8 @@ void LedActor::on_message(const Msg &msg)
         _led_is_on = true;
         gpio_set_level(GPIO_LED, LED_ON_VALUE);
         timer_fire(_timer_led, _duration); });
+    msg.handle<TimerMsg>([&](const TimerMsg &msg)
+                         { on_timer(msg.timer_id); });
 }
 
 void LedActor::on_timer(int timer_id)

@@ -2,14 +2,35 @@
 #include <actor.h>
 #include <queue>
 
-MSG(TestMsg,float speed;uint32_t rpm);
+MSG(TestMsg, float speed; uint32_t rpm);
 
-class TestActor : public Actor {
-    public: 
-        TestActor(const char* name) : Actor(name) {};
-        void on_message(const Msg& msg) {
-            INFO("Msg %s => %s : %s ",msg.src.name(),msg.dst.name(),msg.type_id());
-        }
+ActorRef NULL_ACTOR = ActorRef("null");
+
+void Actor::set_eventbus(EventBus *eventbus)
+{
+    this->eventbus = eventbus;
+}
+
+void Actor::emit(const Msg *msg)
+{
+    if (eventbus)
+    {
+        eventbus->push(msg);
+    }
+    else
+    {
+        ERROR("EventBus not set for actor %s", name());
+    }
+}
+
+class TestActor : public Actor
+{
+public:
+    TestActor(const char *name) : Actor(name) {};
+    void on_message(const Msg &msg)
+    {
+        INFO("Msg %s => %s : %s ", msg.src.name(), msg.dst.name(), msg.type_id());
+    }
 };
 
 void tester1()
@@ -19,7 +40,6 @@ void tester1()
 
     eb.push(new TestMsg);
     eb.loop();
-
 }
 
 void panic_here(const char *s)
@@ -261,7 +281,7 @@ void Thread::step()
     /* QueueSetMemberHandle_t queue = */ xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
     for (auto actor : _actors)
     {
-//        actor->handle_all_cmd();
+        //        actor->handle_all_cmd();
         actor->handle_expired_timers();
     }
 }
@@ -293,7 +313,7 @@ void Thread::run()
                 if (actor->queue_handle() == queue)
                 {
                     //                   INFO("Thread %s handling command for actor %s", name(), actor->name());
-   //                 actor->handle_all_cmd();
+                    //                 actor->handle_all_cmd();
                     break; // Found the actor, no need to continue loop
                 }
             }
@@ -308,4 +328,62 @@ void Thread::run()
     INFO("stopping actor %s", name());
     for (auto actor : _actors)
         actor->on_stop();
+}
+
+EventBus::EventBus(size_t size) : Queue<const Msg *>(size) {};
+
+void EventBus::push(const Msg *msg)
+{
+    send(msg);
+}
+
+void EventBus::loop()
+{
+    Msg *pmsg;
+    for (Actor *actor : _actors)
+    {
+        actor->on_start();
+    }
+    uint32_t timeout = 100; // 100 ms timeout
+
+    while (true)
+    {
+        if (receive((const Msg **)&pmsg, timeout))
+        {
+            for (const auto &handler : _message_handlers)
+            {
+                handler(*pmsg);
+            }
+            for (Actor *actor : _actors)
+            {
+                actor->on_message(*pmsg);
+            }
+
+            delete pmsg;
+        }
+        else
+        {
+            for (Actor *actor : _actors)
+            {
+                actor->handle_expired_timers();
+            }
+        }
+    }
+}
+
+void EventBus::start()
+{
+    xTaskCreate(
+        [](void *arg)
+        {
+            auto self = static_cast<EventBus *>(arg);
+            self->loop();
+        },
+        "EventBus", _stack_size, this, 5, &_task_handle);
+}
+
+void EventBus::register_actor(Actor *actor)
+{
+    _actors.push_back(actor);
+    actor->set_eventbus(this);
 }

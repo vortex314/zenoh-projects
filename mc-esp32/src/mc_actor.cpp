@@ -1,4 +1,5 @@
 #include <mc_actor.h>
+#include <string>
 
 static int create_multicast_socket();
 
@@ -7,10 +8,8 @@ void send()
   auto msg = McSend("test/topic", Value("Hello, World!"));
   msg.topic = "test/topic";
   msg.value = Value("Hello, World!");
-  msg.handle<McSend>([&](const McSend& m){
-    INFO("Sending message: %s", msg.value.toJson().c_str());
-  });
-  
+  msg.handle<McSend>([&](const McSend &m)
+                     { INFO("Sending message: %s", msg.value.toJson().c_str()); });
 }
 
 McActor::McActor(const char *name)
@@ -51,9 +50,18 @@ void McActor::on_message(const Msg &message)
                            { on_timer(msg.timer_id); });
 
   message.handle<WifiConnected>([&](auto _)
-                                { on_wifi_connected(); });
+                                { INFO("WiFi connected, starting multicast actor");
+                                  on_wifi_connected(); });
   message.handle<WifiDisconnected>([&](auto _)
                                    { disconnect(); });
+  message.handle<PublishMsg>([&](const PublishMsg &msg)
+                              { INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
+                                Value v = Value(std::unordered_map<std::string, Value>());
+                                v["topic"] = msg.topic;
+                                v["pub"] = msg.value;
+                                INFO("Publishing value: %s", v.toJson().c_str());
+                                send(v.toJson());
+                              });
 }
 
 void McActor::on_wifi_connected()
@@ -121,9 +129,9 @@ void McActor::receiver_task(void *pv)
         esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
         res_msg.inspect([&](auto v)
                         {
-          v["from_ip"]=ip4addr_to_str(ip_addr);
-          std::string topic = v["src"].as<Value::StringType>();
-          mc_actor->emit(new PublishMsg(mc_actor->ref(),topic,v)); });
+          std::string topic = v["src"].template as<std::string>();
+     //     std::string topic = v["src"].as<std::string>();
+          mc_actor->emit(new PublishRxdMsg(mc_actor->ref(),topic,v)); });
       }
     }
   }
@@ -310,6 +318,7 @@ static int create_udp_socket(uint16_t port)
 
 Result<Void> McActor::send(const std::string &data)
 {
+  emit(new LedPulse(ref(), 10)); // Pulse LED for 10 ms
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);
   dest_addr.sin_family = AF_INET;

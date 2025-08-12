@@ -29,6 +29,7 @@ SysActor sys_actor("sys");
 LedActor led_actor("Led");
 Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
 Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
+EventBus eventbus(10);
 
 Log logger;
 
@@ -73,6 +74,10 @@ extern "C" void app_main()
   eventbus.register_actor(&wifi_actor);
   eventbus.register_actor(&sys_actor);
   eventbus.register_actor(&mc_actor);
+  eventbus.register_actor(&led_actor);
+  eventbus.register_message_handler([](const Msg& msg){
+    INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(),msg.src.name(), msg.dst.name(), msg.type_id());
+  });
   eventbus.loop();
 }
 

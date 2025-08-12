@@ -7,7 +7,7 @@
 #include <vector>
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
-MSG(WifiConnected,std::string ip);
+MSG(WifiConnected,WifiConnected(ActorRef _src){src=_src;});
 MSG(WifiDisconnected);
 
 class WifiActor : public Actor

@@ -30,6 +30,7 @@ static int s_retry_count = 0;
 
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
+  INFO("Creating WiFi actor %s ", name);
   _timer_publish = timer_repetitive(1000);
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
@@ -155,8 +156,8 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   }
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
-    INFO("WiFi STA got IP address");
-    actor->emit(new WifiConnected());
+    INFO("WiFi STA got IP address in %s", actor->ref().name());
+    actor->emit(new WifiConnected(actor->ref()));
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }

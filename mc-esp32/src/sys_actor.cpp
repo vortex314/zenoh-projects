@@ -50,7 +50,7 @@ void SysActor::on_message(const Msg &msg)
     msg.handle<SysReboot>([](auto v)
                           { esp_restart(); });
     msg.handle<PublishMsg>([&](auto publish)
-                           { publish.value["pub"]["utc"].handle<int64_t>([&](const int64_t &utc)
+                           { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
                                                                          { set_utc(utc); }); });
 }
 void SysActor::on_timer(int id)
