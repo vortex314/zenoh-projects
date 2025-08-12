@@ -198,12 +198,32 @@ public:
     virtual ~ThreadSupport() = default;
 };
 
+
+class Actor;
+
+class EventBus : public Queue<Msg *>
+{
+    std::vector<Actor *> _actors;
+    size_t _stack_size = 1024;
+    TaskHandle_t _task_handle;
+
+public:
+    EventBus(size_t size);
+    void push(Msg *msg);
+    void register_actor(Actor *);
+    void loop();
+    void start();
+};
+
+
+
+
 class Actor
 {
 private:
     ActorRef _self;
     Timers _timers;
-    EventBus* eventbus=nullptr;
+    EventBus *eventbus = nullptr;
 
 public:
     virtual void on_start() { INFO("actor %s default started.", _self.name()); }
@@ -212,8 +232,8 @@ public:
     {
         WARN(" No message handler for actor %s ", _self.name());
     }
-    void emit(const Msg* msg);
-    void set_eventbus(EventBus* eventbus);
+    void emit(const Msg *msg);
+    void set_eventbus(EventBus *eventbus);
 
     Actor(const char *name) : _self(name) {};
 
@@ -355,19 +375,8 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
-class EventBus : public Queue<Msg *>
-{
-    std::vector<Actor *> _actors;
-    size_t _stack_size = 1024;
-    TaskHandle_t _task_handle;
+extern EventBus eventbus;
 
-public:
-    EventBus(size_t size);
-    void push(Msg *msg);
-    void register_actor(Actor *);
-    void loop();
-    void start();
-};
 
 EventBus::EventBus(size_t size) : Queue<Msg *>(size) {};
 
@@ -407,30 +416,15 @@ void EventBus::start()
         "EventBus", _stack_size, this, 5, &_task_handle);
 }
 
-template <typename T>
-TaskHandle_t start_freertos_task(T *this_ptr, const char *task_name, uint32_t stack_depth = 2048, uint32_t priority = 5, )
-{
-    TaskHandle_t _task_handle;
-    xTaskCreate(
-        [](void *arg)
-        {
-            auto self = static_cast<T *>(arg);
-            self->loop();
-        },
-        task_name, _stack_size, this, 5, &_task_handle);
-    return _task_handle;
-}
-
 void EventBus::register_actor(Actor *actor)
 {
     _actors.push_back(actor);
     actor->set_eventbus(this);
 }
 
-extern EventBus eventbus;
 
 MSG(StopActorMsg);
-MSG(PublishMsg, std::string topic; Value value);
+MSG(PublishMsg, std::string topic; Value value; PublishMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
 MSG(SubscribeMsg, std::string topic);
 
 #endif

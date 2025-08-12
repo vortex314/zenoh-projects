@@ -4,9 +4,8 @@
 #include <time.h>
 #include <string.h>
 
-SysActor::SysActor() : SysActor("sys", 4096, 5, 5) {}
 
-SysActor::SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth) : Actor(stack_size, name, priority, queue_depth)
+SysActor::SysActor(const char *name) : Actor(name)
 {
     _timer_publish = timer_repetitive(1000);
 }
@@ -58,12 +57,7 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        PublishMsg* pm = new PublishMsg();
-        pm->src = ref();
-        pm->topic = ref().name();
-        pm->value = publish_props().unwrap();
-
-        emit(pm);
+        emit(new PublishMsg(ref(), ref().name(), publish_props().unwrap()));
     }
     else
     {

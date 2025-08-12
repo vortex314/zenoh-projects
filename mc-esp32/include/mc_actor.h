@@ -38,8 +38,8 @@ extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
 struct McSend : Msg
 {
-  constexpr static uint32_t _id = FILE_LINE_HASH;
-  uint32_t type_id() const { return _id; }
+  constexpr static const char*  _id = "McSend";
+  const char* type_id() const { return _id; }
   McSend() = default;
   McSend(const std::string &topic, const Value &value) : topic(topic), value(value) {}
   std::string topic;
@@ -60,12 +60,15 @@ private:
   unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
 
 public:
-  McActor();
-  McActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+  McActor(const char *name);
   ~McActor();
   void run();
-  void on_message(ActorRef &sender, const Msg &message) override;
+  void on_message(const Msg &message) override;
   void on_start() override;
+  void on_wifi_connected();
+  void on_wifi_disconnected();
+  void on_timer(int id);
+
   void prefix(const char *prefix);
   bool is_connected() const;
   Result<Void> connect(void);

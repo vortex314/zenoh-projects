@@ -18,7 +18,7 @@ static int create_multicast_socket();
 
 void send()
 {
-  auto msg = McSend("test/topic",  Value("Hello, World!"));
+  auto msg = McSend("test/topic", Value("Hello, World!"));
   msg.topic = "test/topic";
   msg.value = Value("Hello, World!");
   if (msg.type_id() == McSend::_id)
@@ -32,10 +32,8 @@ void send()
   INFO("Sending message: %s", msg.value.toJson().c_str());
 }
 
-McActor::McActor() : McActor("multicast", 4096, 5, 5) {}
-
-McActor::McActor(const char *name, size_t stack_size, int priority, size_t queue_depth)
-    : Actor(stack_size, name, priority, queue_depth)
+McActor::McActor(const char *name)
+    : Actor(name)
 {
   _timer_publish = timer_repetitive(1000); // timer for publishing properties
 }
@@ -63,63 +61,39 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-void McActor::on_message(ActorRef &sender, const Msg &message)
+void McActor::on_message(const Msg &message)
 {
   message.handle<McSend>([&](const McSend &msg)
-                         {
-    INFO("Received multicast message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
-    emit(msg.value); // Emit the received value to listeners
-  });
+                         { INFO("Received multicast message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str()); });
 
   message.handle<TimerMsg>([&](const TimerMsg &msg)
-                           {
-    on_timer(msg.timer_id);
-  });
+                           { on_timer(msg.timer_id); });
 
-  message.handle<WifiConnected>([&](const Value &cmd)
-                        {
-    on_cmd(cmd);
-  });
+  message.handle<WifiConnected>([&](auto _)
+                                { on_wifi_connected(); });
+  message.handle<WifiDisconnected>([&](auto _)
+                                { disconnect(); });
 }
 
-void McActor::on_cmd(const Value &cmd)
+void McActor::on_wifi_connected()
 {
-
-  //  INFO("Received command: %s", cmd.toJson().c_str());
-  cmd["wifi_connected"].handle<bool>([&](bool wifi_connected)
-                                     {
-    if ( wifi_connected ){
-       if (!_connected)
-      {
-        Result res = connect();
-        if (res.is_err())
-        {
-          INFO("Failed to connect to Mc: %s", res.msg());
-//          vTaskDelay(1000 / portTICK_PERIOD_MS);
-          tell(cmd); // tell myself to get connected  
-        }
-        else
-        {
-          INFO("Connected to Mc.");
-        }
-      }
-    } else {
- INFO("Disconnecting from Mc...");
-      if (_connected)
-      {
-        disconnect();
-      }
-    } });
-
-  cmd["publish_string"].handle<Value::ObjectType>([&](const Value& v)
-                                { 
-                                             std::string str = v.toJson();
-                                                auto res = send(str);
-                                                if (res.is_err())
-                                                {
-                                                  ERROR("Failed to send multicast message: %s", res.msg());
-                                                } });
+  if (!_connected)
+  {
+    Result res = connect();
+    if (res.is_err())
+    {
+      INFO("Failed to connect to Mc: %s", res.msg());
+      //          vTaskDelay(1000 / portTICK_PERIOD_MS);
+      //tell(cmd); // tell myself to get connected
+    }
+    else
+    {
+      INFO("Connected to Mc.");
+    }
+  }
 }
+
+
 
 Result<TaskHandle_t> McActor::start_receiver_task()
 {
@@ -129,7 +103,7 @@ Result<TaskHandle_t> McActor::start_receiver_task()
     return Result<TaskHandle_t>(task_handle);
   return Result<TaskHandle_t>(rc, "xTaskCreate failed");
 }
-// FreeRTOS task to receive udp messages 
+// FreeRTOS task to receive udp messages
 void McActor::receiver_task(void *pv)
 {
   McActor *mc_actor = (McActor *)pv;
@@ -157,7 +131,7 @@ void McActor::receiver_task(void *pv)
       else
       {
         mc_actor->_rx_buffer[len] = '\0';
-        INFO("UDP RXD [%d]: %s", len,mc_actor->_rx_buffer);
+        INFO("UDP RXD [%d]: %s", len, mc_actor->_rx_buffer);
         auto res_msg = Value::fromJson((const char *)mc_actor->_rx_buffer);
         if (!res_msg.is_ok())
         {
@@ -169,7 +143,8 @@ void McActor::receiver_task(void *pv)
         res_msg.inspect([&](auto v)
                         {
           v["from_ip"]=ip4addr_to_str(ip_addr);
-          mc_actor->emit(v); });
+          std::string topic = v["src"].as<std::string>();
+          mc_actor->emit(new PublishMsg(mc_actor->ref(),topic,v)); });
       }
     }
   }
@@ -201,10 +176,10 @@ bool McActor::is_connected() const
   return _connected;
 }
 
-
 McActor::~McActor()
 {
-  if ( _mc_socket > 0) close(_mc_socket);
+  if (_mc_socket > 0)
+    close(_mc_socket);
   INFO("Closing Mc Session...");
 }
 
@@ -299,7 +274,6 @@ static int create_multicast_socket()
 
   return sock;
 }
-
 
 static int create_udp_socket(uint16_t port)
 {

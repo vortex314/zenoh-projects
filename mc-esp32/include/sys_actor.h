@@ -14,8 +14,7 @@ private:
   int _prop_counter = 0;
 
 public:
-  SysActor();
-  SysActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+  SysActor(const char *name);
   ~SysActor();
   void on_message(const Msg& msg);
   void on_timer(int timer_id);

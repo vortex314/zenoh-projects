@@ -24,10 +24,9 @@ private:
   std::vector<std::string> ssid_list;
 
 public:
-  WifiActor();
-  WifiActor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+  WifiActor(const char *name);
   ~WifiActor();
-  void on_message(ActorRef &sender, const Msg &message);
+  void on_message(const Msg &message);
   void on_start();
   void handle_timer(int id);
   Res net_init();

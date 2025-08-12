@@ -261,7 +261,7 @@ void Thread::step()
     /* QueueSetMemberHandle_t queue = */ xQueueSelectFromSet(_queue_set, pdMS_TO_TICKS(min_sleep_msec));
     for (auto actor : _actors)
     {
-        actor->handle_all_cmd();
+//        actor->handle_all_cmd();
         actor->handle_expired_timers();
     }
 }
@@ -293,7 +293,7 @@ void Thread::run()
                 if (actor->queue_handle() == queue)
                 {
                     //                   INFO("Thread %s handling command for actor %s", name(), actor->name());
-                    actor->handle_all_cmd();
+   //                 actor->handle_all_cmd();
                     break; // Found the actor, no need to continue loop
                 }
             }

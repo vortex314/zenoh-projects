@@ -23,9 +23,9 @@
 
 // threads can be run separately or share a thread
 // Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
-WifiActor wifi_actor("wifi", 9000, 40, 5);
-McActor mc_actor("multicast", 9000, 40, 5);
-SysActor sys_actor("sys", 9000, 40, 5);
+WifiActor wifi_actor("wifi");
+McActor mc_actor("multicast");
+SysActor sys_actor("sys");
 LedActor led_actor("Led");
 Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
 Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
@@ -69,57 +69,11 @@ extern "C" void app_main()
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
-  wifi_actor.ref().tell( mc_actor.ref(),new AddListener() );
-  sys_actor.ref().tell( mc_actor.ref(),new AddListener() );
-  
 
-
-  // WiFi connectivity starts and stops zenoh connection
-  wifi_actor.on_event([&](const Value &event)
-                      { event["connected"].handle<bool>([&](auto connected)
-                                                        {
-                          Value v;
-                          v["wifi_connected"]=connected;
-                          mc_actor.tell(v); }); });
-
-  // WIRING the actors together
-  wifi_actor.on_event([&](const Value &event)
-                      { event["pub"].handle<Value::ObjectType>([&](auto v)
-                                                                   { publish(DEVICE_PREFIX "wifi", event); }); });
-  sys_actor.on_event([&](const Value &event)
-                     { event["pub"].handle<Value::ObjectType>([&](auto v)
-                                                                  { publish(DEVICE_PREFIX "sys", event); }); });
-  mc_actor.on_event([&](const Value &event)
-                    { event["pub"].handle<Value::ObjectType>([&](auto v)
-                                                                 { publish(DEVICE_PREFIX "multicast", event); }); });
-
-  // send commands to actors coming from zenoh, deserialize and send to the right actor
-  mc_actor.on_event([&](const Value &v)
-                    {
-        if (v["pub"].is<Value::ObjectType>() && v["dst"].is<std::string>())
-        {
-          const std::string topic = v["dst"].as<std::string>();
-          if (topic == DEVICE_PREFIX "sys")
-            sys_actor.tell(v);
-          else if (topic == DEVICE_PREFIX "wifi")
-            wifi_actor.tell(v);
-          else if (topic == DEVICE_PREFIX "multicast")
-            mc_actor.tell(v);
-        } });
-
-  actor_thread.add_actor(wifi_actor);
-  actor_thread.add_actor(sys_actor);
-  actor_thread.add_actor(led_actor);
-  actor_thread.start();
-  mc_thread.add_actor(mc_actor);
-  mc_thread.start();
-
-  // log heap size, monitoring thread in main, we could exit also
-  while (true)
-  {
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-    INFO(" free heap size: %lu biggest block : %lu ", esp_get_free_heap_size(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
-  }
+  eventbus.register_actor(&wifi_actor);
+  eventbus.register_actor(&sys_actor);
+  eventbus.register_actor(&mc_actor);
+  eventbus.loop();
 }
 
 esp_err_t nvs_init()

@@ -27,7 +27,6 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-WifiActor::WifiActor() : WifiActor("wifi") {}
 
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
@@ -78,7 +77,7 @@ void WifiActor::on_start()
   }
 }
 
-void WifiActor::on_message(ActorRef &sender, const Msg &message)
+void WifiActor::on_message(const Msg &message)
 {
   message.handle<TimerMsg>([&](const TimerMsg &msg)
                            { handle_timer(msg.timer_id); });
@@ -99,7 +98,7 @@ void WifiActor::handle_timer(int timer_id)
       /*publish_info().inspect([&](const Value &info)
                              { wifi_event["info"] = info; });*/
 
-      emit(wifi_event);
+      emit(new PublishMsg(ref(),"wifi",wifi_event));
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -157,9 +156,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     INFO("WiFi STA got IP address");
-    Value wifi_event;
-    wifi_event["connected"] = true;
-    actor->emit(wifi_event);
+    actor->emit(new WifiConnected());
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }
