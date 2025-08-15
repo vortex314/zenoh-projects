@@ -3,14 +3,14 @@
 
 static int create_multicast_socket();
 
-void send()
+/*void send()
 {
   auto msg = McSend("test/topic", Value("Hello, World!"));
   msg.topic = "test/topic";
   msg.value = Value("Hello, World!");
   msg.handle<McSend>([&](const McSend &m)
                      { INFO("Sending message: %s", msg.value.toJson().c_str()); });
-}
+}*/
 
 McActor::McActor(const char *name)
     : Actor(name)
@@ -54,11 +54,11 @@ void McActor::on_message(const Msg &message)
   message.handle<WifiDisconnected>([&](auto _)
                                    { disconnect(); });
   message.handle<PublishTxdMsg>([&](const PublishTxdMsg &msg)
-                              { INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
+                              { //INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
                                 Value v ;
-                                v["topic"] = msg.topic;
+                                v["src"] = msg.topic;
                                 v["pub"] = msg.value;
-                                INFO("Publishing value: %s", v.toJson().c_str());
+                               INFO("Publishing value: %s", v.toJson().c_str());
                                 send(v.toJson());
                               });
 }
@@ -107,6 +107,7 @@ void McActor::receiver_task(void *pv)
     }
     while (true)
     {
+      INFO("Waiting for multicast message...");
       int len = recvfrom(mc_actor->_mc_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
                          (struct sockaddr *)&source_addr, &socklen);
       if (len < 0)

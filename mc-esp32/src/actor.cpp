@@ -8,14 +8,14 @@ ActorRef NULL_ACTOR = ActorRef("null");
 
 void Actor::set_eventbus(EventBus *eventbus)
 {
-    this->eventbus = eventbus;
+    this->_eventbus = eventbus;
 }
 
 void Actor::emit(const Msg *msg)
 {
-    if (eventbus)
+    if (_eventbus)
     {
-        eventbus->push(msg);
+        _eventbus->push(msg);
     }
     else
     {
@@ -359,18 +359,22 @@ void EventBus::loop()
             {
                 actor->on_message(*pmsg);
             }
-
             delete pmsg;
         }
-        else
+
+        timeout = 1000;
+        for (Actor *actor : _actors)
         {
-            timeout = 1000;
-            for (Actor *actor : _actors)
+            for (int id : actor->timers().get_expired_timers())
             {
-                actor->handle_expired_timers();
-                uint64_t sleep_duration=actor->sleep_time();
-                if ( sleep_duration < timeout ) timeout = sleep_duration;
+                TimerMsg timer_msg(NULL_ACTOR, id);
+                actor->on_message(timer_msg);
+                actor->timers().refresh(id);
             }
+            uint64_t sleep_duration = actor->sleep_time();
+            DEBUG("Actor %s sleep duration: %llu", actor->name(), sleep_duration);
+            if (sleep_duration < timeout)
+                timeout = sleep_duration;
         }
     }
 }
@@ -390,4 +394,16 @@ void EventBus::register_actor(Actor *actor)
 {
     _actors.push_back(actor);
     actor->set_eventbus(this);
+}
+
+ActorRef EventBus::find_actor(const char *name)
+{
+    for (auto actor : _actors)
+    {
+        if (actor->name() == name)
+        {
+            return actor->ref();
+        }
+    }
+    return NULL_ACTOR;
 }

@@ -52,6 +52,8 @@ void SysActor::on_message(const Msg &msg)
     msg.handle<PublishRxdMsg>([&](auto publish)
                            { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
                                                                          { set_utc(utc); }); });
+    msg.handle<TimerMsg>([&](const TimerMsg &msg)
+                          { on_timer(msg.timer_id); });
 }
 void SysActor::on_timer(int id)
 {

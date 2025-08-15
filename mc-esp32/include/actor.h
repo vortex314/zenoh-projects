@@ -35,7 +35,7 @@ public:
     inline const char *name() const { return _actor_name; };
 };
 
-extern ActorRef NULL_ACTOR ;
+extern ActorRef NULL_ACTOR;
 
 class Msg
 {
@@ -65,7 +65,7 @@ public:
         __VA_ARGS__;                                                \
     }
 
-MSG(TimerMsg, int timer_id);
+MSG(TimerMsg, int timer_id; TimerMsg(ActorRef & dst, int id) : timer_id(id) { this->dst = dst; });
 
 /*template <typename T>
 void handle(const Msg &message, std::function<void(const T &)> f)
@@ -198,7 +198,6 @@ public:
     virtual ~ThreadSupport() = default;
 };
 
-
 class Actor;
 
 class EventBus : public Queue<const Msg *>
@@ -218,20 +217,21 @@ public:
     }
     void loop();
     void start();
-    const std::vector<Actor*>&  actors() { return _actors ;}
+    ActorRef find_actor(const char *name);
+    const std::vector<Actor *> &actors() { return _actors; }
 };
-
-
-
 
 class Actor
 {
 private:
     ActorRef _self;
     Timers _timers;
-    EventBus *eventbus = nullptr;
+    EventBus *_eventbus = nullptr;
 
 public:
+    Actor(const char *name) : _self(name) {};
+    ~Actor() { INFO("Destroying actor %s", name()); }
+
     virtual void on_start() { INFO("actor %s default started.", _self.name()); }
     virtual void on_stop() { INFO("actor %s default stopped.", _self.name()); }
     virtual void on_message(const Msg &message)
@@ -239,97 +239,33 @@ public:
         WARN(" No message handler for actor %s ", _self.name());
     }
     std::vector<int> get_expired_timers() { return _timers.get_expired_timers(); }
+    Timers &timers() { return _timers; }
+    uint64_t sleep_time() { return _timers.sleep_time(); }
+    ActorRef ref() { return _self; }
+    const char *name() { return _self.name(); }
+
+
+
     void emit(const Msg *msg);
     void set_eventbus(EventBus *eventbus);
-
-    Actor(const char *name) : _self(name) {};
-
-    ActorRef ref()
-    {
-        return _self;
-    }
-
-    uint64_t sleep_time() { return _timers.sleep_time(); }
 
     void handle_expired_timers()
     {
         for (int id : _timers.get_expired_timers())
         {
-            TimerMsg timer_msg;
-            timer_msg.timer_id = id;
-            timer_msg.dst = ref();
+            TimerMsg timer_msg(_self, id);
             on_message(timer_msg);
             _timers.refresh(id);
         }
     };
-
-    void emit(Msg &msg);
-
-    const char *name() { return _self.name(); }
-
-    ~Actor()
-    {
-        INFO("Destroying actor %s", name());
-    }
-
     void loop() {};
-    /*
-        void loop()
-        {
-            INFO("starting actor %s", name());
-            on_start();
-            while (!_stop_actor)
-            {
-                MsgContext *msg_context;
-                INFO("Actor %s waiting for command during %d", name(), _timers.sleep_time());
-                if (_queue->receive(msg_context, _timers.sleep_time()))
-                {
-                    auto ref = ActorRef(msg_context->sender_queue);
-                    on_message(ref, *msg_context->pmsg);
-                    delete msg_context; // Clean up the command after processing
-                }
-                else
-                {
-                    for (int id : _timers.get_expired_timers())
-                    {
-                        TimerMsg timer_msg;
-                        timer_msg.timer_id = id;
-                        on_message(_self, timer_msg);
-                        _timers.refresh(id);
-                    }
-                }
-            }
-            INFO("stopping actor %s", name());
-            on_stop();
-        }
-    */
-    void stop()
-    {
-    }
-    int timer_one_shot(uint64_t delay)
-    {
-        return _timers.create_one_shot(delay);
-    }
-    int timer_repetitive(uint64_t period)
-    {
-        return _timers.create_repetitive(period);
-    }
-    void timer_stop(int id)
-    {
-        _timers.stop(id);
-    }
-    void timer_start(int id, uint64_t delay)
-    {
-        _timers.refresh(id);
-    }
-    void refresh(int id)
-    {
-        _timers.refresh(id);
-    }
-    void timer_fire(int id, uint64_t delay)
-    {
-        _timers.fire(id, delay);
-    }
+    void stop() {}
+    int timer_one_shot(uint64_t delay) { return _timers.create_one_shot(delay); }
+    int timer_repetitive(uint64_t period) { return _timers.create_repetitive(period); }
+    void timer_stop(int id) { _timers.stop(id); }
+    void timer_start(int id, uint64_t delay) { _timers.refresh(id); }
+    void refresh(int id) { _timers.refresh(id); }
+    void timer_fire(int id, uint64_t delay) { _timers.fire(id, delay); }
 };
 
 /*
@@ -382,10 +318,9 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
-
 MSG(StopActorMsg);
-MSG(PublishTxdMsg, std::string topic; Value value; PublishTxdMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
-MSG(PublishRxdMsg, std::string topic; Value value; PublishRxdMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
+MSG(PublishTxdMsg, std::string topic; Value value; PublishTxdMsg(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
+MSG(PublishRxdMsg, std::string topic; Value value; PublishRxdMsg(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
 MSG(SubscribeMsg, std::string topic);
 
 #endif
