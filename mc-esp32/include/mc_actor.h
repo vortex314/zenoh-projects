@@ -45,13 +45,24 @@
 // Multicast configuration
 #define MULTICAST_IP "225.0.0.1"
 #define MULTICAST_PORT 6502
-#define MAX_UDP_PACKET_SIZE 1024
+#define MAX_UDP_PACKET_SIZE 1400
 
 extern std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 
 MSG(McSend, std::string topic; Value value; McSend(const std::string &topic, const Value &value) : topic(topic), value(value){});
 
 void send();
+
+typedef struct RemoteObject {
+  std::string name;
+  esp_ip4_addr_t ip;
+  uint16_t port;
+} RemoteObject ;
+
+typedef struct {
+  std::string src;
+  std::string dst;
+} Subscription;
 
 class McActor : public Actor
 {
@@ -63,6 +74,11 @@ private:
   int _udp_socket = -1; // socket for UDP communication
   TaskHandle_t _task_handle = NULL;
   unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
+  // remote objects 
+  std::unordered_map<std::string,RemoteObject> _remote_objects; // object found at udp location
+  std::unordered_map<std::string,ActorRef> _local_objects;
+  std::vector<Subscription> _remote_subscriptions; // to which object to subscribe
+  std::vector<Subscription>  _local_subscriptions;
 
 public:
   McActor(const char *name);
@@ -74,11 +90,10 @@ public:
   void on_wifi_disconnected();
   void on_timer(int id);
 
-  void prefix(const char *prefix);
   bool is_connected() const;
   Result<Void> connect(void);
   Result<Void> disconnect();
-  Result<Bytes> receive();
+//  Result<Bytes> receive();
   Result<Void> send(const std::string &data);
   Result<Void> publish_props();
 

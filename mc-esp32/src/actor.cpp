@@ -319,6 +319,7 @@ void Thread::run()
             }
         }
         // Always check timers after queue check or timeout
+
         for (auto actor : _actors)
         {
             //            INFO("Thread %s handling expired timers for actor %s", name(), actor->name());
@@ -363,9 +364,12 @@ void EventBus::loop()
         }
         else
         {
+            timeout = 1000;
             for (Actor *actor : _actors)
             {
                 actor->handle_expired_timers();
+                uint64_t sleep_duration=actor->sleep_time();
+                if ( sleep_duration < timeout ) timeout = sleep_duration;
             }
         }
     }

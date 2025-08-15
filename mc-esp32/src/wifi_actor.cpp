@@ -92,14 +92,9 @@ void WifiActor::handle_timer(int timer_id)
     if (_wifi_connected)
     {
       Value wifi_event ;
-
       pubish_props(esp_netif).inspect([&](const Value &info)
                                       { wifi_event["pub"] = info; });
-
-      /*publish_info().inspect([&](const Value &info)
-                             { wifi_event["info"] = info; });*/
-
-      emit(new PublishMsg(ref(),"wifi",wifi_event));
+      emit(new PublishTxdMsg(ref(),"wifi",wifi_event));
     }
   }
   else if (timer_id == _timer_publish_props)

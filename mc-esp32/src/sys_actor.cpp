@@ -49,7 +49,7 @@ void SysActor::on_message(const Msg &msg)
 {
     msg.handle<SysReboot>([](auto v)
                           { esp_restart(); });
-    msg.handle<PublishMsg>([&](auto publish)
+    msg.handle<PublishRxdMsg>([&](auto publish)
                            { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
                                                                          { set_utc(utc); }); });
 }
@@ -57,7 +57,7 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        emit(new PublishMsg(ref(), ref().name(), publish_props().unwrap()));
+        emit(new PublishTxdMsg(ref(), ref().name(), publish_props().unwrap()));
     }
     else
     {

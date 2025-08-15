@@ -50,13 +50,12 @@ void McActor::on_message(const Msg &message)
                            { on_timer(msg.timer_id); });
 
   message.handle<WifiConnected>([&](auto _)
-                                { INFO("WiFi connected, starting multicast actor");
-                                  on_wifi_connected(); });
+                                {on_wifi_connected(); });
   message.handle<WifiDisconnected>([&](auto _)
                                    { disconnect(); });
-  message.handle<PublishMsg>([&](const PublishMsg &msg)
+  message.handle<PublishTxdMsg>([&](const PublishTxdMsg &msg)
                               { INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
-                                Value v = Value(std::unordered_map<std::string, Value>());
+                                Value v ;
                                 v["topic"] = msg.topic;
                                 v["pub"] = msg.value;
                                 INFO("Publishing value: %s", v.toJson().c_str());
@@ -126,7 +125,7 @@ void McActor::receiver_task(void *pv)
           continue;
         }
 
-        esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
+    //    esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
         res_msg.inspect([&](auto v)
                         {
           std::string topic = v["src"].template as<std::string>();
@@ -179,7 +178,7 @@ Res McActor::publish_props()
   }
   Value v, publish;
   get_props(publish);
-  emit(new PublishMsg(ref(), "multicast", publish));
+  emit(new PublishTxdMsg(ref(), "multicast", publish));
   return ResOk;
 }
 

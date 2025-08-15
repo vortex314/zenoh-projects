@@ -212,12 +212,13 @@ public:
     EventBus(size_t size);
     void push(const Msg *msg);
     void register_actor(Actor *);
-    void register_message_handler(std::function<void(const Msg &)> handler)
+    void register_handler(std::function<void(const Msg &)> handler)
     {
         _message_handlers.push_back(handler);
     }
     void loop();
     void start();
+    const std::vector<Actor*>&  actors() { return _actors ;}
 };
 
 
@@ -383,7 +384,7 @@ typedef struct PropInfo
 
 
 MSG(StopActorMsg);
-MSG(PublishMsg, std::string topic; Value value; PublishMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
+MSG(PublishTxdMsg, std::string topic; Value value; PublishTxdMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
 MSG(PublishRxdMsg, std::string topic; Value value; PublishRxdMsg(const ActorRef &s, const std::string &t, const Value &v) : topic(t), value(v){src=s;});
 MSG(SubscribeMsg, std::string topic);
 

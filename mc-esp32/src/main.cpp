@@ -23,12 +23,12 @@
 
 // threads can be run separately or share a thread
 // Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
-WifiActor wifi_actor("wifi");
-McActor mc_actor("multicast");
-SysActor sys_actor("sys");
-LedActor led_actor("Led");
-Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
-Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
+WifiActor wifi_actor(DEVICE_PREFIX "wifi");
+McActor mc_actor(DEVICE_PREFIX "multicast");
+SysActor sys_actor(DEVICE_PREFIX "sys");
+LedActor led_actor(DEVICE_PREFIX "led");
+// Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
+// Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 EventBus eventbus(10);
 
 Log logger;
@@ -64,20 +64,16 @@ extern "C" void app_main()
 {
 
   ESP_ERROR_CHECK(nvs_init());
-  //  mc_actor.prefix(DEVICE_NAME); // set the zenoh prefix to src/esp3 and destination subscriber dst/esp3/**
-  printf("Starting %ld  sizeof Value %d \n", esp_get_free_heap_size(), sizeof(Value));
-  uxTaskGetStackHighWaterMark(NULL); // get the stack high water mark of the main task
+
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
-
 
   eventbus.register_actor(&wifi_actor);
   eventbus.register_actor(&sys_actor);
   eventbus.register_actor(&mc_actor);
   eventbus.register_actor(&led_actor);
-  eventbus.register_message_handler([](const Msg& msg){
-    INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(),msg.src.name(), msg.dst.name(), msg.type_id());
-  });
+  eventbus.register_handler([](const Msg &msg)
+                            { INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), msg.src.name(), msg.dst.name(), msg.type_id()); });
   eventbus.loop();
 }
 
