@@ -243,8 +243,7 @@ public:
     uint64_t sleep_time() { return _timers.sleep_time(); }
     ActorRef ref() { return _self; }
     const char *name() { return _self.name(); }
-
-
+    EventBus *eventbus() const { return _eventbus; }
 
     void emit(const Msg *msg);
     void set_eventbus(EventBus *eventbus);
@@ -319,8 +318,8 @@ typedef struct PropInfo
 } PropInfo;
 
 MSG(StopActorMsg);
-MSG(PublishTxdMsg, std::string topic; Value value; PublishTxdMsg(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
-MSG(PublishRxdMsg, std::string topic; Value value; PublishRxdMsg(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
-MSG(SubscribeMsg, std::string topic);
+MSG(PublishTxd, std::string topic; Value value; PublishTxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
+MSG(PublishRxd, std::string topic; Value value; PublishRxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
+MSG(Subscribe, std::string src; std::string dst);
 
 #endif

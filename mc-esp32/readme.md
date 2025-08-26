@@ -19,9 +19,10 @@
 ```json
 {
     "src":"motor",
-    "address":{
+    "announce":{
         "ip":"192.168.2.3",
-        "port":6502
+        "port":6502,
+        "sub":[""]
     }
 }
 ```
@@ -31,16 +32,15 @@
 
 ```json
 {
-    "dst":"dashboard",
-    "src":"motor",
-    "sub":{
-        "timeout":600
-    }
+    "dst":"motor",
+    "sub" :{
+        "dst":"brain",
+    },
 }
 ```
 
 # Publish
-- To IP/Port
+- To IP/Port - of known subscribers
 - From IP/port
 ```json
 {
@@ -50,6 +50,14 @@
         "uptime":23566,
         "cpu":"esp32"
     }
+}
+```
+```json
+{
+    "dst":"esp1_motor",
+    "pub": {
+        "rpm":2345
+    },
 }
 ```
 # Describe

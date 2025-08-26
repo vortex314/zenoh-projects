@@ -80,7 +80,6 @@
         return as<ObjectType>().at(key);
     }*/
 
-
     void Value::add(Value v)
     {
         if (is<Undefined>())

@@ -55,6 +55,9 @@ private:
 
     class Proxy
     {
+    private:
+        Value &value_;
+        std::string key_;
     public:
         Proxy(Value &value, const std::string &key)
             : value_(value), key_(key)
@@ -85,6 +88,19 @@ private:
             return Proxy(value_.get_map()[key_], key);
         }
 
+        void add(Value v)
+        {
+            if (value_.get(key_).is<Undefined>())
+            {
+                value_.set(key_, Value(ArrayType{}));
+            }
+            if (!value_.get(key_).is<ArrayType>())
+            {
+                PANIC(" cannot index ");
+            }
+            std::get<ArrayType>(value_.get(key_)._value).push_back(v);
+        }
+
         template <typename U, typename F>
         void handle(F &&func) const
         {
@@ -111,10 +127,6 @@ private:
         {
             return !value_.is<NullType>();
         }
-
-    private:
-        Value &value_;
-        std::string key_;
     };
 
 public:
@@ -201,6 +213,7 @@ public:
     {
         return get(key);
     }
+
     /*
     // Overloaded operator[] that returns a proxy
         Proxy operator[](const std::string& key) {

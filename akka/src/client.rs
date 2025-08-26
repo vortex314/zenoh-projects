@@ -289,7 +289,7 @@ impl Handler<ClientCmd> for ClientActor {
                         for dst in dsts {
                             match self.destinations.get(dst) {
                                 Some(Destination::Local(recipient)) => {
-                                    recipient.do_send(ClientEvent::Publish(value.clone()));
+                                    recipient.do_send(ClientEvent::Publish("client".to_string() ,value.clone()));
                                 }
                                 Some(Destination::Remote(object_info)) => {
                                     let mut msg = Value::object();

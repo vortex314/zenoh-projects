@@ -46,6 +46,12 @@ struct Cli {
     object_name: Option<String>,
 }
 
+struct Subscription {
+    dst_pattern: Vec<String>,
+    src: String,
+    dst: String,
+}
+
 fn publish_msg() -> Value {
     let mut announce = Value::object();
     announce["src"] = Value::string(DEVICE_NAME);
@@ -88,7 +94,7 @@ impl Tester {
         value["src"] = self.name.clone().into();
         value["pub"] = Value::object();
         value["pub"]["index"] = self.counter.into();
-        self.client.do_send(ClientCmd::Publish(value));
+        self.client.do_send(ClientCmd::Publish { src:"tester".to_string(), value });
         self.counter += 1;
     }
 }

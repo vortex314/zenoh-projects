@@ -36,7 +36,44 @@ void McActor::on_timer(int id)
   if (id == _timer_publish)
   {
     publish_props();
+    for ( auto actorref : eventbus()->actors())
+    {
+        Value msg;
+        msg["src"] = actorref->name();
+        size_t idx = 0;
+        for ( auto &[key, sub] : _subscriptions)
+        {
+          if (sub.expires_at < current_time())
+          {
+            INFO("Subscription expired: %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
+            _subscriptions.erase(key);
+            continue;
+          }
+          if (sub.link.dst == actorref->name())
+          {
+            msg["subs"].add(Value(sub.link.src));
+            INFO("Adding subscription for %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
+          }
+        }
+        send(msg.toJson());
+    }
   }
+  /* else if (id == _timer_broadcast)
+   {
+     for (const auto &[key, sub] : _subscriptions)
+     {
+       Value v;
+       std::vector<Value> values;
+       v["src"] = key;
+
+       for (std::string src : sub.srcs)
+       {
+         values.push_back(Value(src));
+         INFO("Broadcasting subscription: %s", v.toJson().c_str());
+       }
+       v["sub"] = values;
+     }
+   }*/
   else
     INFO("Unknown timer id: %d", id);
 }
@@ -48,19 +85,22 @@ void McActor::on_message(const Msg &message)
 
   message.handle<TimerMsg>([&](const TimerMsg &msg)
                            { on_timer(msg.timer_id); });
-
   message.handle<WifiConnected>([&](auto _)
-                                {on_wifi_connected(); });
+                                { on_wifi_connected(); });
   message.handle<WifiDisconnected>([&](auto _)
                                    { disconnect(); });
-  message.handle<PublishTxdMsg>([&](const PublishTxdMsg &msg)
-                              { //INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
-                                Value v ;
-                                v["src"] = msg.topic;
-                                v["pub"] = msg.value;
-                               INFO("Publishing value: %s", v.toJson().c_str());
-                                send(v.toJson());
-                              });
+  message.handle<Subscribe>([&](const Subscribe &sub)
+                            {
+                              INFO("Subscribe %s = %s", sub.src.c_str(), sub.dst.c_str());
+                              _subscriptions.emplace(sub.src, Subscription{sub.src, sub.dst, current_time() + 60000}); // 1 minute subscription
+                            });
+  message.handle<PublishTxd>([&](const PublishTxd &msg) { // INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
+    Value v;
+    v["src"] = msg.topic;
+    v["pub"] = msg.value;
+    INFO("Publishing value: %s", v.toJson().c_str());
+    send(v.toJson());
+  });
 }
 
 void McActor::on_wifi_connected()
@@ -93,8 +133,6 @@ Result<TaskHandle_t> McActor::start_receiver_task()
 void McActor::receiver_task(void *pv)
 {
   McActor *mc_actor = (McActor *)pv;
-  struct sockaddr_in source_addr;
-  socklen_t socklen = sizeof(source_addr);
   INFO("Starting multicast receiver task...");
 
   while (true)
@@ -108,6 +146,9 @@ void McActor::receiver_task(void *pv)
     while (true)
     {
       INFO("Waiting for multicast message...");
+      struct sockaddr_in source_addr;
+      socklen_t socklen = sizeof(source_addr);
+
       int len = recvfrom(mc_actor->_mc_socket, mc_actor->_rx_buffer, sizeof(mc_actor->_rx_buffer) - 1, 0,
                          (struct sockaddr *)&source_addr, &socklen);
       if (len < 0)
@@ -126,15 +167,43 @@ void McActor::receiver_task(void *pv)
           continue;
         }
 
-    //    esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
+        //    esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
         res_msg.inspect([&](auto v)
-                        {
-          std::string topic = v["src"].template as<std::string>();
-     //     std::string topic = v["src"].as<std::string>();
-          mc_actor->emit(new PublishRxdMsg(mc_actor->ref(),topic,v)); });
+                        { mc_actor->on_multicast_message(source_addr, v); });
       }
     }
   }
+}
+
+void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &v)
+{
+  /* v.get("sub").handle<Value::ObjectType>([&](const Value::ArrayType &sub)
+                                          {
+                                            auto dst = v.get("src").as<std::string>();
+                                            for (const auto &item : sub)
+                                            {
+                                             auto src = item.as<Value::ArrayType>();
+                                             if (eventbus() && eventbus()->find_actor(src.c_str()) != NULL_ACTOR)
+                                             {
+                                             _subscriptions.emplace(src, Subscription{src, dst, current_time() + 60000}); // 1 minute subscription
+                                             _remote_objects.emplace(src, RemoteObject{source_addr});
+                                            } } });
+   v.get("pub").handle<Value::ObjectType>([&](const Value &pub)
+                                          {
+                                            std::string topic = v["src"].template as<std::string>();
+                                            v.hasKey("sub");
+                                            emit(new PublishRxd(ref(), topic, v)); });*/
+  v.get("dst").handle<std::string>([&](const std::string &dst)
+                                   { ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
+                                    if (dst_actor != NULL_ACTOR)
+                                    {
+                                        emit(new PublishRxd(ref(), dst, v));
+                                    }
+                                    else
+                                    {
+                                        ERROR("No actor found for destination: %s", dst.c_str());
+                                    }
+                                   });
 }
 
 Res McActor::connect(void)
@@ -179,7 +248,7 @@ Res McActor::publish_props()
   }
   Value v, publish;
   get_props(publish);
-  emit(new PublishTxdMsg(ref(), "multicast", publish));
+  emit(new PublishTxd(ref(), "multicast", publish));
   return ResOk;
 }
 
@@ -324,6 +393,7 @@ Result<Void> McActor::send(const std::string &data)
   dest_addr.sin_family = AF_INET;
   dest_addr.sin_port = htons(MULTICAST_PORT);
   dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
+  INFO("Multicast send : %s ", data.c_str());
 
   int err = sendto(_mc_socket, data.data(), data.size(), 0,
                    (struct sockaddr *)&dest_addr, sizeof(dest_addr));
