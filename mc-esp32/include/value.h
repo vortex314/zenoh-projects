@@ -58,6 +58,7 @@ private:
     private:
         Value &value_;
         std::string key_;
+
     public:
         Proxy(Value &value, const std::string &key)
             : value_(value), key_(key)
@@ -75,6 +76,10 @@ private:
         Value operator=(const Value &val)
         {
             return value_.set(key_, val);
+        }
+        void array()
+        {
+            value_.set(key_, Value(ArrayType{}));
         }
 
         // Overloaded operator[] to allow nested access
@@ -132,6 +137,16 @@ private:
 public:
     // Constructors for primitive types
     inline Value() : _value(Undefined{}) {}
+    inline Value &object()
+    {
+        _value = ObjectType{};
+        return *this;
+    }
+    inline Value &array()
+    {
+        _value = ArrayType{};
+        return *this;
+    }
     /*
     Value &operator=(Value &&other)
     {

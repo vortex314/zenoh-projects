@@ -21,43 +21,14 @@
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
-// threads can be run separately or share a thread
-// Pinning all on CPU0 to avoid Bluetooth crash in rwbt.c line 360.
 WifiActor wifi_actor(DEVICE_PREFIX "wifi");
 McActor mc_actor(DEVICE_PREFIX "multicast");
 SysActor sys_actor(DEVICE_PREFIX "sys");
 LedActor led_actor(DEVICE_PREFIX "led");
-// Thread actor_thread("actors", 9000, 40, 24, Cpu::CPU0);
-// Thread mc_thread("mc", 9000, 40, 23, Cpu::CPU_ANY);
 EventBus eventbus(10);
-
 Log logger;
-
-// void zenoh_publish(const char *topic, Option<PublishSerdes> &serdes);
-/*void publish(const char *topic, const Value &value)
-{
-  if (!mc_actor.is_connected())
-  {
-    INFO("Mc not connected, cannot publish");
-    return;
-  }
-  Value mc_cmd;
-  mc_cmd["publish_string"] = std::move(value);
-  mc_cmd["publish_string"]["src"] = topic;
-  mc_actor.ref().tell(new PublishMsg{std::string(topic), mc_cmd});
-  // pulse led when we publish
-  Value led_cmd;
-  led_cmd["action"] = "PULSE";
-  led_cmd["duration"] = 10;
-  led_actor.tell(led_cmd);
-}*/
 esp_err_t nvs_init();
-/*
-| WIFI | = connect/disconnect => | ZENOH | ( set up session )
-| SYS | = system events => | ZENOH | ( publish )
-| ZENOH | = zenoh events => | ZENOH | ( publish )
-| ZENOH | = publish events => | LED | (pulse)
-*/
+
 #include <value.h>
 
 extern "C" void app_main()

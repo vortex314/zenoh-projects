@@ -18,6 +18,7 @@ public:
   ~SysActor();
   void on_message(const Msg& msg);
   void on_timer(int timer_id);
+  void on_start();
   Result<Value> publish_props();
   void set_utc(int64_t utc);
   Result<Value> publish_info();

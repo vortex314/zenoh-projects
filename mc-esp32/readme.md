@@ -12,18 +12,14 @@
 - developer language should be rust for linux and c++ for microcontroller
 - for the linux broker use async and actix actors
 
-# Multicast announce 
+# Multicast hello , subscribes and heartbeat
 - From IP/PORT
 - if ip and port not given , take the UDP address.
 
 ```json
 {
-    "src":"motor",
-    "announce":{
-        "ip":"192.168.2.3",
-        "port":6502,
-        "sub":[""]
-    }
+    "src":"brain",
+    "subs":["motor"]
 }
 ```
 # Subscribe
@@ -33,9 +29,9 @@
 ```json
 {
     "dst":"motor",
-    "sub" :{
-        "dst":"brain",
-    },
+    "src":"brain",
+    "subscribe":{
+    }
 }
 ```
 

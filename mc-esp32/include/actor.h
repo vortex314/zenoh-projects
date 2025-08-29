@@ -320,6 +320,6 @@ typedef struct PropInfo
 MSG(StopActorMsg);
 MSG(PublishTxd, std::string topic; Value value; PublishTxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
 MSG(PublishRxd, std::string topic; Value value; PublishRxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
-MSG(Subscribe, std::string src; std::string dst);
+MSG(Subscribe, std::string src; std::string dst; Subscribe(const std::string &src, const std::string &dst) : src(src), dst(dst) {});
 
 #endif

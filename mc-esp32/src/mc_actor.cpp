@@ -15,7 +15,7 @@ static int create_multicast_socket();
 McActor::McActor(const char *name)
     : Actor(name)
 {
-  _timer_publish = timer_repetitive(1000); // timer for publishing properties
+  _timer_publish = timer_repetitive(5000); // timer for publishing properties
 }
 
 void McActor::on_start()
@@ -36,26 +36,26 @@ void McActor::on_timer(int id)
   if (id == _timer_publish)
   {
     publish_props();
-    for ( auto actorref : eventbus()->actors())
+    for (auto actorref : eventbus()->actors())
     {
-        Value msg;
-        msg["src"] = actorref->name();
-        size_t idx = 0;
-        for ( auto &[key, sub] : _subscriptions)
+      Value msg;
+      msg["src"] = actorref->name();
+      msg["subs"].array();
+      for (auto &[key, sub] : _subscriptions)
+      {
+        if (sub.expires_at < current_time())
         {
-          if (sub.expires_at < current_time())
-          {
-            INFO("Subscription expired: %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
-            _subscriptions.erase(key);
-            continue;
-          }
-          if (sub.link.dst == actorref->name())
-          {
-            msg["subs"].add(Value(sub.link.src));
-            INFO("Adding subscription for %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
-          }
+          INFO("Subscription expired: %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
+          _subscriptions.erase(key);
+          continue;
         }
-        send(msg.toJson());
+        if (sub.link.dst == actorref->name())
+        {
+          msg["subs"].add(Value(sub.link.src));
+          INFO("Adding subscription for %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
+        }
+      }
+      send(msg.toJson());
     }
   }
   /* else if (id == _timer_broadcast)
@@ -98,7 +98,7 @@ void McActor::on_message(const Msg &message)
     Value v;
     v["src"] = msg.topic;
     v["pub"] = msg.value;
-    INFO("Publishing value: %s", v.toJson().c_str());
+    //    INFO("Publishing value: %s", v.toJson().c_str());
     send(v.toJson());
   });
 }
@@ -175,7 +175,7 @@ void McActor::receiver_task(void *pv)
   }
 }
 
-void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &v)
+void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &msg)
 {
   /* v.get("sub").handle<Value::ObjectType>([&](const Value::ArrayType &sub)
                                           {
@@ -193,17 +193,28 @@ void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &
                                             std::string topic = v["src"].template as<std::string>();
                                             v.hasKey("sub");
                                             emit(new PublishRxd(ref(), topic, v)); });*/
-  v.get("dst").handle<std::string>([&](const std::string &dst)
-                                   { ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
+  msg.get("dst").handle<std::string>([&](const std::string &dst)
+                                     { ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
                                     if (dst_actor != NULL_ACTOR)
                                     {
-                                        emit(new PublishRxd(ref(), dst, v));
+                                        emit(new PublishRxd(ref(), dst, msg));
                                     }
                                     else
                                     {
                                         ERROR("No actor found for destination: %s", dst.c_str());
-                                    }
-                                   });
+                                    } });
+  msg.get("subs").handle<Value::ArrayType>([&](const Value::ArrayType &subs)
+                                           {
+                                            auto dst = msg["src"].template as<std::string>();
+                                      for (const auto &sub : subs)
+                                      {
+                                        ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
+                                        if (dst_actor != NULL_ACTOR)
+                                        {
+                                          _subscriptions.emplace(sub.template as<std::string>(), 
+                                          Subscription{sub.template as<std::string>(), dst, current_time() + 60000}); // 1 minute subscription
+                                        }
+                                      } });
 }
 
 Res McActor::connect(void)
@@ -387,7 +398,6 @@ static int create_udp_socket(uint16_t port)
 
 Result<Void> McActor::send(const std::string &data)
 {
-  emit(new LedPulse(ref(), 10)); // Pulse LED for 10 ms
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);
   dest_addr.sin_family = AF_INET;

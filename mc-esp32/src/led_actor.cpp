@@ -21,13 +21,7 @@ void LedActor::on_message(const Msg &msg)
                         _state = LED_STATE_OFF;
             gpio_set_level(GPIO_LED, LED_OFF_VALUE); });
 
-    msg.handle<LedPulse>([&](auto led_pulse)
-                         {
-        _duration = led_pulse.duration_msec;
-        _state = LED_STATE_PULSE;
-        _led_is_on = true;
-        gpio_set_level(GPIO_LED, LED_ON_VALUE);
-        timer_fire(_timer_led, _duration); });
+    msg.handle<LedPulse>([&](auto led_pulse) {});
 
     msg.handle<LedBlink>([&](auto led_blink)
                          {
@@ -38,6 +32,14 @@ void LedActor::on_message(const Msg &msg)
         timer_fire(_timer_led, _duration); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
+
+    msg.handle<PublishTxd>([&](const PublishTxd &msg)
+                           {
+                             _duration = 10;
+        _state = LED_STATE_PULSE;
+        _led_is_on = true;
+        gpio_set_level(GPIO_LED, LED_ON_VALUE);
+        timer_fire(_timer_led, _duration); });
 }
 
 void LedActor::on_timer(int timer_id)
