@@ -56,12 +56,12 @@ private:
     class Proxy
     {
     private:
-        Value &value_;
-        std::string key_;
+        Value &_parent;
+        std::string _key;
 
     public:
         Proxy(Value &value, const std::string &key)
-            : value_(value), key_(key)
+            : _parent(value), _key(key)
         {
             // printf("Proxy created for key: %s\n", key.c_str());
         }
@@ -69,68 +69,68 @@ private:
         // Conversion operator for reading
         operator Value() const
         {
-            return value_.get(key_);
+            return _parent.get(_key);
         }
 
         // Assignment operator for writing
         Value operator=(const Value &val)
         {
-            return value_.set(key_, val);
+            return _parent.set(_key, val);
         }
         void array()
         {
-            value_.set(key_, Value(ArrayType{}));
+            _parent.set(_key, Value(ArrayType{}));
         }
 
         // Overloaded operator[] to allow nested access
         Proxy operator[](const std::string &key)
         {
             // Ensure the current value is a map
-            if (value_.get(key_).is<Undefined>())
+            if (_parent.get(_key).is<Undefined>())
             {
-                value_.set(key_, Value(ObjectType{}));
+                _parent.set(_key, Value(ObjectType{}));
             }
-            return Proxy(value_.get_map()[key_], key);
+            return Proxy(_parent.get_map()[_key], key);
         }
 
         void add(Value v)
         {
-            if (value_.get(key_).is<Undefined>())
+            if (_parent.get(_key).is<Undefined>())
             {
-                value_.set(key_, Value(ArrayType{}));
+                _parent.set(_key, Value(ArrayType{}));
             }
-            if (!value_.get(key_).is<ArrayType>())
+            if (!_parent.get(_key).is<ArrayType>())
             {
                 PANIC(" cannot index ");
             }
-            std::get<ArrayType>(value_.get(key_)._value).push_back(v);
+            std::get<ArrayType>(_parent.get_map()[_key]._value).push_back(v);
         }
 
         template <typename U, typename F>
         void handle(F &&func) const
         {
-            if (!value_.get(key_).is<U>())
+            if (!_parent.get(_key).is<U>())
             {
                 return; // No action if type doesn't match
             }
-            value_.get(key_).handle<U>([&](const U &v)
-                                       { func(v); });
+            _parent.get(_key).handle<U>([&](const U &v)
+                                        { func(v); });
         }
 
         template <typename U>
         bool is() const
         {
-            return value_.get(key_).is<U>();
+            return _parent.get(_key).is<U>();
         }
         template <typename U>
         const U &as() const
         {
-            return value_.get(key_).as<U>();
+            return _parent.get(_key).as<U>();
         }
 
         inline explicit operator bool()
         {
-            return !value_.is<NullType>();
+            return !_parent.is<NullType>();
         }
     };
 

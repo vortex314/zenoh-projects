@@ -4,7 +4,6 @@
 #include <time.h>
 #include <string.h>
 
-
 SysActor::SysActor(const char *name) : Actor(name)
 {
     _timer_publish = timer_repetitive(5000);
@@ -13,8 +12,7 @@ SysActor::SysActor(const char *name) : Actor(name)
 void SysActor::on_start()
 {
     INFO("Starting SysActor");
-        eventbus()->push(new Subscribe("time_server",this->name()));
-
+    eventbus()->push(new Subscribe("time_server", this->name(), UINT32_MAX));
 }
 
 SysActor::~SysActor()
@@ -58,9 +56,9 @@ void SysActor::on_message(const Msg &msg)
                           { esp_restart(); });
     msg.handle<PublishRxd>([&](auto publish)
                            { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
-                                                                         { set_utc(utc); }); });
+                                                                                  { set_utc(utc); }); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
-                          { on_timer(msg.timer_id); });
+                         { on_timer(msg.timer_id); });
 }
 void SysActor::on_timer(int id)
 {

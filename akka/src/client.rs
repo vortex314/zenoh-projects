@@ -31,6 +31,7 @@ fn str_to_ip4_addr(ip4_str: &str) -> Result<Ipv4Addr> {
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
 pub enum ClientCmd {
+    Subscribe {src:String, dst: String},
     AddListener {
         src: String,
         recipient: Recipient<ClientEvent>,

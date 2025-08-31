@@ -37,6 +37,8 @@ pub enum McCmd {
     ReceivedInternal(Value),
     SendValue(Value),
     Reconnect,
+    Subscribe { src: String, dst: String },
+    Publish { src: String, value: Value },
 }
 
 #[derive(Debug, Message, Clone)]

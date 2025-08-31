@@ -10,6 +10,7 @@ mod logger;
 mod multicast;
 mod value;
 mod udp;
+mod eventbus;
 use actix::prelude::*;
 use local_ip_address::local_ip;
 use log::{debug, info};

@@ -24,6 +24,10 @@ void McActor::on_start()
   if (r.is_ok())
   {
     _task_handle = r.unwrap();
+    for (auto actor : eventbus()->actors())
+    {
+      _local_objects.emplace(actor->name(), LocalObject{actor->ref()});
+    }
   }
   else
   {
@@ -33,26 +37,29 @@ void McActor::on_start()
 
 void McActor::on_timer(int id)
 {
+  for (auto &[src, dsts] : _subscriptions)
+  {
+    for (auto &[dst, timeout] : dsts)
+    {
+      INFO("Subscription : %s -> %s : %llu", src.c_str(), dst.c_str(), timeout);
+    }
+  }
   if (id == _timer_publish)
   {
-    publish_props();
-    for (auto actorref : eventbus()->actors())
+    publish_props();                               // publish own props
+    for (auto &[name, local_obj] : _local_objects) // iterate over local objects
     {
       Value msg;
-      msg["src"] = actorref->name();
+      msg["src"] = name;
       msg["subs"].array();
-      for (auto &[key, sub] : _subscriptions)
+      for (auto &[src, dsts] : _subscriptions)
       {
-        if (sub.expires_at < current_time())
+        for (auto &[dst, timeout] : dsts)
         {
-          INFO("Subscription expired: %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
-          _subscriptions.erase(key);
-          continue;
-        }
-        if (sub.link.dst == actorref->name())
-        {
-          msg["subs"].add(Value(sub.link.src));
-          INFO("Adding subscription for %s -> %s", sub.link.src.c_str(), sub.link.dst.c_str());
+          if ( dst == name )
+          {
+            msg["subs"].add(src);
+          }
         }
       }
       send(msg.toJson());
@@ -91,9 +98,8 @@ void McActor::on_message(const Msg &message)
                                    { disconnect(); });
   message.handle<Subscribe>([&](const Subscribe &sub)
                             {
-                              INFO("Subscribe %s = %s", sub.src.c_str(), sub.dst.c_str());
-                              _subscriptions.emplace(sub.src, Subscription{sub.src, sub.dst, current_time() + 60000}); // 1 minute subscription
-                            });
+                              INFO("Subscribe %s => %s", sub.src.c_str(), sub.dst.c_str());
+                              add_subscription(sub.src, sub.dst, current_time()+sub.timeout); });
   message.handle<PublishTxd>([&](const PublishTxd &msg) { // INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
     Value v;
     v["src"] = msg.topic;
@@ -211,8 +217,7 @@ void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &
                                         ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
                                         if (dst_actor != NULL_ACTOR)
                                         {
-                                          _subscriptions.emplace(sub.template as<std::string>(), 
-                                          Subscription{sub.template as<std::string>(), dst, current_time() + 60000}); // 1 minute subscription
+                                          add_subscription(dst, sub.as<std::string>(), 60000);
                                         }
                                       } });
 }
@@ -437,3 +442,12 @@ Result<Bytes> McActor::receive()
     return Result<Bytes>(bytes);
   }
 }*/
+
+void McActor::add_subscription(const std::string &src, const std::string &dst, uint32_t timeout)
+{
+  if (_subscriptions.find(src) == _subscriptions.end())
+  {
+    _subscriptions.emplace(src, std::unordered_map<std::string, uint64_t>());
+  }
+  _subscriptions[src][dst] = timeout;
+}

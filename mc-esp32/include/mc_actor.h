@@ -53,29 +53,33 @@ MSG(McSend, std::string topic; Value value; McSend(const std::string &topic, con
 
 void send();
 
-typedef struct RemoteObject {
+typedef struct RemoteObject
+{
   sockaddr_in addr;
-} RemoteObject ;
+} RemoteObject;
 
-typedef struct LocalObject {
+typedef struct LocalObject
+{
   ActorRef actor;
 } LocalObject;
 
-typedef struct Link {
+typedef struct Link
+{
   std::string src;
   std::string dst;
   bool operator==(const struct Link &other) const
   {
     return src == other.src && dst == other.dst;
   }
+  uint64_t expires_at;
+
 } Link;
 
-typedef struct {
+typedef struct
+{
   Link link;
   uint64_t expires_at;
 } Subscription;
-
-
 
 class McActor : public Actor
 {
@@ -88,10 +92,10 @@ private:
   int _udp_socket = -1; // socket for UDP communication
   TaskHandle_t _task_handle = NULL;
   unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
-  // remote objects 
-  std::unordered_map<std::string,RemoteObject> _remote_objects; // object found at udp location
-  std::unordered_map<std::string,LocalObject> _local_objects;
-  std::unordered_map<std::string,Subscription> _subscriptions;
+  // remote objects
+  std::unordered_map<std::string, RemoteObject> _remote_objects; // object found at udp location
+  std::unordered_map<std::string, LocalObject> _local_objects;
+  std::unordered_map<std::string, std::unordered_map<std::string,uint64_t>> _subscriptions;
 
 public:
   McActor(const char *name);
@@ -103,11 +107,12 @@ public:
   void on_wifi_disconnected();
   void on_timer(int id);
   void on_multicast_message(const sockaddr_in &source_addr, const Value &msg);
+  void add_subscription(const std::string &src, const std::string &dst, uint32_t timeout);
 
   bool is_connected() const;
   Result<Void> connect(void);
   Result<Void> disconnect();
-//  Result<Bytes> receive();
+  //  Result<Bytes> receive();
   Result<Void> send(const std::string &data);
   Result<Void> publish_props();
 

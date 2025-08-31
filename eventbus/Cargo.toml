@@ -1,0 +1,26 @@
+[package]
+name = "eventbus"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio ={version="1.46.1",features = ["full"]}
+async-trait="0.1.88"
+thiserror="*"
+actix="0.13.5"
+actix-rt ="*"
+# ractor={ version = "0.15.6",features = ["async-trait"]}
+env_logger="*"
+log="*"
+chrono="*"
+base64="*"
+serde_json = "1.0"
+serde_cbor ="*"
+anyhow="1.0.98"
+futures="*"
+socket2={ version="0.6.0", features = ["all"] }
+local-ip-address = "0.6.5"
+gethostname = "1.0.2"
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.5.26", features = ["derive"] }
+indexmap = "2.0.0"
