@@ -2,7 +2,7 @@ use std::{any::TypeId, time::Duration};
 
 use log::info;
 use socket2::Type;
-use tokio::{sync::mpsc, time::sleep};
+use tokio::{sync::mpsc, task::JoinHandle, time::sleep};
 
 mod eventbus;
 use eventbus::EventBus;
@@ -28,6 +28,8 @@ struct PlannerActor {
     bus: EventBus,
     rx: mpsc::Receiver<MessageEnvelope>,
     tx: mpsc::Sender<MessageEnvelope>,
+    t1_handle: Option<JoinHandle<()>>,
+    t2_handle: Option<JoinHandle<()>>,
 }
 
 impl PlannerActor {
@@ -38,31 +40,43 @@ impl PlannerActor {
             bus,
             rx,
             tx,
+            t1_handle: None,
+            t2_handle: None,
         }
     }
 
     async fn on_poseupdate(&mut self, msg: &PoseUpdate) {
         info!("[{}] Planner got pose: {:?}", self.id, msg);
+        let m1 = msg.clone();
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(1000)).await;
+            info!("Planner processed pose later: {:?}", m1);
+        });
     }
 
     async fn on_timer(&mut self, msg: &TimerPlanner) {
         info!("[{}] Timer fired: {:?}", self.id, msg);
+        self.t1_handle.as_mut().inspect(|x| {
+            x.abort();
+            info!("[{}] t1_handle is running: {:?}", self.id, x);
+        });
     }
 
     async fn start(&mut self) {
         // Timer sends to planner every 2s
-        let t1 = self.bus.spawn_timer(
-            Some("bus".to_string()) ,
+        self.t1_handle = Some(self.bus.spawn_timer(
+            Some("bus".to_string()),
             Some("planner".into()),
             TimerPlanner::SmallInterval,
             Duration::from_secs(1),
-        );
-        let t2 = self.bus.spawn_timer(
+        ));
+
+        self.t2_handle = Some(self.bus.spawn_timer(
             Some("bus".to_string()),
             Some("planner".into()),
             TimerPlanner::BigInterval,
             Duration::from_secs(5),
-        );
+        ));
 
         self.bus.subscribe_filtered(
             MessageFilter::new(
