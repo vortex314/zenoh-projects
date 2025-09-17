@@ -3,6 +3,8 @@
 
 static int create_multicast_socket();
 
+
+
 /*void send()
 {
   auto msg = McSend("test/topic", Value("Hello, World!"));
@@ -106,6 +108,13 @@ void McActor::on_message(const Msg &message)
     v["pub"] = msg.value;
     //    INFO("Publishing value: %s", v.toJson().c_str());
     send(v.toJson());
+  });
+  message.handle<SysPub>([&](auto sys_pub ) {
+    sys_pub.serialize();
+    Value v;
+    v["src"]=sys_pub.src.name();
+    auto object = v["pub"].as<Value::ObjectType>();
+    sys_pub.cpu_board >> ([&](auto s) { v["sys_pub"]["cpu_board"]=s;});
   });
 }
 

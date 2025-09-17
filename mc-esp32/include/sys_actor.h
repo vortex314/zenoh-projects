@@ -1,11 +1,15 @@
+#ifndef _SYS_ACTOR_H_
+#define _SYS_ACTOR_H_
 #include <actor.h>
 #include <functional>
 #include <msg_info.h>
 #include <serdes.h>
 #include <vector>
 #include <value.h>
+#include <option.h>
 
-MSG(SysReboot);
+MSG(SysCmd, Option<bool> reboot;Option<uint64_t> set_time;);
+MSG(SysPub,Option<uint64_t> uptime;Option<std::string> version;Option<std::string> cpu_board;Option<uint32_t> free_heap);
 
 class SysActor : public Actor
 {
@@ -22,4 +26,7 @@ public:
   Result<Value> publish_props();
   void set_utc(int64_t utc);
   Result<Value> publish_info();
+  static void reboot(Option<bool> b);
 };
+
+#endif

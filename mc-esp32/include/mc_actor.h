@@ -1,5 +1,5 @@
-#ifndef ZENOH_ACTOR_H
-#define ZENOH_ACTOR_H
+#ifndef MC_ACTOR_H
+#define MC_ACTOR_H
 
 #include "json.h"
 #include <actor.h>
@@ -38,6 +38,7 @@
 #include <wifi_actor.h>
 #include "esp_netif.h"
 #include <led_actor.h>
+#include <sys_actor.h>
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -121,4 +122,9 @@ public:
   Result<TaskHandle_t> start_receiver_task();
   static void receiver_task(void *);
 };
+
+Result<std::vector<uint8_t>> serialize(const SysPub& ); // for json or pb
+Result<SysCmd> deserialize(const std::vector<uint8_t>&); // protobuf approach , check messageType
+Result<SysCmd> deserialize(const Value& ); // JSON check presence "sys_cmd" , value.has("sys_pub")
+
 #endif

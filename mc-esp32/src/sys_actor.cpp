@@ -50,10 +50,17 @@ void SysActor::set_utc(int64_t utc)
     // Print with microseconds
     INFO("Current time: %s", buffer);
 }
+
+void SysActor::reboot(Option<bool> b){
+    if ( b && *b ) {
+        esp_restart();
+    }
+}
+
 void SysActor::on_message(const Msg &msg)
 {
-    msg.handle<SysReboot>([](auto v)
-                          { esp_restart(); });
+    msg.handle<SysCmd>([](auto sys_cmd)
+                       { sys_cmd.reboot.inspect(reboot); });
     msg.handle<PublishRxd>([&](auto publish)
                            { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
                                                                                   { set_utc(utc); }); });

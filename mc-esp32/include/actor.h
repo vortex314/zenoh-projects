@@ -17,6 +17,7 @@
 #include <result.h>
 #include <memory>
 #include <stdint.h>
+#include <serdes.h>
 #pragma once
 
 uint64_t current_time();
@@ -61,6 +62,8 @@ public:
     public:                                                         \
         static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
         inline const char *type_id() const override { return id; }; \
+        void serialize(Serializer &) ;                   \
+        void deserialize(Deserializer& );                \
         ~MSG_TYPE() = default;                                      \
         __VA_ARGS__;                                                \
     }
