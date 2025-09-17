@@ -51,8 +51,10 @@ void SysActor::set_utc(int64_t utc)
     INFO("Current time: %s", buffer);
 }
 
-void SysActor::reboot(Option<bool> b){
-    if ( b && *b ) {
+void SysActor::reboot(Option<bool> b)
+{
+    if (b && *b)
+    {
         esp_restart();
     }
 }
@@ -60,10 +62,8 @@ void SysActor::reboot(Option<bool> b){
 void SysActor::on_message(const Msg &msg)
 {
     msg.handle<SysCmd>([](auto sys_cmd)
-                       { sys_cmd.reboot.inspect(reboot); });
-    msg.handle<PublishRxd>([&](auto publish)
-                           { publish.value["pub"]["utc"].template handle<int64_t>([&](const int64_t &utc)
-                                                                                  { set_utc(utc); }); });
+                       { sys_cmd.reboot.inspect(reboot);
+                    sys_cmd.set_time.inspect(set_utc); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
 }
@@ -71,7 +71,17 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        emit(new PublishTxd(ref(), ref().name(), publish_props().unwrap()));
+        JsonDocument doc;
+
+        doc["src"] = ref().name();
+        doc["type"] = "pub";
+        doc["object"] = "sys";
+        doc["cpu"] = "ESP32-XTENSA";
+        doc["clock"] = 240000000;
+        doc["free_heap"] = (int64_t)esp_get_free_heap_size();
+        doc["uptime"] = esp_timer_get_time() / 1000;
+
+        emit(new PublishTxd(doc));
     }
     else
     {

@@ -27,7 +27,6 @@ static int s_retry_count = 0;
 #define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
 
-
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
   INFO("Creating WiFi actor %s ", name);
@@ -84,17 +83,14 @@ void WifiActor::on_message(const Msg &message)
                            { handle_timer(msg.timer_id); });
 }
 
-
 void WifiActor::handle_timer(int timer_id)
 {
   if (timer_id == _timer_publish)
   {
     if (_wifi_connected)
     {
-      Value wifi_event ;
-      pubish_props(esp_netif).inspect([&](const Value &info)
-                                      { wifi_event["pub"] = info; });
-      emit(new PublishTxd(ref(),"wifi",wifi_event));
+      pubish_props(esp_netif).inspect([&](const JsonDocument &doc)
+                                      { emit(new PublishTxd(doc)); });
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -141,7 +137,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
            event_id == WIFI_EVENT_STA_DISCONNECTED)
   {
     INFO("WiFi STA disconnected");
-    actor->emit(new WifiDisconnected() );
+    actor->emit(new WifiDisconnected());
     actor->_wifi_connected = false;
     if (s_retry_count < ESP_MAXIMUM_RETRY)
     {
@@ -189,23 +185,29 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-Result<Value> WifiActor::pubish_props(esp_netif_t *esp_netif)
+Result<JsonDocument> WifiActor::pubish_props(esp_netif_t *esp_netif)
 {
-  Value v;
+  JsonDocument doc;
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
-  CHECK_ESP(esp_netif_get_ip_info(esp_netif, &ip_info));
-  v["ip"] = ip4addr_to_str(&ip_info.ip);
-  v["gateway"] = ip4addr_to_str(&ip_info.gw);
-  v["netmask"] = ip4addr_to_str(&ip_info.netmask);
+  if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)
+  {
+    return Result<JsonDocument>(ENOTCONN, "Not connected to WiFi");
+  }
+  doc["src"] = ref().name();
+  doc["type"] = "pub";
+  doc["object"] = "wifi";
+  doc["ip"] = ip4addr_to_str(&ip_info.ip);
+  doc["gateway"] = ip4addr_to_str(&ip_info.gw);
+  doc["netmask"] = ip4addr_to_str(&ip_info.netmask);
   // get MAC address
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
-  v["mac"] = macStr;
-  return Result<Value>(v);
+  doc["mac"] = macStr;
+  return Result<JsonDocument>(doc);
 }
 
 static PropInfo wifi_prop_info[] = {

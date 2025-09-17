@@ -15,7 +15,7 @@ static int create_multicast_socket();
 }*/
 
 McActor::McActor(const char *name)
-    : Actor(name)
+    : Actor(name), _json_bytes(1024), _json_serializer(_json_bytes)
 {
   _timer_publish = timer_repetitive(5000); // timer for publishing properties
 }
@@ -87,6 +87,7 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
+
 void McActor::on_message(const Msg &message)
 {
   message.handle<McSend>([&](const McSend &msg)
@@ -103,14 +104,12 @@ void McActor::on_message(const Msg &message)
                               INFO("Subscribe %s => %s", sub.src.c_str(), sub.dst.c_str());
                               add_subscription(sub.src, sub.dst, current_time()+sub.timeout); });
   message.handle<PublishTxd>([&](const PublishTxd &msg) { // INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
-    Value v;
-    v["src"] = msg.topic;
-    v["pub"] = msg.value;
-    //    INFO("Publishing value: %s", v.toJson().c_str());
-    send(v.toJson());
+    std::string s;
+    serializeJson(msg.doc, s);
+    send(s);
   });
   message.handle<SysPub>([&](auto sys_pub ) {
-    sys_pub.serialize();
+    sys_pub.serialize(_json_serializer);
     Value v;
     v["src"]=sys_pub.src.name();
     auto object = v["pub"].as<Value::ObjectType>();
@@ -175,23 +174,44 @@ void McActor::receiver_task(void *pv)
       {
         mc_actor->_rx_buffer[len] = '\0';
         INFO("UDP RXD [%d]: %s", len, mc_actor->_rx_buffer);
-        auto res_msg = Value::fromJson((const char *)mc_actor->_rx_buffer);
-        if (!res_msg.is_ok())
+        JsonDocument doc;
+        auto erc = deserializeJson(doc, (const char *)mc_actor->_rx_buffer);
+        if (erc != DeserializationError::Ok)
         {
-          ERROR("Failed to parse multicast message: %s", res_msg.msg());
+          ERROR("Failed to parse multicast message: %s", erc.c_str());
           continue;
         }
 
         //    esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
-        res_msg.inspect([&](auto v)
-                        { mc_actor->on_multicast_message(source_addr, v); });
+         mc_actor->on_multicast_message(source_addr, doc);
       }
     }
   }
 }
 
-void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &msg)
+void McActor::on_multicast_message(const sockaddr_in &source_addr, const JsonDocument &msg)
 {
+  if ( msg["type"].as<std::string>() == "pub")
+  {
+    // Handle publish message
+    if ( msg["object"]=="sys") {
+      SysCmd* sys_cmd = new SysCmd();
+      if ( msg["set_time"])
+      {
+        sys_cmd->set_time = msg["set_time"].as<uint64_t>();
+      }
+      if ( msg["reboot"])
+      {
+        sys_cmd->reboot = msg["reboot"].as<bool>();
+      }
+      emit(sys_cmd);
+      // Process sys_cmd
+    }
+  }
+  else if (msg["type"].as<std::string>() == "sub")
+  {
+    // Handle subscribe message
+  }
   /* v.get("sub").handle<Value::ObjectType>([&](const Value::ArrayType &sub)
                                           {
                                             auto dst = v.get("src").as<std::string>();
@@ -208,7 +228,7 @@ void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &
                                             std::string topic = v["src"].template as<std::string>();
                                             v.hasKey("sub");
                                             emit(new PublishRxd(ref(), topic, v)); });*/
-  msg.get("dst").handle<std::string>([&](const std::string &dst)
+  /*msg.get("dst").handle<std::string>([&](const std::string &dst)
                                      { ActorRef dst_actor = eventbus()->find_actor(dst.c_str());
                                     if (dst_actor != NULL_ACTOR)
                                     {
@@ -228,7 +248,7 @@ void McActor::on_multicast_message(const sockaddr_in &source_addr, const Value &
                                         {
                                           add_subscription(dst, sub.as<std::string>(), 60000);
                                         }
-                                      } });
+                                      } });*/
 }
 
 Res McActor::connect(void)
@@ -271,19 +291,23 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
-  Value v, publish;
-  get_props(publish);
-  emit(new PublishTxd(ref(), "multicast", publish));
+  get_props().inspect([&](const JsonDocument &doc)
+                      { emit(new PublishTxd( doc)); });
   return ResOk;
 }
 
 //============================================================
 
-void McActor::get_props(Value &v) const
+Result<JsonDocument> McActor::get_props() const
 {
-  v["ip"] = MULTICAST_IP;
-  v["port"] = MULTICAST_PORT;
-  v["packet_size"] = MAX_UDP_PACKET_SIZE;
+  JsonDocument doc;
+  doc["src"] = ref().name();
+  doc["type"] = "pub";
+  doc["object"] = "mc";
+  doc["ip"] = MULTICAST_IP;
+  doc["port"] = MULTICAST_PORT;
+  doc["packet_size"] = MAX_UDP_PACKET_SIZE;
+  return Result<JsonDocument>(doc);
 }
 
 static int create_multicast_socket()
@@ -459,4 +483,14 @@ void McActor::add_subscription(const std::string &src, const std::string &dst, u
     _subscriptions.emplace(src, std::unordered_map<std::string, uint64_t>());
   }
   _subscriptions[src][dst] = timeout;
+}
+
+void SysPub::serialize(Serializer &serializer) 
+{
+  serializer.map_begin();
+  serializer.serialize("uptime", uptime);
+  serializer.serialize("version", version);
+  serializer.serialize("cpu_board", cpu_board);
+  serializer.serialize("free_heap", free_heap);
+  serializer.map_end();
 }

@@ -93,10 +93,13 @@ private:
   int _udp_socket = -1; // socket for UDP communication
   TaskHandle_t _task_handle = NULL;
   unsigned char _rx_buffer[MAX_UDP_PACKET_SIZE];
+  Bytes _json_bytes;
+
+  JsonSerializer _json_serializer;
   // remote objects
   std::unordered_map<std::string, RemoteObject> _remote_objects; // object found at udp location
   std::unordered_map<std::string, LocalObject> _local_objects;
-  std::unordered_map<std::string, std::unordered_map<std::string,uint64_t>> _subscriptions;
+  std::unordered_map<std::string, std::unordered_map<std::string, uint64_t>> _subscriptions;
 
 public:
   McActor(const char *name);
@@ -107,7 +110,7 @@ public:
   void on_wifi_connected();
   void on_wifi_disconnected();
   void on_timer(int id);
-  void on_multicast_message(const sockaddr_in &source_addr, const Value &msg);
+  void on_multicast_message(const sockaddr_in &source_addr, const JsonDocument &msg);
   void add_subscription(const std::string &src, const std::string &dst, uint32_t timeout);
 
   bool is_connected() const;
@@ -118,13 +121,13 @@ public:
   Result<Void> publish_props();
 
   Result<Void> subscribe(const std::string &topic);
-  void get_props(Value &v) const;
+  Result<JsonDocument> get_props() const;
   Result<TaskHandle_t> start_receiver_task();
   static void receiver_task(void *);
 };
 
-Result<std::vector<uint8_t>> serialize(const SysPub& ); // for json or pb
-Result<SysCmd> deserialize(const std::vector<uint8_t>&); // protobuf approach , check messageType
-Result<SysCmd> deserialize(const Value& ); // JSON check presence "sys_cmd" , value.has("sys_pub")
+Result<std::vector<uint8_t>> serialize(const SysPub &);   // for json or pb
+Result<SysCmd> deserialize(const std::vector<uint8_t> &); // protobuf approach , check messageType
+Result<SysCmd> deserialize(const Value &);                // JSON check presence "sys_cmd" , value.has("sys_pub")
 
 #endif

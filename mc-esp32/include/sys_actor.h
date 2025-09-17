@@ -7,6 +7,7 @@
 #include <vector>
 #include <value.h>
 #include <option.h>
+#include <ArduinoJson.h>
 
 MSG(SysCmd, Option<bool> reboot;Option<uint64_t> set_time;);
 MSG(SysPub,Option<uint64_t> uptime;Option<std::string> version;Option<std::string> cpu_board;Option<uint32_t> free_heap);
@@ -24,7 +25,7 @@ public:
   void on_timer(int timer_id);
   void on_start();
   Result<Value> publish_props();
-  void set_utc(int64_t utc);
+  static void set_utc(int64_t utc);
   Result<Value> publish_info();
   static void reboot(Option<bool> b);
 };

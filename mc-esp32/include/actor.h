@@ -18,6 +18,7 @@
 #include <memory>
 #include <stdint.h>
 #include <serdes.h>
+#include <ArduinoJson.h>
 #pragma once
 
 uint64_t current_time();
@@ -244,7 +245,7 @@ public:
     std::vector<int> get_expired_timers() { return _timers.get_expired_timers(); }
     Timers &timers() { return _timers; }
     uint64_t sleep_time() { return _timers.sleep_time(); }
-    ActorRef ref() { return _self; }
+    ActorRef ref() const { return _self; }
     const char *name() { return _self.name(); }
     EventBus *eventbus() const { return _eventbus; }
 
@@ -321,11 +322,21 @@ typedef struct PropInfo
 } PropInfo;
 
 MSG(StopActorMsg);
-MSG(PublishTxd, std::string topic; Value value; \
-    PublishTxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
-MSG(PublishRxd, std::string topic; Value value; \
-    PublishRxd(const ActorRef &ref, const std::string &topic, const Value &value) : topic(topic), value(value) { src = ref; });
+MSG(PublishTxd,  JsonDocument doc; \
+    PublishTxd( const JsonDocument &doc) :  doc(doc) {  });
+MSG(PublishRxd, JsonDocument doc; \
+    PublishRxd(const JsonDocument &doc) : doc(doc) {  });
 MSG(Subscribe, std::string src; std::string dst; uint32_t timeout; \
     Subscribe(const std::string &src, const std::string &dst, uint32_t timeout) : src(src), dst(dst), timeout(timeout){});
+
+template <typename T>
+void handle(JsonDocument& doc, const char *key, std::function<void(const T &)> f)
+{
+    if (doc.containsKey(key) && doc[key].is<T>())
+    {
+        T value = doc[key].as<T>();
+        f(value);
+    }
+}
 
 #endif
