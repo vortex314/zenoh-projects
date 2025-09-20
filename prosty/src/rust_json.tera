@@ -1,0 +1,28 @@
+use serde::{Serialize, Deserialize};
+{% for en in enums %}
+#[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum {{ en.name }} {
+    {%- for value in en.values %}
+    {{ value.0 }},
+    {%- endfor %}
+} 
+{% endfor %}
+
+{% for msg in messages %}
+#[derive(Debug, Clone,Serialize,Deserialize)]
+pub struct {{ msg.name }} {
+    {% for field in msg.fields -%}
+        {%- if field.repeated -%}
+    pub {{ field.name }}:Vec<{{ field.target_type }}>,
+        {%- elif field.optional -%}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{ field.name }}:Option<{{ field.target_type }}>,
+        {% else -%}
+    pub {{ field.name }}:{{ field.target_type }},
+        {%- endif -%}
+    {% endfor %}
+}
+impl {{ msg.name }} {
+    pub const ID: u32 = {{ msg.msg_id }};
+}
+{% endfor %}

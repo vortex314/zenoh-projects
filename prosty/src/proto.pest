@@ -1,0 +1,42 @@
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }
+
+COMMENT = _{ LINE_COMMENT | BLOCK_COMMENT }
+LINE_COMMENT = _{ "//" ~ (!NEWLINE ~ ANY)* ~ (NEWLINE | EOI) }
+BLOCK_COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+identifier = @{ (ASCII_ALPHANUMERIC | "_" | ".")+ }
+package_name = { identifier }
+
+string = @{
+    "\"" ~ ( "\\\"" | (!"\"" ~ ANY) )* ~ "\""
+  | "\'" ~ ( "\\\'" | (!"\'" ~ ANY) )* ~ "\'"
+}
+
+number = @{ ASCII_DIGIT+ }
+
+syntax_decl = { "syntax" ~ "=" ~ string ~ ";" }
+package_decl = { "package" ~ package_name ~ ";" }
+import_decl = { "import" ~ ( "public" | "weak" )? ~ string ~ ";" }
+option_decl = { "option" ~ identifier ~ "=" ~ (identifier | string | number) ~ ";" }
+
+proto = { SOI ~ (syntax_decl)? ~ (top_item)* ~ EOI }
+top_item = _{ (package_decl | import_decl | option_decl | top_message | top_enum | service_decl) }
+
+top_message = { "message" ~ identifier ~ "{" ~ message_body* ~ "}" }
+message_body = _{ field_decl | nested_message | nested_enum | option_decl }
+
+nested_message = { top_message }
+field_decl = { ("repeated")? ~ type_name ~ identifier ~ "=" ~ number ~ ( "[" ~ field_options ~ "]")? ~ ";" }
+field_options = { (identifier ~ "=" ~ (identifier | string | number) ) ~ ("," ~ (identifier ~ "=" ~ (identifier | string | number) ))* }
+
+type_name = { identifier }
+
+top_enum = { "enum" ~ identifier ~ "{" ~ enum_field* ~ "}" }
+enum_field = { identifier ~ "=" ~ number ~ ";" }
+
+service_decl = { "service" ~ identifier ~ "{" ~ rpc_decl* ~ "}" }
+rpc_decl = { "rpc" ~ identifier ~ "(" ~ ( "stream" )? ~ type_name ~ ")" ~ "returns" ~ "(" ~ ( "stream" )? ~ type_name ~ ")" ~ ( "{" ~ rpc_options* ~ "}" )? ";" }
+rpc_options = { option_decl | "option" ~ identifier ~ "=" ~ (identifier | string | number) ~ ";" }
+
+field_or_ws = _{ field_decl | WHITESPACE | COMMENT }

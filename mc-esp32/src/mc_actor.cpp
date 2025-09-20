@@ -194,13 +194,15 @@ void McActor::on_multicast_message(const sockaddr_in &source_addr, const JsonDoc
   if ( msg["type"].as<std::string>() == "pub")
   {
     // Handle publish message
-    if ( msg["object"]=="sys") {
+    if ( msg["SysCmd"].is<JsonObject>() )
+    {
+      auto m = msg["SysCmd"].as<JsonObject>();
       SysCmd* sys_cmd = new SysCmd();
-      if ( msg["set_time"])
+      if ( m["set_time"])
       {
         sys_cmd->set_time = msg["set_time"].as<uint64_t>();
       }
-      if ( msg["reboot"])
+      if ( m["reboot"])
       {
         sys_cmd->reboot = msg["reboot"].as<bool>();
       }

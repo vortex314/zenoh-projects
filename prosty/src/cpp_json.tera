@@ -1,0 +1,80 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <optional>
+#include <ArduinoJson.h>
+    #include <actor.h>
+
+typedef std::vector<uint8_t> Bytes;
+
+{% for en in enums %}
+typedef enum {
+    {%- for value in en.values %}
+    {{ value.0 }} = {{ value.1 }},
+    {%- endfor %}
+} {{ en.name }};
+{% endfor %}
+
+{% for msg in messages %}
+class {{ msg.name }} : public Msg {
+    public:
+    static constexpr const char *id = "{{ msg.name}}";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = {{ msg.msg_id }};
+
+    {% for field in msg.fields %}
+        {%- if field.repeated -%}
+        std::vector<{{ field.target_type }}>
+        {%- elif field.optional -%}
+        std::optional<{{ field.target_type }}> 
+        {%- else -%}
+        {{ field.target_type }} 
+        {%- endif %} {{ field.name }};
+    {% endfor -%}
+
+    Bytes serialize() const {
+        JsonDocument doc;
+        JsonObject obj = doc.to<JsonObject>();
+        {% for field in msg.fields %}
+            {%- if field.repeated -%}
+        JsonArray arr = obj["{{ field.name }}"].as<JsonArray>();
+        for (const auto& item : {{ field.name }}) {
+            arr.add(item);
+        }
+            {%- elif field.optional -%}
+        if ({{ field.name }}.has_value()) {
+            obj["{{ field.name }}"] = {{ field.name }}.value();
+        }
+            {%- else -%}
+        obj["{{ field.name }}"] = {{ field.name }};
+            {%- endif %}
+        {% endfor %}
+        std::string str;
+        serializeJson(doc, str);
+        return {str.begin(), str.end()};
+    }
+
+    void deserialize(const Bytes& data) {
+        JsonDocument doc;
+        deserializeJson(doc, data);
+        JsonObject obj = doc.as<JsonObject>();
+        {% for field in msg.fields %}
+            {%- if field.repeated -%}
+        if (obj["{{ field.name }}"].is<JsonArray>()) {
+            JsonArray arr = obj["{{ field.name }}"].as<JsonArray>();
+            {{ field.name }}.clear();
+            for (JsonVariant v : arr) {
+                {{ field.name }}.push_back(v.as<{{ field.target_type }}>());
+            }
+        }
+            {%- elif field.optional -%}
+        if (obj["{{ field.name }}"].is<{{ field.target_type }}>() ) {
+            {{ field.name }} = obj["{{ field.name }}"].as<{{ field.target_type }}>();
+        } 
+            {%- endif %}
+        {% endfor %}
+    }
+
+};
+{% endfor %}

@@ -51,9 +51,9 @@ void SysActor::set_utc(int64_t utc)
     INFO("Current time: %s", buffer);
 }
 
-void SysActor::reboot(Option<bool> b)
+void SysActor::reboot(bool b)
 {
-    if (b && *b)
+    if (b)
     {
         esp_restart();
     }
@@ -62,8 +62,8 @@ void SysActor::reboot(Option<bool> b)
 void SysActor::on_message(const Msg &msg)
 {
     msg.handle<SysCmd>([](auto sys_cmd)
-                       { sys_cmd.reboot.inspect(reboot);
-                    sys_cmd.set_time.inspect(set_utc); });
+                       { if ( sys_cmd.reboot) reboot(*sys_cmd.reboot);
+                         if ( sys_cmd.set_time) set_utc(*sys_cmd.set_time); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
 }

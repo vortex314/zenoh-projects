@@ -5,6 +5,7 @@
 #include <esp_wifi.h>
 #include <functional>
 #include <vector>
+#include <limero.cpp>
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
 MSG(WifiConnected,WifiConnected(ActorRef _src){src=_src;});

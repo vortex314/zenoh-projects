@@ -63,8 +63,8 @@ public:
     public:                                                         \
         static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
         inline const char *type_id() const override { return id; }; \
-        void serialize(Serializer &) ;                   \
-        void deserialize(Deserializer& );                \
+        Bytes serialize() const ;                   \
+        void deserialize(const Bytes&) ;                \
         ~MSG_TYPE() = default;                                      \
         __VA_ARGS__;                                                \
     }
