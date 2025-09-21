@@ -1,0 +1,40 @@
+{
+    "src":"esp1/sys", 
+    "dst":"all",
+    "sys_pub":{
+        "cpu":"ESP32",
+        "mem":"4MB",
+        "disk":"16MB",
+        "uptime":756786876876,
+        "build":"2024-06-12 10:00:00",
+        "version":"1.0.0",
+        "free_heap":1024
+    },
+    "sys_cmd":{
+        "restart":true,
+        "update":false
+    },
+    "motor_pub":{
+        "speed":100,
+        "direction":"forward",
+        "IA":100,
+        "IB":100
+
+    },
+    "motor_cmd":{
+        "speed":100,
+        "direction":"backward"
+    },
+    "compass_pub":{
+        "heading":0,
+        "pitch":0,
+        "roll":0
+    },
+    "cutter_pub":{
+        "status":"idle",
+        "position":0
+    },
+    "cutter_set":{
+        "rpm":3000
+    }
+}

@@ -77,9 +77,9 @@ void WifiActor::on_start()
   }
 }
 
-void WifiActor::on_message(const Msg &message)
+void WifiActor::on_message(const Envelope &env)
 {
-  message.handle<TimerMsg>([&](const TimerMsg &msg)
+  env.msg->handle<TimerMsg>([&](const TimerMsg &msg)
                            { handle_timer(msg.timer_id); });
 }
 
@@ -89,8 +89,7 @@ void WifiActor::handle_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      pubish_props(esp_netif).inspect([&](const JsonDocument &doc)
-                                      { emit(new PublishTxd(doc)); });
+      pubish_props(esp_netif);
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -148,7 +147,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
   {
     INFO("WiFi STA got IP address in %s", actor->ref().name());
-    actor->emit(new WifiConnected(actor->ref()));
+    actor->emit(new WifiConnected());
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }
@@ -185,29 +184,27 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-Result<JsonDocument> WifiActor::pubish_props(esp_netif_t *esp_netif)
+void WifiActor::pubish_props(esp_netif_t *esp_netif)
 {
-  JsonDocument doc;
+  WifiInfo* wifi_info = new WifiInfo();
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)
   {
-    return Result<JsonDocument>(ENOTCONN, "Not connected to WiFi");
+    ERROR("Failed to get IP info")  ;
+    return;
   }
-  doc["src"] = ref().name();
-  doc["type"] = "pub";
-  doc["object"] = "wifi";
-  doc["ip"] = ip4addr_to_str(&ip_info.ip);
-  doc["gateway"] = ip4addr_to_str(&ip_info.gw);
-  doc["netmask"] = ip4addr_to_str(&ip_info.netmask);
+  wifi_info->ip = ip4addr_to_str(&ip_info.ip);
+  wifi_info->gateway = ip4addr_to_str(&ip_info.gw);
+  wifi_info->netmask = ip4addr_to_str(&ip_info.netmask);
   // get MAC address
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
   char macStr[18];
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
           mac[3], mac[4], mac[5]);
-  doc["mac"] = macStr;
-  return Result<JsonDocument>(doc);
+  wifi_info->mac = macStr;
+  emit(wifi_info);
 }
 
 static PropInfo wifi_prop_info[] = {

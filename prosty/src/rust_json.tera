@@ -1,4 +1,9 @@
 use serde::{Serialize, Deserialize};
+
+pub trait Msg {
+    const ID: u32;
+    const NAME: &'static str;
+}
 {% for en in enums %}
 #[derive(Debug, Clone,Serialize,Deserialize)] 
 pub enum {{ en.name }} {
@@ -22,7 +27,8 @@ pub struct {{ msg.name }} {
         {%- endif -%}
     {% endfor %}
 }
-impl {{ msg.name }} {
-    pub const ID: u32 = {{ msg.msg_id }};
+impl Msg for {{ msg.name }} {
+     const ID: u32 = {{ msg.msg_id }};
+     const NAME: &'static str = "{{ msg.name }}";
 }
 {% endfor %}

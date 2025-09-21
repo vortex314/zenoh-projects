@@ -3,8 +3,6 @@
 
 static int create_multicast_socket();
 
-
-
 /*void send()
 {
   auto msg = McSend("test/topic", Value("Hello, World!"));
@@ -49,7 +47,7 @@ void McActor::on_timer(int id)
   if (id == _timer_publish)
   {
     publish_props();                               // publish own props
-    for (auto &[name, local_obj] : _local_objects) // iterate over local objects
+    /*for (auto &[name, local_obj] : _local_objects) // iterate over local objects
     {
       Value msg;
       msg["src"] = name;
@@ -58,14 +56,14 @@ void McActor::on_timer(int id)
       {
         for (auto &[dst, timeout] : dsts)
         {
-          if ( dst == name )
+          if (dst == name)
           {
             msg["subs"].add(src);
           }
         }
       }
       send(msg.toJson());
-    }
+    }*/
   }
   /* else if (id == _timer_broadcast)
    {
@@ -87,9 +85,9 @@ void McActor::on_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-
-void McActor::on_message(const Msg &message)
+void McActor::on_message(const Envelope &env)
 {
+  const Msg &message = *env.msg;
   message.handle<McSend>([&](const McSend &msg)
                          { INFO("Received multicast message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str()); });
 
@@ -108,13 +106,30 @@ void McActor::on_message(const Msg &message)
     serializeJson(msg.doc, s);
     send(s);
   });
-  message.handle<SysPub>([&](auto sys_pub ) {
-    sys_pub.serialize(_json_serializer);
-    Value v;
-    v["src"]=sys_pub.src.name();
-    auto object = v["pub"].as<Value::ObjectType>();
-    sys_pub.cpu_board >> ([&](auto s) { v["sys_pub"]["cpu_board"]=s;});
-  });
+  message.handle<SysInfo>([&](const SysInfo &sys_info)
+                          {
+                            JsonDocument doc;
+                            doc["src"]=env.src->name();
+                            doc["SysInfo"]=sys_info.serialize(); 
+                            std::string s;
+                            serializeJson(doc,s);
+                            send(s); });
+  message.handle<WifiInfo>([&](const WifiInfo &wifi_info)
+                          {
+                            JsonDocument doc;
+                            doc["src"]=env.src->name();
+                            doc["WifiInfo"]=wifi_info.serialize();
+                            std::string s;
+                            serializeJson(doc,s);
+                            send(s); });
+  message.handle<MulticastInfo>([&](const MulticastInfo &multicast_info)
+                                  {
+                                    JsonDocument doc;
+                                    doc["src"]=env.src->name();
+                                    doc["MulticastInfo"]=multicast_info.serialize();
+                                    std::string s;
+                                    serializeJson(doc,s);
+                                    send(s); });
 }
 
 void McActor::on_wifi_connected()
@@ -172,37 +187,41 @@ void McActor::receiver_task(void *pv)
       }
       else
       {
-        mc_actor->_rx_buffer[len] = '\0';
-        INFO("UDP RXD [%d]: %s", len, mc_actor->_rx_buffer);
-        JsonDocument doc;
-        auto erc = deserializeJson(doc, (const char *)mc_actor->_rx_buffer);
-        if (erc != DeserializationError::Ok)
-        {
-          ERROR("Failed to parse multicast message: %s", erc.c_str());
-          continue;
-        }
+        Bytes bytes(mc_actor->_rx_buffer, mc_actor->_rx_buffer + len);
 
         //    esp_ip4_addr_t *ip_addr = (esp_ip4_addr_t *)&source_addr.sin_addr.s_addr;
-         mc_actor->on_multicast_message(source_addr, doc);
+        mc_actor->on_multicast_message(source_addr, bytes);
       }
     }
   }
 }
 
-void McActor::on_multicast_message(const sockaddr_in &source_addr, const JsonDocument &msg)
+void McActor::on_multicast_message(const sockaddr_in &source_addr, Bytes &data)
 {
-  if ( msg["type"].as<std::string>() == "pub")
+
+  data.push_back('\0');
+  INFO("UDP RXD [%d]: %s", data.size(), data.data());
+  JsonDocument doc;
+  auto erc = deserializeJson(doc, (const char *)data.data());
+  if (erc != DeserializationError::Ok)
+  {
+    ERROR("Failed to parse multicast message: %s", erc.c_str());
+    return;
+  }
+  auto msg = doc.as<JsonObject>();
+
+  if (msg["type"].as<std::string>() == "pub")
   {
     // Handle publish message
-    if ( msg["SysCmd"].is<JsonObject>() )
+    if (msg["SysCmd"].is<JsonObject>())
     {
       auto m = msg["SysCmd"].as<JsonObject>();
-      SysCmd* sys_cmd = new SysCmd();
-      if ( m["set_time"])
+      SysCmd *sys_cmd = new SysCmd();
+      if (m["set_time"])
       {
         sys_cmd->set_time = msg["set_time"].as<uint64_t>();
       }
-      if ( m["reboot"])
+      if (m["reboot"])
       {
         sys_cmd->reboot = msg["reboot"].as<bool>();
       }
@@ -293,8 +312,11 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
-  get_props().inspect([&](const JsonDocument &doc)
-                      { emit(new PublishTxd( doc)); });
+  MulticastInfo* info = new MulticastInfo();
+  info->group = MULTICAST_IP;
+  info->port = MULTICAST_PORT;
+  info->mtu = MAX_UDP_PACKET_SIZE;
+  emit(info);
   return ResOk;
 }
 
@@ -452,6 +474,7 @@ Result<Void> McActor::send(const std::string &data)
   {
     return Result<Void>(errno, "Error occurred during sending ");
   }
+  emit(new LedPulse(10));
   return ResOk;
 }
 /*
@@ -485,14 +508,4 @@ void McActor::add_subscription(const std::string &src, const std::string &dst, u
     _subscriptions.emplace(src, std::unordered_map<std::string, uint64_t>());
   }
   _subscriptions[src][dst] = timeout;
-}
-
-void SysPub::serialize(Serializer &serializer) 
-{
-  serializer.map_begin();
-  serializer.serialize("uptime", uptime);
-  serializer.serialize("version", version);
-  serializer.serialize("cpu_board", cpu_board);
-  serializer.serialize("free_heap", free_heap);
-  serializer.map_end();
 }

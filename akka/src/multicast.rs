@@ -2,6 +2,12 @@ use anyhow::Result;
 use log::debug;
 use log::error;
 use log::info;
+use serde::Deserialize;
+use serde::de::DeserializeOwned;
+
+use crate::limero::Msg;
+use crate::limero::MulticastInfo;
+use crate::limero::WifiInfo;
 
 use socket2::Domain;
 use socket2::Protocol;
@@ -47,7 +53,6 @@ pub enum McEvent {
     ReceivedValue(Value),
 }
 
-
 pub struct McActor {
     multicast_ip: String,
     multicast_port: u16,
@@ -91,6 +96,36 @@ impl McActor {
     }
 }
 
+pub trait GetPayload<T>
+where
+    T: Msg + DeserializeOwned,
+{
+    fn get_payload(&self) -> Result<T>;
+}
+
+impl<T> GetPayload<T> for serde_json::Value
+where
+    T: Msg + DeserializeOwned,
+{
+    fn get_payload(&self) -> Result<T> {
+        let field = self.get(T::NAME).ok_or_else(|| {
+            anyhow::anyhow!(format!(
+                "Field '{}' not found in the provided JSON value",
+                T::NAME
+            ))
+        })?;
+        let deserialized: T = serde_json::from_value(field.clone())?;
+        Ok(deserialized)
+    }
+}
+
+pub fn get_payload<T>(v: &serde_json::Value) -> Result<T>
+where
+    T: Msg + DeserializeOwned,
+{
+    <serde_json::Value as GetPayload<T>>::get_payload(v)
+}
+
 impl Actor for McActor {
     type Context = Context<Self>;
 
@@ -115,10 +150,22 @@ impl Actor for McActor {
                     Ok((len, src)) => {
                          let message = String::from_utf8_lossy(&buf[..len]);
                             info!("MC recv {} => {}", src, message);
+                        let v: Result<serde_json::Value> = serde_json::from_str(&message).map_err(anyhow::Error::from);
+                        if v.is_err() {
+                            error!("Failed to parse JSON: {}", v.err().unwrap());
+                            continue;
+                        }
+                        v.map(|v| {
+                            info!("Parsed JSON: {:?}", v);
+                            <serde_json::Value as GetPayload<MulticastInfo>>::get_payload(&v).map(|mi| {
+                                info!("Parsed MulticastInfo: {:?}", mi);
+                                self.emit(mi);
+                            }).ok();
+                            <serde_json::Value as GetPayload<WifiInfo>>::get_payload(&v).map(|mi| {
+                                info!("Parsed WifiInfo: {:?}", mi)
+                            }).ok();
 
-                        let value = Value::from_json(&message[..]);
-                        self_ref.send(McCmd::ReceivedInternal(value.unwrap())).await.expect("Failed to send ReceivedInternal message");
-
+                        });
 
                     },
                     Err(e) => {

@@ -12,7 +12,7 @@ SysActor::SysActor(const char *name) : Actor(name)
 void SysActor::on_start()
 {
     INFO("Starting SysActor");
-    eventbus()->push(new Subscribe("time_server", this->name(), UINT32_MAX));
+    eventbus()->push(new Envelope(new Subscribe("time_server", this->name(), UINT32_MAX)));
 }
 
 SysActor::~SysActor()
@@ -59,8 +59,9 @@ void SysActor::reboot(bool b)
     }
 }
 
-void SysActor::on_message(const Msg &msg)
+void SysActor::on_message(const Envelope &env)
 {
+    const Msg& msg = *env.msg;
     msg.handle<SysCmd>([](auto sys_cmd)
                        { if ( sys_cmd.reboot) reboot(*sys_cmd.reboot);
                          if ( sys_cmd.set_time) set_utc(*sys_cmd.set_time); });
@@ -71,17 +72,11 @@ void SysActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        JsonDocument doc;
-
-        doc["src"] = ref().name();
-        doc["type"] = "pub";
-        doc["object"] = "sys";
-        doc["cpu"] = "ESP32-XTENSA";
-        doc["clock"] = 240000000;
-        doc["free_heap"] = (int64_t)esp_get_free_heap_size();
-        doc["uptime"] = esp_timer_get_time() / 1000;
-
-        emit(new PublishTxd(doc));
+        SysInfo* sys_info = new SysInfo();
+        sys_info->cpu_board = "ESP32-DEVKIT1";
+        sys_info->free_heap = (int64_t)esp_get_free_heap_size();
+        sys_info->uptime = esp_timer_get_time() / 1000;
+        emit(sys_info);
     }
     else
     {

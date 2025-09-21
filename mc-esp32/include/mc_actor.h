@@ -105,12 +105,12 @@ public:
   McActor(const char *name);
   ~McActor();
   void run();
-  void on_message(const Msg &message) override;
+  void on_message(const Envelope &) override;
   void on_start() override;
   void on_wifi_connected();
   void on_wifi_disconnected();
   void on_timer(int id);
-  void on_multicast_message(const sockaddr_in &source_addr, const JsonDocument &msg);
+  void on_multicast_message(const sockaddr_in &source_addr, Bytes&);
   void add_subscription(const std::string &src, const std::string &dst, uint32_t timeout);
 
   bool is_connected() const;
@@ -126,8 +126,6 @@ public:
   static void receiver_task(void *);
 };
 
-Result<std::vector<uint8_t>> serialize(const SysPub &);   // for json or pb
-Result<SysCmd> deserialize(const std::vector<uint8_t> &); // protobuf approach , check messageType
-Result<SysCmd> deserialize(const Value &);                // JSON check presence "sys_cmd" , value.has("sys_pub")
+         // JSON check presence "sys_cmd" , value.has("sys_pub")
 
 #endif

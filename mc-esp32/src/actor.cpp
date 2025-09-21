@@ -15,7 +15,7 @@ void Actor::emit(const Msg *msg)
 {
     if (_eventbus)
     {
-        _eventbus->push(msg);
+        _eventbus->push(new Envelope(ref(),msg));
     }
     else
     {
@@ -27,9 +27,11 @@ class TestActor : public Actor
 {
 public:
     TestActor(const char *name) : Actor(name) {};
-    void on_message(const Msg &msg)
+    void on_message(const Envelope &env)
     {
-        INFO("Msg %s => %s : %s ", msg.src.name(), msg.dst.name(), msg.type_id());
+        const char* src = env.src ? env.src->name() : "unknown";
+        const char* dst = env.dst ? env.dst->name() : "unknown";
+        INFO("Env %s => %s : %s ", src,dst, env.msg->type_id());
     }
 };
 
@@ -38,7 +40,7 @@ void tester1()
     EventBus eb(10);
     eb.register_actor(new TestActor("tester"));
 
-    eb.push(new TestMsg);
+    eb.push(new Envelope(new TestMsg()));
     eb.loop();
 }
 
@@ -331,16 +333,16 @@ void Thread::run()
         actor->on_stop();
 }
 
-EventBus::EventBus(size_t size) : Queue<const Msg *>(size) {};
+EventBus::EventBus(size_t size) : Queue<const Envelope *>(size) {};
 
-void EventBus::push(const Msg *msg)
+void EventBus::push(const Envelope *msg)
 {
     send(msg);
 }
 
 void EventBus::loop()
 {
-    Msg *pmsg;
+    Envelope *pmsg;
     for (Actor *actor : _actors)
     {
         actor->on_start();
@@ -349,7 +351,7 @@ void EventBus::loop()
 
     while (true)
     {
-        if (receive((const Msg **)&pmsg, timeout))
+        if (receive((const Envelope **)&pmsg, timeout))
         {
             for (const auto &handler : _message_handlers)
             {
@@ -367,8 +369,7 @@ void EventBus::loop()
         {
             for (int id : actor->timers().get_expired_timers())
             {
-                TimerMsg timer_msg(NULL_ACTOR, id);
-                actor->on_message(timer_msg);
+                actor->on_message(Envelope(new TimerMsg(id)));
                 actor->timers().refresh(id);
             }
             uint64_t sleep_duration = actor->sleep_time();

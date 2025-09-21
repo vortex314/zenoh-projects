@@ -21,7 +21,7 @@ private:
 public:
   SysActor(const char *name);
   ~SysActor();
-  void on_message(const Msg& msg);
+  void on_message(const Envelope& msg);
   void on_timer(int timer_id);
   void on_start();
   Result<Value> publish_props();

@@ -8,7 +8,7 @@
 #include <limero.cpp>
 
 std::string ip4addr_to_str(esp_ip4_addr_t *ip);
-MSG(WifiConnected,WifiConnected(ActorRef _src){src=_src;});
+MSG(WifiConnected);
 MSG(WifiDisconnected);
 
 class WifiActor : public Actor
@@ -29,12 +29,12 @@ private:
 public:
   WifiActor(const char *name);
   ~WifiActor();
-  void on_message(const Msg &message);
+  void on_message(const Envelope &);
   void on_start();
   void handle_timer(int id);
   Res net_init();
   Res wifi_set_config(const char *ssid, const char *password);
-  Result<JsonDocument> pubish_props(esp_netif_t *esp_netif);
+  void pubish_props(esp_netif_t *esp_netif);
   Result<Value> publish_info();
 
   static void event_handler(void *arg, esp_event_base_t event_base,

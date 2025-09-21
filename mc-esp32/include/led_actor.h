@@ -12,7 +12,7 @@
 MSG(LedBlink,uint32_t interval_msec);
 MSG(LedOff);
 MSG(LedOn);
-MSG(LedPulse,uint32_t duration_msec;LedPulse(const ActorRef &src, uint32_t duration_msec) : duration_msec(duration_msec) { this->src = src; });
+MSG(LedPulse,uint32_t duration_msec;LedPulse( uint32_t duration_msec) : duration_msec(duration_msec) { });
 
 class LedActor : public Actor {
     typedef enum State {
@@ -29,7 +29,7 @@ class LedActor : public Actor {
 public:
     LedActor(const char* name);
     ~LedActor();
-    void on_message(const Msg& msg);
+    void on_message(const Envelope& msg);
     void on_timer(int timer_id);
     void on_start();
 };

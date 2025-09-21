@@ -42,8 +42,6 @@ extern ActorRef NULL_ACTOR;
 class Msg
 {
 public:
-    ActorRef src = NULL_ACTOR;
-    ActorRef dst = NULL_ACTOR;
     virtual const char *type_id() const = 0;
     virtual ~Msg() = default;
     template <typename T>
@@ -56,6 +54,16 @@ public:
         }
     }
 };
+class Envelope
+{
+public:
+    std::optional<ActorRef> src = std::nullopt;
+    std::optional<ActorRef> dst = std::nullopt;
+    const Msg *msg;
+    Envelope(Msg *msg) : msg(msg){}
+    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg){}
+    ~Envelope() { delete msg; }
+};
 
 #define MSG(MSG_TYPE, ...)                                          \
     class MSG_TYPE : public Msg                                     \
@@ -63,13 +71,13 @@ public:
     public:                                                         \
         static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
         inline const char *type_id() const override { return id; }; \
-        Bytes serialize() const ;                   \
-        void deserialize(const Bytes&) ;                \
+        Bytes serialize() const;                                    \
+        void deserialize(const Bytes &);                            \
         ~MSG_TYPE() = default;                                      \
         __VA_ARGS__;                                                \
     }
 
-MSG(TimerMsg, int timer_id; TimerMsg(ActorRef & dst, int id) : timer_id(id) { this->dst = dst; });
+MSG(TimerMsg, int timer_id; TimerMsg(int id) : timer_id(id){});
 
 /*template <typename T>
 void handle(const Msg &message, std::function<void(const T &)> f)
@@ -204,18 +212,18 @@ public:
 
 class Actor;
 
-class EventBus : public Queue<const Msg *>
+class EventBus : public Queue<const Envelope *>
 {
     std::vector<Actor *> _actors;
-    std::vector<std::function<void(const Msg &)>> _message_handlers;
+    std::vector<std::function<void(const Envelope  &)>> _message_handlers;
     size_t _stack_size = 1024;
     TaskHandle_t _task_handle;
 
 public:
     EventBus(size_t size);
-    void push(const Msg *msg);
+    void push(const Envelope *env);
     void register_actor(Actor *);
-    void register_handler(std::function<void(const Msg &)> handler)
+    void register_handler(std::function<void(const Envelope &)> handler)
     {
         _message_handlers.push_back(handler);
     }
@@ -238,7 +246,7 @@ public:
 
     virtual void on_start() { INFO("actor %s default started.", _self.name()); }
     virtual void on_stop() { INFO("actor %s default stopped.", _self.name()); }
-    virtual void on_message(const Msg &message)
+    virtual void on_message(const Envelope& env)
     {
         WARN(" No message handler for actor %s ", _self.name());
     }
@@ -256,8 +264,8 @@ public:
     {
         for (int id : _timers.get_expired_timers())
         {
-            TimerMsg timer_msg(_self, id);
-            on_message(timer_msg);
+            Envelope *env = new Envelope(ref(), new TimerMsg(id));
+            on_message(*env);
             _timers.refresh(id);
         }
     };
@@ -322,21 +330,26 @@ typedef struct PropInfo
 } PropInfo;
 
 MSG(StopActorMsg);
-MSG(PublishTxd,  JsonDocument doc; \
-    PublishTxd( const JsonDocument &doc) :  doc(doc) {  });
-MSG(PublishRxd, JsonDocument doc; \
-    PublishRxd(const JsonDocument &doc) : doc(doc) {  });
-MSG(Subscribe, std::string src; std::string dst; uint32_t timeout; \
+MSG(PublishTxd, JsonDocument doc;
+    PublishTxd(const JsonDocument &doc) : doc(doc){});
+MSG(PublishRxd, JsonDocument doc;
+    PublishRxd(const JsonDocument &doc) : doc(doc){});
+MSG(Subscribe, std::string src; std::string dst; uint32_t timeout;
     Subscribe(const std::string &src, const std::string &dst, uint32_t timeout) : src(src), dst(dst), timeout(timeout){});
 
 template <typename T>
-void handle(JsonDocument& doc, const char *key, std::function<void(const T &)> f)
+void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)
 {
     if (doc.containsKey(key) && doc[key].is<T>())
     {
         T value = doc[key].as<T>();
         f(value);
     }
+}
+
+template <typename T>
+void handle(std::optional<T>& v,std::function<void(const T &)> f) {
+    if ( v ) f(*v);
 }
 
 #endif

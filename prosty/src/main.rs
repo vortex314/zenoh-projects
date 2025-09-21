@@ -18,8 +18,10 @@ struct Args {
     proto: String,
     /// Output directory for the generated files
     /// default: examples
-    #[arg(short, long, default_value = "examples")]
-    out: String,
+    #[arg(short, long, default_value = "../mc-esp32/src")]
+    cpp_out: String,
+    #[arg(short, long, default_value = "../akka/src")]
+    rust_out: String,
     #[arg(short, long, default_value = "rust")]
     lang: String,
     #[arg(short, long, default_value = "json")]
@@ -39,14 +41,14 @@ fn main() -> anyhow::Result<()> {
 
     let messages = convert_rust_types(&fd);
     let enums = convert_enum_rust_types(&fd);
-    let rust_name = format!("{}/{}.rs", args.out, fd.package);
+    let rust_name = format!("{}/{}.rs", args.rust_out, fd.package);
     let rendered = render(&enums, &messages, "rust_json.tera");
     fs::write(&rust_name, rendered).expect("Failed to write output file");
     info!("Generated Rust code written to {}", rust_name);
 
     let messages = convert_cpp_types(&fd);
     let enums = convert_enum_cpp_types(&fd);
-    let cpp_name = format!("{}/{}.cpp", args.out, fd.package);;
+    let cpp_name = format!("{}/{}.cpp", args.cpp_out, fd.package);;
     let rendered = render(&enums, &messages, "cpp_json.tera");
     fs::write(&cpp_name, rendered).expect("Failed to write output file");
     info!("Generated C++ code written to {}", cpp_name);

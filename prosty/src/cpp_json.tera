@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <ArduinoJson.h>
-    #include <actor.h>
+#include <actor.h>
 
 typedef std::vector<uint8_t> Bytes;
 
@@ -31,34 +31,26 @@ class {{ msg.name }} : public Msg {
         {%- else -%}
         {{ field.target_type }} 
         {%- endif %} {{ field.name }};
-    {% endfor -%}
+    {% endfor %}
 
-    Bytes serialize() const {
+    JsonDocument serialize() const {
         JsonDocument doc;
-        JsonObject obj = doc.to<JsonObject>();
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        JsonArray arr = obj["{{ field.name }}"].as<JsonArray>();
+        JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
         for (const auto& item : {{ field.name }}) {
             arr.add(item);
         }
             {%- elif field.optional -%}
-        if ({{ field.name }}.has_value()) {
-            obj["{{ field.name }}"] = {{ field.name }}.value();
-        }
+        if ({{ field.name }})  doc["{{ field.name }}"] = *{{ field.name }}; 
             {%- else -%}
-        obj["{{ field.name }}"] = {{ field.name }};
+        doc["{{ field.name }}"] = {{ field.name }};
             {%- endif %}
-        {% endfor %}
-        std::string str;
-        serializeJson(doc, str);
-        return {str.begin(), str.end()};
+        {% endfor -%}
+        return doc;
     }
 
-    void deserialize(const Bytes& data) {
-        JsonDocument doc;
-        deserializeJson(doc, data);
-        JsonObject obj = doc.as<JsonObject>();
+    void deserialize(const JsonObject& obj) {
         {% for field in msg.fields %}
             {%- if field.repeated -%}
         if (obj["{{ field.name }}"].is<JsonArray>()) {
@@ -69,11 +61,9 @@ class {{ msg.name }} : public Msg {
             }
         }
             {%- elif field.optional -%}
-        if (obj["{{ field.name }}"].is<{{ field.target_type }}>() ) {
-            {{ field.name }} = obj["{{ field.name }}"].as<{{ field.target_type }}>();
-        } 
+        if (obj["{{ field.name }}"].is<{{ field.target_type }}>() )  {{ field.name }} = obj["{{ field.name }}"].as<{{ field.target_type }}>();
             {%- endif %}
-        {% endfor %}
+        {% endfor -%}
     }
 
 };

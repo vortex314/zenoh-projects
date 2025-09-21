@@ -1,5 +1,10 @@
 use serde::{Serialize, Deserialize};
 
+pub trait Msg {
+    const ID: u32;
+    const NAME: &'static str;
+}
+
 #[derive(Debug, Clone,Serialize,Deserialize)] 
 pub enum MessageType {
     SysCmd,
@@ -25,8 +30,9 @@ pub struct SysCmd {
     pub reboot:Option<bool>,
         
 }
-impl SysCmd {
-    pub const ID: u32 = 51983;
+impl Msg for SysCmd {
+     const ID: u32 = 51983;
+     const NAME: &'static str = "SysCmd";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -41,8 +47,9 @@ pub struct SysInfo {
     pub cpu_board:Option<String>,
         
 }
-impl SysInfo {
-    pub const ID: u32 = 10347;
+impl Msg for SysInfo {
+     const ID: u32 = 10347;
+     const NAME: &'static str = "SysInfo";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -65,8 +72,9 @@ pub struct WifiInfo {
     pub netmask:Option<String>,
         
 }
-impl WifiInfo {
-    pub const ID: u32 = 15363;
+impl Msg for WifiInfo {
+     const ID: u32 = 15363;
+     const NAME: &'static str = "WifiInfo";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -79,8 +87,9 @@ pub struct MulticastInfo {
     pub mtu:Option<u32>,
         
 }
-impl MulticastInfo {
-    pub const ID: u32 = 61310;
+impl Msg for MulticastInfo {
+     const ID: u32 = 61310;
+     const NAME: &'static str = "MulticastInfo";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -91,8 +100,9 @@ pub struct MotorInfo {
     pub direction:Option<i32>,
         
 }
-impl MotorInfo {
-    pub const ID: u32 = 62329;
+impl Msg for MotorInfo {
+     const ID: u32 = 62329;
+     const NAME: &'static str = "MotorInfo";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -103,8 +113,9 @@ pub struct MotorCmd {
     pub direction:Option<i32>,
         
 }
-impl MotorCmd {
-    pub const ID: u32 = 32797;
+impl Msg for MotorCmd {
+     const ID: u32 = 32797;
+     const NAME: &'static str = "MotorCmd";
 }
 
 #[derive(Debug, Clone,Serialize,Deserialize)]
@@ -115,6 +126,7 @@ pub struct LpsInfo {
     pub msg:Option<String>,
         
 }
-impl LpsInfo {
-    pub const ID: u32 = 24957;
+impl Msg for LpsInfo {
+     const ID: u32 = 24957;
+     const NAME: &'static str = "LpsInfo";
 }
