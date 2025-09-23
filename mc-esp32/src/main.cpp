@@ -45,8 +45,8 @@ extern "C" void app_main()
   eventbus.register_actor(&led_actor);
   eventbus.register_handler([](const Envelope &env)
                             { 
-                              const char* src = env.src ? env.src->name() : "unknown";
-                              const char* dst = env.dst ? env.dst->name() : "unknown";
+                              const char* src = env.src ? env.src->name() : "";
+                              const char* dst = env.dst ? env.dst->name() : "";
                               INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_id()); });
   eventbus.loop();
 }

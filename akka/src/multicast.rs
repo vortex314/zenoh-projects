@@ -159,7 +159,7 @@ impl Actor for McActor {
                             info!("Parsed JSON: {:?}", v);
                             <serde_json::Value as GetPayload<MulticastInfo>>::get_payload(&v).map(|mi| {
                                 info!("Parsed MulticastInfo: {:?}", mi);
-                                self.emit(mi);
+//                                self.emit(Box::new(mi));
                             }).ok();
                             <serde_json::Value as GetPayload<WifiInfo>>::get_payload(&v).map(|mi| {
                                 info!("Parsed WifiInfo: {:?}", mi)

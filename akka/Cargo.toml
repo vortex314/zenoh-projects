@@ -24,3 +24,5 @@ gethostname = "1.0.2"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "4.5.26", features = ["derive"] }
 indexmap = "2.0.0"
+tiny-tokio-actor = "0.3.0"
+tokio-mpmc = "0.2.4"

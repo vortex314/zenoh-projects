@@ -41,7 +41,7 @@
 ```json
 {
     "src":"esp1_sys",
-    "pub": {
+    "SysInfo": {
         "free_heap":126700,
         "uptime":23566,
         "cpu":"esp32"
@@ -51,7 +51,7 @@
 ```json
 {
     "dst":"esp1_motor",
-    "pub": {
+    "MotorCmd": {
         "rpm":2345
     },
 }

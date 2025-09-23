@@ -22,7 +22,7 @@ pub enum Toggle {
 
 
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct SysCmd {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub set_time:Option<u64>,
@@ -35,7 +35,7 @@ impl Msg for SysCmd {
      const NAME: &'static str = "SysCmd";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct SysInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uptime:Option<u64>,
@@ -52,7 +52,7 @@ impl Msg for SysInfo {
      const NAME: &'static str = "SysInfo";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct WifiInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssid:Option<String>,
@@ -77,7 +77,7 @@ impl Msg for WifiInfo {
      const NAME: &'static str = "WifiInfo";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct MulticastInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group:Option<String>,
@@ -92,7 +92,7 @@ impl Msg for MulticastInfo {
      const NAME: &'static str = "MulticastInfo";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct MotorInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub speed:Option<i32>,
@@ -105,7 +105,7 @@ impl Msg for MotorInfo {
      const NAME: &'static str = "MotorInfo";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct MotorCmd {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub speed:Option<i32>,
@@ -118,7 +118,7 @@ impl Msg for MotorCmd {
      const NAME: &'static str = "MotorCmd";
 }
 
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct LpsInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub direction:Option<i32>,

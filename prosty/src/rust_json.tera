@@ -14,7 +14,7 @@ pub enum {{ en.name }} {
 {% endfor %}
 
 {% for msg in messages %}
-#[derive(Debug, Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct {{ msg.name }} {
     {% for field in msg.fields -%}
         {%- if field.repeated -%}
