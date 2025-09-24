@@ -15,7 +15,8 @@ pub enum Value {
     String(String),
     Bytes(Vec<u8>),
     Array(Vec<Value>),
-    Object(IndexMap<String, Value>),
+    StringMap(IndexMap<String, Value>),
+    IntMap(IndexMap<i64, Value>),
 }
 
 impl Value {
@@ -41,9 +42,14 @@ impl Value {
             {
                 true
             }
-            Value::Object(_)
+            Value::StringMap(_)
                 if std::any::TypeId::of::<T>()
                     == std::any::TypeId::of::<IndexMap<String, Value>>() =>
+            {
+                true
+            }
+            Value::IntMap(_)
+                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<IndexMap<i64, Value>>() =>
             {
                 true
             }
@@ -63,7 +69,8 @@ impl Value {
             Value::String(s) => (s as &dyn Any).downcast_ref::<T>(),
             Value::Bytes(b) => (b as &dyn Any).downcast_ref::<T>(),
             Value::Array(a) => (a as &dyn Any).downcast_ref::<T>(),
-            Value::Object(o) => (o as &dyn Any).downcast_ref::<T>(),
+            Value::StringMap(o) => (o as &dyn Any).downcast_ref::<T>(),
+            Value::IntMap(o) => (o as &dyn Any).downcast_ref::<T>(),
         }
     }
 
@@ -111,7 +118,7 @@ impl Value {
 
     pub fn object() -> Self {
         let hm = IndexMap::<String, Value>::new();
-        Value::Object(hm)
+        Value::StringMap(hm)
     }
 
     // Type checking
@@ -148,8 +155,18 @@ impl Value {
     }
 
     pub fn is_object(&self) -> bool {
-        matches!(self, Value::Object(_))
+        matches!(self, Value::StringMap(_))
     }
+
+    pub fn is_undefined(&self) -> bool {
+        matches!(self, Value::Undefined)
+    }
+
+    pub fn is_int_map(&self) -> bool {
+        matches!(self, Value::IntMap(_))
+    }
+
+
 
     // Getters with type conversion
     pub fn as_bool(&self) -> Option<bool> {
@@ -202,7 +219,7 @@ impl Value {
     }
 
     pub fn as_object(&self) -> Option<&IndexMap<String, Value>> {
-        if let Value::Object(o) = self {
+        if let Value::StringMap(o) = self {
             Some(o)
         } else {
             None
@@ -219,7 +236,7 @@ impl Value {
     }
 
     pub fn as_object_mut(&mut self) -> Option<&mut IndexMap<String, Value>> {
-        if let Value::Object(o) = self {
+        if let Value::StringMap(o) = self {
             Some(o)
         } else {
             None
@@ -272,13 +289,23 @@ impl fmt::Display for Value {
                 }
                 write!(f, "]")
             }
-            Value::Object(o) => {
+            Value::StringMap(o) => {
                 write!(f, "{{")?;
                 for (i, (k, v)) in o.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
                     write!(f, "\"{}\": {}", k.escape_debug(), v)?;
+                }
+                write!(f, "}}")
+            }
+            Value::IntMap(o) => {
+                write!(f, "{{")?;
+                for (i, (k, v)) in o.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}: {}", k, v)?;
                 }
                 write!(f, "}}")
             }
@@ -366,7 +393,7 @@ impl<'de> Visitor<'de> for ValueVisitor {
         while let Some((key, value)) = map.next_entry()? {
             hashmap.insert(key, value);
         }
-        Ok(Value::Object(hashmap))
+        Ok(Value::StringMap(hashmap))
     }
 }
 
@@ -445,10 +472,17 @@ impl Value {
                 let items: Vec<String> = arr.iter().map(|v| v.to_json_internal()).collect();
                 format!("[{}]", items.join(","))
             }
-            Value::Object(obj) => {
+            Value::StringMap(obj) => {
                 let items: Vec<String> = obj
                     .iter()
                     .map(|(k, v)| format!("\"{}\":{}", escape_json_string(k), v.to_json_internal()))
+                    .collect();
+                format!("{{{}}}", items.join(","))
+            }
+            Value::IntMap(obj) => {
+                let items: Vec<String> = obj
+                    .iter()
+                    .map(|(k, v)| format!("{}:{}", k, v.to_json_internal()))
                     .collect();
                 format!("{{{}}}", items.join(","))
             }
@@ -515,11 +549,22 @@ fn encode_value_to_cbor(value: &Value, buf: &mut Vec<u8>) {
                 encode_value_to_cbor(v, buf);
             }
         }
-        Value::Object(obj) => {
+        Value::StringMap(obj) => {
             encode_unsigned(obj.len() as u64, 0xa0, buf);
             for (k, v) in obj {
                 encode_unsigned(k.len() as u64, 0x60, buf);
                 buf.extend_from_slice(k.as_bytes());
+                encode_value_to_cbor(v, buf);
+            }
+        }
+        Value::IntMap(obj) => {
+            encode_unsigned(obj.len() as u64, 0xa0, buf);
+            for (k, v) in obj {
+                if *k >= 0 {
+                    encode_unsigned(*k as u64, 0x00, buf);
+                } else {
+                    encode_unsigned((-1 - *k) as u64, 0x20, buf);
+                }
                 encode_value_to_cbor(v, buf);
             }
         }
@@ -541,14 +586,14 @@ impl Value {
 
 pub fn tester() {
     // Create a complex value
-    let mut value = Value::Object(IndexMap::new());
-    if let Value::Object(ref mut map) = value {
+    let mut value = Value::StringMap(IndexMap::new());
+    if let Value::StringMap(ref mut map) = value {
         map.insert("name".to_string(), Value::string("John Doe"));
         map.insert("age".to_string(), Value::int(42));
         map.insert("active".to_string(), Value::bool(true));
 
-        let mut address = Value::Object(IndexMap::new());
-        if let Value::Object(ref mut addr_map) = address {
+        let mut address = Value::StringMap(IndexMap::new());
+        if let Value::StringMap(ref mut addr_map) = address {
             addr_map.insert("street".to_string(), Value::string("123 Main St"));
             addr_map.insert("city".to_string(), Value::string("Anytown"));
         }
@@ -582,7 +627,7 @@ impl Index<&str> for Value {
 
     fn index(&self, index: &str) -> &Self::Output {
         match self {
-            Value::Object(map) => map.get(index).unwrap_or(&Value::Undefined),
+            Value::StringMap(map) => map.get(index).unwrap_or(&Value::Undefined),
             _ => &Value::Undefined,
         }
     }
@@ -603,11 +648,11 @@ impl Index<usize> for Value {
 impl IndexMut<&str> for Value {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
         if self.is_null() {
-            *self = Value::Object(IndexMap::new());
+            *self = Value::StringMap(IndexMap::new());
         }
 
         match self {
-            Value::Object(map) => {
+            Value::StringMap(map) => {
                 if !map.contains_key(index) {
                     map.insert(index.to_string(), Value::default());
                 }
@@ -671,14 +716,14 @@ pub fn tester2() {
 impl Value {
     pub fn get(&self, key: &str) -> Option<&Value> {
         match self {
-            Value::Object(map) => map.get(key),
+            Value::StringMap(map) => map.get(key),
             _ => None,
         }
     }
 
     pub fn get_mut(&mut self, key: &str) -> Option<&mut Value> {
         match self {
-            Value::Object(map) => map.get_mut(key),
+            Value::StringMap(map) => map.get_mut(key),
             _ => None,
         }
     }
@@ -697,7 +742,7 @@ impl Value {
         }
     }
     pub fn set(&mut self, key: &str, value: Value) {
-        if let Value::Object(map) = self {
+        if let Value::StringMap(map) = self {
             map.insert(key.to_string(), value);
         } else {
             error!("Cannot set key on non-object value");
