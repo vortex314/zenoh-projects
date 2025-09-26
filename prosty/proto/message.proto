@@ -33,12 +33,13 @@ message MulticastInfo {
   optional uint32 mtu = 3;
 }
 
-message MotorInfo {
+message HoverboardInfo {
   optional int32 speed = 1;
   optional int32 direction = 2;
+  optional int32 currentA=3;
 }
 
-message MotorCmd {
+message HoverboardCmd {
   optional int32 speed = 1;
   optional int32 direction = 2;
 }
@@ -54,6 +55,15 @@ enum MessageType {
 enum Toggle {
   OFF = 0;
   ON = 1;
+}
+
+message Msg {
+  optional string src = 1;
+  optional string dst = 2;
+  oneof {
+    MotorCmd = 3;
+    MotorInfo = 4;
+  }
 }
 
 

@@ -147,11 +147,38 @@ class MulticastInfo : public Msg {
 
 };
 
-class MotorInfo : public Msg {
+class HoverboardInfo : public Msg {
     public:
-    static constexpr const char *id = "MotorInfo";     
+    static constexpr const char *id = "HoverboardInfo";     
     inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 62329;
+    static const uint32_t ID = 59150;
+
+    std::optional<int32_t> speed;
+    std::optional<int32_t> direction;
+    std::optional<int32_t> currentA;
+    
+
+    JsonDocument serialize() const {
+        JsonDocument doc;
+        if (speed)  doc["speed"] = *speed;
+        if (direction)  doc["direction"] = *direction;
+        if (currentA)  doc["currentA"] = *currentA;
+        return doc;
+    }
+
+    void deserialize(const JsonObject& obj) {
+        if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
+        if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
+        if (obj["currentA"].is<int32_t>() )  currentA = obj["currentA"].as<int32_t>();
+        }
+
+};
+
+class HoverboardCmd : public Msg {
+    public:
+    static constexpr const char *id = "HoverboardCmd";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = 58218;
 
     std::optional<int32_t> speed;
     std::optional<int32_t> direction;
@@ -171,26 +198,26 @@ class MotorInfo : public Msg {
 
 };
 
-class MotorCmd : public Msg {
+class Msg : public Msg {
     public:
-    static constexpr const char *id = "MotorCmd";     
+    static constexpr const char *id = "Msg";     
     inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 32797;
+    static const uint32_t ID = 14661;
 
-    std::optional<int32_t> speed;
-    std::optional<int32_t> direction;
+    std::optional<std::string> src;
+    std::optional<std::string> dst;
     
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (speed)  doc["speed"] = *speed;
-        if (direction)  doc["direction"] = *direction;
+        if (src)  doc["src"] = *src;
+        if (dst)  doc["dst"] = *dst;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
-        if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
-        if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
+        if (obj["src"].is<std::string>() )  src = obj["src"].as<std::string>();
+        if (obj["dst"].is<std::string>() )  dst = obj["dst"].as<std::string>();
         }
 
 };

@@ -83,6 +83,17 @@ impl Value {
             f(value);
         }
     }
+    pub fn set_if<T:'static>(&self,v : &mut T) where T : Clone  {
+        if let Some(value) = self.as_::<T>() {
+            *v = value.clone();
+        }
+    }
+
+    pub fn set_if_opt<T:'static>(&self,v : &mut Option<T>) where T : Clone  {
+        if let Some(value) = self.as_::<T>() {
+            *v = Some(value.clone());
+        }
+    }
     // Constructors
     pub fn null() -> Self {
         Value::Null

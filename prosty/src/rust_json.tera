@@ -30,5 +30,23 @@ pub struct {{ msg.name }} {
 impl Msg for {{ msg.name }} {
      const ID: u32 = {{ msg.msg_id }};
      const NAME: &'static str = "{{ msg.name }}";
+
+     fn  from_value(Value) -> Result<{{msg.name}}> {
+
+        serde_json::from_value(Value)
+     }
+
+     fn  to_value(&self) -> Result<Value>  {
+        serde_json::to_value(self)
+     }
+
 }
+
+fn json_to_value(json:&String) -> Result<Value> {
+    // to value 
+}
+fn value_to_json(value:&Value) -> Result<String> {
+    
+}
+
 {% endfor %}
