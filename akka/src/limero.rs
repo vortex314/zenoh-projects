@@ -33,7 +33,7 @@ pub enum Toggle {
 pub struct SysCmd {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub set_time:Option<u64>,
-        #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reboot:Option<bool>,
 }
 
@@ -49,7 +49,14 @@ impl SerdesValue<SysCmd> for SysCmd {
         v["reboot"].set_if_opt(&mut sys_cmd.reboot);
         Ok(SysCmd::default())
     }
-    fn to_value(t:&SysCmd) -> Result<Value> {
+    fn to_value(sys_cmd:&SysCmd) -> Result<Value> {
+        let mut value = Value::object();
+        v.get_if_opt("set_time",sys_cmd.set_time);
+        
+        if let Some(set_time) = sys_cmd.set_time {
+            v["set_time"]=sys_cmd.set_time.unwrap();
+        }
+
         Ok(Value::Null)
     }
 }
