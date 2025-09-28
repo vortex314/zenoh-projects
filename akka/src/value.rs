@@ -1,4 +1,6 @@
+use anyhow::Result;
 use indexmap::IndexMap;
+use std::convert::From;
 use std::fmt;
 
 struct Undefined {}
@@ -49,7 +51,8 @@ impl Value {
                 true
             }
             Value::IntMap(_)
-                if std::any::TypeId::of::<T>() == std::any::TypeId::of::<IndexMap<i64, Value>>() =>
+                if std::any::TypeId::of::<T>()
+                    == std::any::TypeId::of::<IndexMap<i64, Value>>() =>
             {
                 true
             }
@@ -83,15 +86,31 @@ impl Value {
             f(value);
         }
     }
-    pub fn set_if<T:'static>(&self,v : &mut T) where T : Clone  {
-        if let Some(value) = self.as_::<T>() {
+    pub fn get_if<T: 'static>(&self, s: &str, v: &mut T)
+    where
+        T: Clone,
+    {
+        if let Some(value) = self[s].as_::<T>() {
             *v = value.clone();
         }
     }
 
-    pub fn set_if_opt<T:'static>(&self,v : &mut Option<T>) where T : Clone  {
-        if let Some(value) = self.as_::<T>() {
+    pub fn get_if_opt<T: 'static>(&self, s: &str, v: &mut Option<T>)
+    where
+        T: Clone,
+    {
+        if let Some(value) = self[s].as_::<T>() {
             *v = Some(value.clone());
+        }
+    }
+
+    pub fn set_if<T: 'static>(&mut self, s: &str, source: &Option<T>)
+    where
+        T: Clone,
+        Self: From<T>,
+    {
+        if let Some(t) = source {
+            self[s] = Value::from(t.clone());
         }
     }
     // Constructors
@@ -177,8 +196,6 @@ impl Value {
         matches!(self, Value::IntMap(_))
     }
 
-
-
     // Getters with type conversion
     pub fn as_bool(&self) -> Option<bool> {
         if let Value::Bool(b) = self {
@@ -253,6 +270,14 @@ impl Value {
             None
         }
     }
+
+    pub fn has_field(&self, key: &str) -> bool {
+        if let Value::StringMap(o) = self {
+            o.contains_key(key)
+        } else {
+            false
+        }
+    }   
 }
 
 impl From<i64> for Value {
@@ -276,6 +301,36 @@ impl From<String> for Value {
 impl From<f32> for Value {
     fn from(v: f32) -> Self {
         Value::Float(v)
+    }
+}
+
+impl From<f64> for Value {
+    fn from(v: f64) -> Self {
+        Value::Double(v)
+    }
+}
+
+impl From<bool> for Value {
+    fn from(v: bool) -> Self {
+        Value::Bool(v)
+    }
+}
+
+impl From<u64> for Value {
+    fn from(v: u64) -> Self {
+        Value::Int(v as i64)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(v: i32) -> Self {
+        Value::Int(v as i64)
+    }
+}
+
+impl From<u32> for Value {
+    fn from(v: u32) -> Self {
+        Value::Int(v as i64)
     }
 }
 
@@ -505,8 +560,8 @@ impl Value {
     }
 }
 
+use serde_cbor::Deserializer as CborDeserializer;
 use serde_cbor::error::Error as CborError;
-use serde_cbor::{Deserializer as CborDeserializer};
 
 fn encode_unsigned(n: u64, major: u8, buf: &mut Vec<u8>) {
     if n < 24 {
@@ -638,7 +693,9 @@ impl Index<&str> for Value {
 
     fn index(&self, index: &str) -> &Self::Output {
         match self {
-            Value::StringMap(map) => map.get(index).unwrap_or(&Value::Undefined),
+            Value::StringMap(map) => {
+                map.get(index).unwrap_or(&Value::Undefined)
+            },
             _ => &Value::Undefined,
         }
     }
@@ -673,6 +730,8 @@ impl IndexMut<&str> for Value {
         }
     }
 }
+
+
 
 // permit += value for a Value Array
 

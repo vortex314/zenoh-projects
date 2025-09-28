@@ -30,18 +30,24 @@ class SysCmd : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 51983;
 
+    std::optional<std::string> dst;
+    std::optional<std::string> src;
     std::optional<uint64_t> set_time;
     std::optional<bool> reboot;
     
 
     JsonDocument serialize() const {
         JsonDocument doc;
+        if (dst)  doc["dst"] = *dst;
+        if (src)  doc["src"] = *src;
         if (set_time)  doc["set_time"] = *set_time;
         if (reboot)  doc["reboot"] = *reboot;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        if (obj["dst"].is<std::string>() )  dst = obj["dst"].as<std::string>();
+        if (obj["src"].is<std::string>() )  src = obj["src"].as<std::string>();
         if (obj["set_time"].is<uint64_t>() )  set_time = obj["set_time"].as<uint64_t>();
         if (obj["reboot"].is<bool>() )  reboot = obj["reboot"].as<bool>();
         }
@@ -194,30 +200,6 @@ class HoverboardCmd : public Msg {
     void deserialize(const JsonObject& obj) {
         if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
         if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
-        }
-
-};
-
-class Msg : public Msg {
-    public:
-    static constexpr const char *id = "Msg";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 14661;
-
-    std::optional<std::string> src;
-    std::optional<std::string> dst;
-    
-
-    JsonDocument serialize() const {
-        JsonDocument doc;
-        if (src)  doc["src"] = *src;
-        if (dst)  doc["dst"] = *dst;
-        return doc;
-    }
-
-    void deserialize(const JsonObject& obj) {
-        if (obj["src"].is<std::string>() )  src = obj["src"].as<std::string>();
-        if (obj["dst"].is<std::string>() )  dst = obj["dst"].as<std::string>();
         }
 
 };

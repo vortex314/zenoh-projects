@@ -1,9 +1,18 @@
 use serde::{Serialize, Deserialize};
+use anyhow::Result;
+use crate::value::Value;
 
 pub trait Msg {
     const ID: u32;
     const NAME: &'static str;
 }
+
+pub trait Convert<T> {
+    fn to_value(&self) -> Result<Value>;
+    fn from_value(value:&Value) -> Result<T>;
+    fn exist_in_value(value:&Value) -> bool ;
+}
+
 {% for en in enums %}
 #[derive(Debug, Clone,Serialize,Deserialize)] 
 pub enum {{ en.name }} {
@@ -26,27 +35,49 @@ pub struct {{ msg.name }} {
     pub {{ field.name }}:{{ field.target_type }},
         {%- endif -%}
     {% endfor %}
+
 }
 impl Msg for {{ msg.name }} {
      const ID: u32 = {{ msg.msg_id }};
      const NAME: &'static str = "{{ msg.name }}";
+}
+impl Convert<{{msg.name}}> for {{msg.name}} {
 
-     fn  from_value(Value) -> Result<{{msg.name}}> {
-
-        serde_json::from_value(Value)
+     fn  from_value(v:&Value) -> Result<{{msg.name}}> {
+         let mut m = {{msg.name}}::default();
+         {%- for field in msg.fields -%}
+         {%- if field.repeated -%}
+         v.get_array("{{ field.name }}").map(|arr|{
+             m.{{ field.name }} = arr.iter().map(|v|v.as_{{ field.target_type }}().unwrap()).collect();
+         });
+         {%- elif field.optional %}
+         m.{{ field.name }} = v["{{ field.name }}"].as_::<{{ field.target_type }}>().clone().cloned();
+         {%- else -%}
+         m.{{ field.name }} = v.get("{{ field.name }}").and_then(|v|v.as_{{ field.target_type }}()).unwrap();
+         {%- endif -%}
+         {% endfor -%}
+         // e.g.
+         Ok(m)
      }
 
      fn  to_value(&self) -> Result<Value>  {
-        serde_json::to_value(self)
+        let mut value = Value::object();
+        {% for field in msg.fields -%}
+        {%- if field.repeated -%}
+        let arr = self.{{ field.name }}.iter().map(|v|Value::from(v.clone())).collect();
+        value.set_array("{{ field.name }}", arr);
+        {%- elif field.optional %}
+        self.{{ field.name }}.as_ref().map(|v| value.set("{{ field.name }}", Value::from(v.clone())));
+        {%- else -%}
+        value.set("{{ field.name }}", self.{{ field.name }}));
+        {%- endif -%}
+        {% endfor -%}
+        Ok(value)
      }
 
+    fn exist_in_value(value:&Value) -> bool {
+        value.has_field("MulticastInfo")
+    }
 }
-
-fn json_to_value(json:&String) -> Result<Value> {
-    // to value 
-}
-fn value_to_json(value:&Value) -> Result<String> {
     
-}
-
 {% endfor %}

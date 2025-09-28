@@ -5,8 +5,10 @@ package limero;
 
 
 message SysCmd {
-  optional uint64 set_time = 1;
-  optional bool reboot = 2;
+  string dst = 1;
+  optional string src = 2;
+  optional uint64 set_time = 3;
+  optional bool reboot = 4;
 }
 
 message SysInfo {
@@ -56,16 +58,6 @@ enum Toggle {
   OFF = 0;
   ON = 1;
 }
-
-message Msg {
-  optional string src = 1;
-  optional string dst = 2;
-  oneof {
-    MotorCmd = 3;
-    MotorInfo = 4;
-  }
-}
-
 
 
 message LpsInfo {

@@ -8,6 +8,8 @@ use serde::de::DeserializeOwned;
 use crate::limero::Msg;
 use crate::limero::MulticastInfo;
 use crate::limero::WifiInfo;
+use crate::limero::SysInfo;
+use crate::limero::Convert;
 
 use socket2::Domain;
 use socket2::Protocol;
@@ -150,23 +152,19 @@ impl Actor for McActor {
                     Ok((len, src)) => {
                          let message = String::from_utf8_lossy(&buf[..len]);
                             info!("MC recv {} => {}", src, message);
-                        let v: Result<serde_json::Value> = serde_json::from_str(&message).map_err(anyhow::Error::from);
-                        if v.is_err() {
-                            error!("Failed to parse JSON: {}", v.err().unwrap());
-                            continue;
-                        }
-                        v.map(|v| {
-                            info!("Parsed JSON: {:?}", v);
-                            <serde_json::Value as GetPayload<MulticastInfo>>::get_payload(&v).map(|mi| {
-                                info!("Parsed MulticastInfo: {:?}", mi);
-//                                self.emit(Box::new(mi));
-                            }).ok();
-                            <serde_json::Value as GetPayload<WifiInfo>>::get_payload(&v).map(|mi| {
-                                info!("Parsed WifiInfo: {:?}", mi)
-                            }).ok();
-
-                        });
-
+                            let  v = Value::from_json(&message).unwrap();
+                            v[SysInfo::NAME].as_::<IndexMap<String, Value>>().map(|sys_info| {
+                                if let Some(wifi_info) = sys_info.get(WifiInfo::NAME) {
+                                    if let Some(multicast_info) = wifi_info.get(MulticastInfo::NAME) {
+                                        if let Some(ip) = multicast_info.get("ip") {
+                                            if let Some(port) = multicast_info.get("port") {
+                                                info!("Multicast Info: ip={} port={}", ip, port);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            
                     },
                     Err(e) => {
                         error!("UDP receive error: {}", e);
