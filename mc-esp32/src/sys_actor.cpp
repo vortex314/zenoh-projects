@@ -73,6 +73,7 @@ void SysActor::on_timer(int id)
     if (id == _timer_publish)
     {
         SysInfo* sys_info = new SysInfo();
+        sys_info->src = this->name();
         sys_info->cpu_board = "ESP32-DEVKIT1";
         sys_info->free_heap = (int64_t)esp_get_free_heap_size();
         sys_info->uptime = esp_timer_get_time() / 1000;

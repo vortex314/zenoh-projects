@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <actor.h>
 
+
 typedef std::vector<uint8_t> Bytes;
 
 
@@ -30,24 +31,25 @@ class SysCmd : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 51983;
 
-    std::optional<std::string> dst;
-    std::optional<std::string> src;
+    std::string dst;
+    std::string src;
     std::optional<uint64_t> set_time;
     std::optional<bool> reboot;
     
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (dst)  doc["dst"] = *dst;
-        if (src)  doc["src"] = *src;
-        if (set_time)  doc["set_time"] = *set_time;
-        if (reboot)  doc["reboot"] = *reboot;
+        JsonObject obj = doc["SysCmd"].to<JsonObject>();
+        obj["dst"] = dst;
+        obj["src"] = src;
+        if (set_time)  obj["set_time"] = *set_time;
+        if (reboot)  obj["reboot"] = *reboot;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
-        if (obj["dst"].is<std::string>() )  dst = obj["dst"].as<std::string>();
-        if (obj["src"].is<std::string>() )  src = obj["src"].as<std::string>();
+        
+        
         if (obj["set_time"].is<uint64_t>() )  set_time = obj["set_time"].as<uint64_t>();
         if (obj["reboot"].is<bool>() )  reboot = obj["reboot"].as<bool>();
         }
@@ -60,6 +62,7 @@ class SysInfo : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 10347;
 
+    std::string src;
     std::optional<uint64_t> uptime;
     std::optional<uint64_t> free_heap;
     std::optional<uint64_t> flash;
@@ -68,14 +71,17 @@ class SysInfo : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (uptime)  doc["uptime"] = *uptime;
-        if (free_heap)  doc["free_heap"] = *free_heap;
-        if (flash)  doc["flash"] = *flash;
-        if (cpu_board)  doc["cpu_board"] = *cpu_board;
+        JsonObject obj = doc["SysInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (uptime)  obj["uptime"] = *uptime;
+        if (free_heap)  obj["free_heap"] = *free_heap;
+        if (flash)  obj["flash"] = *flash;
+        if (cpu_board)  obj["cpu_board"] = *cpu_board;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        
         if (obj["uptime"].is<uint64_t>() )  uptime = obj["uptime"].as<uint64_t>();
         if (obj["free_heap"].is<uint64_t>() )  free_heap = obj["free_heap"].as<uint64_t>();
         if (obj["flash"].is<uint64_t>() )  flash = obj["flash"].as<uint64_t>();
@@ -90,6 +96,7 @@ class WifiInfo : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 15363;
 
+    std::string src;
     std::optional<std::string> ssid;
     std::optional<std::string> bssid;
     std::optional<int32_t> rssi;
@@ -102,18 +109,21 @@ class WifiInfo : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (ssid)  doc["ssid"] = *ssid;
-        if (bssid)  doc["bssid"] = *bssid;
-        if (rssi)  doc["rssi"] = *rssi;
-        if (ip)  doc["ip"] = *ip;
-        if (mac)  doc["mac"] = *mac;
-        if (channel)  doc["channel"] = *channel;
-        if (gateway)  doc["gateway"] = *gateway;
-        if (netmask)  doc["netmask"] = *netmask;
+        JsonObject obj = doc["WifiInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (ssid)  obj["ssid"] = *ssid;
+        if (bssid)  obj["bssid"] = *bssid;
+        if (rssi)  obj["rssi"] = *rssi;
+        if (ip)  obj["ip"] = *ip;
+        if (mac)  obj["mac"] = *mac;
+        if (channel)  obj["channel"] = *channel;
+        if (gateway)  obj["gateway"] = *gateway;
+        if (netmask)  obj["netmask"] = *netmask;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        
         if (obj["ssid"].is<std::string>() )  ssid = obj["ssid"].as<std::string>();
         if (obj["bssid"].is<std::string>() )  bssid = obj["bssid"].as<std::string>();
         if (obj["rssi"].is<int32_t>() )  rssi = obj["rssi"].as<int32_t>();
@@ -132,6 +142,7 @@ class MulticastInfo : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 61310;
 
+    std::string src;
     std::optional<std::string> group;
     std::optional<int32_t> port;
     std::optional<uint32_t> mtu;
@@ -139,13 +150,16 @@ class MulticastInfo : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (group)  doc["group"] = *group;
-        if (port)  doc["port"] = *port;
-        if (mtu)  doc["mtu"] = *mtu;
+        JsonObject obj = doc["MulticastInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (group)  obj["group"] = *group;
+        if (port)  obj["port"] = *port;
+        if (mtu)  obj["mtu"] = *mtu;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        
         if (obj["group"].is<std::string>() )  group = obj["group"].as<std::string>();
         if (obj["port"].is<int32_t>() )  port = obj["port"].as<int32_t>();
         if (obj["mtu"].is<uint32_t>() )  mtu = obj["mtu"].as<uint32_t>();
@@ -159,6 +173,7 @@ class HoverboardInfo : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 59150;
 
+    std::string src;
     std::optional<int32_t> speed;
     std::optional<int32_t> direction;
     std::optional<int32_t> currentA;
@@ -166,13 +181,16 @@ class HoverboardInfo : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (speed)  doc["speed"] = *speed;
-        if (direction)  doc["direction"] = *direction;
-        if (currentA)  doc["currentA"] = *currentA;
+        JsonObject obj = doc["HoverboardInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (speed)  obj["speed"] = *speed;
+        if (direction)  obj["direction"] = *direction;
+        if (currentA)  obj["currentA"] = *currentA;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        
         if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
         if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
         if (obj["currentA"].is<int32_t>() )  currentA = obj["currentA"].as<int32_t>();
@@ -186,18 +204,22 @@ class HoverboardCmd : public Msg {
     inline const char *type_id() const override { return id; }; 
     static const uint32_t ID = 58218;
 
+    std::string dst;
     std::optional<int32_t> speed;
     std::optional<int32_t> direction;
     
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (speed)  doc["speed"] = *speed;
-        if (direction)  doc["direction"] = *direction;
+        JsonObject obj = doc["HoverboardCmd"].to<JsonObject>();
+        obj["dst"] = dst;
+        if (speed)  obj["speed"] = *speed;
+        if (direction)  obj["direction"] = *direction;
         return doc;
     }
 
     void deserialize(const JsonObject& obj) {
+        
         if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
         if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
         }
@@ -216,8 +238,9 @@ class LpsInfo : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
-        if (direction)  doc["direction"] = *direction;
-        if (msg)  doc["msg"] = *msg;
+        JsonObject obj = doc["LpsInfo"].to<JsonObject>();
+        if (direction)  obj["direction"] = *direction;
+        if (msg)  obj["msg"] = *msg;
         return doc;
     }
 

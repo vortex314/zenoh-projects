@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <actor.h>
 
+
 typedef std::vector<uint8_t> Bytes;
 
 {% for en in enums %}
@@ -35,16 +36,17 @@ class {{ msg.name }} : public Msg {
 
     JsonDocument serialize() const {
         JsonDocument doc;
+        JsonObject obj = doc["{{ msg.name }}"].to<JsonObject>();
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
+        JsonArray arr = obj["{{ field.name }}"].to<JsonArray>();
         for (const auto& item : {{ field.name }}) {
             arr.add(item);
         }
             {%- elif field.optional -%}
-        if ({{ field.name }})  doc["{{ field.name }}"] = *{{ field.name }}; 
+        if ({{ field.name }})  obj["{{ field.name }}"] = *{{ field.name }}; 
             {%- else -%}
-        doc["{{ field.name }}"] = {{ field.name }};
+        obj["{{ field.name }}"] = {{ field.name }};
             {%- endif %}
         {% endfor -%}
         return doc;

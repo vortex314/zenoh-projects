@@ -5,45 +5,50 @@ package limero;
 
 
 message SysCmd {
-  string dst = 1;
-  optional string src = 2;
-  optional uint64 set_time = 3;
-  optional bool reboot = 4;
+  required string dst = 1;
+  required string src = 2;
+  uint64 set_time = 3;
+  bool reboot = 4;
 }
 
 message SysInfo {
-  optional uint64 uptime = 1;
-  optional uint64 free_heap = 2;
-  optional uint64 flash = 3;
-  optional string cpu_board = 4;
+  required string src = 1;
+   uint64 uptime = 2;
+   uint64 free_heap = 3;
+   uint64 flash = 4;
+   string cpu_board = 5;
 }
 
 message WifiInfo {
-  optional string ssid = 1;
-  optional string bssid = 2;
-  optional int32 rssi = 3;
-  optional string ip = 4;
-  optional string mac = 5;
-  optional int32 channel = 6;
-  optional string gateway = 7;
-  optional string netmask = 8;
+  required string src = 1;
+   string ssid = 2;
+   string bssid = 3;
+   int32 rssi = 4;
+   string ip = 5;
+   string mac = 6;
+   int32 channel = 7;
+   string gateway = 8;
+   string netmask = 9;
 }
 
 message MulticastInfo {
-  optional string group = 1;
-  optional int32 port = 2;
-  optional uint32 mtu = 3;
+  required string src = 1;
+   string group = 2;
+   int32 port = 3;
+   uint32 mtu = 4 ;
 }
 
 message HoverboardInfo {
-  optional int32 speed = 1;
-  optional int32 direction = 2;
-  optional int32 currentA=3;
+  required string src = 1;
+   int32 speed = 1;
+   int32 direction = 2;
+   int32 currentA=3;
 }
 
 message HoverboardCmd {
-  optional int32 speed = 1;
-  optional int32 direction = 2;
+  required string dst = 1;
+   int32 speed = 2;
+   int32 direction = 3;
 }
 
 enum MessageType {
@@ -61,6 +66,6 @@ enum Toggle {
 
 
 message LpsInfo {
-    optional int32 direction=1;
-    optional string msg=3;
+     int32 direction=1;
+     string msg=3;
 }

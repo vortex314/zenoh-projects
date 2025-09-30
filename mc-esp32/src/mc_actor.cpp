@@ -46,7 +46,7 @@ void McActor::on_timer(int id)
   }
   if (id == _timer_publish)
   {
-    publish_props();                               // publish own props
+    publish_props(); // publish own props
     /*for (auto &[name, local_obj] : _local_objects) // iterate over local objects
     {
       Value msg;
@@ -108,28 +108,22 @@ void McActor::on_message(const Envelope &env)
   });
   message.handle<SysInfo>([&](const SysInfo &sys_info)
                           {
-                            JsonDocument doc;
-                            doc["src"]=env.src->name();
-                            doc["SysInfo"]=sys_info.serialize(); 
+                            JsonDocument doc = sys_info.serialize();
                             std::string s;
                             serializeJson(doc,s);
                             send(s); });
   message.handle<WifiInfo>([&](const WifiInfo &wifi_info)
-                          {
-                            JsonDocument doc;
-                            doc["src"]=env.src->name();
-                            doc["WifiInfo"]=wifi_info.serialize();
+                           {
+                            JsonDocument doc = wifi_info.serialize();
                             std::string s;
                             serializeJson(doc,s);
                             send(s); });
   message.handle<MulticastInfo>([&](const MulticastInfo &multicast_info)
-                                  {
-                                    JsonDocument doc;
-                                    doc["src"]=env.src->name();
-                                    doc["MulticastInfo"]=multicast_info.serialize();
-                                    std::string s;
-                                    serializeJson(doc,s);
-                                    send(s); });
+                                {
+                                    JsonDocument doc = multicast_info.serialize();
+                            std::string s;
+                            serializeJson(doc,s);
+                            send(s); });
 }
 
 void McActor::on_wifi_connected()
@@ -312,7 +306,7 @@ Res McActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Mc");
   }
-  MulticastInfo* info = new MulticastInfo();
+  MulticastInfo *info = new MulticastInfo();
   info->group = MULTICAST_IP;
   info->port = MULTICAST_PORT;
   info->mtu = MAX_UDP_PACKET_SIZE;

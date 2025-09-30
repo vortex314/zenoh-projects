@@ -31,9 +31,9 @@ pub struct {{ msg.name }} {
         {%- elif field.optional -%}
     #[serde(skip_serializing_if = "Option::is_none")]
     pub {{ field.name }}:Option<{{ field.target_type }}>,
-        {% else -%}
+        {% else %}
     pub {{ field.name }}:{{ field.target_type }},
-        {%- endif -%}
+        {% endif -%}
     {% endfor %}
 
 }
@@ -45,18 +45,17 @@ impl Convert<{{msg.name}}> for {{msg.name}} {
 
      fn  from_value(v:&Value) -> Result<{{msg.name}}> {
          let mut m = {{msg.name}}::default();
-         {%- for field in msg.fields -%}
+         {% for field in msg.fields -%}
          {%- if field.repeated -%}
          v.get_array("{{ field.name }}").map(|arr|{
-             m.{{ field.name }} = arr.iter().map(|v|v.as_{{ field.target_type }}().unwrap()).collect();
+             m.{{ field.name }} = arr.iter().map(|v|v.as_::{{ field.target_type }}().unwrap()).collect();
          });
          {%- elif field.optional %}
          m.{{ field.name }} = v["{{ field.name }}"].as_::<{{ field.target_type }}>().clone().cloned();
          {%- else -%}
-         m.{{ field.name }} = v.get("{{ field.name }}").and_then(|v|v.as_{{ field.target_type }}()).unwrap();
+         m.{{ field.name }} = v.get("{{ field.name }}").and_then(|v|v.as_<{{ field.target_type }}>()).unwrap();
          {%- endif -%}
-         {% endfor -%}
-         // e.g.
+         {% endfor %}
          Ok(m)
      }
 
@@ -69,8 +68,8 @@ impl Convert<{{msg.name}}> for {{msg.name}} {
         {%- elif field.optional %}
         self.{{ field.name }}.as_ref().map(|v| value.set("{{ field.name }}", Value::from(v.clone())));
         {%- else -%}
-        value.set("{{ field.name }}", self.{{ field.name }}));
-        {%- endif -%}
+        value.set("{{ field.name }}", Value::from(&self.{{ field.name }}));
+        {% endif -%}
         {% endfor -%}
         Ok(value)
      }
