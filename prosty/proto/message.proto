@@ -3,6 +3,27 @@
 syntax = "proto3";
 package limero;
 
+enum LogLevel {
+  DEBUG = 1;
+  INFO =2 ;
+  WARN = 3;
+  ERROR = 4;
+  FATAL = 5;
+}
+
+message LogInfo {
+  required string src=1;
+  LogLevel level=2;
+  string message=3;
+  int32 error_code=4;
+}
+
+message AlertInfo {
+  required string src=1;
+  LogLevel level=2;
+  string message=3;
+  int32 error_code=4;
+}
 
 message SysCmd {
   required string dst = 1;
@@ -47,8 +68,9 @@ message HoverboardInfo {
 
 message HoverboardCmd {
   required string dst = 1;
-   int32 speed = 2;
-   int32 direction = 3;
+  string src = 2;
+   int32 speed = 3;
+   int32 direction = 4;
 }
 
 enum MessageType {

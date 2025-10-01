@@ -15,6 +15,15 @@ pub trait Convert<T> {
 
 
 #[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum LogLevel {
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Fatal,
+} 
+
+#[derive(Debug, Clone,Serialize,Deserialize)] 
 pub enum MessageType {
     SysCmd,
     SysInfo,
@@ -30,6 +39,92 @@ pub enum Toggle {
 } 
 
 
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LogInfo {
+    
+    pub src:String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub level:Option<LogLevel>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub message:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_code:Option<i32>,
+        
+
+}
+impl Msg for LogInfo {
+     const ID: u32 = 34678;
+     const NAME: &'static str = "LogInfo";
+}
+impl Convert<LogInfo> for LogInfo {
+
+     fn  from_value(v:&Value) -> Result<LogInfo> {
+         let mut m = LogInfo::default();
+         m.src = v.get("src").and_then(|v|v.as_<String>()).unwrap();
+         m.level = v["level"].as_::<LogLevel>().clone().cloned();
+         m.message = v["message"].as_::<String>().clone().cloned();
+         m.error_code = v["error_code"].as_::<i32>().clone().cloned();
+         Ok(m)
+     }
+
+     fn  to_value(&self) -> Result<Value>  {
+        let mut value = Value::object();
+        value.set("src", Value::from(&self.src));
+        
+        self.level.as_ref().map(|v| value.set("level", Value::from(v.clone())));
+        self.message.as_ref().map(|v| value.set("message", Value::from(v.clone())));
+        self.error_code.as_ref().map(|v| value.set("error_code", Value::from(v.clone())));Ok(value)
+     }
+
+    fn exist_in_value(value:&Value) -> bool {
+        value.has_field("MulticastInfo")
+    }
+}
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct AlertInfo {
+    
+    pub src:String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub level:Option<LogLevel>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub message:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_code:Option<i32>,
+        
+
+}
+impl Msg for AlertInfo {
+     const ID: u32 = 64124;
+     const NAME: &'static str = "AlertInfo";
+}
+impl Convert<AlertInfo> for AlertInfo {
+
+     fn  from_value(v:&Value) -> Result<AlertInfo> {
+         let mut m = AlertInfo::default();
+         m.src = v.get("src").and_then(|v|v.as_<String>()).unwrap();
+         m.level = v["level"].as_::<LogLevel>().clone().cloned();
+         m.message = v["message"].as_::<String>().clone().cloned();
+         m.error_code = v["error_code"].as_::<i32>().clone().cloned();
+         Ok(m)
+     }
+
+     fn  to_value(&self) -> Result<Value>  {
+        let mut value = Value::object();
+        value.set("src", Value::from(&self.src));
+        
+        self.level.as_ref().map(|v| value.set("level", Value::from(v.clone())));
+        self.message.as_ref().map(|v| value.set("message", Value::from(v.clone())));
+        self.error_code.as_ref().map(|v| value.set("error_code", Value::from(v.clone())));Ok(value)
+     }
+
+    fn exist_in_value(value:&Value) -> bool {
+        value.has_field("MulticastInfo")
+    }
+}
+    
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct SysCmd {
@@ -274,6 +369,8 @@ pub struct HoverboardCmd {
     
     pub dst:String,
         #[serde(skip_serializing_if = "Option::is_none")]
+    pub src:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
     pub speed:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub direction:Option<i32>,
@@ -289,6 +386,7 @@ impl Convert<HoverboardCmd> for HoverboardCmd {
      fn  from_value(v:&Value) -> Result<HoverboardCmd> {
          let mut m = HoverboardCmd::default();
          m.dst = v.get("dst").and_then(|v|v.as_<String>()).unwrap();
+         m.src = v["src"].as_::<String>().clone().cloned();
          m.speed = v["speed"].as_::<i32>().clone().cloned();
          m.direction = v["direction"].as_::<i32>().clone().cloned();
          Ok(m)
@@ -298,6 +396,7 @@ impl Convert<HoverboardCmd> for HoverboardCmd {
         let mut value = Value::object();
         value.set("dst", Value::from(&self.dst));
         
+        self.src.as_ref().map(|v| value.set("src", Value::from(v.clone())));
         self.speed.as_ref().map(|v| value.set("speed", Value::from(v.clone())));
         self.direction.as_ref().map(|v| value.set("direction", Value::from(v.clone())));Ok(value)
      }

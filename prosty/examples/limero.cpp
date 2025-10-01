@@ -11,6 +11,14 @@ typedef std::vector<uint8_t> Bytes;
 
 
 typedef enum {
+    DEBUG = 1,
+    INFO = 2,
+    WARN = 3,
+    ERROR = 4,
+    FATAL = 5,
+} LogLevel;
+
+typedef enum {
     SYS_CMD = 1,
     SYS_INFO = 2,
     WIFI_INFO = 3,
@@ -24,6 +32,68 @@ typedef enum {
 } Toggle;
 
 
+
+class LogInfo : public Msg {
+    public:
+    static constexpr const char *id = "LogInfo";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = 34678;
+
+    std::string src;
+    std::optional<LogLevel> level;
+    std::optional<std::string> message;
+    std::optional<int32_t> error_code;
+    
+
+    JsonDocument serialize() const {
+        JsonDocument doc;
+        JsonObject obj = doc["LogInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (level)  obj["level"] = *level;
+        if (message)  obj["message"] = *message;
+        if (error_code)  obj["error_code"] = *error_code;
+        return doc;
+    }
+
+    void deserialize(const JsonObject& obj) {
+        
+        if (obj["level"].is<LogLevel>() )  level = obj["level"].as<LogLevel>();
+        if (obj["message"].is<std::string>() )  message = obj["message"].as<std::string>();
+        if (obj["error_code"].is<int32_t>() )  error_code = obj["error_code"].as<int32_t>();
+        }
+
+};
+
+class AlertInfo : public Msg {
+    public:
+    static constexpr const char *id = "AlertInfo";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = 64124;
+
+    std::string src;
+    std::optional<LogLevel> level;
+    std::optional<std::string> message;
+    std::optional<int32_t> error_code;
+    
+
+    JsonDocument serialize() const {
+        JsonDocument doc;
+        JsonObject obj = doc["AlertInfo"].to<JsonObject>();
+        obj["src"] = src;
+        if (level)  obj["level"] = *level;
+        if (message)  obj["message"] = *message;
+        if (error_code)  obj["error_code"] = *error_code;
+        return doc;
+    }
+
+    void deserialize(const JsonObject& obj) {
+        
+        if (obj["level"].is<LogLevel>() )  level = obj["level"].as<LogLevel>();
+        if (obj["message"].is<std::string>() )  message = obj["message"].as<std::string>();
+        if (obj["error_code"].is<int32_t>() )  error_code = obj["error_code"].as<int32_t>();
+        }
+
+};
 
 class SysCmd : public Msg {
     public:
@@ -205,6 +275,7 @@ class HoverboardCmd : public Msg {
     static const uint32_t ID = 58218;
 
     std::string dst;
+    std::optional<std::string> src;
     std::optional<int32_t> speed;
     std::optional<int32_t> direction;
     
@@ -213,6 +284,7 @@ class HoverboardCmd : public Msg {
         JsonDocument doc;
         JsonObject obj = doc["HoverboardCmd"].to<JsonObject>();
         obj["dst"] = dst;
+        if (src)  obj["src"] = *src;
         if (speed)  obj["speed"] = *speed;
         if (direction)  obj["direction"] = *direction;
         return doc;
@@ -220,6 +292,7 @@ class HoverboardCmd : public Msg {
 
     void deserialize(const JsonObject& obj) {
         
+        if (obj["src"].is<std::string>() )  src = obj["src"].as<std::string>();
         if (obj["speed"].is<int32_t>() )  speed = obj["speed"].as<int32_t>();
         if (obj["direction"].is<int32_t>() )  direction = obj["direction"].as<int32_t>();
         }

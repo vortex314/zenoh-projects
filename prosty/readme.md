@@ -136,3 +136,18 @@ bool value.has_speed();
 Toggle value.get_button();
 
 Msg has_SysInfo()-> bool
+
+```json
+{
+  "src/esp1/sys/SysInfo/JSON" : {
+    "uptime":49729374,
+    "free_heap":130000
+  },
+  "dst/esp1/sys/SysCmd/JSON": {
+    "reboot":true,
+    "set_time":983487289
+  }
+}
+```
+- subscribe to "dst/esp1/*" on "esp1" device / eventbus - dst/src / DEVICE / COMPONENT / MSG_TYPE / FORMAT
+- Home assistant only permits subsription to message type
