@@ -41,6 +41,62 @@ pub enum Toggle {
 
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct ZenohInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zid:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub what_am_i:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub peers:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub routers:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub connect:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub listen:Option<String>,
+        
+
+}
+impl Msg for ZenohInfo {
+     const ID: u32 = 33380;
+     const NAME: &'static str = "ZenohInfo";
+}
+impl Convert<ZenohInfo> for ZenohInfo {
+
+     fn  from_value(v:&Value) -> Result<ZenohInfo> {
+         let mut m = ZenohInfo::default();
+         
+         m.zid = v["zid"].as_::<String>().clone().cloned();
+         m.what_am_i = v["what_am_i"].as_::<String>().clone().cloned();
+         m.peers = v["peers"].as_::<String>().clone().cloned();
+         m.prefix = v["prefix"].as_::<String>().clone().cloned();
+         m.routers = v["routers"].as_::<String>().clone().cloned();
+         m.connect = v["connect"].as_::<String>().clone().cloned();
+         m.listen = v["listen"].as_::<String>().clone().cloned();
+         Ok(m)
+     }
+
+     fn  to_value(&self) -> Result<Value>  {
+        let mut value = Value::object();
+        
+        self.zid.as_ref().map(|v| value.set("zid", Value::from(v.clone())));
+        self.what_am_i.as_ref().map(|v| value.set("what_am_i", Value::from(v.clone())));
+        self.peers.as_ref().map(|v| value.set("peers", Value::from(v.clone())));
+        self.prefix.as_ref().map(|v| value.set("prefix", Value::from(v.clone())));
+        self.routers.as_ref().map(|v| value.set("routers", Value::from(v.clone())));
+        self.connect.as_ref().map(|v| value.set("connect", Value::from(v.clone())));
+        self.listen.as_ref().map(|v| value.set("listen", Value::from(v.clone())));Ok(value)
+     }
+
+    fn exist_in_value(value:&Value) -> bool {
+        value.has_field("MulticastInfo")
+    }
+}
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct LogInfo {
     
     pub src:String,

@@ -10,6 +10,7 @@
 #include <mc_actor.h>
 #include <sys_actor.h>
 #include <led_actor.h>
+#include <zenoh_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -22,7 +23,8 @@
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
 WifiActor wifi_actor(DEVICE_PREFIX "wifi");
-McActor mc_actor(DEVICE_PREFIX "multicast");
+// McActor mc_actor(DEVICE_PREFIX "multicast");
+ZenohActor zenoh_actor(DEVICE_PREFIX "zenoh");
 SysActor sys_actor(DEVICE_PREFIX "sys");
 LedActor led_actor(DEVICE_PREFIX "led");
 EventBus eventbus(10);
@@ -41,7 +43,8 @@ extern "C" void app_main()
 
   eventbus.register_actor(&wifi_actor);
   eventbus.register_actor(&sys_actor);
-  eventbus.register_actor(&mc_actor);
+//  eventbus.register_actor(&mc_actor);
+  eventbus.register_actor(&zenoh_actor);
   eventbus.register_actor(&led_actor);
   eventbus.register_handler([](const Envelope &env)
                             { 

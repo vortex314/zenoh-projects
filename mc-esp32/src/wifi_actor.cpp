@@ -4,6 +4,7 @@
 #include <strings.h>
 #include <wifi_actor.h>
 #include <esp_mac.h>
+#include <zenoh_actor.h>
 
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -148,6 +149,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   {
     INFO("WiFi STA got IP address in %s", actor->ref().name());
     actor->emit(new WifiConnected());
+    actor->emit(new ZenohConnect());
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }

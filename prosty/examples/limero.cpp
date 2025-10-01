@@ -33,6 +33,46 @@ typedef enum {
 
 
 
+class ZenohInfo : public Msg {
+    public:
+    static constexpr const char *id = "ZenohInfo";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = 33380;
+
+    std::optional<std::string> zid;
+    std::optional<std::string> what_am_i;
+    std::optional<std::string> peers;
+    std::optional<std::string> prefix;
+    std::optional<std::string> routers;
+    std::optional<std::string> connect;
+    std::optional<std::string> listen;
+    
+
+    JsonDocument serialize() const {
+        JsonDocument doc;
+        JsonObject obj = doc["ZenohInfo"].to<JsonObject>();
+        if (zid)  obj["zid"] = *zid;
+        if (what_am_i)  obj["what_am_i"] = *what_am_i;
+        if (peers)  obj["peers"] = *peers;
+        if (prefix)  obj["prefix"] = *prefix;
+        if (routers)  obj["routers"] = *routers;
+        if (connect)  obj["connect"] = *connect;
+        if (listen)  obj["listen"] = *listen;
+        return doc;
+    }
+
+    void deserialize(const JsonObject& obj) {
+        if (obj["zid"].is<std::string>() )  zid = obj["zid"].as<std::string>();
+        if (obj["what_am_i"].is<std::string>() )  what_am_i = obj["what_am_i"].as<std::string>();
+        if (obj["peers"].is<std::string>() )  peers = obj["peers"].as<std::string>();
+        if (obj["prefix"].is<std::string>() )  prefix = obj["prefix"].as<std::string>();
+        if (obj["routers"].is<std::string>() )  routers = obj["routers"].as<std::string>();
+        if (obj["connect"].is<std::string>() )  connect = obj["connect"].as<std::string>();
+        if (obj["listen"].is<std::string>() )  listen = obj["listen"].as<std::string>();
+        }
+
+};
+
 class LogInfo : public Msg {
     public:
     static constexpr const char *id = "LogInfo";     

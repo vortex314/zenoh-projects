@@ -104,26 +104,29 @@ void McActor::on_message(const Envelope &env)
   message.handle<PublishTxd>([&](const PublishTxd &msg) { // INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
     std::string s;
     serializeJson(msg.doc, s);
-    send(s);
+    send("",s);
   });
   message.handle<SysInfo>([&](const SysInfo &sys_info)
                           {
+                            std::string topic = "src/" + std::string(this->name()) + "/SysInfo/JSON";
                             JsonDocument doc = sys_info.serialize();
                             std::string s;
                             serializeJson(doc,s);
-                            send(s); });
+                            send(topic,s); });
   message.handle<WifiInfo>([&](const WifiInfo &wifi_info)
                            {
+                              std::string topic = "src/" + std::string(this->name()) + "/WifiInfo/JSON";
                             JsonDocument doc = wifi_info.serialize();
                             std::string s;
                             serializeJson(doc,s);
-                            send(s); });
+                            send(topic,s); });
   message.handle<MulticastInfo>([&](const MulticastInfo &multicast_info)
                                 {
+                                  std::string topic = "src/" + std::string(this->name()) + "/MulticastInfo/JSON";
                                     JsonDocument doc = multicast_info.serialize();
                             std::string s;
                             serializeJson(doc,s);
-                            send(s); });
+                            send(topic,s); });
 }
 
 void McActor::on_wifi_connected()
@@ -452,7 +455,7 @@ static int create_udp_socket(uint16_t port)
   return sock;
 }
 
-Result<Void> McActor::send(const std::string &data)
+Result<Void> McActor::send(const std::string& topic, const std::string &data)
 {
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);

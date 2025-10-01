@@ -11,6 +11,17 @@ enum LogLevel {
   FATAL = 5;
 }
 
+
+message ZenohInfo {
+  string zid=2;
+  string what_am_i=3;
+  string peers=4;
+  string prefix=5;
+  string routers=6;
+  string connect=7;
+  string listen=8;
+}
+
 message LogInfo {
   required string src=1;
   LogLevel level=2;
