@@ -5,6 +5,7 @@
 #include <optional>
 #include <ArduinoJson.h>
 #include <actor.h>
+#include <result.h>
 
 
 typedef std::vector<uint8_t> Bytes;
@@ -34,14 +35,16 @@ class {{ msg.name }} : public Msg {
         {%- endif %} {{ field.name }};
     {% endfor %}
 
-    JsonDocument serialize() const {
+    Bytes serialize() const {
         JsonDocument doc;
         JsonObject obj = doc["{{ msg.name }}"].to<JsonObject>();
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        JsonArray arr = obj["{{ field.name }}"].to<JsonArray>();
+        {
+            JsonArray arr = obj["{{ field.name }}"].to<JsonArray>();
         for (const auto& item : {{ field.name }}) {
             arr.add(item);
+        }
         }
             {%- elif field.optional -%}
         if ({{ field.name }})  obj["{{ field.name }}"] = *{{ field.name }}; 
@@ -49,10 +52,17 @@ class {{ msg.name }} : public Msg {
         obj["{{ field.name }}"] = {{ field.name }};
             {%- endif %}
         {% endfor -%}
-        return doc;
+        std::string str;
+        serializeJson(doc,str);
+        return Bytes(str.begin(),str.end());
     }
 
-    void deserialize(const JsonObject& obj) {
+    bool deserialize(const Bytes& bytes) {
+        JsonDocument obj;
+        auto err = deserializeJson(obj,bytes);
+        if ( err != DeserializationError::Ok || obj.is<JsonObject>() == false ) {
+            return false;
+        };        
         {% for field in msg.fields %}
             {%- if field.repeated -%}
         if (obj["{{ field.name }}"].is<JsonArray>()) {
@@ -66,6 +76,7 @@ class {{ msg.name }} : public Msg {
         if (obj["{{ field.name }}"].is<{{ field.target_type }}>() )  {{ field.name }} = obj["{{ field.name }}"].as<{{ field.target_type }}>();
             {%- endif %}
         {% endfor -%}
+        return true;
     }
 
 };

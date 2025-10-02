@@ -36,17 +36,22 @@ void ZenohActor::handle_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
+void ZenohActor::send_msg(const char *src, const Msg *msg)
+{
+  char topic[100];
+  sprintf(topic, "%s/%s/%s/JSON", _src_device.c_str(), src, msg->type_id());
+  zenoh_publish(topic, msg->serialize());
+}
+
 void ZenohActor::on_message(const Envelope &env)
 {
   const Msg &msg = *env.msg;
-  msg.handle<SysInfo>([&](const SysInfo &sys_info)
-                           {
-                             std::string topic = env.src->name();
-                             topic += "/SysInfo/JSON";
-                             JsonDocument doc = sys_info.serialize();
-                             std::string s;
-                             serializeJson(doc,s);
-                             zenoh_publish(topic.c_str(), Bytes(s.begin(), s.end())); });
+  msg.handle<SysInfo>([&](const auto &msg)
+                      { send_msg(env.src->name(), &msg); });
+  msg.handle<WifiInfo>([&](const auto &msg)
+                       { send_msg(env.src->name(), &msg); });
+  msg.handle<ZenohInfo>([&](const auto &msg)
+                        { send_msg(env.src->name(), &msg); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -70,7 +75,7 @@ void ZenohActor::on_message(const Envelope &env)
                              } else {
                                INFO("Connected to Zenoh");
                              }
-                           }});
+                           } });
   msg.handle<ZenohDisconnect>([&](auto _)
                               { if (_connected)
                                 { disconnect(); } });
@@ -112,25 +117,23 @@ Res ZenohActor::connect(void)
   size_t length = z_string_len(z_loan(z_str));
   INFO("Own ZID  : %.*s", length, z_string_data(z_loan(z_str)));
 
-  auto f1 = [](const z_id_t *id, void *arg)
+  auto f1 = [](const z_id_t *id, void *context)
   {
     z_owned_string_t z_str;
     z_id_to_string(id, &z_str);
+    std::vector<std::string> *vec = (std::vector<std::string> *)context;
     size_t length = z_string_len(z_loan(z_str));
+    vec->push_back(_z_string_data(z_loan(z_str)));
     INFO("Connected to Router : %.*s", length, z_string_data(z_loan(z_str)));
   };
   z_owned_closure_zid_t zid_closure;
 
-  CHECK(z_closure_zid(&zid_closure, f1, NULL, NULL));
+  _routers.clear();
+  CHECK(z_closure_zid(&zid_closure, f1, NULL, &_routers));
   CHECK(z_info_routers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
-  auto f2 = [](const z_id_t *id, void *arg)
-  {
-    z_owned_string_t z_str;
-    z_id_to_string(id, &z_str);
-    size_t length = z_string_len(z_loan(z_str));
-    INFO("Connected to Peer : %.*s", length, z_string_data(z_loan(z_str)));
-  };
-  CHECK(z_closure_zid(&zid_closure, f2, NULL, NULL));
+
+  _peers.clear();
+  CHECK(z_closure_zid(&zid_closure, f1, NULL, &_peers));
   CHECK(z_info_peers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
 
   return ResOk;
@@ -165,13 +168,13 @@ bool ZenohActor::is_connected() const
   return _connected;
 }
 
-void ZenohActor::prefix(const char *prefix)
+void ZenohActor::prefix(const char *device_name)
 {
-  _src_prefix = "src/";
-  _src_prefix += prefix;
-  _dst_prefix = "dst/";
-  _dst_prefix += prefix;
-  _subscribed_topics.push_back(_dst_prefix + "/**");
+  _src_device = "src/";
+  _src_device += device_name;
+  _dst_device = "dst/";
+  _dst_device += device_name;
+  _subscribed_topics.push_back(_dst_device + "/**");
 }
 
 Result<Void> ZenohActor::subscribe(const std::string &topic)
@@ -271,6 +274,39 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   return ResOk;
 }
 */
+struct Topic
+{
+  const char *delimiter = "/";
+  const char *src_dst = "";
+  const char *device = "";
+  const char *component = "";
+  const char *message_type = "";
+  const char *serialization = "JSON";
+  bool deserialize(const char *topic_arg)
+  {
+    char topic[64];
+    strncpy(topic, topic_arg, sizeof(topic));
+    char *token = strtok(topic, delimiter);
+    int cnt = 0;
+    while (token != NULL)
+    {
+      if (cnt == 0)
+        src_dst = token;
+      if (cnt == 1)
+        device = token;
+      if (cnt == 2)
+        component = token;
+      if (cnt == 3)
+        message_type = token;
+      if (cnt == 4)
+        serialization = token;
+      cnt++;
+      token = strtok(NULL, delimiter);
+    }
+    return cnt < 4;
+  }
+};
+
 void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 {
   ZenohActor *actor = (ZenohActor *)arg;
@@ -289,8 +325,17 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   _z_bytes_reader_read(&reader, buffer.data(), len);
 
   INFO("Received message on topic '%s': %d", topic.c_str(), len);
+  Topic t;
+  t.deserialize(topic.c_str());
 
-  actor->emit(new ZenohReceived(topic, buffer));
+  if (strcmp(t.message_type, SysCmd::id) == 0)
+  {
+    SysCmd *sys_cmd = new SysCmd();
+    sys_cmd->deserialize(buffer);
+    actor->emit(sys_cmd);
+  }
+  else
+    actor->emit(new ZenohReceived(topic, buffer));
 }
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
@@ -315,57 +360,32 @@ Res ZenohActor::publish_props()
   {
     return Res(ENOTCONN, "Not connected to Zenoh");
   }
+  ZenohInfo *zenoh_info = new ZenohInfo();
+
   z_id_t _zid = z_info_zid(z_loan(_zenoh_session));
   z_owned_string_t z_str;
   z_id_to_string(&_zid, &z_str);
-  _zenoh_msg.zid = std::string(z_str._val._slice.start, z_str._val._slice.start + z_str._val._slice.len);
-  
-    z_owned_string_t what_am_i_str;
-    z_info_what_am_i(_zenoh_session, &what_am_i_str);
-    std::string what_am_i = std::string(what_am_i_str._val._slice.start, what_am_i_str._val._slice.start + what_am_i_str._val._slice.len);
-  
-  ZenohInfo* zenoh_info = new ZenohInfo();
-  zenoh_info->zid = z_str;
-  zenoh_info->what_am_i = 
-  zenoh_info->peers = _zenoh_msg.peers;
-  zenoh_info->prefix = _zenoh_msg.prefix;
-  zenoh_info->routers = _zenoh_msg.routers;
-  emit(new ZenohPublish(_src_prefix + "/props", Bytes()));
+  zenoh_info->zid = _z_string_data(z_loan(z_str));
+
+  zenoh_info->what_am_i = MODE;
+  zenoh_info->peers = _peers;
+  zenoh_info->routers = _routers;
+  zenoh_info->connect = CONNECT;
+  emit(zenoh_info);
   z_drop(z_move(z_str));
   return ResOk;
 }
 
 //============================================================
 
-Res ZenohMsg::serialize(Serializer &ser) const
-{
-  //  int idx = 0;
-  ser.reset();
-  ser.map_begin();
-  ser.serialize(KEY("zid"), zid);
-  ser.serialize(KEY("what_am_i"), what_am_i);
-  ser.serialize(KEY("peers"), peers);
-  ser.serialize(KEY("prefix"), prefix);
-  ser.serialize(KEY("routers"), routers);
-  ser.serialize(KEY("connect"), connect);
-  return ser.map_end();
-}
-
-Res ZenohMsg::deserialize(Deserializer &des)
-{
-  return Res(EAFNOSUPPORT, "not implemented");
-}
-
 void ZenohActor::on_start()
 {
   INFO("Starting Zenoh Actor '%s'", name());
-
 }
 
 void ZenohActor::on_stop()
 {
   INFO("Stopping Zenoh Actor '%s'", name());
-
 }
 
 void ZenohActor::zenoh_unsubscribe(const std::string &topic)
@@ -383,5 +403,3 @@ void ZenohActor::zenoh_unsubscribe(const std::string &topic)
     WARN("No subscription found for topic '%s'", topic.c_str());
   }
 }
-
-

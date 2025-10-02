@@ -15,7 +15,7 @@ use log::info;
 
 use std::net::Ipv4Addr;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::time::{Duration, interval};
+use tokio::time::{interval, Duration};
 
 // import necessary modules
 
@@ -94,7 +94,10 @@ impl Tester {
         value["src"] = self.name.clone().into();
         value["pub"] = Value::object();
         value["pub"]["index"] = self.counter.into();
-        self.client.do_send(ClientCmd::Publish { src:"tester".to_string(), value });
+        self.client.do_send(ClientCmd::Publish {
+            src: "tester".to_string(),
+            value,
+        });
         self.counter += 1;
     }
 }

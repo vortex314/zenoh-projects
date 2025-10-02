@@ -1,7 +1,7 @@
 use convert_case::Casing;
 use protobuf_parser::{FieldType, FileDescriptor};
 use std::path::Path;
-use std::{convert, fs};
+use std::fs;
 mod logger;
 use log::info;
 use logger::init;
@@ -30,9 +30,9 @@ struct Args {
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let pkg = Path::new(&args.proto)
+    /*  pkg = Path::new(&args.proto)
         .parent()
-        .expect("Failed to get parent directory");
+        .expect("Failed to get parent directory");*/
     init();
     let proto_file = Path::new("proto/message.proto");
     let proto_content = fs::read_to_string(proto_file).expect("Failed to read proto file");
@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
 
     let messages = convert_cpp_types(&fd);
     let enums = convert_enum_cpp_types(&fd);
-    let cpp_name = format!("{}/{}.cpp", args.cpp_out, fd.package);;
+    let cpp_name = format!("{}/{}.cpp", args.cpp_out, fd.package);
     let rendered = render(&enums, &messages, "cpp_json.tera");
     fs::write(&cpp_name, rendered).expect("Failed to write output file");
     info!("Generated C++ code written to {}", cpp_name);
@@ -238,7 +238,7 @@ fn convert_enum_cpp_types(fd: &FileDescriptor) -> Vec<EnumType> {
 }
 
 use tera::{Context, Tera};
-
+/* 
 fn fnv1a_32(data: &[u8]) -> u32 {
     const FNV_OFFSET_BASIS: u32 = 0x811c9dc5;
     const FNV_PRIME: u32 = 0x01000193;
@@ -248,7 +248,7 @@ fn fnv1a_32(data: &[u8]) -> u32 {
         hash = hash.wrapping_mul(FNV_PRIME);
     }
     hash
-}
+}*/
 
 fn fnv1a_16(data: &[u8]) -> u16 {
     const FNV_OFFSET_BASIS: u16 = 0x811c;

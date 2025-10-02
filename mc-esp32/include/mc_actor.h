@@ -117,7 +117,7 @@ public:
   Result<Void> connect(void);
   Result<Void> disconnect();
   //  Result<Bytes> receive();
-  Result<Void> send(const std::string& topic, const std::string &data);
+  Result<Void> send(const std::string& topic, const Bytes &data);
   Result<Void> publish_props();
 
   Result<Void> subscribe(const std::string &topic);

@@ -9,42 +9,36 @@ enum LogLevel {
   WARN = 3;
   ERROR = 4;
   FATAL = 5;
+  ALERT =6 ;
 }
 
 
 message ZenohInfo {
   string zid=2;
   string what_am_i=3;
-  string peers=4;
+  repeated string peers=4;
   string prefix=5;
-  string routers=6;
+  repeated string routers=6;
   string connect=7;
   string listen=8;
 }
 
 message LogInfo {
-  required string src=1;
   LogLevel level=2;
   string message=3;
   int32 error_code=4;
-}
-
-message AlertInfo {
-  required string src=1;
-  LogLevel level=2;
-  string message=3;
-  int32 error_code=4;
+  string file=5;
+  int32 line=6;
 }
 
 message SysCmd {
-  required string dst = 1;
   required string src = 2;
   uint64 set_time = 3;
   bool reboot = 4;
 }
 
 message SysInfo {
-  required string src = 1;
+   uint64 utc = 1;
    uint64 uptime = 2;
    uint64 free_heap = 3;
    uint64 flash = 4;
@@ -52,7 +46,6 @@ message SysInfo {
 }
 
 message WifiInfo {
-  required string src = 1;
    string ssid = 2;
    string bssid = 3;
    int32 rssi = 4;
@@ -64,21 +57,18 @@ message WifiInfo {
 }
 
 message MulticastInfo {
-  required string src = 1;
    string group = 2;
    int32 port = 3;
    uint32 mtu = 4 ;
 }
 
 message HoverboardInfo {
-  required string src = 1;
    int32 speed = 1;
    int32 direction = 2;
    int32 currentA=3;
 }
 
 message HoverboardCmd {
-  required string dst = 1;
   string src = 2;
    int32 speed = 3;
    int32 direction = 4;

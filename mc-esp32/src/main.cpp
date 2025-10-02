@@ -22,11 +22,11 @@
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
-WifiActor wifi_actor(DEVICE_PREFIX "wifi");
+WifiActor wifi_actor( "wifi");
 // McActor mc_actor(DEVICE_PREFIX "multicast");
-ZenohActor zenoh_actor(DEVICE_PREFIX "zenoh");
-SysActor sys_actor(DEVICE_PREFIX "sys");
-LedActor led_actor(DEVICE_PREFIX "led");
+ZenohActor zenoh_actor( "zenoh");
+SysActor sys_actor( "sys");
+LedActor led_actor( "led");
 EventBus eventbus(10);
 Log logger;
 esp_err_t nvs_init();
@@ -40,6 +40,8 @@ extern "C" void app_main()
 
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
+
+  zenoh_actor.prefix(DEVICE_NAME);
 
   eventbus.register_actor(&wifi_actor);
   eventbus.register_actor(&sys_actor);

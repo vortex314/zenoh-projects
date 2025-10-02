@@ -19,33 +19,6 @@
 #include <wifi_actor.h>
 #include <limero.cpp>
 
-enum ZenohAction
-{
-  Connect,
-  Disconnect,
-  Subscribe,
-  Stop
-};
-/*
-struct ZenohSerial
-{
-  std::string topic;
-  Serializable &value;
-};*/
-
-struct ZenohMsg : public Serializable
-{
-  Option<std::string> zid;
-  Option<std::string> what_am_i;
-  Option<std::string> peers;
-  Option<std::string> prefix;
-  Option<std::string> routers;
-  Option<std::string> connect;
-  Option<std::string> listen;
-
-  Res serialize(Serializer &ser) const;
-  Res deserialize(Deserializer &des);
-};
 
 MSG(ZenohPublish, std::string topic; Bytes payload; ZenohPublish(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){});
 MSG(ZenohSubscribe, std::string topic; ZenohSubscribe(const std::string &topic) : topic(topic){});
@@ -76,6 +49,7 @@ public:
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);
 
   Res zenoh_publish(const char *topic, const Bytes &value);
+  void send_msg(const char* topic, const Msg* msg);
   Res publish_props();
 //  Res publish_props_info();
 
@@ -90,13 +64,15 @@ public:
   static void subscription_handler(z_loaned_sample_t *sample, void *arg);
 
 private:
-  std::string _src_prefix;
-  std::string _dst_prefix;
+  std::string _src_device;
+  std::string _dst_device;
   z_owned_session_t _zenoh_session;
-  ZenohMsg _zenoh_msg;
   bool _connected = false;
   z_owned_config_t config;
   z_put_options_t put_options;
+  std::vector<std::string> _routers;
+    std::vector<std::string> _peers;
+
 
   std::vector<std::string> _subscribed_topics;
   std::map<std::string, z_owned_subscriber_t> _subscribers;

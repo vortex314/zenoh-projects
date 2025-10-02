@@ -104,29 +104,20 @@ void McActor::on_message(const Envelope &env)
   message.handle<PublishTxd>([&](const PublishTxd &msg) { // INFO("Received publish message on topic %s: %s", msg.topic.c_str(), msg.value.toJson().c_str());
     std::string s;
     serializeJson(msg.doc, s);
-    send("",s);
+    send("", Bytes(s.begin(),s.end()));
   });
   message.handle<SysInfo>([&](const SysInfo &sys_info)
                           {
                             std::string topic = "src/" + std::string(this->name()) + "/SysInfo/JSON";
-                            JsonDocument doc = sys_info.serialize();
-                            std::string s;
-                            serializeJson(doc,s);
-                            send(topic,s); });
+                            send(topic,sys_info.serialize()); });
   message.handle<WifiInfo>([&](const WifiInfo &wifi_info)
                            {
                               std::string topic = "src/" + std::string(this->name()) + "/WifiInfo/JSON";
-                            JsonDocument doc = wifi_info.serialize();
-                            std::string s;
-                            serializeJson(doc,s);
-                            send(topic,s); });
+                            send(topic,wifi_info.serialize()); });
   message.handle<MulticastInfo>([&](const MulticastInfo &multicast_info)
                                 {
                                   std::string topic = "src/" + std::string(this->name()) + "/MulticastInfo/JSON";
-                                    JsonDocument doc = multicast_info.serialize();
-                            std::string s;
-                            serializeJson(doc,s);
-                            send(topic,s); });
+                            send(topic,multicast_info.serialize()); });
 }
 
 void McActor::on_wifi_connected()
@@ -455,14 +446,14 @@ static int create_udp_socket(uint16_t port)
   return sock;
 }
 
-Result<Void> McActor::send(const std::string& topic, const std::string &data)
+Result<Void> McActor::send(const std::string &topic, const Bytes &data)
 {
   struct sockaddr_in dest_addr;
   BZERO(dest_addr);
   dest_addr.sin_family = AF_INET;
   dest_addr.sin_port = htons(MULTICAST_PORT);
   dest_addr.sin_addr.s_addr = inet_addr(MULTICAST_IP);
-  INFO("Multicast send : %s ", data.c_str());
+  INFO("Multicast send : %d ", data.size());
 
   int err = sendto(_mc_socket, data.data(), data.size(), 0,
                    (struct sockaddr *)&dest_addr, sizeof(dest_addr));

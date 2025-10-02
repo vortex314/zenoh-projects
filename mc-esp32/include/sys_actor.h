@@ -9,6 +9,7 @@
 #include <option.h>
 #include <ArduinoJson.h>
 #include <limero.cpp>
+#include <zenoh_actor.h>
 
 MSG(SysPub,Option<uint64_t> uptime;Option<std::string> version;Option<std::string> cpu_board;Option<uint32_t> free_heap);
 
@@ -24,9 +25,8 @@ public:
   void on_message(const Envelope& msg);
   void on_timer(int timer_id);
   void on_start();
-  Result<Value> publish_props();
-  static void set_utc(int64_t utc);
-  Result<Value> publish_info();
+   void set_utc(int64_t utc);
+   void publish_info();
   static void reboot(bool b);
 };
 

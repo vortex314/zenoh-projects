@@ -44,6 +44,8 @@ class Msg
 public:
     virtual const char *type_id() const = 0;
     virtual ~Msg() = default;
+    virtual Bytes serialize() const = 0;
+    virtual bool deserialize(const Bytes &) = 0;
     template <typename T>
     void handle(std::function<void(const T &)> f) const
     {
@@ -54,16 +56,6 @@ public:
         }
     }
 };
-class Envelope
-{
-public:
-    std::optional<ActorRef> src = std::nullopt;
-    std::optional<ActorRef> dst = std::nullopt;
-    const Msg *msg;
-    Envelope(Msg *msg) : msg(msg){}
-    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg){}
-    ~Envelope() { delete msg; }
-};
 
 #define MSG(MSG_TYPE, ...)                                          \
     class MSG_TYPE : public Msg                                     \
@@ -71,11 +63,22 @@ public:
     public:                                                         \
         static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
         inline const char *type_id() const override { return id; }; \
-        Bytes serialize() const;                                    \
-        void deserialize(const Bytes &);                            \
+        inline Bytes serialize() const { return Bytes(); };                \
+        inline bool deserialize(const Bytes &) { return false;};                         \
         ~MSG_TYPE() = default;                                      \
         __VA_ARGS__;                                                \
     }
+
+class Envelope
+{
+public:
+    std::optional<ActorRef> src = std::nullopt;
+    std::optional<ActorRef> dst = std::nullopt;
+    const Msg *msg;
+    Envelope(Msg *msg) : msg(msg) {}
+    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg) {}
+    ~Envelope() { delete msg; }
+};
 
 MSG(TimerMsg, int timer_id; TimerMsg(int id) : timer_id(id){});
 
@@ -215,7 +218,7 @@ class Actor;
 class EventBus : public Queue<const Envelope *>
 {
     std::vector<Actor *> _actors;
-    std::vector<std::function<void(const Envelope  &)>> _message_handlers;
+    std::vector<std::function<void(const Envelope &)>> _message_handlers;
     size_t _stack_size = 1024;
     TaskHandle_t _task_handle;
 
@@ -246,7 +249,7 @@ public:
 
     virtual void on_start() { INFO("actor %s default started.", _self.name()); }
     virtual void on_stop() { INFO("actor %s default stopped.", _self.name()); }
-    virtual void on_message(const Envelope& env)
+    virtual void on_message(const Envelope &env)
     {
         WARN(" No message handler for actor %s ", _self.name());
     }
@@ -348,8 +351,10 @@ void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f
 }
 
 template <typename T>
-void handle(std::optional<T>& v,std::function<void(const T &)> f) {
-    if ( v ) f(*v);
+void handle(std::optional<T> &v, std::function<void(const T &)> f)
+{
+    if (v)
+        f(*v);
 }
 
 #endif
