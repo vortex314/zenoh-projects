@@ -18,6 +18,7 @@
 #include <sys_actor.h>
 #include <wifi_actor.h>
 #include <limero.cpp>
+#include <led_actor.h>
 
 
 MSG(ZenohPublish, std::string topic; Bytes payload; ZenohPublish(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){});
@@ -50,6 +51,7 @@ public:
 
   Res zenoh_publish(const char *topic, const Bytes &value);
   void send_msg(const char* topic, const Msg* msg);
+  Res collect_info();
   Res publish_props();
 //  Res publish_props_info();
 
@@ -70,8 +72,9 @@ private:
   bool _connected = false;
   z_owned_config_t config;
   z_put_options_t put_options;
+  std::string zid;
   std::vector<std::string> _routers;
-    std::vector<std::string> _peers;
+  std::vector<std::string> _peers;
 
 
   std::vector<std::string> _subscribed_topics;

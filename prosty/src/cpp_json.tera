@@ -35,7 +35,7 @@ class {{ msg.name }} : public Msg {
         {%- endif %} {{ field.name }};
     {% endfor %}
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         {% for field in msg.fields %}
             {%- if field.repeated -%}

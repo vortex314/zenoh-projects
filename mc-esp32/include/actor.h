@@ -44,7 +44,7 @@ class Msg
 public:
     virtual const char *type_id() const = 0;
     virtual ~Msg() = default;
-    virtual Bytes serialize() const = 0;
+    static Bytes serialize() { return Bytes(); };
     virtual bool deserialize(const Bytes &) = 0;
     template <typename T>
     void handle(std::function<void(const T &)> f) const

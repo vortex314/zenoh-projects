@@ -1,5 +1,6 @@
 set -x
-RUST_LOG=trace ../../zenoh/target/release/zenohd --no-multicast-scouting \
+# RUST_LOG=trace
+RUST_LOG=info ../../zenoh/target/release/zenohd --no-multicast-scouting \
     -l "udp/224.0.0.123:7447" \
     -l "tcp/127.0.0.1:7447" \
     --cfg='transport/link/tx/batch_size:2048' \

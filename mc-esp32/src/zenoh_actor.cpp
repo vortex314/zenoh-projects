@@ -14,7 +14,7 @@
 ZenohActor::ZenohActor(const char *name)
     : Actor(name)
 {
-  _timer_publish = timer_repetitive(1000); // timer for publishing properties
+  _timer_publish = timer_repetitive(5000); // timer for publishing properties
   z_put_options_default(&put_options);
   z_owned_encoding_t encoding;
   z_result_t r = z_encoding_from_str(&encoding, "application/cbor"); // ZP_ENCODING_APPLICATION_CBOR;
@@ -75,6 +75,7 @@ void ZenohActor::on_message(const Envelope &env)
                              } else {
                                INFO("Connected to Zenoh");
                              }
+                             subscribe("dst/esp1/**");
                            } });
   msg.handle<ZenohDisconnect>([&](auto _)
                               { if (_connected)
@@ -109,32 +110,47 @@ Res ZenohActor::connect(void)
   // Start the receive and the session lease loop for zenoh-pico
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), NULL));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL));
+  collect_info();
+  INFO("Zenoh session opened with ZID %s", zid.c_str());
   _connected = true;
-  // log own zid // put after start tasks as
-  z_id_t zid = z_info_zid(z_loan(_zenoh_session));
-  z_owned_string_t z_str;
-  z_id_to_string(&zid, &z_str);
-  size_t length = z_string_len(z_loan(z_str));
-  INFO("Own ZID  : %.*s", length, z_string_data(z_loan(z_str)));
+  return ResOk;
+}
 
-  auto f1 = [](const z_id_t *id, void *context)
+std::string z_str_to_string(z_owned_string_t &z_str)
+{
+  return std::string(z_string_data(z_loan(z_str)), z_string_len(z_loan(z_str)));
+}
+
+Res ZenohActor::collect_info()
+{
+
+  z_id_t _zid = z_info_zid(z_loan(_zenoh_session));
+  z_owned_string_t z_str;
+  z_id_to_string(&_zid, &z_str);
+  this->zid = z_str_to_string(z_str);
+  z_drop(z_move(z_str));
+
+  auto callback_push = [](const z_id_t *id, void *context)
   {
     z_owned_string_t z_str;
     z_id_to_string(id, &z_str);
     std::vector<std::string> *vec = (std::vector<std::string> *)context;
-    size_t length = z_string_len(z_loan(z_str));
-    vec->push_back(_z_string_data(z_loan(z_str)));
-    INFO("Connected to Router : %.*s", length, z_string_data(z_loan(z_str)));
+    std::string s = z_str_to_string(z_str);
+    vec->push_back(s);
+    INFO("Lambda : %s", s.c_str());
+    z_drop(z_move(z_str));
   };
   z_owned_closure_zid_t zid_closure;
 
   _routers.clear();
-  CHECK(z_closure_zid(&zid_closure, f1, NULL, &_routers));
+  CHECK(z_closure_zid(&zid_closure, callback_push, NULL, &_routers));
   CHECK(z_info_routers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
 
   _peers.clear();
-  CHECK(z_closure_zid(&zid_closure, f1, NULL, &_peers));
+  CHECK(z_closure_zid(&zid_closure, callback_push, NULL, &_peers));
   CHECK(z_info_peers_zid(z_loan(_zenoh_session), z_move(zid_closure)));
+
+  z_drop(z_move(zid_closure));
 
   return ResOk;
 }
@@ -333,7 +349,7 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
     SysCmd *sys_cmd = new SysCmd();
     sys_cmd->deserialize(buffer);
     actor->emit(sys_cmd);
-  }
+  } 
   else
     actor->emit(new ZenohReceived(topic, buffer));
 }
@@ -341,9 +357,6 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
   INFO("Publishing message on topic '%s' (%d bytes)", topic, value.size());
-  /*std::string topic_name = _src_prefix;
-  topic_name += "/";
-  topic_name += topic;*/
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic);
@@ -351,6 +364,8 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
   CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &put_options));
   z_drop(z_move(payload));
+  emit(new LedPulse(10));
+
   return ResOk;
 }
 
@@ -361,18 +376,12 @@ Res ZenohActor::publish_props()
     return Res(ENOTCONN, "Not connected to Zenoh");
   }
   ZenohInfo *zenoh_info = new ZenohInfo();
-
-  z_id_t _zid = z_info_zid(z_loan(_zenoh_session));
-  z_owned_string_t z_str;
-  z_id_to_string(&_zid, &z_str);
-  zenoh_info->zid = _z_string_data(z_loan(z_str));
-
+  zenoh_info->zid = zid;
   zenoh_info->what_am_i = MODE;
   zenoh_info->peers = _peers;
   zenoh_info->routers = _routers;
   zenoh_info->connect = CONNECT;
   emit(zenoh_info);
-  z_drop(z_move(z_str));
   return ResOk;
 }
 

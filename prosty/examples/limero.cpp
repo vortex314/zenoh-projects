@@ -50,7 +50,7 @@ class ZenohInfo : public Msg {
     std::optional<std::string> listen;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (zid)  doc["zid"] = *zid;
         if (what_am_i)  doc["what_am_i"] = *what_am_i;
@@ -117,7 +117,7 @@ class LogInfo : public Msg {
     std::optional<int32_t> line;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (level)  doc["level"] = *level;
         if (message)  doc["message"] = *message;
@@ -156,7 +156,7 @@ class SysCmd : public Msg {
     std::optional<bool> reboot;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         doc["src"] = src;
         if (set_time)  doc["set_time"] = *set_time;
@@ -193,7 +193,7 @@ class SysInfo : public Msg {
     std::optional<std::string> cpu_board;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (utc)  doc["utc"] = *utc;
         if (uptime)  doc["uptime"] = *uptime;
@@ -237,7 +237,7 @@ class WifiInfo : public Msg {
     std::optional<std::string> netmask;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (ssid)  doc["ssid"] = *ssid;
         if (bssid)  doc["bssid"] = *bssid;
@@ -282,7 +282,7 @@ class MulticastInfo : public Msg {
     std::optional<uint32_t> mtu;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (group)  doc["group"] = *group;
         if (port)  doc["port"] = *port;
@@ -317,7 +317,7 @@ class HoverboardInfo : public Msg {
     std::optional<int32_t> currentA;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (speed)  doc["speed"] = *speed;
         if (direction)  doc["direction"] = *direction;
@@ -352,7 +352,7 @@ class HoverboardCmd : public Msg {
     std::optional<int32_t> direction;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (src)  doc["src"] = *src;
         if (speed)  doc["speed"] = *speed;
@@ -386,7 +386,7 @@ class LpsInfo : public Msg {
     std::optional<std::string> msg;
     
 
-    Bytes serialize() const {
+    Bytes serialize()  {
         JsonDocument doc;
         if (direction)  doc["direction"] = *direction;
         if (msg)  doc["msg"] = *msg;
