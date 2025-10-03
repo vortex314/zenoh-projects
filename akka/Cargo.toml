@@ -26,3 +26,4 @@ clap = { version = "4.5.26", features = ["derive"] }
 indexmap = "2.0.0"
 tiny-tokio-actor = "0.3.0"
 tokio-mpmc = "0.2.4"
+zenoh = { version ="1.5.1" }

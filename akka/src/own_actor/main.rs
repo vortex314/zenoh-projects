@@ -20,6 +20,7 @@ use crate::actor::ActorSystem;
 use crate::multicast::McActor;
 use crate::multicast::McMessage;
 use crate::value::Value;
+use zenoh_actor;
 
 mod actor;
 mod logger;

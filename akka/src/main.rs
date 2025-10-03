@@ -12,6 +12,7 @@ mod logger;
 mod multicast;
 mod udp;
 mod value;
+mod zenoh_actor;
 use actix::prelude::*;
 use limero::*;
 use local_ip_address::local_ip;

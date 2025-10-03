@@ -10,7 +10,6 @@ use crate::limero::Msg;
 use crate::limero::MulticastInfo;
 use crate::limero::WifiInfo;
 use crate::limero::SysInfo;
-use crate::limero::Convert;
 
 use socket2::Domain;
 use socket2::Protocol;
@@ -151,7 +150,8 @@ impl Actor for McActor {
                     r = udp_receiver_socket.recv_from(&mut buf) => {
                         match r {
                     Ok((len, src)) => {
-                         let message = String::from_utf8_lossy(&buf[..len]);
+                        
+                         let slice = String::from_utf8_lossy(&buf[..len]);
                             info!("MC recv {} => {}", src, message);
                             let  v = Value::from_json(&message).unwrap();
                             v[SysInfo::NAME].as_::<IndexMap<String, Value>>().map(|sys_info| {

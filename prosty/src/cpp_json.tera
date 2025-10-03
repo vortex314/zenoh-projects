@@ -37,19 +37,18 @@ class {{ msg.name }} : public Msg {
 
     Bytes serialize() const {
         JsonDocument doc;
-        JsonObject obj = doc["{{ msg.name }}"].to<JsonObject>();
         {% for field in msg.fields %}
             {%- if field.repeated -%}
         {
-            JsonArray arr = obj["{{ field.name }}"].to<JsonArray>();
+            JsonArray arr = doc["{{ field.name }}"].to<JsonArray>();
         for (const auto& item : {{ field.name }}) {
             arr.add(item);
         }
         }
             {%- elif field.optional -%}
-        if ({{ field.name }})  obj["{{ field.name }}"] = *{{ field.name }}; 
+        if ({{ field.name }})  doc["{{ field.name }}"] = *{{ field.name }}; 
             {%- else -%}
-        obj["{{ field.name }}"] = {{ field.name }};
+        doc["{{ field.name }}"] = {{ field.name }};
             {%- endif %}
         {% endfor -%}
         std::string str;
@@ -58,22 +57,22 @@ class {{ msg.name }} : public Msg {
     }
 
     bool deserialize(const Bytes& bytes) {
-        JsonDocument obj;
-        auto err = deserializeJson(obj,bytes);
-        if ( err != DeserializationError::Ok || obj.is<JsonObject>() == false ) {
+        JsonDocument doc;
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             return false;
         };        
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        if (obj["{{ field.name }}"].is<JsonArray>()) {
-            JsonArray arr = obj["{{ field.name }}"].as<JsonArray>();
+        if (doc["{{ field.name }}"].is<JsonArray>()) {
+            JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
             {{ field.name }}.clear();
             for (JsonVariant v : arr) {
                 {{ field.name }}.push_back(v.as<{{ field.target_type }}>());
             }
         }
             {%- elif field.optional -%}
-        if (obj["{{ field.name }}"].is<{{ field.target_type }}>() )  {{ field.name }} = obj["{{ field.name }}"].as<{{ field.target_type }}>();
+        if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )  {{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();
             {%- endif %}
         {% endfor -%}
         return true;
