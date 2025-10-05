@@ -6,7 +6,7 @@
 
 <script setup>
 import { ref, onMounted, reactive, h } from 'vue'
-import { PubSub } from '@/PubSub'
+import { messageBus } from '@/PubSub'
 
 const props = defineProps({
     h: {
@@ -35,7 +35,7 @@ const props = defineProps({
 const value = ref(50)
 
 function pressed() {
-    PubSub.publish(props.src, props.pressed)
+    messageBus.publish(props.src, props.pressed)
 }
 
 onMounted(() => {

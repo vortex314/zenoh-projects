@@ -53,12 +53,12 @@ provide('global', global); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = ref([
-  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", itemId: "341" },
-  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/measured_rpm" }, kind: "LineChart", itemId: "342" },
-  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart", itemId: "343" },
-  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider", itemId: "344" },
-  { x: 8, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button", itemId: "345" },
-  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", itemId: "346" },
+  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", id: "341", itemId: "341" },
+  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/measured_rpm" }, kind: "LineChart", id: "342", itemId: "342" },
+  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart", id: "343", itemId: "343" },
+  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider", id: "344", itemId: "344" },
+  { x: 8, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button", id: "345", itemId: "345" },
+  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", id: "346", itemId: "346" },
 
 ]);
 const shadowDom = {};
@@ -131,7 +131,8 @@ function addWidget(kind) {
   items.value.push(item);
   console.log("Adding widget with itemId:", id, "kind:", kind);
   nextTick(() => {
-    grid.makeWidget(item.itemId);
+    let g = grid.addWidget({id:item.itemId,w:4,h:4});
+    console.log("Widget added to grid:", g);
   });
   /* grid.makeWidget(
     `<div class="grid-stack-item" gs-x="${node.x}" gs-y="${node.y}" gs-w="${node.w}" gs-h="${node.h}" gs-id="${id}">
@@ -172,7 +173,7 @@ function addWidget(kind) {
 
 .handle-remove:hover {
   background-color: #149b80;
-}
+}PubSubClass
 
 .card-header {
   margin: 0;

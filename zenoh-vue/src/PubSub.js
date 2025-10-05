@@ -4,7 +4,7 @@ const emitter = mitt()
 
 export default emitter
 
-class PubSubClass {
+class BusClass {
     constructor(host, port, path, emitter) {
         console.log("PubSubClass", host, port, path, emitter);
         this.start_time = Date.now();
@@ -53,5 +53,5 @@ class PubSubClass {
     }
 }
 
-export const PubSub = new PubSubClass("limero.be", 7447, "/redis",mitt());
+export const messageBus = new BusClass("limero.be", 7447, "/redis",mitt());
 

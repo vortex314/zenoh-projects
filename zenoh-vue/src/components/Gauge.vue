@@ -30,7 +30,7 @@ use([
 ]);
 provide(THEME_KEY, "light");
 
-import { PubSub } from "@/PubSub";
+import { messageBus } from "@/PubSub";
 
 // show gauge
 //import { Gauge } from "vue-google-charts";
@@ -92,7 +92,7 @@ let option = ref({
 const el = ref(null);
 
 onMounted( () => {
-    PubSub.listen("src/mtr1/motor.rpm_target", (msg) => {
+    messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
             option.value.series[0].data[0].value = Math.round(msg.value);
     });
 });

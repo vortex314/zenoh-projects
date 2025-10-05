@@ -12,7 +12,7 @@ import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import { VBtn} from 'vuetify/components/VBtn';
 
-import { PubSub } from './PubSub.js';
+import { messageBus } from './PubSub.js';
 
 
 const vuetify = createVuetify({

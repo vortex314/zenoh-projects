@@ -35,7 +35,7 @@ use([
   DataZoomComponent]);
 provide(THEME_KEY, "light");
 
-import { PubSub } from "@/PubSub";
+import { messageBus } from "@/PubSub";
 
 const option = ref({
   xAxis: {
@@ -85,7 +85,7 @@ const props = defineProps({
   }
 });
 onMounted(() => {
-  PubSub.listen("src/mtr1/motor.rpm_target", (msg) => {
+  messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
             option.value.series[0].data.push(Math.round(msg.value));
             option.value.series[1].data.push(Math.round(msg.value*Math.random()));
             option.value.series[2].data.push(Math.round(msg.value*Math.random()*5));

@@ -8,7 +8,7 @@
     </div>
 </template>
 <script setup>
-import { PubSub } from "@/PubSub";
+import { messageBus } from "@/PubSub";
 import { onMounted, ref } from "vue";
 import { defineProps } from "vue";
 import "vuetify/styles";
@@ -41,7 +41,7 @@ const headers = ref([
 const items = ref([]);
 
 onMounted(() => {
-    PubSub.listen("*", (msg) => {
+    messageBus.listen("*", (msg) => {
         console.log("SubTable received message:", msg);
         onMessage(msg.topic, msg.value);
     });
