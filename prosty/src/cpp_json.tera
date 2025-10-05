@@ -35,15 +35,15 @@ class {{ msg.name }} : public Msg {
         {%- endif %} {{ field.name }};
     {% endfor %}
 
-    Bytes serialize()  {
+    Bytes serialize() const {
         JsonDocument doc;
         {% for field in msg.fields %}
             {%- if field.repeated -%}
         {
             JsonArray arr = doc["{{ field.name }}"].to<JsonArray>();
-        for (const auto& item : {{ field.name }}) {
-            arr.add(item);
-        }
+            for (const auto& item : {{ field.name }}) {
+                arr.add(item);
+            }
         }
             {%- elif field.optional -%}
         if ({{ field.name }})  doc["{{ field.name }}"] = *{{ field.name }}; 
@@ -56,26 +56,28 @@ class {{ msg.name }} : public Msg {
         return Bytes(str.begin(),str.end());
     }
 
-    bool deserialize(const Bytes& bytes) {
+    {{msg.name}}* deserialize(const Bytes& bytes) {
         JsonDocument doc;
+        {{msg.name}}* msg = new {{msg.name}}();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
-            return false;
+            delete msg;
+            return NULL ;
         };        
         {% for field in msg.fields %}
             {%- if field.repeated -%}
         if (doc["{{ field.name }}"].is<JsonArray>()) {
             JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
-            {{ field.name }}.clear();
+            msg->{{ field.name }}.clear();
             for (JsonVariant v : arr) {
-                {{ field.name }}.push_back(v.as<{{ field.target_type }}>());
+                msg->{{ field.name }}.push_back(v.as<{{ field.target_type }}>());
             }
         }
             {%- elif field.optional -%}
-        if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )  {{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();
+        if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )  msg->{{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();
             {%- endif %}
         {% endfor -%}
-        return true;
+        return msg;
     }
 
 };

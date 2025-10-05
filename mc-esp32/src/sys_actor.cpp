@@ -59,7 +59,8 @@ void SysActor::on_message(const Envelope &env)
     const Msg &msg = *env.msg;
     msg.handle<SysCmd>([&](auto sys_cmd)
                        { if ( sys_cmd.reboot) reboot(*sys_cmd.reboot);
-                         if ( sys_cmd.set_time) set_utc(*sys_cmd.set_time); });
+                         if ( sys_cmd.set_time) set_utc(*sys_cmd.set_time); 
+                        if ( sys_cmd.console ) INFO("SysCmd.console from %s: %s", sys_cmd.src.c_str(), (*sys_cmd.console).c_str()); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
 }

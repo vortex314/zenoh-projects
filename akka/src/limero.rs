@@ -109,6 +109,8 @@ pub struct SysCmd {
     pub set_time:Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub reboot:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub console:Option<String>,
         
 
 }

@@ -340,15 +340,15 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   buffer.resize(len);
   _z_bytes_reader_read(&reader, buffer.data(), len);
 
-  INFO("Received message on topic '%s': %d", topic.c_str(), len);
+  INFO("Received message on topic '%s' (%d bytes)", topic.c_str(), len);
   Topic t;
   t.deserialize(topic.c_str());
 
   if (strcmp(t.message_type, SysCmd::id) == 0)
   {
-    SysCmd *sys_cmd = new SysCmd();
-    sys_cmd->deserialize(buffer);
-    actor->emit(sys_cmd);
+    auto msg_opt = SysCmd().deserialize(buffer);
+    if ( msg_opt ) actor->emit(msg_opt);
+    else ERROR("Failed to deserialize SysCmd message");
   } 
   else
     actor->emit(new ZenohReceived(topic, buffer));

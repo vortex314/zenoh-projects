@@ -575,7 +575,7 @@
   //  },
   //  /// Plugins are only loaded if `plugins_loading: { enabled: true }` and present in the configuration when starting.
   //  /// Once loaded, they may react to changes in the configuration made through the zenoh instance's adminspace.
-  //  plugins: {
+  plugins: {
   //    /// If no `__path__` is given to a plugin, zenohd will automatically search for a shared library matching the plugin's name (here, `libzenoh_plugin_rest.so` would be searched for on linux)
   //
   //    /// Plugin settings may contain field `__config__`
@@ -587,20 +587,20 @@
   //    /// See below example of plugin configuration using `__config__` property
   //
   //    /// Configure the REST API plugin
-  //    rest: {
-  //      /// Setting this option to true allows zenohd to panic should it detect issues with this plugin. Setting it to false politely asks the plugin not to panic.
-  //      __required__: true, // defaults to false
-  //      /// load configuration from the file
-  //      __config__: "./plugins/zenoh-plugin-rest/config.json5",
-  //      /// http port to answer to rest requests
-  //      http_port: 8000,
-  //      /// The number of worker thread in TOKIO runtime (default: 2)
-  //      /// The configuration only takes effect if running as a dynamic plugin, which can not reuse the current runtime.
-  //      work_thread_num: 2,
-  //      /// The number of blocking thread in TOKIO runtime (default: 50)
-  //      /// The configuration only takes effect if running as a dynamic plugin, which can not reuse the current runtime.
-  //      max_block_thread_num: 50,
-  //    },
+      rest: {
+        /// Setting this option to true allows zenohd to panic should it detect issues with this plugin. Setting it to false politely asks the plugin not to panic.
+        __required__: true, // defaults to false
+        /// load configuration from the file
+        __config__: "./rest.json5",
+        /// http port to answer to rest requests
+        http_port: 8000,
+        /// The number of worker thread in TOKIO runtime (default: 2)
+        /// The configuration only takes effect if running as a dynamic plugin, which can not reuse the current runtime.
+        work_thread_num: 2,
+        /// The number of blocking thread in TOKIO runtime (default: 50)
+        /// The configuration only takes effect if running as a dynamic plugin, which can not reuse the current runtime.
+        max_block_thread_num: 50,
+      },
   //
   //    /// Configure the storage manager plugin
   //    storage_manager: {
@@ -708,7 +708,7 @@
   //        },
   //      },
   //    },
-  //  },
+    },
 
   // /// Plugin configuration example using `__config__` property
   // plugins: {

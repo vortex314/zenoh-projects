@@ -35,6 +35,7 @@ message SysCmd {
   required string src = 2;
   uint64 set_time = 3;
   bool reboot = 4;
+  string console = 5;
 }
 
 message SysInfo {
