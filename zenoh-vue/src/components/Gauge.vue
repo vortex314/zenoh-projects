@@ -92,6 +92,8 @@ let option = ref({
 const el = ref(null);
 
 onMounted( () => {
+    console.log("Mounted Gauge ", props.id);
+    console.log("props.options:", props);
     messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
             option.value.series[0].data[0].value = Math.round(msg.value);
     });

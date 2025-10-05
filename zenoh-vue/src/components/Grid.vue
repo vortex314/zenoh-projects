@@ -8,15 +8,16 @@
       <v-btn color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
     </span>
     <div class="grid-stack">
-      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
-        :gs-h="item.h" :gs-id="item.itemId">
+      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" 
+        :gs-y="item.y" :gs-w="item.w"
+        :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
         <div class="grid-stack-item-content" :id="item.itemId">
           <div class="card-header">
             <span>{{ item.config.title }}</span>
             <v-btn size="x-small" class="remove-btn" @click="remove(item)" style="float: right;">X</v-btn>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :item-id="item.itemId" :config="item.config" :dim="item.dim" />
+            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config" :dim="item.dim" />
           </div>
         </div>
       </div>
@@ -53,12 +54,12 @@ provide('global', global); // Provide global state if needed
 let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const items = ref([
-  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", id: "341", itemId: "341" },
-  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/measured_rpm" }, kind: "LineChart", id: "342", itemId: "342" },
-  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "PieChart", id: "343", itemId: "343" },
-  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Slider", id: "344", itemId: "344" },
-  { x: 8, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Button", id: "345", itemId: "345" },
-  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: "Gauge", id: "346", itemId: "346" },
+  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/gauge1" }, kind: "Gauge", id: "341", itemId: "341" },
+  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/line1" }, kind: "LineChart", id: "342", itemId: "342" },
+  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/pie1" }, kind: "PieChart", id: "343", itemId: "343" },
+  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/slider1" }, kind: "Slider", id: "344", itemId: "344" },
+  { x: 8, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/button1" }, kind: "Button", id: "345", itemId: "345" },
+  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/gauge2" }, kind: "Gauge", id: "346", itemId: "346" },
 
 ]);
 const shadowDom = {};
@@ -76,7 +77,7 @@ onMounted(() => {
     cellHeight: "20px",
     minRow: 1,
     handle: '.card-header',
-    margin: 2,
+    margin: 3,
   });
 
   // Listen for remove events to clean up Vue renders
@@ -99,15 +100,10 @@ onMounted(() => {
 });
 
 function onChange(event, changeItems) {
-  console.log("Grid items changed:", changeItems);
-  // update item position
-  for ( item in items.value) {
-    console.log("Grid item:", items.value[item],change);
-  }
   changeItems.forEach(item => {
-    var widget = items.value.find(w => w.itemId == item.itemId);
+    var widget = items.value.find(w => w.id == item.id);
     if (!widget) {
-      alert("Widget not found: " + item.itemId);
+      alert("Widget not found: " + item.id);
       return;
     }
     widget.x = item.x;
@@ -118,6 +114,7 @@ function onChange(event, changeItems) {
 }
 
 function remove(widget) {
+  console.log("Removing widget:", widget);
   var index = items.value.findIndex(w => w.itemId == widget.itemId);
   items.value.splice(index, 1);
   const selector = `#${widget.itemId}`;
@@ -127,11 +124,12 @@ function remove(widget) {
 
 function addWidget(kind) {
   let id = String(Math.round(2 ** 32 * Math.random()))
-  let item = { h: 20, w: 3, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, kind: kind, itemId: id };
+  let item = { h: 20, w: 3, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, 
+    kind: kind, itemId: id , id:id };
   items.value.push(item);
   console.log("Adding widget with itemId:", id, "kind:", kind);
   nextTick(() => {
-    let g = grid.addWidget({id:item.itemId,w:4,h:4});
+    let g = grid.addWidget(item);
     console.log("Widget added to grid:", g);
   });
   /* grid.makeWidget(
