@@ -8,8 +8,7 @@
       <v-btn color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
     </span>
     <div class="grid-stack">
-      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" 
-        :gs-y="item.y" :gs-w="item.w"
+      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
         :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
         <div class="grid-stack-item-content" :id="item.itemId">
           <div class="card-header">
@@ -17,7 +16,8 @@
             <v-btn size="x-small" class="remove-btn" @click="remove(item)" style="float: right;">X</v-btn>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config" :dim="item.dim" />
+            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config"
+              :dim="item.dim" />
           </div>
         </div>
       </div>
@@ -79,6 +79,7 @@ onMounted(() => {
     handle: '.card-header',
     margin: 3,
   });
+  grid.margin(5);
 
   // Listen for remove events to clean up Vue renders
   grid.on('removed', function (event, items) {
@@ -123,16 +124,37 @@ function remove(widget) {
 
 
 function addWidget(kind) {
+  console.log("Adding widget of kind:", kind);
   let id = String(Math.round(2 ** 32 * Math.random()))
-  let item = { h: 20, w: 3, config: { title: "target RPM", src: "src/mtr1/motor/target_rpm" }, 
-    kind: kind, itemId: id , id:id };
+  let item = {
+    h: 20, w: 3, config: { title: "New Widget", src: "src/mtr1/motor/target_rpm" },
+    kind: kind, itemId: id, id: id
+  };
   items.value.push(item);
   console.log("Adding widget with itemId:", id, "kind:", kind);
-  nextTick(() => {
+  let g = grid.addWidget(item);
+  let vnode = h(item);
+  shadowDom[item.itemId] = document.getElementById(item.itemId);
+  console.log("Widget added to grid:", g, "with shadowDom:", shadowDom[item.itemId]);
+  render(vnode, shadowDom[item.itemId]);
+
+  /*nextTick(() => {
     let g = grid.addWidget(item);
     console.log("Widget added to grid:", g);
-  });
-  /* grid.makeWidget(
+    const itemContentVNode = h(
+      GridContentComponent,
+      {
+        itemId: itemId,
+        onRemove: (itemId) => {
+          grid.removeWidget(itemEl)
+        }
+      }
+    )
+
+    // Render the vue node into the item element
+    render(itemContentVNode, itemElContent)
+  });*/
+  /*grid.makeWidget(
     `<div class="grid-stack-item" gs-x="${node.x}" gs-y="${node.y}" gs-w="${node.w}" gs-h="${node.h}" gs-id="${id}">
       <div class="grid-stack-item-content" id="${id}">
         <div class="card-header">
@@ -144,8 +166,8 @@ function addWidget(kind) {
         </div>
       </div>
     </div>`, { itemId: id, x: node.x, y: node.y, w: node.w, h: node.h }
-  );*/
-  console.log("Grid items after adding:", items.value);
+  );
+  console.log("Grid items after adding:", items.value);*/
 }
 
 
@@ -171,9 +193,9 @@ function addWidget(kind) {
 
 .handle-remove:hover {
   background-color: #149b80;
-}PubSubClass
+}
 
-.card-header {
+PubSubClass .card-header {
   margin: 0;
   cursor: move;
   min-height: 18px;
