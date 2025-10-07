@@ -1,13 +1,16 @@
 <template>
   <div>
     <span>
-      <v-btn color="primary" size="x-small" @click="save()">Save</v-btn>
-      <v-btn color="primary" size="x-small" @click="load()">Load</v-btn>
-      <v-btn color="primary" size="x-small" @click="addWidget('LineChart')">LineChart</v-btn>
-      <v-btn color="primary" size="x-small" @click="addWidget('PieChart')">PieChart</v-btn>
-      <v-btn color="primary" size="x-small" @click="addWidget('Gauge')">Gauge</v-btn>
-      <v-btn color="primary" size="x-small" @click="addWidget('Button')">v-btn</v-btn>
-      <v-btn color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
+      <v-btn prepend-icon="mdi-cloud-upload" color="primary" size="x-small" @click="save()" >Save</v-btn>
+      <v-btn prepend-icon="mdi-cloud-download" color="primary" size="x-small" @click="load()">Load</v-btn>
+      <v-btn prepend-icon="mdi-chart-line" color="primary" size="x-small" @click="addWidget('LineChart')">LineChart</v-btn>
+      <v-btn prepend-icon="mdi-chart-pie" color="primary" size="x-small" @click="addWidget('PieChart')">PieChart</v-btn>
+      <v-btn prepend-icon="mdi-gauge" color="primary" size="x-small" @click="addWidget('Gauge')">Gauge</v-btn>
+      <v-btn prepend-icon="mdi-button" color="primary" size="x-small" @click="addWidget('Button')">v-btn</v-btn>
+      <v-btn prepend-icon="mdi-table" color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
+      <v-btn prepend-icon="mdi-slider" color="primary" size="x-small" @click="addWidget('Slider')">Slider</v-btn>
+      <v-btn prepend-icon="mdi-chart-bar" color="primary" size="x-small" @click="addWidget('BarChart')">BarChart</v-btn>
+      <v-btn prepend-icon="mdi-text" color="primary" size="x-small" @click="addWidget('Output')">Output</v-btn>
     </span>
     <div class="grid-stack">
       <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
@@ -40,6 +43,8 @@ import LineChart from "@/components/LineChart.vue"; // Import your Vue component
 import PieChart from "@/components/PieChart.vue"; // Import your Vue component
 import Table from "@/components/Table.vue"; // Import your Vue component
 import Slider from "@/components/Slider.vue"; // Import your Vue component
+import Output from "./Output.vue";
+
 
 const grid_kinds = {
   Gauge: markRaw(Gauge),
@@ -47,7 +52,8 @@ const grid_kinds = {
   LineChart: markRaw(LineChart),
   PieChart: markRaw(PieChart),
   Table: markRaw(Table),
-  Slider: markRaw(Slider)
+  Slider: markRaw(Slider),
+  Output: markRaw(Output),
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
 
@@ -65,6 +71,50 @@ const items = ref([
 
 ]);
 const shadowDom = {};
+
+function save() {
+  localStorage.setItem('grid-items', JSON.stringify(items.value));
+  alert("Layout saved");
+}
+
+function load() {
+  const saved = localStorage.getItem('grid-items');
+  if (saved) {
+    items.value = JSON.parse(saved);
+    nextTick(() => {
+      // Reinitialize gridstack after loading new items
+      if (grid) {
+        grid.destroy();
+      }
+      grid = GridStack.init({
+        float: false,
+        cellHeight: "20px",
+        minRow: 1,
+        handle: '.card-header',
+        margin: 0,
+      });
+      grid.on('removed', function (event, items) {
+        items.forEach((item) => {
+          if (shadowDom[item.itemId]) {
+            render(null, shadowDom[item.itemId]);
+            delete shadowDom[item.itemId];
+          }
+        });
+      });
+      grid.on('change', onChange);
+      // Make all current items widgets
+      items.value.forEach((item) => {
+        const el = document.getElementById(item.itemId);
+        if (el) {
+          grid.makeWidget(el);
+        }
+      });
+    });
+    alert("Layout loaded");
+  } else {
+    alert("No saved layout found");
+  }
+}
 
 onBeforeUnmount(() => {
   // Clean up Vue renders
