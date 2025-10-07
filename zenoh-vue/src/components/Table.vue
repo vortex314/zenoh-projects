@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-btn class="ma-2" color="primary" @click="items = []">
+        <v-btn size="x-small" class="ma-2" color="primary" @click="items = []">
             Clear Table
         </v-btn>
         <v-data-table :headers="headers" :items="items">

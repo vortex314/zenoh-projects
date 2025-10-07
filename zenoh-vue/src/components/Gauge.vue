@@ -40,6 +40,9 @@ const props = defineProps({
         required: true,
         default: "1"
     },
+    config:{
+        type: Object,
+    },
     locked: {
         type: Boolean,
         default: false
