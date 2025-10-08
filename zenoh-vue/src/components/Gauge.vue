@@ -32,6 +32,8 @@ provide(THEME_KEY, "light");
 
 import { messageBus } from "@/PubSub";
 
+const modelValue = defineModel()  // Vue 3.4+ syntax
+
 // show gauge
 //import { Gauge } from "vue-google-charts";
 const props = defineProps({
@@ -40,8 +42,20 @@ const props = defineProps({
         required: true,
         default: "1"
     },
-    config:{
+    config: {
         type: Object,
+        default: () => ({
+            topic: "src/device/component/message_type/property",
+            min: 0.0,
+            max: 100.0,
+            round:1,
+            step: 10,
+            title : topic,
+            prefix:"",
+            suffix:"",
+            minorTicks:1,
+            majorTicks:5,
+        })
     },
     locked: {
         type: Boolean,
@@ -50,7 +64,6 @@ const props = defineProps({
     options: {
         type: Object,
         default: () => ({
-
             redFrom: 90,
             redTo: 100,
             yellowFrom: 75,
@@ -67,7 +80,7 @@ const props = defineProps({
         default: "Gauge"
     }
 });
-
+let cfg = defineModel('config')  // This is reactive and two-way bound
 let option = ref({
     tooltip: {
         formatter: '{a} <br/>{b} : {c}%'
@@ -94,12 +107,16 @@ let option = ref({
 });
 const el = ref(null);
 
-onMounted( () => {
-    console.log("Mounted Gauge ", props.id);
-    console.log("props.options:", props);
+onMounted(() => {
+    console.log("Modelvalue Gauge ", cfg);
+    cfg.value = props.config;
+    console.log("props:", props.config);
     messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
-            option.value.series[0].data[0].value = Math.round(msg.value);
+        option.value.series[0].data[0].value = Math.round(msg.value);
     });
+       window.setInterval(() => {
+           console.log(cfg);
+        }, 3000);
 });
 
 </script>

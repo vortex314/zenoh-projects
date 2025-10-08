@@ -25,11 +25,11 @@ class BusClass {
         // send data on timer
         this.connectionTimer = window.setInterval(() => {
             let v = Math.random() * 100;
-            this.emitter.emit('published', { topic:"src/mtr1/motor.rpm_target", value: v });
-            this.emitter.emit('published', { topic:"src/mtr1/motor.rpm_measured", value: v * 0.9 });
+            this.emitter.emit({event:"PUBLISHED", topic:"src/mtr1/motor.rpm_target", payload: v });
+            this.emitter.emit({event:"PUBLISHED", topic:"src/mtr1/motor.rpm_measured", payload: v * 0.9 });
             // get current time in msec
             let uptime = Date.now() - this.start_time;
-            this.emitter.emit('published', { topic:"src/mtr1/sys.uptime", value: uptime });
+            this.emitter.emit({event:"PUBLISHED", topic:"src/mtr1/sys.uptime", payload: uptime });
         }, 3000);
 
 

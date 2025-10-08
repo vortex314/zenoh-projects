@@ -17,6 +17,21 @@ class WS {
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             console.log("Message received:", message);
+            if ( message.reply == "LOAD ") {
+                messageBus.send({loaded:message.})
+            } 
+            if ( message.reply == "SAVE") {
+
+            }
+            if ( message.reply == "LIST") {
+
+            }
+            if ( message.request == "PUBLISH"){
+
+            }
+            if ( message.reply == "SUBSCRIBE") {
+
+            }
 
             // Dispatch message to matching subscriptions
             this.subscriptions.forEach(subscription => {
@@ -29,6 +44,8 @@ class WS {
         this.ws.onerror = (error) => {
             console.error("WebSocket error:", error);
         };
+
+        this.ws.send(message) = (message) => {};
 
         this.ws.onclose = () => {
             this.connected = false;
@@ -83,7 +100,7 @@ class WS {
                     }
             
                     this.subscriptions.push({ pattern, callback });
-                    this.ws.send(JSON.stringify(["SUBSCRIBE", pattern]));
+                    this.ws.send(JSON.stringify({ type:"SUBSCRIBE", topic: pattern}));
                     console.log(`Subscribed to pattern: ${pattern}`);
                 }
             
@@ -93,7 +110,7 @@ class WS {
                     });
             
                     if (this.connected) {
-                        this.ws.send(JSON.stringify(["UNSUBSCRIBE", pattern]));
+                        this.ws.send(JSON.stringify({ type:"UNSUBSCRIBE", topic:pattern}));
                         console.log(`Unsubscribed from pattern: ${pattern}`);
                     }
                 }
@@ -104,7 +121,7 @@ class WS {
                         return;
                     }
             
-                    this.ws.send(JSON.stringify(["PUBLISH", topic, message]));
+                    this.ws.send(JSON.stringify({type:"PUBLISH", topic:topic, message:message}));
                     console.log(`Published message to topic: ${topic}`);
                 }
             
@@ -157,8 +174,29 @@ class WS {
             return;
         }
 
-        this.ws.send(JSON.stringify(["PUBLISH", topic, message]));
+        this.ws.send(JSON.stringify({request:"PUBLISH",topic:topic,payload:message}));
         console.log(`Published message to topic: ${topic}`);
+    }
+
+    save_json(id,json) {
+        if (this.connected) {
+            this.ws.send(JSON.stringify({request:"SAVE",id:id,json:json}));
+            console.log(`Saving Object `,id);
+        }
+    }
+
+    load_json(id ){
+        if (this.connected) {
+            this.ws.send(JSON.stringify({request:"LOAD",id:id}));
+            console.log(`Loading Object : ${id}`);
+        }
+    }
+
+    list_json(id ){
+        if (this.connected) {
+            this.ws.send(JSON.stringify({request:"LIST",id:id}));
+            console.log(`Listing Objects : `,id);
+        }
     }
 
     disconnect() {

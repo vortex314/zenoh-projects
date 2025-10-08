@@ -11,9 +11,10 @@
       <v-btn prepend-icon="mdi-slider" color="primary" size="x-small" @click="addWidget('Slider')">Slider</v-btn>
       <v-btn prepend-icon="mdi-chart-bar" color="primary" size="x-small" @click="addWidget('BarChart')">BarChart</v-btn>
       <v-btn prepend-icon="mdi-text" color="primary" size="x-small" @click="addWidget('Output')">Output</v-btn>
+      <v-btn prepend-icon="mdi-text" color="primary" size="x-small" @click="addWidget('YourComponent')">Props</v-btn>
     </span>
     <div class="grid-stack">
-      <div v-for="item in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
+      <div v-for="(item,index) in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
         :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
         <div class="grid-stack-item-content" :id="item.itemId">
           <div class="card-header">
@@ -21,7 +22,7 @@
             <v-btn size="x-small" class="remove-btn" @click="remove(item)" style="float: right;">X</v-btn>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config"
+            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config" v-model:config="items[index].config"
               :dim="item.dim" />
           </div>
         </div>
@@ -44,6 +45,7 @@ import PieChart from "@/components/PieChart.vue"; // Import your Vue component
 import Table from "@/components/Table.vue"; // Import your Vue component
 import Slider from "@/components/Slider.vue"; // Import your Vue component
 import Output from "./Output.vue";
+import YourComponent from "./YourComponent.vue";
 
 
 const grid_kinds = {
@@ -54,6 +56,7 @@ const grid_kinds = {
   Table: markRaw(Table),
   Slider: markRaw(Slider),
   Output: markRaw(Output),
+  YourComponent:markRaw(YourComponent)
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
 
@@ -149,6 +152,11 @@ onMounted(() => {
   emitter.on("publish", (data) => {
     console.log(data)
   });
+
+   window.setInterval(() => {
+           console.log(items.value[0].config);
+        }, 3000);
+
 
 });
 

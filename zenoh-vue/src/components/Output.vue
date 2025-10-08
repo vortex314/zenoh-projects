@@ -1,5 +1,5 @@
 <template>
-    <v-text-field label="Label">Hello world</v-text-field>
+    <v-text-field label="Label" >{}</v-text-field>
 </template>
 
 <script setup>
@@ -18,24 +18,20 @@ const props = defineProps({
         type: String,
         default: "dst/esp32/sys/reset"
     },
-    pressed: {
-        type: String,
-        default: "on"
-    },
-    released: {
-        type: String,
-        default: "off"
-    },
     label: {
         type: String,
         default: "Reset"
+    },
+    config:{
+        type:Object,
+        default: () => ({
+            prefix:"",
+            suffix:"",
+        })
     }
 })
 const id = ref(null)
 
-function pressed() {
-    messageBus.publish(props.src, props.pressed)
-}
 
 onMounted(() => {
     

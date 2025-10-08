@@ -1,35 +1,35 @@
 <template>
-  <v-icon icon="mdi-home" color="primary" size="x-small" />
-  <v-btn prepend-icon="mdi-content-save" color="primary" size="x-small" @click="save">Save</v-btn>
-  <v-btn prepend-icon="mdi-upload" color="secondary" size="x-small" @click="load">Load</v-btn>
-  <v-btn prepend-icon="mdi-chart-line" color="success" size="x-small" @click="showLineChart">Line Chart</v-btn>
-  <v-btn prepend-icon="mdi-refresh" color="info" size="x-small" @click="refresh">Refresh</v-btn>
-  <v-btn prepend-icon="mdi-gauge" color="warning" size="x-small" @click="showGauge">Gauge</v-btn>
+  <v-data-table :headers="headers" :items="items" item-value="id" class="elevation-1">
+    <!-- Editable second column (name) -->
+    <template #item.value="{ item }">
+      <v-text-field v-model="item.value" variant="solo" density="compact" hide-details />
+    </template>
+  </v-data-table>
 </template>
 
 <script setup>
-function save() {
-  console.log("Save button clicked!");
-  // Add your save logic here
+import { onMounted, ref } from 'vue'
+
+const headers = [
+  { title: 'Field', key: 'field' },
+  { title: 'Value', key: 'value' },
+  { title: 'Type', key: 'type' },
+]
+
+const my_object = {
+  topic: "src/esp1/motor/MotorInfo/rpm",
+  min: 0.1,
+  max: 0.2,
+  prefix: "prefix",
+  suffix: "suffix"
 }
 
-function load() {
-  console.log("Load button clicked!");
-  // Add your load logic here
-}
+const items = ref([]);
 
-function showLineChart() {
-  console.log("Line Chart button clicked!");
-  // Add your line chart logic here
-}
+onMounted(() => {
+  // analyze my_object to items
+  for (const [key, value] of Object.entries(my_object)) { items.value.push({ field: key, value: value, type: typeof value }); }
+})
 
-function refresh() {
-  console.log("Refresh button clicked!");
-  // Add your refresh logic here
-}
 
-function showGauge() {
-  console.log("Gauge button clicked!");
-  // Add your gauge logic here
-}
 </script>
