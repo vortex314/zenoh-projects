@@ -1,5 +1,5 @@
 <template>
-  <v-data-table :headers="headers" :items="items" item-value="id" class="elevation-1">
+  <v-data-table :headers="headers" :items="items" item-value="id" density="compact" class="elevation-1">
     <!-- Editable second column (name) -->
     <template #item.value="{ item }">
       <v-text-field v-model="item.value" variant="solo" density="compact" hide-details />
@@ -24,11 +24,17 @@ const my_object = {
   suffix: "suffix"
 }
 
+const props = defineProps({
+      config: {
+        type: Object
+  },
+})
+
 const items = ref([]);
 
 onMounted(() => {
   // analyze my_object to items
-  for (const [key, value] of Object.entries(my_object)) { items.value.push({ field: key, value: value, type: typeof value }); }
+  for (const [key, value] of Object.entries(props.config)) { items.value.push({ field: key, value: value, type: typeof value }); }
 })
 
 

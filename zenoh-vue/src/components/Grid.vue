@@ -1,33 +1,41 @@
 <template>
   <div>
-    <span>
-      <v-btn prepend-icon="mdi-cloud-upload" color="primary" size="x-small" @click="save()" >Save</v-btn>
-      <v-btn prepend-icon="mdi-cloud-download" color="primary" size="x-small" @click="load()">Load</v-btn>
-      <v-btn prepend-icon="mdi-chart-line" color="primary" size="x-small" @click="addWidget('LineChart')">LineChart</v-btn>
-      <v-btn prepend-icon="mdi-chart-pie" color="primary" size="x-small" @click="addWidget('PieChart')">PieChart</v-btn>
-      <v-btn prepend-icon="mdi-gauge" color="primary" size="x-small" @click="addWidget('Gauge')">Gauge</v-btn>
-      <v-btn prepend-icon="mdi-button" color="primary" size="x-small" @click="addWidget('Button')">v-btn</v-btn>
-      <v-btn prepend-icon="mdi-table" color="primary" size="x-small" @click="addWidget('Table')">Table</v-btn>
-      <v-btn prepend-icon="mdi-slider" color="primary" size="x-small" @click="addWidget('Slider')">Slider</v-btn>
-      <v-btn prepend-icon="mdi-chart-bar" color="primary" size="x-small" @click="addWidget('BarChart')">BarChart</v-btn>
-      <v-btn prepend-icon="mdi-text" color="primary" size="x-small" @click="addWidget('Output')">Output</v-btn>
-      <v-btn prepend-icon="mdi-text" color="primary" size="x-small" @click="addWidget('YourComponent')">Props</v-btn>
-    </span>
+    <v-container>
+      <v-system-bar color="primary" style="align-content: left">
+        <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
+        <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
+        <v-icon icon="mdi-chart-line" class="ms-2" @click="addWidget('LineChart')"></v-icon>
+        <v-icon icon="mdi-chart-pie" class="ms-2" @click="addWidget('PieChart')"></v-icon>
+        <v-icon icon="mdi-gauge" class="ms-2" @click="addWidget('Gauge')"></v-icon>
+        <v-icon icon="mdi-button-cursor" class="ms-2" @click="addWidget('Button')"></v-icon>
+        <v-icon icon="mdi-table" class="ms-2" @click="addWidget('Table')"></v-icon>
+        <v-icon icon="mdi-tune-variant" class="ms-2" @click="addWidget('Slider')"></v-icon>
+        <v-icon icon="mdi-chart-bar" class="ms-2" @click="addWidget('BarChart')"></v-icon>
+        <v-icon icon="mdi-text" class="ms-2" @click="addWidget('Output')"></v-icon>
+        <v-icon icon="mdi-text" class="ms-2" @click="addWidget('YourComponent')"></v-icon>
+        <span class="ms-2">{{ local_time }}</span>
+      </v-system-bar>
+    </v-container>
     <div class="grid-stack">
-      <div v-for="(item,index) in items" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y" :gs-w="item.w"
-        :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
+      <div v-for="(item, index) in widgets" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y"
+        :gs-w="item.w" :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
         <div class="grid-stack-item-content" :id="item.itemId">
           <div class="card-header">
             <span>{{ item.config.title }}</span>
-            <v-btn size="x-small" class="remove-btn" @click="remove(item)" style="float: right;">X</v-btn>
+            <v-icon icon="mdi-trash-can-outline" class="ms-2" @click="remove(item)" style="float: right;"></v-icon>
+            <v-icon icon="mdi-pencil" class="ms-2" @click="edit(item)" style="float: right;"></v-icon>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config" v-model:config="items[index].config"
-              :dim="item.dim" />
+            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config"
+              v-model:config="widgets[index].config" :dim="item.dim" @default-config="merge_configs" />
           </div>
         </div>
       </div>
     </div>
+    <v-dialog v-model="editDialog" max-width="500"> 
+      <v-card>
+        <component :is="ConfigEditor" v-bind="editItem" :config="editItem"/>
+    </v-card> </v-dialog>
   </div>
 
 </template>
@@ -45,7 +53,8 @@ import PieChart from "@/components/PieChart.vue"; // Import your Vue component
 import Table from "@/components/Table.vue"; // Import your Vue component
 import Slider from "@/components/Slider.vue"; // Import your Vue component
 import Output from "./Output.vue";
-import YourComponent from "./YourComponent.vue";
+import YourComponent from "./ConfigEditor.vue";
+import ConfigEditor from "./ConfigEditor.vue";
 
 
 const grid_kinds = {
@@ -56,34 +65,65 @@ const grid_kinds = {
   Table: markRaw(Table),
   Slider: markRaw(Slider),
   Output: markRaw(Output),
-  YourComponent:markRaw(YourComponent)
+  ConfigEditor: markRaw(ConfigEditor)
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
 
+let editDialog = ref(false);
+let editItem = ref();
+function edit(item) {
+  editDialog.value = true;
+  editItem = item.config;
+}
+
 const global = ref({}); // Create a reactive global state
 provide('global', global); // Provide global state if needed
-let count = ref(0);
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
-const items = ref([
-  { x: 0, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/gauge1" }, kind: "Gauge", id: "341", itemId: "341" },
-  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", src: "src/mtr1/motor/line1" }, kind: "LineChart", id: "342", itemId: "342" },
-  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/pie1" }, kind: "PieChart", id: "343", itemId: "343" },
-  { x: 6, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/slider1" }, kind: "Slider", id: "344", itemId: "344" },
-  { x: 8, y: 0, h: 20, w: 2, config: { title: "Reset", src: "src/mtr1/motor/button1" }, kind: "Button", id: "345", itemId: "345" },
-  { x: 10, y: 0, h: 20, w: 2, config: { title: "target RPM", src: "src/mtr1/motor/gauge2" }, kind: "Gauge", id: "346", itemId: "346" },
-
+const widgets = ref([
+  { x: 0, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "341", itemId: "341" },
+  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", topic: "topic/mtr1/motor/line1" }, kind: "LineChart", id: "342", itemId: "342" },
+  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", topic: "topic/mtr1/motor/pie1" }, kind: "PieChart", id: "343", itemId: "343" },
+  { x: 6, y: 0, h: 10, w: 2, config: {}, kind: "Slider", id: "344", itemId: "344" },
+  { x: 6, y: 10, h: 10, w: 2, config: {}, kind: "Button", id: "345", itemId: "345" },
+  { x: 8, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "346", itemId: "346" },
 ]);
 const shadowDom = {};
 
+const local_time = ref("")
+
+const v = defineEmits()
+
+function deepMerge(target, source) {
+  for (const key in source) {
+    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { deepMerge(target[key], source[key]); }
+    else { if (!(key in target)) { target[key] = source[key]; } }
+  }
+  return target;
+}
+
+function merge_configs(default_config) {
+  var widgetIdx = widgets.value.findIndex(widget => widget.id == default_config.id)
+  // console.log(widgetIdx)
+  //  console.log(widgets.value[widgetIdx])
+  if (widgetIdx != -1) {
+    //   console.log('Widget', widgets.value[widgetIdx].config)
+    //   console.log('Defaults', default_config)
+    const result = deepMerge(widgets.value[widgetIdx].config, default_config)
+    //   console.log('result', result)
+  }
+}
+
+
+
 function save() {
-  localStorage.setItem('grid-items', JSON.stringify(items.value));
+  localStorage.setItem('grid-items', JSON.stringify(widgets.value));
   alert("Layout saved");
 }
 
 function load() {
   const saved = localStorage.getItem('grid-items');
   if (saved) {
-    items.value = JSON.parse(saved);
+    widgets.value = JSON.parse(saved);
     nextTick(() => {
       // Reinitialize gridstack after loading new items
       if (grid) {
@@ -106,7 +146,7 @@ function load() {
       });
       grid.on('change', onChange);
       // Make all current items widgets
-      items.value.forEach((item) => {
+      widgets.value.forEach((item) => {
         const el = document.getElementById(item.itemId);
         if (el) {
           grid.makeWidget(el);
@@ -134,7 +174,7 @@ onMounted(() => {
     handle: '.card-header',
     margin: 0,
   });
-//  grid.margin(5);
+  //  grid.margin(5);
 
   // Listen for remove events to clean up Vue renders
   grid.on('removed', function (event, items) {
@@ -153,16 +193,16 @@ onMounted(() => {
     console.log(data)
   });
 
-   window.setInterval(() => {
-           console.log(items.value[0].config);
-        }, 3000);
+  window.setInterval(() => {
+    local_time.value = new Date().toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' });
+  }, 3000);
 
 
 });
 
 function onChange(event, changeItems) {
   changeItems.forEach(item => {
-    var widget = items.value.find(w => w.id == item.id);
+    var widget = widgets.value.find(w => w.id == item.id);
     if (!widget) {
       alert("Widget not found: " + item.id);
       return;
@@ -176,8 +216,8 @@ function onChange(event, changeItems) {
 
 function remove(widget) {
   console.log("Removing widget:", widget);
-  var index = items.value.findIndex(w => w.itemId == widget.itemId);
-  items.value.splice(index, 1);
+  var index = widgets.value.findIndex(w => w.itemId == widget.itemId);
+  widgets.value.splice(index, 1);
   const selector = `#${widget.itemId}`;
   grid.removeWidget(widget.itemId, true, true);
 }
@@ -186,20 +226,107 @@ function remove(widget) {
 function addWidget(kind) {
   let id = String(Math.round(2 ** 32 * Math.random()))
   let item = {
-    h: 20, w: 3,  config: { title: "src/esp1/motor/MotorInfo/JSON", src: "src/mtr1/motor/target_rpm" },
+    h: 20, w: 3, config: {},
     kind: kind, itemId: id, id: id
   };
 
   // let g = grid.addWidget(item);
-    items.value.push(item);
-    nextTick(() => {    
-        const newEl = document.getElementById(id)
-       if ( newEl ) 
-        grid.makeWidget(newEl);
- })
+  widgets.value.push(item);
+  nextTick(() => {
+    const newEl = document.getElementById(id)
+    if (newEl)
+      grid.makeWidget(newEl);
+  })
 }
 
+/**
+ * Deep-merge two Maps without mutating the inputs.
+ * - If the same key exists in both:
+ *   - Map + Map     => deep-merge Maps
+ *   - Object + Obj  => deep-merge plain objects
+ *   - Array + Array => concatenate arrays
+ *   - Otherwise     => replace with source value (cloned where sensible)
+ *
+ * @param {Map<any, any>} a
+ * @param {Map<any, any>} b
+ * @returns {Map<any, any>} new merged Map
+ */
+function deepMergeMap(a, b) {
+  const out = new Map();
 
+  // start with a's entries (cloned)
+  for (const [k, v] of a) {
+    out.set(k, clone(v));
+  }
+
+  // merge/override with b's entries
+  for (const [k, v] of b) {
+    if (!out.has(k)) {
+      out.set(k, clone(v));
+      continue;
+    }
+
+    const prev = out.get(k);
+
+    if (prev instanceof Map && v instanceof Map) {
+      out.set(k, deepMergeMap(prev, v));
+    } else if (isPlainObject(prev) && isPlainObject(v)) {
+      out.set(k, deepMergeObject(prev, v));
+    } else if (Array.isArray(prev) && Array.isArray(v)) {
+      out.set(k, prev.concat(v)); // or replace: v.slice()
+    } else {
+      out.set(k, clone(v)); // fallback: replace
+    }
+  }
+
+  return out;
+}
+
+/* ------------ helpers ------------ */
+
+function isPlainObject(x) {
+  return x && Object.prototype.toString.call(x) === '[object Object]';
+}
+
+function deepMergeObject(a, b) {
+  const out = {};
+  // copy a
+  for (const k of Reflect.ownKeys(a)) {
+    out[k] = clone(a[k]);
+  }
+  // merge b
+  for (const k of Reflect.ownKeys(b)) {
+    const av = out[k];
+    const bv = b[k];
+
+    if (av instanceof Map && bv instanceof Map) {
+      out[k] = deepMergeMap(av, bv);
+    } else if (isPlainObject(av) && isPlainObject(bv)) {
+      out[k] = deepMergeObject(av, bv);
+    } else if (Array.isArray(av) && Array.isArray(bv)) {
+      out[k] = av.concat(bv); // or replace: bv.slice()
+    } else {
+      out[k] = clone(bv);
+    }
+  }
+  return out;
+}
+
+function clone(v) {
+  if (v == null || typeof v !== 'object') return v;
+  if (v instanceof Date) return new Date(v);
+  if (v instanceof RegExp) return new RegExp(v.source, v.flags);
+  if (Array.isArray(v)) return v.map(clone);
+  if (v instanceof Map) return new Map([...v].map(([k, val]) => [k, clone(val)]));
+  if (v instanceof Set) return new Set([...v].map(clone));
+  if (isPlainObject(v)) {
+    const o = {};
+    for (const k of Reflect.ownKeys(v)) o[k] = clone(v[k]);
+    return o;
+  }
+  // For other object types (class instances/typed arrays), return as-is.
+  return v;
+}
 </script>
 <style lang="css">
 /* required file for gridstack to work */
@@ -228,7 +355,7 @@ function addWidget(kind) {
   margin: 0;
   cursor: move;
   min-height: 15px;
-  font-size: 10px ;
+  font-size: 12px;
   background-color: #bdbdbd;
   width: 100%;
 }

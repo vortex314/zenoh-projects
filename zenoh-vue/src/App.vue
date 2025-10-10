@@ -1,7 +1,9 @@
 <template>
+    <v-app>
     <div>
         <Grid />
     </div>
+    </v-app>
 </template>
 
 <script setup lang="ts">

@@ -17,7 +17,7 @@ class WS {
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             console.log("Message received:", message);
-            if ( message.reply == "LOAD ") {
+            if ( message.reply == "LOAD") {
                 messageBus.send({loaded:message.})
             } 
             if ( message.reply == "SAVE") {

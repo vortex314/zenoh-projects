@@ -5,7 +5,6 @@
 <script setup>
 
 import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
-
 import { GaugeChart } from "echarts/charts";
 import {
     TitleComponent,
@@ -17,7 +16,7 @@ import {
     SVGRenderer,
     CanvasRenderer
 } from "echarts/renderers";
-import { PieChart } from "echarts/charts";
+import { messageBus } from "@/PubSub";
 
 import VChart, { THEME_KEY } from "vue-echarts";
 use([
@@ -30,9 +29,20 @@ use([
 ]);
 provide(THEME_KEY, "light");
 
-import { messageBus } from "@/PubSub";
-
+const CONFIG_DEFAULTS = {
+            topic: "src/device/component/message_type/property",
+            min: 0.0,
+            max: 100.0,
+            round:1,
+            step: 10,
+            title : "just a title",
+            prefix:"",
+            suffix:"",
+            minorTicks:1,
+            majorTicks:5,
+}
 const modelValue = defineModel()  // Vue 3.4+ syntax
+const emit = defineEmits(['defaultConfig'])
 
 // show gauge
 //import { Gauge } from "vue-google-charts";
@@ -108,15 +118,14 @@ let option = ref({
 const el = ref(null);
 
 onMounted(() => {
-    console.log("Modelvalue Gauge ", cfg);
-    cfg.value = props.config;
-    console.log("props:", props.config);
+    CONFIG_DEFAULTS.id = props.id
+    emit('defaultConfig',CONFIG_DEFAULTS)
     messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
         option.value.series[0].data[0].value = Math.round(msg.value);
     });
-       window.setInterval(() => {
+       /*window.setInterval(() => {
            console.log(cfg);
-        }, 3000);
+        }, 3000);*/
 });
 
 </script>

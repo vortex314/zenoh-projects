@@ -1,10 +1,9 @@
 <template>
         <v-chart class="chart" :option="option" autoresize />
 </template>
-
 <script setup lang="ts">
 
-import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
+import { ref, onMounted, watch,provide } from "vue";
 import { useElementSize } from '@vueuse/core'
 
 import { PieChart } from "echarts/charts";
@@ -18,6 +17,8 @@ import {
     SVGRenderer,
     CanvasRenderer
 } from "echarts/renderers";
+import { messageBus } from "@/PubSub";
+
 
 import VChart, { THEME_KEY } from "vue-echarts";
 use([
@@ -36,6 +37,9 @@ const props = defineProps({
     required: true,
     default: "1"
   },
+  config: {
+        type: Object
+  },
   locked: {
     type: Boolean,
     default: false
@@ -53,13 +57,32 @@ const props = defineProps({
     default: "Gauge"
   }
 });
+const CONFIG_DEFAULTS = {
+            topic: "source topic",
+            title : "just a title",
+            prefix:"",
+            suffix:"",
+}
+const emit = defineEmits(['defaultConfig'])
+
+function messageHandler(msg) {
+    console.log("msg received")
+    option.value.series[0].data[0].value = Math.round(msg.value);
+}
+
 onMounted(() => {
-    console.log("Gauge"," component mounted");
+    CONFIG_DEFAULTS.id = props.id
+    emit('defaultConfig',CONFIG_DEFAULTS)
+    messageBus.listen(props.config.topic,messageHandler);
+    watch(props.config, (next,prev) =>{
+      console.log(next,prev)
+      messageBus.listen(next.config.topic,messageHandler)
+    })
 });
 
 const option=ref({
   title: {
-    text: 'Referer of a Website',
+    text: props.config.title,
     subtext: 'Fake Data',
     left: 'center'
   },

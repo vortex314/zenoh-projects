@@ -1,46 +1,50 @@
 <template>
     <div> {{ value }}
-        <v-slider v-model="value" thumb-label ref="id">BUTTON</v-slider>
+        <v-slider thumb-label 
+            v-model="value" 
+            :step="config.step" 
+            :max="config.max" 
+            :min="config.min"  
+            ref="id"
+            @change="onChange"
+            @end="onChange"></v-slider>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, h } from 'vue'
+import { ref, onMounted } from 'vue'
 import { messageBus } from '@/PubSub'
 
 const props = defineProps({
-    h: {
-        type: Number,
-        default: 200
-    }, w: {
-        type: Number,
-        default: 200
-    }, src: {
-        type: String,
-        default: "dst/esp32/sys/reset"
-    },
-    pressed: {
-        type: String,
-        default: "on"
-    },
-    released: {
-        type: String,
-        default: "off"
-    },
-    label: {
-        type: String,
-        default: "Reset"
-    }
+  id: {
+    type: [String, Number],
+    required: true,
+    default: "1"
+  },
+  config: {
+        type: Object
+  },
 })
-const value = ref(50)
-
-function pressed() {
-    messageBus.publish(props.src, props.pressed)
+const value = ref(51)
+const CONFIG_DEFAULTS = {
+            topic: "dst/esp1/drive/HoverBoardCmd/speed",
+            title : "just a title",
+            prefix:"",
+            suffix:"V",
+            min:-100,
+            max:100,
+            step:10,
 }
+const emit = defineEmits(['defaultConfig'])
 
 onMounted(() => {
-
+    CONFIG_DEFAULTS.id = props.id
+    emit('defaultConfig',CONFIG_DEFAULTS)
 })
+
+function onChange(slider_value) {
+   messageBus.publish(props.config.topic,slider_value)
+}
 
 
 </script>

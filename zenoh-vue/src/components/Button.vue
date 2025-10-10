@@ -1,5 +1,5 @@
 <template>
-    <v-btn color="primary" size="x-small" @click="pressed" ref="id">BUTTON</v-btn>
+    <v-btn color="primary" size="x-small" @click="pressed" ref="id">{{ props.config.label }}</v-btn>
 </template>
 
 <script setup>
@@ -7,37 +7,33 @@ import { ref, onMounted, reactive,h  } from 'vue'
 import { messageBus } from '@/PubSub'
 
 const props = defineProps({
-    h: {
-        type: Number,
-        default: 200
-    }, w: {
-        type: Number,
-        default: 200
-    }, src: {
-        type: String,
-        default: "dst/esp32/sys/reset"
+    config: {
+        type: Object,
     },
-    pressed: {
-        type: String,
-        default: "on"
+    id: {
+        type: [String, Number],
+        required: true,
+        default: "1"
     },
-    released: {
-        type: String,
-        default: "off"
-    },
-    label: {
-        type: String,
-        default: "Reset"
-    }
 })
+const emit = defineEmits(['defaultConfig'])
 const id = ref(null)
 
 function pressed() {
-    messageBus.publish(props.src, props.pressed)
+    messageBus.publish(props.config.topic, props.pressed)
+}
+
+const CONFIG_DEFAULTS = {
+    pressed_msg : "on",
+    released_msg : "off",
+    label : "Button Label",
+    title :"Button Title",
+    topic : "Button Topic"
 }
 
 onMounted(() => {
-
+    CONFIG_DEFAULTS.id = props.id
+    emit('defaultConfig',CONFIG_DEFAULTS)
 
 })
 
