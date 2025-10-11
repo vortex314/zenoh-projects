@@ -4,7 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide } from "vue";
+import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide, watch } from "vue";
 import { GaugeChart } from "echarts/charts";
 import {
     TitleComponent,
@@ -30,22 +30,21 @@ use([
 provide(THEME_KEY, "light");
 
 const CONFIG_DEFAULTS = {
-            topic: "src/device/component/message_type/property",
-            min: 0.0,
-            max: 100.0,
-            round:1,
-            step: 10,
-            title : "just a title",
-            prefix:"",
-            suffix:"",
-            minorTicks:1,
-            majorTicks:5,
+    topic: "src/device/component/message_type/property",
+    title: "Mains Voltage",
+    label: 'Volt',
+    min: 0.0,
+    max: 100.0,
+    round: 1,
+    step: 10,
+    prefix: "",
+    suffix: "",
+    minorTicks: 1,
+    majorTicks: 5,
+    gaugeColor: "#00ff00",
 }
-const modelValue = defineModel()  // Vue 3.4+ syntax
 const emit = defineEmits(['defaultConfig'])
 
-// show gauge
-//import { Gauge } from "vue-google-charts";
 const props = defineProps({
     id: {
         type: [String, Number],
@@ -53,51 +52,16 @@ const props = defineProps({
         default: "1"
     },
     config: {
-        type: Object,
-        default: () => ({
-            topic: "src/device/component/message_type/property",
-            min: 0.0,
-            max: 100.0,
-            round:1,
-            step: 10,
-            title : topic,
-            prefix:"",
-            suffix:"",
-            minorTicks:1,
-            majorTicks:5,
-        })
+        type: Object
     },
-    locked: {
-        type: Boolean,
-        default: false
-    },
-    options: {
-        type: Object,
-        default: () => ({
-            redFrom: 90,
-            redTo: 100,
-            yellowFrom: 75,
-            yellowTo: 90,
-            minorTicks: 5
-        })
-    },
-    dim: {
-        type: Object,
-        default: () => ({})
-    },
-    kind: {
-        type: String,
-        default: "Gauge"
-    }
 });
-let cfg = defineModel('config')  // This is reactive and two-way bound
 let option = ref({
     tooltip: {
         formatter: '{a} <br/>{b} : {c}%'
     },
     series: [
         {
-            name: 'Pressure',
+            name: props.config.title,
             type: 'gauge',
             progress: {
                 show: true
@@ -109,24 +73,36 @@ let option = ref({
             data: [
                 {
                     value: 50,
-                    name: 'SCORE'
+                    name: props.config.label
                 }
             ]
         }
     ]
 });
-const el = ref(null);
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
-    emit('defaultConfig',CONFIG_DEFAULTS)
-    messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
-        option.value.series[0].data[0].value = Math.round(msg.value);
-    });
-       /*window.setInterval(() => {
-           console.log(cfg);
-        }, 3000);*/
+    emit('defaultConfig', CONFIG_DEFAULTS)
+    messageBus.listen(props.config.topic, messageHandler);
+    watch(props.config, (next, prev) => {
+        console.log(next, prev)
+        messageBus.unsubscribe(prev.topic)
+        messageBus.listen(next.topic, messageHandler)
+        option.value.series[0].data[0].name = next.label
+        option.value.series[0].max = next.max
+        option.value.series[0].min = next.min
+        option.value.series[0].title = next.title;
+        option.value.series[0].detail = {
+            formatter: `{value}${next.suffix}`,
+            fontSize: 20
+        }
+    })
 });
+
+function messageHandler(msg) {
+    console.log("msg received")
+    option.value.series[0].data[0].value = Math.round(msg.value);
+}
 
 </script>
 <style scoped>

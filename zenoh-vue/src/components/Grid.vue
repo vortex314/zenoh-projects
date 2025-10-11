@@ -17,25 +17,25 @@
       </v-system-bar>
     </v-container>
     <div class="grid-stack">
-      <div v-for="(item, index) in widgets" :key="item.itemId" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y"
-        :gs-w="item.w" :gs-h="item.h" :gs-id="item.itemId" :id="item.itemId">
-        <div class="grid-stack-item-content" :id="item.itemId">
+      <div v-for="(item, index) in widgets" :key="item.id" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y"
+        :gs-w="item.w" :gs-h="item.h" :gs-id="item.id" :id="item.id">
+        <div class="grid-stack-item-content" :id="item.id">
           <div class="card-header">
             <span>{{ item.config.title }}</span>
             <v-icon icon="mdi-trash-can-outline" class="ms-2" @click="remove(item)" style="float: right;"></v-icon>
             <v-icon icon="mdi-pencil" class="ms-2" @click="edit(item)" style="float: right;"></v-icon>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.itemId" :item-id="item.itemId" :config="item.config"
+            <component :is="grid_kinds[item.kind]" :id="item.id" :item-id="item.id" :config="item.config"
               v-model:config="widgets[index].config" :dim="item.dim" @default-config="merge_configs" />
           </div>
         </div>
       </div>
     </div>
-    <v-dialog v-model="editDialog" max-width="500"> 
-      <v-card>
-        <component :is="ConfigEditor" v-bind="editItem" :config="editItem"/>
-    </v-card> </v-dialog>
+    <v-dialog v-model="editDialog" max-width="500" max-height="600">
+      <component :is="ConfigEditor" :config="editItem" @default-config="overwrite_configs"
+        @close="editDialog = false" />
+    </v-dialog>
   </div>
 
 </template>
@@ -80,12 +80,11 @@ const global = ref({}); // Create a reactive global state
 provide('global', global); // Provide global state if needed
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const widgets = ref([
-  { x: 0, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "341", itemId: "341" },
-  { x: 2, y: 0, h: 20, w: 2, config: { title: "measured RPM", topic: "topic/mtr1/motor/line1" }, kind: "LineChart", id: "342", itemId: "342" },
-  { x: 4, y: 0, h: 20, w: 2, config: { title: "target RPM", topic: "topic/mtr1/motor/pie1" }, kind: "PieChart", id: "343", itemId: "343" },
-  { x: 6, y: 0, h: 10, w: 2, config: {}, kind: "Slider", id: "344", itemId: "344" },
-  { x: 6, y: 10, h: 10, w: 2, config: {}, kind: "Button", id: "345", itemId: "345" },
-  { x: 8, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "346", itemId: "346" },
+  { x: 0, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "341" },
+  { x: 2, y: 0, h: 20, w: 2, config: {}, kind: "LineChart", id: "342" },
+  { x: 6, y: 0, h: 10, w: 2, config: {}, kind: "Slider", id: "344" },
+  { x: 6, y: 10, h: 10, w: 2, config: {}, kind: "Button", id: "345" },
+  { x: 8, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "346" },
 ]);
 const shadowDom = {};
 
@@ -102,60 +101,64 @@ function deepMerge(target, source) {
 }
 
 function merge_configs(default_config) {
+  console.log("Merging config for id", default_config.id, default_config)
   var widgetIdx = widgets.value.findIndex(widget => widget.id == default_config.id)
-  // console.log(widgetIdx)
-  //  console.log(widgets.value[widgetIdx])
   if (widgetIdx != -1) {
-    //   console.log('Widget', widgets.value[widgetIdx].config)
-    //   console.log('Defaults', default_config)
     const result = deepMerge(widgets.value[widgetIdx].config, default_config)
-    //   console.log('result', result)
+  }
+}
+
+function deepMergeOverwrite(target, source) {
+  for (const key in source) {
+    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { deepMergeOverwrite(target[key], source[key]); }
+    else { target[key] = source[key]; }
+  }
+  return target;
+}
+
+function overwrite_configs(default_config) {
+  console.log("Merging config for id", default_config.id, default_config)
+  var widgetIdx = widgets.value.findIndex(widget => widget.id == default_config.id)
+  if (widgetIdx != -1) {
+    const result = deepMergeOverwrite(widgets.value[widgetIdx].config, default_config)
   }
 }
 
 
 
 function save() {
-  localStorage.setItem('grid-items', JSON.stringify(widgets.value));
-  alert("Layout saved");
+  localStorage.setItem('grid1', JSON.stringify(widgets.value));
+  console.log("Saved layout:", widgets.value);
 }
 
 function load() {
-  const saved = localStorage.getItem('grid-items');
+  const saved = localStorage.getItem('grid1');
+  console.log("Existing widgets", widgets.value.length);
+  while (widgets.value.length > 0) {
+    remove(widgets.value[0]);
+  }
+  
   if (saved) {
     widgets.value = JSON.parse(saved);
-    nextTick(() => {
-      // Reinitialize gridstack after loading new items
-      if (grid) {
-        grid.destroy();
-      }
-      grid = GridStack.init({
-        float: false,
-        cellHeight: "20px",
-        minRow: 1,
-        handle: '.card-header',
-        margin: 0,
-      });
-      grid.on('removed', function (event, items) {
-        items.forEach((item) => {
-          if (shadowDom[item.itemId]) {
-            render(null, shadowDom[item.itemId]);
-            delete shadowDom[item.itemId];
-          }
-        });
-      });
-      grid.on('change', onChange);
-      // Make all current items widgets
-      widgets.value.forEach((item) => {
-        const el = document.getElementById(item.itemId);
-        if (el) {
-          grid.makeWidget(el);
-        }
-      });
+    widgets.value.forEach(w => {
+      var old_id = w.id
+      w.id = String(Math.round(2 ** 32 * Math.random()))
+      w.config.id = w.id
+      console.log("Changed id from", old_id, "to", w.id)
+    }
+    );
+
+    // Re-create gridstack widgets
+    widgets.value.forEach((item) => {
+      nextTick(() => {
+        const newEl = document.getElementById(item.id)
+        if (newEl)
+          grid.makeWidget(newEl);
+        else console.warn("Element not found for id", item.id)
+      })
     });
-    alert("Layout loaded");
   } else {
-    alert("No saved layout found");
+    console.warn("No saved layout found.");
   }
 }
 
@@ -167,6 +170,7 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
+  local_time.value = new Date().toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' });
   grid = GridStack.init({ // DO NOT use grid.value = GridStack.init(), see above
     float: false,
     cellHeight: "20px",
@@ -179,9 +183,9 @@ onMounted(() => {
   // Listen for remove events to clean up Vue renders
   grid.on('removed', function (event, items) {
     items.forEach((item) => {
-      if (shadowDom[item.itemId]) {
-        render(null, shadowDom[item.itemId]);
-        delete shadowDom[item.itemId];
+      if (shadowDom[item.id]) {
+        render(null, shadowDom[item.id]);
+        delete shadowDom[item.id];
       }
     });
   });
@@ -216,10 +220,15 @@ function onChange(event, changeItems) {
 
 function remove(widget) {
   console.log("Removing widget:", widget);
-  var index = widgets.value.findIndex(w => w.itemId == widget.itemId);
-  widgets.value.splice(index, 1);
-  const selector = `#${widget.itemId}`;
-  grid.removeWidget(widget.itemId, true, true);
+  var index = widgets.value.findIndex(w => w.id == widget.id);
+  if (index !== -1) {
+    widgets.value.splice(index, 1);
+    const selector = `#${widget.id}`;
+    grid.removeWidget(widget.id, true, true);
+  } else {
+    console.warn("Widget to remove not found in widgets array:", widget);
+  }
+
 }
 
 
@@ -227,7 +236,7 @@ function addWidget(kind) {
   let id = String(Math.round(2 ** 32 * Math.random()))
   let item = {
     h: 20, w: 3, config: {},
-    kind: kind, itemId: id, id: id
+    kind: kind, id: id
   };
 
   // let g = grid.addWidget(item);

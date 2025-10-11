@@ -24,11 +24,12 @@ function pressed() {
 }
 
 const CONFIG_DEFAULTS = {
-    pressed_msg : "on",
-    released_msg : "off",
-    label : "Button Label",
+    topic : "dst/esp1/sys/SysCmd/reset",
     title :"Button Title",
-    topic : "Button Topic"
+    label : "Button Label",
+    pressed_msg : "true",
+    released_msg : "false",
+
 }
 
 onMounted(() => {

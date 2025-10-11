@@ -76,7 +76,8 @@ onMounted(() => {
     messageBus.listen(props.config.topic,messageHandler);
     watch(props.config, (next,prev) =>{
       console.log(next,prev)
-      messageBus.listen(next.config.topic,messageHandler)
+      messageBus.unsubscribe(prev.topic)
+      messageBus.listen(next.topic,messageHandler)
     })
 });
 
