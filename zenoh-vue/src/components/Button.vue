@@ -3,8 +3,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive,h  } from 'vue'
-import { messageBus } from '@/PubSub'
+import { ref, onMounted  } from 'vue'
+import local_bus from '@/LocalBus'
 
 const props = defineProps({
     config: {
@@ -20,7 +20,7 @@ const emit = defineEmits(['defaultConfig'])
 const id = ref(null)
 
 function pressed() {
-    messageBus.publish(props.config.topic, props.pressed)
+    local_bus.publish(props.config.topic, props.pressed)
 }
 
 const CONFIG_DEFAULTS = {

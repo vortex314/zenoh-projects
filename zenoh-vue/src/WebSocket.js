@@ -1,9 +1,19 @@
+/*
+    Browser <------> Zenoh WebSocket Bridge
+    SAVE/LOAD/DELETE/UPDATE/QUERY JSON Objects ----> 
+    PUB_TXD/SUBSCRIBE to topics --->
+    PUB_RXD <---- 
+
+    Using Zenoh WebSocket protocol
+*/
+import localbus from './LocalBus.js';
 class WS {
-    constructor(url) {
+    constructor(url,localbus) {
         this.url = url;
         this.ws = null;
         this.connected = false;
         this.subscriptions = [];
+        this.localbus = localbus || null;
     }
 
     connect() {
@@ -17,10 +27,9 @@ class WS {
         this.ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
             console.log("Message received:", message);
-            if ( message.reply == "LOAD") {
-                messageBus.send({loaded:message.})
+            if ( message.reply == "load") {
             } 
-            if ( message.reply == "SAVE") {
+            if ( message.reply == "save") {
 
             }
             if ( message.reply == "LIST") {
@@ -207,19 +216,7 @@ class WS {
 }
 
 // Example usage:
-const pubSub = new WS("ws://localhost:8000"); // Replace with your Zenoh WebSocket URL
-pubSub.connect();
+const web_socket = new WS("ws://localhost:8000"); // Replace with your Zenoh WebSocket URL
+export default web_socket;
 
-// Wait for connection to establish before using commands
-setTimeout(() => {
-    pubSub.subscribe("example/topic", (message) => {
-        console.log("Received message on example/topic:", message);
-    });
 
-    pubSub.publish("example/topic", { data: "Hello, Zenoh!" });
-
-    setTimeout(() => {
-        pubSub.unsubscribe("example/topic", () => {});
-        pubSub.disconnect();
-    }, 5000);
-}, 1000);

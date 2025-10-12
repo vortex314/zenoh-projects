@@ -4,7 +4,6 @@ import { createApp, provide } from 'vue'
 import App from './App.vue'
 //import { PubSub } from './PubSub.js';
 
-import emitter from './PubSub.js';
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components'
@@ -13,9 +12,8 @@ import { aliases as faAliases, fa } from 'vuetify/iconsets/fa'; // Example for F
 import { aliases, mdi } from 'vuetify/iconsets/mdi'; // Correct import for mdi icon set
 import { VBtn} from 'vuetify/components/VBtn';
 import '@mdi/font/css/materialdesignicons.css'; // Ensure the MDI font is imported
-
-import { messageBus } from './PubSub.js';
-// import { WebSocket  } from './WebSocket.js';
+import local_bus from './LocalBus.js'; // Use named import
+import web_socket from './WebSocket.js'; // Use default import
 
 const vuetify = createVuetify({
   // Specify the components and directives you need
@@ -51,11 +49,5 @@ const vuetify = createVuetify({
 //   },
 const app = createApp(App);
 app.use(vuetify);
-//app.use(PubSub); // This line is not needed as we are using mitt directly
 
-// app.use(PubSub);
-// app.component('pubsub',PubSub)
-
-app.config.globalProperties.emitter = emitter
-console.log("emitter", emitter)
 app.mount('#app');

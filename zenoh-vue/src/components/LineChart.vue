@@ -35,7 +35,7 @@ use([
   DataZoomComponent]);
 provide(THEME_KEY, "light");
 
-import { messageBus } from "@/PubSub";
+import  local_bus  from "@/LocalBus";
 
 const option = ref({
   xAxis: {
@@ -85,10 +85,10 @@ const props = defineProps({
   }
 });
 onMounted(() => {
-  messageBus.listen("src/mtr1/motor.rpm_target", (msg) => {
-            option.value.series[0].data.push(Math.round(msg.value));
-            option.value.series[1].data.push(Math.round(msg.value*Math.random()));
-            option.value.series[2].data.push(Math.round(msg.value*Math.random()*5));
+  local_bus.subscribe("src/mtr1/motor.rpm_target", (topic,value) => {
+            option.value.series[0].data.push(Math.round(value));
+            option.value.series[1].data.push(Math.round(value*Math.random()));
+            option.value.series[2].data.push(Math.round(value*Math.random()*5));
 
             if (option.value.xAxis.data.length > 100) {
                 option.value.xAxis.data.shift();

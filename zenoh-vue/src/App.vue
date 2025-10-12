@@ -15,4 +15,10 @@ onMounted(() => {})
 onBeforeUnmount(() => {})
 </script>
 
-<style scoped></style>
+<style scoped>
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* prevent unwanted global scroll */
+}
+</style>

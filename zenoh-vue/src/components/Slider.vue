@@ -13,7 +13,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { messageBus } from '@/PubSub'
+import local_bus from '@/LocalBus'
 
 const props = defineProps({
   id: {
@@ -43,7 +43,7 @@ onMounted(() => {
 })
 
 function onChange(slider_value) {
-   messageBus.publish(props.config.topic,slider_value)
+   local_bus.publish(props.config.topic,slider_value)
 }
 
 

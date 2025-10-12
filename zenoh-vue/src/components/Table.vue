@@ -8,7 +8,7 @@
     </div>
 </template>
 <script setup>
-import { messageBus } from "@/PubSub";
+import  local_bus  from "@/LocalBus";
 import { onMounted, ref } from "vue";
 import { defineProps } from "vue";
 import "vuetify/styles";
@@ -41,17 +41,16 @@ const headers = ref([
 const items = ref([]);
 
 onMounted(() => {
-    messageBus.listen("*", (msg) => {
-        console.log("SubTable received message:", msg);
-        onMessage(msg.topic, msg.value);
+    local_bus.subscribe("**", (topic,value) => {
+        console.log("Table received", topic, value);
+        onMessage(topic, value);
     });
 });
 
 
-function onMessage(topic, message) {
-    var v = JSON.stringify(message)
+function onMessage(topic, value) {
+    var v = JSON.stringify(value)
     var idx = findIndexOfTopic(topic);
-    console.log("SubTable.onMessage idx:" + idx + " topic:" + topic + " message:" + v + " length " + items.value.length);
     var ts = new Date().toTimeString().split(' ')[0]
     if (idx < 0) {
         items.value.push({ topic: topic, value: v, date: ts, count: 1 });

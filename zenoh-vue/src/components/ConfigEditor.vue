@@ -8,8 +8,8 @@
     </v-data-table>
     <!-- save and cancel -->
     <span style="float:right; margin:5px;">
-      <v-icon icon="mdi-close" @click="$emit('close')" class="close-icon" />
-      <v-icon icon="mdi-content-save" @click="saveConfig" class="save-icon" />
+      <v-icon icon="mdi-close" class="ms-2" @click="$emit('close')" />
+      <v-icon icon="mdi-content-save" class="ms-2" @click="saveConfig"  />
     </span></v-card>
 </template>
 

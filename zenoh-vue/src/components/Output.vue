@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted, reactive, h } from 'vue'
-import { messageBus } from '@/PubSub'
+import local_bus from '@/LocalBus'
 
 const props = defineProps({
     id: {
@@ -25,18 +25,18 @@ const CONFIG_DEFAULTS = {
     prefix : "",
 }
 
-const value = ref("initial value");
+var value = ref("---");
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig',CONFIG_DEFAULTS)
-    messageBus.listen(props.config.topic, messageHandler);
+    local_bus.subscribe(props.config.topic, messageHandler);
 
 })
 
-function messageHandler(msg) {
-    console.log("msg received")
-    value.value = Math.round(msg.value);
+function messageHandler(topic, newValue) {
+    console.log("Output received", topic, newValue);
+    value.value = JSON.stringify(newValue);
 }
 
 

@@ -1,33 +1,33 @@
 <template>
-        <v-chart class="chart" :option="option" autoresize />
+  <v-chart class="chart" :option="option" autoresize />
 </template>
 <script setup lang="ts">
 
-import { ref, onMounted, watch,provide } from "vue";
+import { ref, onMounted, watch, provide } from "vue";
 import { useElementSize } from '@vueuse/core'
 
 import { PieChart } from "echarts/charts";
 import {
-    TitleComponent,
-    TooltipComponent,
-    LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
 } from "echarts/components";
 import { use } from "echarts/core";
 import {
-    SVGRenderer,
-    CanvasRenderer
+  SVGRenderer,
+  CanvasRenderer
 } from "echarts/renderers";
-import { messageBus } from "@/PubSub";
+import  local_bus  from "@/LocalBus";
 
 
 import VChart, { THEME_KEY } from "vue-echarts";
 use([
-    PieChart,
-    SVGRenderer,
-    CanvasRenderer,
-    TitleComponent,
-    TooltipComponent,
-    LegendComponent,
+  PieChart,
+  SVGRenderer,
+  CanvasRenderer,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
 ]);
 provide(THEME_KEY, "light");
 
@@ -38,50 +38,33 @@ const props = defineProps({
     default: "1"
   },
   config: {
-        type: Object
+    type: Object
   },
-  locked: {
-    type: Boolean,
-    default: false
-  },
-  options: {
-    type: Object,
-    default: () => ({})
-  },
-  dim: {
-    type: Object,
-    default: () => ({})
-  },
-  kind: {
-    type: String,
-    default: "Gauge"
-  }
 });
 const CONFIG_DEFAULTS = {
-            topic: "source topic",
-            title : "just a title",
-            prefix:"",
-            suffix:"",
+  topic: "source topic",
+  title: "just a title",
+  prefix: "",
+  suffix: "",
 }
 const emit = defineEmits(['defaultConfig'])
 
-function messageHandler(msg) {
-    console.log("msg received")
-    option.value.series[0].data[0].value = Math.round(msg.value);
+function messageHandler(value) {
+  option.value.series[0].data[0].value = Math.round(value);
 }
 
 onMounted(() => {
-    CONFIG_DEFAULTS.id = props.id
-    emit('defaultConfig',CONFIG_DEFAULTS)
-    messageBus.listen(props.config.topic,messageHandler);
-    watch(props.config, (next,prev) =>{
-      console.log(next,prev)
-      messageBus.unsubscribe(prev.topic)
-      messageBus.listen(next.topic,messageHandler)
-    })
+  CONFIG_DEFAULTS.id = props.id;
+  emit('defaultConfig', CONFIG_DEFAULTS);
+  local_bus.subscribe(props.config.topic, messageHandler);
+  watch(props.config, (next, prev) => {
+    console.log(next, prev)
+    local_bus.unsubscribe(prev.topic, messageHandler);
+    local_bus.subscribe(next.topic, messageHandler);
+  })
 });
 
-const option=ref({
+const option = ref({
   title: {
     text: props.config.title,
     subtext: 'Fake Data',
@@ -121,12 +104,12 @@ const option=ref({
 
 <style scoped>
 .chart {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .v-chart {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 </style>

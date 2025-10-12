@@ -16,7 +16,7 @@ import {
     SVGRenderer,
     CanvasRenderer
 } from "echarts/renderers";
-import { messageBus } from "@/PubSub";
+import local_bus from "@/LocalBus";
 
 import VChart, { THEME_KEY } from "vue-echarts";
 use([
@@ -83,11 +83,11 @@ let option = ref({
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
-    messageBus.listen(props.config.topic, messageHandler);
+    local_bus.subscribe(props.config.topic, messageHandler);
     watch(props.config, (next, prev) => {
         console.log(next, prev)
-        messageBus.unsubscribe(prev.topic)
-        messageBus.listen(next.topic, messageHandler)
+        local_bus.unsubscribe(prev.topic, messageHandler);
+        local_bus.subscribe(next.topic, messageHandler);
         option.value.series[0].data[0].name = next.label
         option.value.series[0].max = next.max
         option.value.series[0].min = next.min
@@ -99,9 +99,8 @@ onMounted(() => {
     })
 });
 
-function messageHandler(msg) {
-    console.log("msg received")
-    option.value.series[0].data[0].value = Math.round(msg.value);
+function messageHandler(topic,value) {
+    option.value.series[0].data[0].value = Math.round(value);
 }
 
 </script>
