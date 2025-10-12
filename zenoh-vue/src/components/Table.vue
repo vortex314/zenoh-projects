@@ -42,7 +42,6 @@ const items = ref([]);
 
 onMounted(() => {
     local_bus.subscribe("**", (topic,value) => {
-        console.log("Table received", topic, value);
         onMessage(topic, value);
     });
 });

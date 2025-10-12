@@ -1,5 +1,5 @@
 <template>
-    <v-text-field label="Label" >{{ value }}</v-text-field>
+    <v-text-field  >{{ value }}</v-text-field>
 </template>
 
 <script setup>
@@ -35,8 +35,7 @@ onMounted(() => {
 })
 
 function messageHandler(topic, newValue) {
-    console.log("Output received", topic, newValue);
-    value.value = JSON.stringify(newValue);
+    value.value = topic +'=' +JSON.stringify(newValue);
 }
 
 

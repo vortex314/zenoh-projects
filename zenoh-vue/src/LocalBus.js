@@ -30,12 +30,11 @@ class LocalBus {
             let uptime = Date.now() - this.start_time;
             this.emitter.emit("src/mtr1/sys.uptime",  uptime );
         }, 3000);
-        this.emitter.on("**", (value) => {
-            console.log("LocalBus event",  value);
+        this.emitter.on("**", function (value) {
+            console.log("LocalBus : '", this.event, "' : ", value);
         });
-
-
     }
+
     publish(topic, value) {
         this.emitter.emit(topic, value);
         // send also to WS
