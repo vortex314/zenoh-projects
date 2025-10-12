@@ -67,28 +67,22 @@ const props = defineProps({
     required: true,
     default: "1"
   },
-  locked: {
-    type: Boolean,
-    default: false
+  config: {
+    type: Object
   },
-  options: {
-    type: Object,
-    default: () => ({})
-  },
-  dim: {
-    type: Object,
-    default: () => ({})
-  },
-  kind: {
-    type: String,
-    default: "Gauge"
-  }
 });
+const CONFIG_DEFAULTS = {
+            topic: "src/mtr1/motor.rpm_target",
+            title : "just a title",
+}
+const emit = defineEmits(['defaultConfig'])
 onMounted(() => {
+  CONFIG_DEFAULTS.id = props.id
+ emit('defaultConfig',CONFIG_DEFAULTS)
   local_bus.subscribe("src/mtr1/motor.rpm_target", (topic,value) => {
-            option.value.series[0].data.push(Math.round(value));
-            option.value.series[1].data.push(Math.round(value*Math.random()));
-            option.value.series[2].data.push(Math.round(value*Math.random()*5));
+            option.value.series[0].data.push(Math.round(value*2));
+            option.value.series[1].data.push(Math.round(value*Math.random()*2));
+            option.value.series[2].data.push(Math.round(value*Math.random()*2));
 
             if (option.value.xAxis.data.length > 100) {
                 option.value.xAxis.data.shift();

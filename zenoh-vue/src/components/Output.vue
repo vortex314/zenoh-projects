@@ -1,5 +1,5 @@
 <template>
-    <v-text-field  >{{ value }}</v-text-field>
+    <v-text-field  >.{{ props.config.prefix }} {{ value }}{{ props.config.suffix }}</v-text-field>
 </template>
 
 <script setup>
@@ -31,11 +31,11 @@ onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig',CONFIG_DEFAULTS)
     local_bus.subscribe(props.config.topic, messageHandler);
-
 })
 
 function messageHandler(topic, newValue) {
-    value.value = topic +'=' +JSON.stringify(newValue);
+    value.value = topic +'=' +JSON.stringify(Math.round(newValue));
+    console.log("props ",props.config.prefix,props.config.suffix);
 }
 
 

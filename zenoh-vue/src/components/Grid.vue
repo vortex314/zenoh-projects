@@ -12,6 +12,8 @@
         <v-icon icon="mdi-tune-variant" class="ms-2" @click="addWidget('Slider')"></v-icon>
         <v-icon icon="mdi-chart-bar" class="ms-2" @click="addWidget('BarChart')"></v-icon>
         <v-icon icon="mdi-text" class="ms-2" @click="addWidget('Output')"></v-icon>
+        <v-icon icon="mdi-arrow-expand-right" class="ms-2" @click="addWidget('Progress')"></v-icon>
+        <v-icon icon="mdi-toggle-switch" class="ms-2" @click="addWidget('Switch')"></v-icon>
         <v-icon icon="mdi-text" class="ms-2" @click="addWidget('YourComponent')"></v-icon>
         <span class="ms-2">{{ local_time }}</span>
       </v-system-bar>
@@ -26,8 +28,8 @@
             <v-icon icon="mdi-pencil" class="ms-2" @click="edit(item)" style="float: right;"></v-icon>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.id" :item-id="item.id" :config="item.config"
-              v-model:config="widgets[index].config" :dim="item.dim" @default-config="merge_configs" />
+            <component :is="grid_kinds[item.kind]" :id="item.id"  :config="item.config"
+              v-model:config="widgets[index].config"  @default-config="merge_configs" />
           </div>
         </div>
       </div>
@@ -53,6 +55,8 @@ import PieChart from "@/components/PieChart.vue"; // Import your Vue component
 import Table from "@/components/Table.vue"; // Import your Vue component
 import Slider from "@/components/Slider.vue"; // Import your Vue component
 import Output from "./Output.vue";
+import Progress from "./Progress.vue";
+import Switch  from "./Switch.vue";
 import YourComponent from "./ConfigEditor.vue";
 import ConfigEditor from "./ConfigEditor.vue";
 
@@ -65,6 +69,8 @@ const grid_kinds = {
   Table: markRaw(Table),
   Slider: markRaw(Slider),
   Output: markRaw(Output),
+  Progress:markRaw(Progress),
+  Switch:markRaw(Switch),
   ConfigEditor: markRaw(ConfigEditor)
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };

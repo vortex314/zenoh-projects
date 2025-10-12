@@ -3,7 +3,7 @@
         <v-btn size="x-small" class="ma-2" color="primary" @click="items = []">
             Clear Table
         </v-btn>
-        <v-data-table :headers="headers" :items="items">
+        <v-data-table :headers="headers" :items="items" density="compact">
         </v-data-table>
     </div>
 </template>

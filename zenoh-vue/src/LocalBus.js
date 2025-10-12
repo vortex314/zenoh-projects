@@ -26,6 +26,10 @@ class LocalBus {
             let v = Math.random() ;
             this.emitter.emit("src/mtr1/motor.rpm_target", v * 2000 );
             this.emitter.emit("src/mtr1/motor.rpm_measured", v * 2000 );
+            this.emitter.emit("src/random/1", Math.random() );
+            this.emitter.emit("src/random/10", Math.random()* 10);
+            this.emitter.emit("src/random/100", Math.random() *100 );
+
             // get current time in msec
             let uptime = Date.now() - this.start_time;
             this.emitter.emit("src/mtr1/sys.uptime",  uptime );

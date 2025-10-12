@@ -4,7 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, h, onBeforeUnmount, render, useTemplateRef, nextTick, provide, watch } from "vue";
+import { ref, onMounted, watchEffect, provide, watch } from "vue";
 import { GaugeChart } from "echarts/charts";
 import {
     TitleComponent,
@@ -62,6 +62,8 @@ let option = ref({
     series: [
         {
             name: props.config.title,
+            min : props.config.min,
+             max : props.config.max,
             type: 'gauge',
             progress: {
                 show: true
@@ -73,7 +75,8 @@ let option = ref({
             data: [
                 {
                     value: 50,
-                    name: props.config.label
+                    name: props.config.label,
+
                 }
             ]
         }
@@ -82,24 +85,13 @@ let option = ref({
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
-    emit('defaultConfig', CONFIG_DEFAULTS)
+    emit('defaultConfig', CONFIG_DEFAULTS);
     local_bus.subscribe(props.config.topic, messageHandler);
-    watch(props.config, (next, prev) => {
-        console.log(next, prev)
-        local_bus.unsubscribe(prev.topic, messageHandler);
-        local_bus.subscribe(next.topic, messageHandler);
-        option.value.series[0].data[0].name = next.label
-        option.value.series[0].max = next.max
-        option.value.series[0].min = next.min
-        option.value.series[0].title = next.title;
-        option.value.series[0].detail = {
-            formatter: `{value}${next.suffix}`,
-            fontSize: 20
-        }
-    })
 });
 
-function messageHandler(topic,value) {
+
+
+function messageHandler(topic, value) {
     option.value.series[0].data[0].value = Math.round(value);
 }
 
