@@ -27,11 +27,9 @@ function state_changed() {
 }
 
 const CONFIG_DEFAULTS = {
-    src: ["src/null/switch"],
+    src: "src/random/bool",
     title: "Alive",
     label: "Switch Label",
-    true_value: true,
-    false_value: false,
 }
 
 onMounted(() => {
@@ -42,10 +40,4 @@ onMounted(() => {
         switch_state.value = v;
     });
 })
-/*
-
-        :true-value="props.config.true_value" :false-value="props.config.false_value"
-
-        */
-
 </script>
