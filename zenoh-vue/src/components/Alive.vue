@@ -20,16 +20,15 @@ const props = defineProps({
     },
 })
 const emit = defineEmits(['defaultConfig'])
-const switch_state = ref(true)
+const alive_state = ref([])
 
 function state_changed() {
     local_bus.publish(props.config.dst, switch_state.value)
 }
 
 const CONFIG_DEFAULTS = {
-    dst: "dst/null/switch",
-    src: "src/null/switch",
-    title: "Switch Title",
+    src: ["src/null/switch"],
+    title: "Alive",
     label: "Switch Label",
     true_value: true,
     false_value: false,

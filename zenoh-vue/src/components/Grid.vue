@@ -45,7 +45,7 @@
 <script setup>
 import { ref, markRaw, onMounted, h, onBeforeUnmount, render, inject, provide, nextTick } from "vue";
 import { GridStack } from "gridstack";
-import GridItem from "@/components/GridItem.vue"; // Import your Vue component
+// import GridItem from "@/components/GridItem.vue"; // Import your Vue component
 import local_bus from "@/LocalBus";
 
 import Gauge from "@/components/Gauge.vue"; // Import your Vue component
@@ -353,13 +353,13 @@ function clone(v) {
 
 .grid-stack-item-content {
   text-align: center;
-  background-color: #18bc9c;
+  background-color: #bdbdbd;
   width: 100% !important;
   height: 100% !important;
 }
 
 .grid-stack-item {
-  border: 1px solid #000;
+  border: 0px solid #000;
 }
 
 .handle-remove:hover {

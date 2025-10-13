@@ -6,6 +6,7 @@
             :max="config.max" 
             :min="config.min"  
             ref="id"
+            color="primary"
             @change="onChange"
             @end="onChange"></v-slider>
     </div>

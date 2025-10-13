@@ -63,7 +63,7 @@ let option = ref({
         {
             name: props.config.title,
             min : props.config.min,
-             max : props.config.max,
+            max : props.config.max,
             type: 'gauge',
             progress: {
                 show: true
@@ -76,7 +76,6 @@ let option = ref({
                 {
                     value: 50,
                     name: props.config.label,
-
                 }
             ]
         }

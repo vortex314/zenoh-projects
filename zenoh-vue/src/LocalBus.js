@@ -29,6 +29,7 @@ class LocalBus {
             this.emitter.emit("src/random/1", Math.random() );
             this.emitter.emit("src/random/10", Math.random()* 10);
             this.emitter.emit("src/random/100", Math.random() *100 );
+            this.emitter.emit("src/random/bool", Math.random()<0.5?true:false);
 
             // get current time in msec
             let uptime = Date.now() - this.start_time;
