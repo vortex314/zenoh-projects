@@ -353,7 +353,7 @@ function clone(v) {
 
 .grid-stack-item-content {
   text-align: center;
-  background-color: #bdbdbd;
+  background-color: 	#51906a;
   width: 100% !important;
   height: 100% !important;
 }

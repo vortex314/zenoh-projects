@@ -7,10 +7,35 @@
 - example : src/esp1/motor/MotorInfo/rpm = 2324 or src/esp2/gps/GpsInfo = { "lon":37.44, "lat":4.0 }
 ```json
 {
-    "type":"pub", // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
+    "request":"publish", // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
     "topic":"dst/esp1/sys/SysCmd", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
     "payload": { "reboot" :true },
     "message_topics":{"topics":["src/esp1/sys/SysInfo","src/esp1/motor/MotorInfo"]}
+}
+{
+    "request":"subscribe",
+    "topic":"src/esp1"
+}
+{
+    "request":"save",
+    "topic":"filename1",
+    "payload":{"f1":1.23,"mayb":true}
+}
+{
+    "reply":"save",
+    "rc":0,
+    "msg":"OK"
+}
+{
+    "request":"load",
+    "topic":"db2"
+}
+{
+    "reply":"load",
+    "topic":"db2",
+    "rc":0,
+    "msg":"OK",
+    "payload":{"items":[],"meta": {}}
 }
 ```
 ## Recommended IDE Setup

@@ -1,5 +1,5 @@
 <template>
-    <v-text-field  >.{{ props.config.prefix }} {{ value }}{{ props.config.suffix }}</v-text-field>
+    <v-text-field class="white-text" >.{{ props.config.prefix }} {{ value }}{{ props.config.suffix }}</v-text-field>
 </template>
 
 <script setup>
@@ -40,3 +40,9 @@ function messageHandler(topic, newValue) {
 
 
 </script>
+
+<style scoped>
+.white-text {
+    color: white !important;
+}
+</style>

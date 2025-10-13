@@ -1,6 +1,6 @@
 <template>
     <span>{{ props.config.prefix }}{{ model_value }}{{ props.config.suffix }}</span>
-<v-progress-linear color="primary" :model-value="model_value" :height="25"></v-progress-linear>
+<v-progress-linear color="primary" :model-value="model_value" :height="25" :max="props.config.max"></v-progress-linear>
 </template>
 
 <script setup>
@@ -56,8 +56,9 @@ function messageHandler(topic, value) {
     height: 100%;
 }
 
-.v-chart {
-    width: 100%;
+.v-progress-linear {
+    width: 90%;
     height: 100%;
+    margin-left: 5%;
 }
 </style>

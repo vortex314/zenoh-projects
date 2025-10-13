@@ -2,9 +2,9 @@
     <div> {{ value }}
         <v-slider thumb-label 
             v-model="value" 
-            :step="config.step" 
-            :max="config.max" 
-            :min="config.min"  
+            :step="props.config.step" 
+            :max="props.config.max" 
+            :min="props.config.min"  
             ref="id"
             color="primary"
             @change="onChange"
