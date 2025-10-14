@@ -1,5 +1,5 @@
 <template>
-    <v-text-field class="white-text" >.{{ props.config.prefix }} {{ value }}{{ props.config.suffix }}</v-text-field>
+    <v-text-field >{{ props.config.prefix }} {{ value }}{{ props.config.suffix }}</v-text-field>
 </template>
 
 <script setup>
@@ -37,12 +37,8 @@ function messageHandler(topic, newValue) {
     value.value = topic +'=' +JSON.stringify(Math.round(newValue));
     console.log("props ",props.config.prefix,props.config.suffix);
 }
-
-
 </script>
 
 <style scoped>
-.white-text {
-    color: white !important;
-}
+
 </style>

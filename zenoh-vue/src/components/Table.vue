@@ -83,6 +83,8 @@ function findIndexOfTopic(topic) {
 .v-table {
     width: 100%;
     height: 100%;
+    background-color: #E0E0E0;
+    
 }
 .left-align {    text-align: left;  }
 </style>

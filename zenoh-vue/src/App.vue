@@ -18,5 +18,6 @@ html, body, #app {
   height: 100%;
   margin: 0;
   overflow: hidden; /* prevent unwanted global scroll */
+  background-color: 	#E0E0E0;
 }
 </style>

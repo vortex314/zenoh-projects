@@ -1,7 +1,8 @@
 <template>
   <div>
     <v-container>
-      <v-system-bar color="primary" style="align-content: left">
+      <v-system-bar window="true" color="primary" style="align-content: left">
+          {{ log_message }}
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
         <v-icon icon="mdi-chart-line" class="ms-2" @click="addWidget('LineChart')"></v-icon>
@@ -83,6 +84,7 @@ function edit(item) {
 }
 
 const global = ref({}); // Create a reactive global state
+const log_message = ref("log..")
 provide('global', global); // Provide global state if needed
 let grid = null; // DO NOT use ref(null) as proxies GS will break all logic when comparing structures... see https://github.com/gridstack/gridstack.js/issues/2115
 const widgets = ref([
@@ -353,7 +355,7 @@ function clone(v) {
 
 .grid-stack-item-content {
   text-align: center;
-  background-color: 	#51906a;
+  background-color: 	#E0E0E0;
   width: 100% !important;
   height: 100% !important;
 }
@@ -377,6 +379,10 @@ function clone(v) {
 
 .card-header:hover {
   background-color: #149b80;
+}
+
+.log_message {
+  align-content: center;
 }
 
 
