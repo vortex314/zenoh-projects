@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-container>
-      <v-system-bar window="true" color="primary" style="align-content: left">
+      <v-system-bar window color="primary" style="align-content: left">
           {{ log_message }}
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
@@ -15,6 +15,7 @@
         <v-icon icon="mdi-text" class="ms-2" @click="addWidget('Output')"></v-icon>
         <v-icon icon="mdi-arrow-expand-right" class="ms-2" @click="addWidget('Progress')"></v-icon>
         <v-icon icon="mdi-toggle-switch" class="ms-2" @click="addWidget('Switch')"></v-icon>
+        <v-icon icon="mdi-lightbulb" class="ms-2" @click="addWidget('Alive')"></v-icon>
         <v-icon icon="mdi-text" class="ms-2" @click="addWidget('YourComponent')"></v-icon>
         <span class="ms-2">{{ local_time }}</span>
       </v-system-bar>
@@ -58,6 +59,7 @@ import Slider from "@/components/Slider.vue"; // Import your Vue component
 import Output from "./Output.vue";
 import Progress from "./Progress.vue";
 import Switch  from "./Switch.vue";
+import Alive from "./Alive.vue";
 import YourComponent from "./ConfigEditor.vue";
 import ConfigEditor from "./ConfigEditor.vue";
 
@@ -72,6 +74,7 @@ const grid_kinds = {
   Output: markRaw(Output),
   Progress:markRaw(Progress),
   Switch:markRaw(Switch),
+  Alive:markRaw(Alive),
   ConfigEditor: markRaw(ConfigEditor)
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
