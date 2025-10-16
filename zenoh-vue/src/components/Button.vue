@@ -1,5 +1,5 @@
 <template>
-    <v-btn color="primary" size="x-small" @click="pressed" ref="id">{{ props.config.label }}</v-btn>
+    <v-btn block class="w-100 h-100" color="primary" size="x-small" @click="pressed" ref="id">{{ props.config.label }}</v-btn>
 </template>
 
 <script setup>
@@ -40,3 +40,7 @@ onMounted(() => {
 
 
 </script>
+
+<style scoped>
+
+</style>

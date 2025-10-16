@@ -2,7 +2,9 @@
   <div>
     <v-container>
       <v-system-bar window color="primary" style="align-content: left">
-          {{ log_message }}
+        <div class="text-left w-100">{{ log_message }}</div>
+        <v-img src="@/assets/mqtt.png" height="24"  @click="config_mqtt()" ></v-img>
+        <v-img src="@/public/zenoh.png" height="24"  @click="config_zenoh()" ></v-img>
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
         <v-icon icon="mdi-chart-line" class="ms-2" @click="addWidget('LineChart')"></v-icon>
@@ -28,10 +30,11 @@
             <span>{{ item.config.title }}</span>
             <v-icon icon="mdi-trash-can-outline" class="ms-2" @click="remove(item)" style="float: right;"></v-icon>
             <v-icon icon="mdi-pencil" class="ms-2" @click="edit(item)" style="float: right;"></v-icon>
+            <v-icon icon="mdi-content-copy" class="ms-2" @click="copy(item)" style="float: right;"></v-icon>
           </div>
           <div class="card">
             <component :is="grid_kinds[item.kind]" :id="item.id"  :config="item.config"
-              v-model:config="widgets[index].config"  @default-config="merge_configs" />
+              v-model:config="widgets[index].config"  @default-config="merge_configs" @log="log"/>
           </div>
         </div>
       </div>
@@ -119,6 +122,10 @@ function merge_configs(default_config) {
   }
 }
 
+function log(msg) {
+  log_message.value = msg 
+}
+
 function deepMergeOverwrite(target, source) {
   for (const key in source) {
     if (source[key] instanceof Object && key in target && target[key] instanceof Object) { deepMergeOverwrite(target[key], source[key]); }
@@ -140,6 +147,7 @@ function overwrite_configs(default_config) {
 function save() {
   localStorage.setItem('grid1', JSON.stringify(widgets.value));
   console.log("Saved layout:", widgets.value);
+  log("Saved layout")
 }
 
 function load() {
@@ -171,8 +179,16 @@ function load() {
   } else {
     console.warn("No saved layout found.");
   }
+  log("Layout loaded.")
 }
 
+function confif_mqtt() {
+
+}
+
+function config_zenoh(){
+
+}
 onBeforeUnmount(() => {
   // Clean up Vue renders
   Object.values(shadowDom).forEach((el) => {
@@ -364,7 +380,7 @@ function clone(v) {
 }
 
 .grid-stack-item {
-  border: 0px solid #000;
+  border: 1px solid #000;
 }
 
 .handle-remove:hover {

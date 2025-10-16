@@ -1,10 +1,9 @@
 <template>
   <v-chart class="chart" :option="option" autoresize />
 </template>
-<script setup lang="ts">
+<script setup>
 
 import { ref, onMounted, watch, provide } from "vue";
-import { useElementSize } from '@vueuse/core'
 
 import { PieChart } from "echarts/charts";
 import {
@@ -41,13 +40,15 @@ const props = defineProps({
     type: Object
   },
 });
+const emit = defineEmits(['defaultConfig'])
+
+
 const CONFIG_DEFAULTS = {
   topic: "source topic",
   title: "just a title",
   prefix: "",
   suffix: "",
 }
-const emit = defineEmits(['defaultConfig'])
 
 function messageHandler(value) {
   option.value.series[0].data[0].value = Math.round(value);

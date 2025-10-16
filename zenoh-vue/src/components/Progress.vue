@@ -1,11 +1,14 @@
 <template>
-    <span>{{ props.config.prefix }}{{ model_value }}{{ props.config.suffix }}</span>
-<v-progress-linear color="primary" :model-value="model_value" :height="25" :max="props.config.max"></v-progress-linear>
+    <div>
+        <span>{{ props.config.prefix }}{{ model_value }}{{ props.config.suffix }}</span>
+        <v-progress-linear color="primary" :model-value="model_value" :height="25"
+            :max="props.config.max"></v-progress-linear>
+    </div>
 </template>
 
 <script setup>
 import local_bus from "@/LocalBus";
-import { onMounted,ref  } from "vue";
+import { onMounted, ref } from "vue";
 
 var model_value = ref(0)
 

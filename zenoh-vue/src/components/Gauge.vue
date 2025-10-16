@@ -4,8 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, watchEffect, provide, watch } from "vue";
-import { GaugeChart } from "echarts/charts";
+import { ref, onMounted, provide } from "vue";
 import {
     TitleComponent,
     TooltipComponent,
@@ -16,8 +15,7 @@ import {
     SVGRenderer,
     CanvasRenderer
 } from "echarts/renderers";
-import local_bus from "@/LocalBus";
-
+import { GaugeChart } from "echarts/charts";
 import VChart, { THEME_KEY } from "vue-echarts";
 use([
     GaugeChart,
@@ -28,6 +26,9 @@ use([
     LegendComponent,
 ]);
 provide(THEME_KEY, "light");
+
+import local_bus from "@/LocalBus";
+
 
 const CONFIG_DEFAULTS = {
     topic: "src/device/component/message_type/property",
@@ -82,19 +83,17 @@ let option = ref({
     ]
 });
 
-onMounted(() => {
-    CONFIG_DEFAULTS.id = props.id
-    emit('defaultConfig', CONFIG_DEFAULTS);
-    local_bus.subscribe(props.config.topic, messageHandler);
-});
-
-
-
 function messageHandler(topic, value) {
     option.value.series[0].data[0].value = Math.round(value);
 }
 
+onMounted(() => {
+    CONFIG_DEFAULTS.id = props.id;
+    emit('defaultConfig', CONFIG_DEFAULTS);
+    local_bus.subscribe(props.config.topic, messageHandler);
+});
 </script>
+
 <style scoped>
 .chart {
     width: 100%;

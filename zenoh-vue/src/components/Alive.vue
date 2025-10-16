@@ -1,11 +1,10 @@
 <template>
-    <span style="display: block;" :class="alive_state" height="100px" width="100%">{{ props.config.label }}</span>
+    <span style="display: block;" :class="alive_state" width="100%">{{ props.config.label }}</span>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import local_bus from '@/LocalBus'
-import { set } from '@vueuse/core'
 
 const props = defineProps({
     config: {
@@ -20,6 +19,8 @@ const props = defineProps({
 const emit = defineEmits(['defaultConfig'])
 const alive_state = ref("dead")
 const last_update = ref(Date.now())
+const found_topics=ref({})
+
 
 
 const CONFIG_DEFAULTS = {
@@ -33,6 +34,12 @@ onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
     local_bus.subscribe(props.config.src, (topic, value) => {
+        if ( topic in found_topics ) {
+
+        } else 
+        {
+            
+        }
         alive_state.value = "alive"
         last_update.value = Date.now()
     });

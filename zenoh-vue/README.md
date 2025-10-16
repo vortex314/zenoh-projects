@@ -1,4 +1,16 @@
-# zenoh-vue
+# PubSub-Dashboard Features
+
+- Goal is to have an easy deployable browser-based dashboard to visualize ad-hoc PubSub data  and to generate PubSub Events
+- Supported PubSub engines : MQTT , Zenoh
+- The Dashboard speaks Topic/Payload semnatics, with the payload being JSON send from/to the Websocket proxy.
+- The WebSocket proxy is taking care of any mapping to other serialization formats and can eventualyy have its own dictionary.
+
+## My own idiomatic format of topics
+- 'srcDst/Device/Component/MessageType'
+- Supported wild cards /** or  /* for single or multiple level
+- Example src/*/sys/SysInfo 
+- Example : dst/esp1/gps/LocationTarget { lon:23.445,lat:56.77 }
+- Example : dst/esp1/sys/SystemCmd => { reboot:true }. or dst/esp1/sys/SysCmd/reboot => true 
 
 ## 
 
@@ -8,7 +20,7 @@
 ```json
 {
     "request":"publish", // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
-    "topic":"dst/esp1/sys/SysCmd", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
+    "topic":"dst/esp1/sys/SysCmd/", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
     "payload": { "reboot" :true },
     "message_topics":{"topics":["src/esp1/sys/SysInfo","src/esp1/motor/MotorInfo"]}
 }
