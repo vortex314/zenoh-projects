@@ -1,10 +1,15 @@
 <template>
   <div>
     <v-container>
-      <v-system-bar window color="primary" style="align-content: left">
-        <div class="text-left w-100">{{ log_message }}</div>
-        <v-img src="@/assets/mqtt.png" height="24"  @click="config_mqtt()" ></v-img>
-        <v-img src="@/public/zenoh.png" height="24"  @click="config_zenoh()" ></v-img>
+      <v-system-bar window color="primary" >
+        <div @click="config_mqtt()" style="cursor: pointer;">
+          <v-img :src="mqttIcon" width="20px" height="20px" class="ms-2" ></v-img>
+        </div>
+        <div @click="config_zenoh()" style="cursor: pointer;">
+          <v-img :src="zenohIcon" width="20px" height="20px" class="ms-2" >
+          </v-img>
+        </div>
+        <div class="text-left w-100 ms-2">{{ log_message }}</div>
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
         <v-icon icon="mdi-chart-line" class="ms-2" @click="addWidget('LineChart')"></v-icon>
@@ -19,7 +24,7 @@
         <v-icon icon="mdi-toggle-switch" class="ms-2" @click="addWidget('Switch')"></v-icon>
         <v-icon icon="mdi-lightbulb" class="ms-2" @click="addWidget('Alive')"></v-icon>
         <v-icon icon="mdi-text" class="ms-2" @click="addWidget('YourComponent')"></v-icon>
-        <span class="ms-2">{{ local_time }}</span>
+        <span class="ms-4">{{ local_time }}</span>
       </v-system-bar>
     </v-container>
     <div class="grid-stack">
@@ -33,8 +38,8 @@
             <v-icon icon="mdi-content-copy" class="ms-2" @click="copy(item)" style="float: right;"></v-icon>
           </div>
           <div class="card">
-            <component :is="grid_kinds[item.kind]" :id="item.id"  :config="item.config"
-              v-model:config="widgets[index].config"  @default-config="merge_configs" @log="log"/>
+            <component :is="grid_kinds[item.kind]" :id="item.id" :config="item.config"
+              v-model:config="widgets[index].config" @default-config="merge_configs" @log="log" />
           </div>
         </div>
       </div>
@@ -61,10 +66,12 @@ import Table from "@/components/Table.vue"; // Import your Vue component
 import Slider from "@/components/Slider.vue"; // Import your Vue component
 import Output from "./Output.vue";
 import Progress from "./Progress.vue";
-import Switch  from "./Switch.vue";
+import Switch from "./Switch.vue";
 import Alive from "./Alive.vue";
 import YourComponent from "./ConfigEditor.vue";
 import ConfigEditor from "./ConfigEditor.vue";
+import mqttIcon from '@/assets/mqtt.png'
+import zenohIcon from "@/assets/zenoh.png"
 
 
 const grid_kinds = {
@@ -75,9 +82,9 @@ const grid_kinds = {
   Table: markRaw(Table),
   Slider: markRaw(Slider),
   Output: markRaw(Output),
-  Progress:markRaw(Progress),
-  Switch:markRaw(Switch),
-  Alive:markRaw(Alive),
+  Progress: markRaw(Progress),
+  Switch: markRaw(Switch),
+  Alive: markRaw(Alive),
   ConfigEditor: markRaw(ConfigEditor)
   // Slider: markRaw(() => h('div', 'Slider component not implemented yet')), // Placeholder for Slider
 };
@@ -123,7 +130,7 @@ function merge_configs(default_config) {
 }
 
 function log(msg) {
-  log_message.value = msg 
+  log_message.value = msg
 }
 
 function deepMergeOverwrite(target, source) {
@@ -156,7 +163,7 @@ function load() {
   while (widgets.value.length > 0) {
     remove(widgets.value[0]);
   }
-  
+
   if (saved) {
     widgets.value = JSON.parse(saved);
     widgets.value.forEach(w => {
@@ -182,12 +189,12 @@ function load() {
   log("Layout loaded.")
 }
 
-function confif_mqtt() {
-
+function config_mqtt() {
+  console.log("Configure MQTT")
 }
 
-function config_zenoh(){
-
+function config_zenoh() {
+  console.log("Configure Zenoh")
 }
 onBeforeUnmount(() => {
   // Clean up Vue renders
@@ -374,7 +381,7 @@ function clone(v) {
 
 .grid-stack-item-content {
   text-align: center;
-  background-color: 	#E0E0E0;
+  background-color: #E0E0E0;
   width: 100% !important;
   height: 100% !important;
 }
