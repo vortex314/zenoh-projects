@@ -19,19 +19,26 @@
 - example : src/esp1/motor/MotorInfo/rpm = 2324 or src/esp2/gps/GpsInfo = { "lon":37.44, "lat":4.0 }
 ```json
 {
-    "request":"publish", // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
-    "topic":"dst/esp1/sys/SysCmd/", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
-    "payload": { "reboot" :true },
-    "message_topics":{"topics":["src/esp1/sys/SysInfo","src/esp1/motor/MotorInfo"]}
+    "publish":{
+        "topic":"dst/esp1/sys/SysCmd/", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
+        "payload": { "reboot" :true },
+        "message_topics":{"topics":["src/esp1/sys/SysInfo","src/esp1/motor/MotorInfo"]}
+    } // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
+
 }
 {
-    "request":"subscribe",
-    "topic":"src/esp1"
+    "subscribe":{
+        "topic":"src/esp1/*"
+    }
 }
 {
-    "request":"save",
-    "topic":"filename1",
-    "payload":{"f1":1.23,"mayb":true}
+    "save":{
+        "file":"filename1"
+    },
+    "save_reply" :{
+        "rc":0,
+        "msg":"OK"
+    }
 }
 {
     "reply":"save",

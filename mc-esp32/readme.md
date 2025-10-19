@@ -10,7 +10,7 @@
 - the id's used should be peristent : string or hash from string
 - the code generation is easily extendible with .tera templates
 ### Pub Sub
-- The communication uses principles that are also used in MQTT, Zenoh,..
+- The communication uses principles that are also used in MQTT, Zenoh,.. - topic , payload
 - The communication uses : topic and payload 
   - The topic indicates : 
     - direction : src or dst, to ease subscription patterns 
