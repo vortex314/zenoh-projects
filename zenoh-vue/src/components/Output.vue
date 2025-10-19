@@ -35,7 +35,6 @@ onMounted(() => {
 
 function messageHandler(topic, newValue) {
     value.value = topic +'=' +JSON.stringify(Math.round(newValue));
-    console.log("props ",props.config.prefix,props.config.suffix);
 }
 </script>
 

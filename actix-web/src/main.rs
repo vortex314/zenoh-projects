@@ -101,10 +101,14 @@ impl actix::Handler<BroadcastMsg> for WsActor {
     type Result = ();
 
     fn handle(&mut self, msg: BroadcastMsg, ctx: &mut Self::Context) {
-        info!("📢 Broadcasting Zenoh message to WebSocket client");
+        let str = String::from_utf8(msg.0.value.clone()).unwrap_or_default();
+        let js: serde_json::Value = serde_json::from_str(&str).unwrap_or_default();
+        info!("📢 Broadcasting Zenoh message to WebSocket client {:?}", str);
+
         let json = serde_json::json!({
+            "type": "Publish",
             "topic": msg.0.key,
-            "payload_base64": base64::encode(&msg.0.value),
+            "payload": js,
         });
         if let Ok(txt) = serde_json::to_string(&json) {
             ctx.text(txt);
@@ -122,16 +126,29 @@ impl actix::StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsActor {
             Ok(ws::Message::Text(txt)) => {
                 if let Ok(cmd) = serde_json::from_str::<msg::Message>(&txt) {
                     info!("Parsed command: {:?}", cmd);
-                    let tx = self.tx_publish.clone();
-                    /*actix_rt::spawn(async move {
-                        let _ = tx
-                            .send(PublishRequest {
-                                key: "ttt".to_string(),
-                                payload: cmd,",
-                                payload,
-                            })
-                            .await;
-                    });*/
+                    match cmd {
+                        msg::Message::Publish(pub_msg) => {
+
+                            let payload = if let Ok(p) = serde_json::to_vec(&pub_msg.payload) {
+                                p
+                            } else {
+                                info!("Failed to serialize payload");
+                                return;
+                            };
+                            let tx = self.tx_publish.clone();
+                            actix_rt::spawn(async move {
+                                let _ = tx
+                                    .send(PublishRequest {
+                                        key: pub_msg.topic,
+                                        payload,
+                                    })
+                                    .await;
+                            });
+                        }
+                        _ => {
+                            info!("Unsupported command type");
+                        }
+                    }
                 } else {
                     info!("Failed to parse WebSocket message as Command");
                 }
@@ -204,6 +221,7 @@ async fn zenoh_worker(
     tokio::spawn(async move {
         let mut stream = sub.stream();
         while let Some(sample) = stream.next().await {
+            info!("📥 Received Zenoh sample on key {}:{}", sample.key_expr(),sample.payload().try_to_string().unwrap());
             let data = ZenohSample {
                 key: sample.key_expr().to_string(),
                 value: sample.payload().to_bytes().to_vec(),
@@ -214,6 +232,7 @@ async fn zenoh_worker(
 
     // Publishing loop
     while let Some(req) = rx_publish.recv().await {
+        info!("📤 Publishing to Zenoh key {}", req.key);
         let _ = session.put(&req.key, req.payload).await;
     }
 }

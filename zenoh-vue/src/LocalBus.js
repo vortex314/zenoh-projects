@@ -1,4 +1,5 @@
 import { EventEmitter2 } from 'eventemitter2';
+import web_socket from './WebSocket';
 
 
 class LocalBus {
@@ -43,6 +44,10 @@ class LocalBus {
     publish(topic, value) {
         this.emitter.emit(topic, value);
         // send also to WS
+        web_socket.publish(topic, value);
+    }
+    publish_rxd(topic, value) {
+        this.emitter.emit(topic, value);
     }
     subscribe(topic, handler) {
         this.emitter.emit('subscribe', topic);

@@ -20,7 +20,7 @@ const emit = defineEmits(['defaultConfig'])
 const id = ref(null)
 
 function pressed() {
-    local_bus.publish(props.config.topic, props.pressed)
+    local_bus.publish(props.config.topic, props.config.pressed_msg)
 }
 
 const CONFIG_DEFAULTS = {

@@ -17,206 +17,95 @@ class WS {
     }
 
     connect() {
+        if (this.ws) {
+            this.ws.close();
+        }
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
             this.connected = true;
-            console.log("Connected to Zenoh WebSocket server");
+            console.log("Connected to WebSocket server");
         };
-
-        this.ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            console.log("Message received:", message);
-            if ( message.reply == "load") {
-            } 
-            if ( message.reply == "save") {
-
-            }
-            if ( message.reply == "LIST") {
-
-            }
-            if ( message.request == "PUBLISH"){
-
-            }
-            if ( message.reply == "SUBSCRIBE") {
-
-            }
-
-            // Dispatch message to matching subscriptions
-            this.subscriptions.forEach(subscription => {
-                if (message.topic && message.topic.match(subscription.pattern)) {
-                    subscription.callback(message);
-                }
-            });
+        this.ws.onclose = () => {
+            this.connected = false;
+            console.log("Disconnected from WebSocket server");
         };
 
         this.ws.onerror = (error) => {
             console.error("WebSocket error:", error);
         };
 
-        this.ws.send(message) = (message) => {};
-
-        this.ws.onclose = () => {
-            this.connected = false;
-            console.log("Disconnected from Zenoh WebSocket server");
-        };
-    }
-
-    subscribe(pattern, callback) {
-        if (!this.connected) {
-            class PubSub {
-                constructor(url) {
-                    this.url = url;
-                    this.ws = null;
-                    this.connected = false;
-                    this.subscriptions = [];
-                }
-            
-                connect() {
-                    this.ws = new WebSocket(this.url);
-            
-                    this.ws.onopen = () => {
-                        this.connected = true;
-                        console.log("Connected to Zenoh WebSocket server");
-                    };
-            
-                    this.ws.onmessage = (event) => {
-                        const message = JSON.parse(event.data);
-                        console.log("Message received:", message);
-            
-                        // Dispatch message to matching subscriptions
-                        this.subscriptions.forEach(subscription => {
-                            if (message.topic && message.topic.match(subscription.pattern)) {
-                                subscription.callback(message);
-                            }
-                        });
-                    };
-            
-                    this.ws.onerror = (error) => {
-                        console.error("WebSocket error:", error);
-                    };
-            
-                    this.ws.onclose = () => {
-                        this.connected = false;
-                        console.log("Disconnected from Zenoh WebSocket server");
-                    };
-                }
-            
-                subscribe(pattern, callback) {
-                    if (!this.connected) {
-                        console.error("Cannot subscribe, WebSocket not connected");
-                        return;
-                    }
-            
-                    this.subscriptions.push({ pattern, callback });
-                    this.ws.send(JSON.stringify({ type:"SUBSCRIBE", topic: pattern}));
-                    console.log(`Subscribed to pattern: ${pattern}`);
-                }
-            
-                unsubscribe(pattern, callback) {
-                    this.subscriptions = this.subscriptions.filter(subscription => {
-                        return subscription.pattern !== pattern || subscription.callback !== callback;
-                    });
-            
-                    if (this.connected) {
-                        this.ws.send(JSON.stringify({ type:"UNSUBSCRIBE", topic:pattern}));
-                        console.log(`Unsubscribed from pattern: ${pattern}`);
-                    }
-                }
-            
-                publish(topic, message) {
-                    if (!this.connected) {
-                        console.error("Cannot publish, WebSocket not connected");
-                        return;
-                    }
-            
-                    this.ws.send(JSON.stringify({type:"PUBLISH", topic:topic, message:message}));
-                    console.log(`Published message to topic: ${topic}`);
-                }
-            
-                disconnect() {
-                    if (this.ws) {
-                        this.ws.close();
-                    }
-                }
+        this.ws.onsend = (event) => {
+            console.log("Message sent:", event.data);
+        }
+        this.ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            console.log("Message received:", message,localbus);
+            if ( message.type === "Publish" && this.localbus ) {
+                localbus.publish_rxd( message.topic, message.payload);
             }
-            
-            // Example usage:
-            const pubSub = new PubSub("ws://localhost:8000"); // Replace with your Zenoh WebSocket URL
-            pubSub.connect();
-            
-            // Wait for connection to establish before using commands
-            setTimeout(() => {
-                pubSub.subscribe("example/topic", (message) => {
-                    console.log("Received message on example/topic:", message);
-                });
-            
-                pubSub.publish("example/topic", { data: "Hello, Zenoh!" });
-            
-                setTimeout(() => {
-                    pubSub.unsubscribe("example/topic", () => {});
-                    pubSub.disconnect();
-                }, 5000);
-            }, 1000);  console.error("Cannot subscribe, WebSocket not connected");
-            return;
-        }
-
-        this.subscriptions.push({ pattern, callback });
-        this.ws.send(JSON.stringify(["SUBSCRIBE", pattern]));
-        console.log(`Subscribed to pattern: ${pattern}`);
-    }
-
-    unsubscribe(pattern, callback) {
-        this.subscriptions = this.subscriptions.filter(subscription => {
-            return subscription.pattern !== pattern || subscription.callback !== callback;
-        });
-
-        if (this.connected) {
-            this.ws.send(JSON.stringify(["UNSUBSCRIBE", pattern]));
-            console.log(`Unsubscribed from pattern: ${pattern}`);
-        }
-    }
-
-    publish(topic, message) {
-        if (!this.connected) {
-            console.error("Cannot publish, WebSocket not connected");
-            return;
-        }
-
-        this.ws.send(JSON.stringify({request:"PUBLISH",topic:topic,payload:message}));
-        console.log(`Published message to topic: ${topic}`);
-    }
-
-    save_json(id,json) {
-        if (this.connected) {
-            this.ws.send(JSON.stringify({request:"SAVE",id:id,json:json}));
-            console.log(`Saving Object `,id);
-        }
-    }
-
-    load_json(id ){
-        if (this.connected) {
-            this.ws.send(JSON.stringify({request:"LOAD",id:id}));
-            console.log(`Loading Object : ${id}`);
-        }
-    }
-
-    list_json(id ){
-        if (this.connected) {
-            this.ws.send(JSON.stringify({request:"LIST",id:id}));
-            console.log(`Listing Objects : `,id);
-        }
+        };
     }
 
     disconnect() {
         if (this.ws) {
             this.ws.close();
+            this.ws = null;
+            this.connected = false;
+        }
+    }
+
+    sendMessage() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            var message = { type:"Publish", topic: 'src/esp1/sys/SysInfo', payload: { uptime: 12345 } } ;
+            this.ws.send(JSON.stringify(message));
+             message = { type:"Subscribe", topic: 'src/esp1/sys/SysInfo' } ;
+            this.ws.send(JSON.stringify(message));
+            message = { type:"Load", key: 'config/device1' } ;
+            this.ws.send(JSON.stringify(message));
+            message = { type:"Save", key: 'config/device1', payload: { setting: 'value' } } ;
+            this.ws.send(JSON.stringify(message));
+        } else {
+            alert('WebSocket is not connected.');
+        }
+    }
+    subscribe(topic_pattern) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            var message = { type: "Subscribe", topic: topic_pattern };
+            this.ws.send(JSON.stringify(message));
+        } else {
+            alert('WebSocket is not connected.');
+        }
+    }
+    publish(topic, payload) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            var message = { type: "Publish", topic: topic, payload: payload };
+            console.log("WS Publish:", JSON.stringify(message));
+            this.ws.send(JSON.stringify(message));
+        } else {
+            alert('WebSocket is not connected.');
+        }
+    }
+    save(key, payload) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            var message = { type: "Save", key: key, payload: payload };
+            this.ws.send(JSON.stringify(message));
+        } else {
+            alert('WebSocket is not connected.');
+        }
+    }
+    load(key) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            var message = { type: "Load", key: key };
+            this.ws.send(JSON.stringify(message));
+        } else {
+            alert('WebSocket is not connected.');   
         }
     }
 }
 
 // Example usage:
-const web_socket = new WS("ws://localhost:8000"); // Replace with your Zenoh WebSocket URL
+const web_socket = new WS("ws://localhost:8080/ws"); // Replace with your Zenoh WebSocket URL
 export default web_socket;
 
 

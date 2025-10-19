@@ -9,6 +9,8 @@
           <v-img :src="zenohIcon" width="20px" height="20px" class="ms-2" >
           </v-img>
         </div>
+        <v-icon icon="mdi-lan-connect" class="ms-2" @click="connect()" hover="Connect proxy"></v-icon>
+        <v-icon icon="mdi-lan-disconnect" class="ms-2" @click="disconnect()" hover="Disconnect proxy"></v-icon>
         <div class="text-left w-100 ms-2">{{ log_message }}</div>
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
@@ -72,6 +74,7 @@ import YourComponent from "./ConfigEditor.vue";
 import ConfigEditor from "./ConfigEditor.vue";
 import mqttIcon from '@/assets/mqtt.png'
 import zenohIcon from "@/assets/zenoh.png"
+import web_socket from "@/WebSocket";
 
 
 const grid_kinds = {
@@ -111,12 +114,19 @@ const shadowDom = {};
 
 const local_time = ref("")
 
+const connection = ref(null);
+
 const v = defineEmits()
 
-function deepMerge(target, source) {
+function deepMerge(target, source, overwrite = false) {
   for (const key in source) {
-    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { deepMerge(target[key], source[key]); }
-    else { if (!(key in target)) { target[key] = source[key]; } }
+    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { 
+      deepMerge(target[key], source[key], overwrite); 
+    } else { 
+      if (overwrite || !(key in target)) { 
+        target[key] = source[key]; 
+      } 
+    }
   }
   return target;
 }
@@ -133,19 +143,27 @@ function log(msg) {
   log_message.value = msg
 }
 
-function deepMergeOverwrite(target, source) {
-  for (const key in source) {
-    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { deepMergeOverwrite(target[key], source[key]); }
-    else { target[key] = source[key]; }
-  }
-  return target;
+function copy(item) {
+  let id = String(Math.round(2 ** 32 * Math.random()))
+  let new_item = {
+    h: item.h, w: item.w, config: JSON.parse(JSON.stringify(item.config)),
+    kind: item.kind, id: id
+  };
+  widgets.value.push(new_item);
+  nextTick(() => {
+    const newEl = document.getElementById(id)
+    if (newEl)
+      grid.makeWidget(newEl);
+  })
 }
+
+
 
 function overwrite_configs(default_config) {
   console.log("Merging config for id", default_config.id, default_config)
   var widgetIdx = widgets.value.findIndex(widget => widget.id == default_config.id)
   if (widgetIdx != -1) {
-    const result = deepMergeOverwrite(widgets.value[widgetIdx].config, default_config)
+    const result = deepMerge(widgets.value[widgetIdx].config, default_config, true)
   }
 }
 
@@ -187,6 +205,14 @@ function load() {
     console.warn("No saved layout found.");
   }
   log("Layout loaded.")
+}
+
+function connect() {
+  web_socket.connect();
+}
+
+function disconnect() {
+  web_socket.disconnect();
 }
 
 function config_mqtt() {
