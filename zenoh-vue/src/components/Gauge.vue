@@ -4,7 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, provide } from "vue";
+import { ref, onMounted, provide, watch } from "vue";
 import {
     TitleComponent,
     TooltipComponent,
@@ -32,6 +32,7 @@ import local_bus from "@/LocalBus";
 
 const CONFIG_DEFAULTS = {
     topic: "src/device/component/message_type/property",
+    field :"",
     title: "Mains Voltage",
     label: 'Volt',
     min: 0.0,
@@ -84,9 +85,13 @@ let option = ref({
 });
 
 function messageHandler(topic, value) {
+    if ( props.config.field !== "") value = value[props.config.field];
     option.value.series[0].data[0].value = Math.round(value);
 }
 
+watch(() => props.config,(new_prop,old_prop) => {
+    console.log("Props changed ",old_prop," to ",new_prop);
+});
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id;
     emit('defaultConfig', CONFIG_DEFAULTS);

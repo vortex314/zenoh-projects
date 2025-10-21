@@ -30,6 +30,7 @@ class LocalBus {
             this.emitter.emit("src/random/1", Math.random() );
             this.emitter.emit("src/random/10", Math.random()* 10);
             this.emitter.emit("src/random/100", Math.random() *100 );
+            this.emitter.emit("src/random/1000", Math.random() *1000 );
             this.emitter.emit("src/random/bool", Math.random()<0.5?true:false);
 
             // get current time in msec
@@ -37,7 +38,7 @@ class LocalBus {
             this.emitter.emit("src/mtr1/sys.uptime",  uptime );
         }, 3000);
         this.emitter.on("**", function (value) {
-            console.log("LocalBus : '", this.event, "' : ", value);
+          //  console.log("LocalBus : '", this.event, "' : ", value);
         });
     }
 

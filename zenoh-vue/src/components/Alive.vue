@@ -38,13 +38,13 @@ onMounted(() => {
 
         } else 
         {
-            
+
         }
         alive_state.value = "alive"
         last_update.value = Date.now()
     });
     setInterval(() => {
-        console.log("check alive ", Date.now() - last_update.value, props.config.timeout);
+ //       console.log("check alive ", Date.now() - last_update.value, props.config.timeout);
         if (Date.now() - last_update.value > props.config.timeout) {
             alive_state.value = "dead"
         }

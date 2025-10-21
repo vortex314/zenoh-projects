@@ -29,6 +29,7 @@ function state_changed() {
 const CONFIG_DEFAULTS = {
     dst: "dst/null/switch",
     src: "src/null/switch",
+    field :"",
     title: "Switch Title",
     label: "Switch Label",
     true_value: true,

@@ -61,7 +61,6 @@ onMounted(() => {
 
 
 function onMessage(topic, value) {
-    console.log("Table received:", topic, value);
     var v = JSON.stringify(value)
     var idx = findIndexOfTopic(topic);
     var ts = new Date().toTimeString().split(' ')[0]
