@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted  } from 'vue'
-import local_bus from '@/LocalBus'
+import bus from '@/LocalBus'
 
 const props = defineProps({
     config: {
@@ -20,7 +20,7 @@ const emit = defineEmits(['defaultConfig'])
 const id = ref(null)
 
 function pressed() {
-    local_bus.publish(props.config.topic, props.config.pressed_msg)
+    bus.txd.publish(props.config.topic, props.config.pressed_msg)
 }
 
 const CONFIG_DEFAULTS = {

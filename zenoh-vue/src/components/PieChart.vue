@@ -16,7 +16,7 @@ import {
   SVGRenderer,
   CanvasRenderer
 } from "echarts/renderers";
-import  local_bus  from "@/LocalBus";
+import  bus  from "@/LocalBus";
 
 
 import VChart, { THEME_KEY } from "vue-echarts";
@@ -57,11 +57,11 @@ function messageHandler(value) {
 onMounted(() => {
   CONFIG_DEFAULTS.id = props.id;
   emit('defaultConfig', CONFIG_DEFAULTS);
-  local_bus.subscribe(props.config.topic, messageHandler);
+  bus.rxd.subscribe(props.config.topic, messageHandler);
   watch(props.config, (next, prev) => {
     console.log(next, prev)
-    local_bus.unsubscribe(prev.topic, messageHandler);
-    local_bus.subscribe(next.topic, messageHandler);
+    bus.rxd.unsubscribe(prev.topic, messageHandler);
+    bus.rxd.subscribe(next.topic, messageHandler);
   })
 });
 

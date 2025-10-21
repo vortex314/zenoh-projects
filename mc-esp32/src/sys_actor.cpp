@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <string.h>
+#include <esp_flash.h>
 
 SysActor::SysActor(const char *name) : Actor(name)
 {
@@ -12,7 +13,7 @@ SysActor::SysActor(const char *name) : Actor(name)
 void SysActor::on_start()
 {
     INFO("Starting SysActor");
-    emit(new ZenohSubscribe("src/time_server/clock/utc/JSON"));
+    emit(new ZenohSubscribe("src/time_server/clock/utc"));
 }
 
 SysActor::~SysActor()
@@ -78,6 +79,10 @@ void SysActor::publish_info()
     sys_info->cpu_board = "ESP32-DEVKIT1";
     sys_info->free_heap = (int64_t)esp_get_free_heap_size();
     sys_info->uptime = esp_timer_get_time() / 1000;
+    uint32_t flash_size = 0;
+    esp_flash_get_size(NULL, &flash_size);
+    sys_info->flash = (int64_t)flash_size;
+    sys_info->build_date = __DATE__ " " __TIME__;
     struct timeval tv1;
     gettimeofday(&tv1, NULL);
     sys_info->utc = tv1.tv_sec;

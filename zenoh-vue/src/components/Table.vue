@@ -24,7 +24,7 @@
     </div>
 </template>
 <script setup>
-import local_bus from "@/LocalBus";
+import bus from "@/LocalBus";
 import { onMounted, ref } from "vue";
 import { defineProps } from "vue";
 import "vuetify/styles";
@@ -54,7 +54,7 @@ const items = ref([]);
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS);
-    local_bus.subscribe(props.config.topic, (topic, value) => {
+    bus.rxd.subscribe(props.config.topic, (topic, value) => {
         onMessage(topic, value);
     });
 });

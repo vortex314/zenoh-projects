@@ -39,7 +39,7 @@ void ZenohActor::handle_timer(int id)
 void ZenohActor::send_msg(const char *src, const Msg *msg)
 {
   char topic[100];
-  sprintf(topic, "%s/%s/%s/JSON", _src_device.c_str(), src, msg->type_id());
+  sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg->type_id());
   zenoh_publish(topic, msg->serialize());
 }
 

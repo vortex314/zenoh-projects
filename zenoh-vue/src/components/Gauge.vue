@@ -27,7 +27,7 @@ use([
 ]);
 provide(THEME_KEY, "light");
 
-import local_bus from "@/LocalBus";
+import bus from "@/LocalBus";
 
 
 const CONFIG_DEFAULTS = {
@@ -85,17 +85,26 @@ let option = ref({
 });
 
 function messageHandler(topic, value) {
+    console.log("Gauge received:", props.config.topic,topic, value);
     if ( props.config.field !== "") value = value[props.config.field];
     option.value.series[0].data[0].value = Math.round(value);
 }
 
 watch(() => props.config,(new_prop,old_prop) => {
-    console.log("Props changed ",old_prop," to ",new_prop);
+
+    console.log("Gauge config changed:", old_prop.topic, "->", new_prop.topic);
+    bus.rxd.unsubscribe(old_prop.topic, messageHandler);
+    bus.rxd.subscribe(new_prop.topic, messageHandler);
+    option.value.series[0].name = new_prop.title || option.value.series[0].name;
+    option.value.series[0].min = new_prop.min || option.value.series[0].min;
+    option.value.series[0].max = new_prop.max || option.value.series[0].max;
+    option.value.series[0].data[0].name = new_prop.label || option.value.series[0].data[0].name;
 });
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id;
     emit('defaultConfig', CONFIG_DEFAULTS);
-    local_bus.subscribe(props.config.topic, messageHandler);
+    console.log("Subscribing to topic:", props.config.topic);
+    bus.rxd.subscribe(props.config.topic, messageHandler);
 });
 </script>
 

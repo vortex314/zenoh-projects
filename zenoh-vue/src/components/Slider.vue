@@ -14,7 +14,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import local_bus from '@/LocalBus'
+import bus from '@/LocalBus'
 
 const props = defineProps({
   id: {
@@ -44,7 +44,7 @@ onMounted(() => {
 })
 
 function onChange(slider_value) {
-   local_bus.publish(props.config.topic,slider_value)
+   bus.txd.publish(props.config.topic,slider_value)
 }
 
 

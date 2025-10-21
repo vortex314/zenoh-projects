@@ -44,6 +44,7 @@ message SysInfo {
    uint64 free_heap = 3;
    uint64 flash = 4;
    string cpu_board = 5;
+   string build_date = 6;
 }
 
 message WifiInfo {

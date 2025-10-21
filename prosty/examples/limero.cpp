@@ -200,6 +200,7 @@ class SysInfo : public Msg {
     std::optional<uint64_t> free_heap;
     std::optional<uint64_t> flash;
     std::optional<std::string> cpu_board;
+    std::optional<std::string> build_date;
     
 
     Bytes serialize() const {
@@ -209,6 +210,7 @@ class SysInfo : public Msg {
         if (free_heap)  doc["free_heap"] = *free_heap;
         if (flash)  doc["flash"] = *flash;
         if (cpu_board)  doc["cpu_board"] = *cpu_board;
+        if (build_date)  doc["build_date"] = *build_date;
         std::string str;
         serializeJson(doc,str);
         return Bytes(str.begin(),str.end());
@@ -227,6 +229,7 @@ class SysInfo : public Msg {
         if (doc["free_heap"].is<uint64_t>() )  msg->free_heap = doc["free_heap"].as<uint64_t>();
         if (doc["flash"].is<uint64_t>() )  msg->flash = doc["flash"].as<uint64_t>();
         if (doc["cpu_board"].is<std::string>() )  msg->cpu_board = doc["cpu_board"].as<std::string>();
+        if (doc["build_date"].is<std::string>() )  msg->build_date = doc["build_date"].as<std::string>();
         return msg;
     }
 

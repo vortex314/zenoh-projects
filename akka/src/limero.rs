@@ -143,6 +143,8 @@ pub struct SysInfo {
     pub flash:Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_board:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_date:Option<String>,
         
 
 }

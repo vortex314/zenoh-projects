@@ -7,7 +7,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import local_bus from '@/LocalBus'
+import bus from '@/LocalBus'
 
 const props = defineProps({
     config: {
@@ -19,13 +19,6 @@ const props = defineProps({
         default: "1"
     },
 })
-const emit = defineEmits(['defaultConfig'])
-const switch_state = ref(true)
-
-function state_changed() {
-    local_bus.publish(props.config.dst, switch_state.value)
-}
-
 const CONFIG_DEFAULTS = {
     dst: "dst/null/switch",
     src: "src/null/switch",
@@ -35,11 +28,19 @@ const CONFIG_DEFAULTS = {
     true_value: true,
     false_value: false,
 }
+const emit = defineEmits(['defaultConfig'])
+const switch_state = ref(true)
+
+function state_changed() {
+    bus.txd.publish(props.config.dst, switch_state.value)
+}
+
+
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
-    local_bus.subscribe(props.config.src, (topic, value) => {
+    bus.rxd.subscribe(props.config.src, (topic, value) => {
         var v = JSON.stringify(value); // the config is translated to string 
         switch_state.value = v;
     });

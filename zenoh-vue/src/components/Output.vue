@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted, reactive, h } from 'vue'
-import local_bus from '@/LocalBus'
+import bus from '@/LocalBus'
 
 const props = defineProps({
     id: {
@@ -19,6 +19,8 @@ const props = defineProps({
 const emit = defineEmits(['defaultConfig'])
 const CONFIG_DEFAULTS = {
     topic : "src/esp1/sys/SysInfo/uptime",
+    field:"",
+    eval:"parseFloat(value).toFixed(2)",
     title :"Output Title",
     label : "Output Label",
     suffix : "s",
@@ -30,11 +32,17 @@ var value = ref("---");
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig',CONFIG_DEFAULTS)
-    local_bus.subscribe(props.config.topic, messageHandler);
+    bus.rxd.subscribe(props.config.topic, messageHandler);
 })
 
 function messageHandler(topic, newValue) {
-    value.value = topic +'=' +JSON.stringify(Math.round(newValue));
+    if (props.config.field !== "") newValue = newValue[props.config.field];
+    
+    if (props.config.eval) {
+        value.value = eval(props.config.eval.replace('value', newValue));
+    } else {
+        value.value = newValue;
+    }
 }
 </script>
 

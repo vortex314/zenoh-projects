@@ -58,7 +58,7 @@
 import { ref, markRaw, onMounted, h, onBeforeUnmount, render, inject, provide, nextTick } from "vue";
 import { GridStack } from "gridstack";
 // import GridItem from "@/components/GridItem.vue"; // Import your Vue component
-import local_bus from "@/LocalBus";
+import bus from "@/LocalBus";
 
 import Gauge from "@/components/Gauge.vue"; // Import your Vue component
 import Button from "@/components/Button.vue"; // Import your Vue component
@@ -255,12 +255,6 @@ onMounted(() => {
   window.setInterval(() => {
     local_time.value = new Date().toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' });
   }, 3000);
-
-
-  local_bus.subscribe('some/topic', (data) => {
-    console.log('Data received:', data);
-
-  });
 
 });
 

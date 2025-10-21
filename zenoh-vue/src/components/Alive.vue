@@ -4,7 +4,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import local_bus from '@/LocalBus'
+import bus from '@/LocalBus'
 
 const props = defineProps({
     config: {
@@ -33,7 +33,7 @@ const CONFIG_DEFAULTS = {
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
-    local_bus.subscribe(props.config.src, (topic, value) => {
+    bus.rxd.subscribe(props.config.src, (topic, value) => {
         if ( topic in found_topics ) {
 
         } else 

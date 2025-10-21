@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import local_bus from "@/LocalBus";
+import bus from "@/LocalBus";
 import { onMounted, ref } from "vue";
 
 var model_value = ref(0)
@@ -43,7 +43,7 @@ const props = defineProps({
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS);
-    local_bus.subscribe(props.config.topic, messageHandler);
+    bus.rxd.subscribe(props.config.topic, messageHandler);
 });
 
 
