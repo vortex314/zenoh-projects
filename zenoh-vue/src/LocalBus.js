@@ -7,11 +7,6 @@ class LocalBus {
             wildcard: true,     // Enable wildcards
             delimiter: '/',     // Default is '.'
           });
-        this.start_time = Date.now();
-        this.connected = false;
-        // send data on timer
-
-
     }
 
     publish(topic, value) {
@@ -29,8 +24,8 @@ class LocalBus {
 
     log_on() {
         this.emitter.onAny((topic, value) => {
-            let uptime = Date.now() - this.start_time; // get current time in msec
-            console.log(`[${uptime} ms] Topic: ${topic}, Value:`, value);
+            let ts = Date.now()
+            console.log(`[${ts}] Topic: ${topic}, Value:`, value);
         });
     }
 }

@@ -11,6 +11,7 @@
         </div>
         <v-icon icon="mdi-lan-connect" class="ms-2" @click="connect()" hover="Connect proxy"></v-icon>
         <v-icon icon="mdi-lan-disconnect" class="ms-2" @click="disconnect()" hover="Disconnect proxy"></v-icon>
+        <v-icon icon="mdi-lock" class="ms-2" @click="toggle_locked()" hover="Lock/Unlock dashboard"></v-icon>
         <div class="text-left w-100 ms-2">{{ log_message }}</div>
         <v-icon icon="mdi-cloud-upload" class="ms-2" @click="save()" hover="Save Dashboard"></v-icon>
         <v-icon icon="mdi-cloud-download" class="ms-2" @click="load()"></v-icon>
@@ -32,8 +33,8 @@
     <div class="grid-stack">
       <div v-for="(item, index) in widgets" :key="item.id" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y"
         :gs-w="item.w" :gs-h="item.h" :gs-id="item.id" :id="item.id">
-        <div class="grid-stack-item-content" :id="item.id">
-          <div class="card-header">
+        <div :class="['grid-stack-item-content',{ 'border' : !locked }]" :id="item.id" >
+          <div v-if="!locked" class="card-header">
             <span>{{ item.config.title }}</span>
             <v-icon icon="mdi-trash-can-outline" class="ms-2" @click="remove(item)" style="float: right;"></v-icon>
             <v-icon icon="mdi-pencil" class="ms-2" @click="edit(item)" style="float: right;"></v-icon>
@@ -55,7 +56,7 @@
 </template>
 
 <script setup>
-import { ref, markRaw, onMounted, h, onBeforeUnmount, render, inject, provide, nextTick } from "vue";
+import { ref, markRaw, onMounted, h, onBeforeUnmount, render, watch, provide, nextTick } from "vue";
 import { GridStack } from "gridstack";
 // import GridItem from "@/components/GridItem.vue"; // Import your Vue component
 import bus from "@/LocalBus";
@@ -98,6 +99,16 @@ function edit(item) {
   editDialog.value = true;
   editItem = item.config;
 }
+const locked = ref(false);
+
+function toggle_locked() {
+  locked.value = !locked.value;
+  log(locked.value ? "Dashboard locked." : "Dashboard unlocked.");
+  grid.setStatic(locked.value);
+}
+const shadowDom = {};
+const local_time = ref("")
+const connection = ref(null);
 
 const global = ref({}); // Create a reactive global state
 const log_message = ref("log..")
@@ -110,11 +121,7 @@ const widgets = ref([
   { x: 6, y: 10, h: 10, w: 2, config: {}, kind: "Button", id: "345" },
   { x: 8, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "346" },
 ]);
-const shadowDom = {};
 
-const local_time = ref("")
-
-const connection = ref(null);
 
 const v = defineEmits()
 
@@ -406,8 +413,16 @@ function clone(v) {
   height: 100% !important;
 }
 
-.grid-stack-item {
+/*.grid-stack-item {
   border: 1px solid #000;
+}*/
+
+.border {
+  border: 1px solid #000;
+}
+
+.noborder {
+  border: 0px solid #000;
 }
 
 .handle-remove:hover {

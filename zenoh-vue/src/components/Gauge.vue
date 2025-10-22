@@ -31,12 +31,12 @@ import bus from "@/LocalBus";
 
 
 const CONFIG_DEFAULTS = {
-    topic: "src/device/component/message_type/property",
+    topic: "src/random/100",
     field :"",
     title: "Mains Voltage",
     label: 'Volt',
-    min: 0.0,
-    max: 100.0,
+    min: 0,
+    max: 100,
     round: 1,
     step: 10,
     prefix: "",
@@ -85,13 +85,12 @@ let option = ref({
 });
 
 function messageHandler(topic, value) {
-    console.log("Gauge received:", props.config.topic,topic, value);
+   // console.log("Gauge received:", props.config.topic,topic, value);
     if ( props.config.field !== "") value = value[props.config.field];
     option.value.series[0].data[0].value = Math.round(value);
 }
 
 watch(() => props.config,(new_prop,old_prop) => {
-
     console.log("Gauge config changed:", old_prop.topic, "->", new_prop.topic);
     bus.rxd.unsubscribe(old_prop.topic, messageHandler);
     bus.rxd.subscribe(new_prop.topic, messageHandler);

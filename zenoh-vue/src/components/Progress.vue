@@ -13,7 +13,7 @@ import { onMounted, ref } from "vue";
 var model_value = ref(0)
 
 const CONFIG_DEFAULTS = {
-    topic: "src/mtr1/motor.rpm_measured",
+    topic: "src/random/100",
     title: "Mains Voltage",
     label: 'Volt',
     min: 0.0,

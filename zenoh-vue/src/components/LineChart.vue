@@ -69,9 +69,10 @@ const option = ref({
 const CONFIG_DEFAULTS = {
   topic: "src/random/100",
   field: "",
-  title: "just a title",
+  title: "Linechart random",
   min: 0,
   max: 100,
+  samples:100,
 }
 const emit = defineEmits(['defaultConfig', 'log'])
 
@@ -86,7 +87,7 @@ function messageHandler(topic, value) {
     emit('defaultConfig', CONFIG_DEFAULTS);
   }
   option.value.series[0].data.push(value);
-  if (option.value.xAxis.data.length > 100) {
+  if (option.value.xAxis.data.length > props.config.samples) {
     option.value.xAxis.data.shift();
     option.value.series[0].data.shift();
   }
