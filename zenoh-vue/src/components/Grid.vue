@@ -119,7 +119,6 @@ const widgets = ref([
   { x: 2, y: 0, h: 20, w: 2, config: {}, kind: "LineChart", id: "342" },
   { x: 6, y: 0, h: 10, w: 2, config: {}, kind: "Slider", id: "344" },
   { x: 6, y: 10, h: 10, w: 2, config: {}, kind: "Button", id: "345" },
-  { x: 8, y: 0, h: 20, w: 2, config: {}, kind: "Gauge", id: "346" },
 ]);
 
 

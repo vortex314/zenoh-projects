@@ -9,6 +9,7 @@
 import bus from "./LocalBus.js";
 class WS {
     constructor(url, txd, rxd) {
+        console.log("WS Constructor called");
         this.url = url;
         this.ws = null;
         this.connected = false;
@@ -60,6 +61,7 @@ class WS {
             this.rxd.publish("src/random/bool", Math.random()<0.5?true:false);
             let uptime = Date.now() - this.start_time; // get current time in msec
             this.rxd.publish("src/uptime",  uptime );
+       //     console.log("WS publishing random values");
         }, 1000);
     }
 

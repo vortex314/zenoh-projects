@@ -4,7 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, provide, watch } from "vue";
+import { ref, onMounted, provide, watchEffect } from "vue";
 
 import {
   TitleComponent,
@@ -54,8 +54,8 @@ const option = ref({
   },
   yAxis: {
     type: 'value',
-    min: props.config.min,
-    max: props.config.max,
+    min: 0,
+    max: 100,
   },
   series: [
     {
@@ -76,7 +76,14 @@ const CONFIG_DEFAULTS = {
 }
 const emit = defineEmits(['defaultConfig', 'log'])
 
+watchEffect(() => {
+    console.log("LineChart watchEffect:", props.config.min, props.config.max);
+    option.value.yAxis.min = props.config.min;
+    option.value.yAxis.max = props.config.max;
+});
+
 function messageHandler(topic, value) {
+ // console.log("LineChart received:", topic, value);
   if (props.config.field !== "") value = value[props.config.field];
   if (value > props.config.max) {
     CONFIG_DEFAULTS.max = value;
@@ -93,22 +100,6 @@ function messageHandler(topic, value) {
   }
   option.value.xAxis.data.push(new Date().toLocaleTimeString());
 }
-watch(
-  () => props.config,
-  (newConfig, oldConfig) => {
-    // Unsubscribe from the old topic
-    bus.rxd.unsubscribe(oldConfig.topic, messageHandler);
-
-    // Subscribe to the new topic
-    bus.rxd.subscribe(newConfig.topic, messageHandler);
-
-    // Update the chart options
-    option.value.yAxis.min = newConfig.min;
-    option.value.yAxis.max = newConfig.max;
-  },
-  { deep: true } // Ensure deep watching for nested properties
-);
-
 
 onMounted(() => {
   CONFIG_DEFAULTS.id = props.id;
