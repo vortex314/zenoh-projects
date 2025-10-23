@@ -13,9 +13,9 @@ class LocalBus {
         this.emitter.emit(topic, value);      
     }
     subscribe(topic, handler) {
-        this.emitter.on(topic, function (value) {
+        return this.emitter.on(topic, function (value) {
                 handler(this.event,value);
-            }
+            },{objectify: true}
         );
     }
     unsubscribe(topic,handler) {

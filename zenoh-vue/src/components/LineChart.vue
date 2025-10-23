@@ -3,9 +3,8 @@
 </template>
 
 <script setup>
-
+import bus from "@/LocalBus";
 import { ref, onMounted, provide, watchEffect } from "vue";
-
 import {
   TitleComponent,
   TooltipComponent,
@@ -33,8 +32,6 @@ use([
   ToolboxComponent,
   DataZoomComponent]);
 provide(THEME_KEY, "light");
-
-import bus from "@/LocalBus";
 
 const props = defineProps({
   id: {
@@ -64,7 +61,6 @@ const option = ref({
     }
   ]
 });
-
 
 const CONFIG_DEFAULTS = {
   topic: "src/random/100",

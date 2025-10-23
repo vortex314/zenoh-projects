@@ -4,7 +4,7 @@
 
 <script setup>
 
-import { ref, onMounted, provide, watch, toRef, watchEffect } from "vue";
+import { ref, onMounted, provide, watch, toRef, isRef, watchEffect } from "vue";
 import {
     TitleComponent,
     TooltipComponent,
@@ -28,11 +28,13 @@ use([
 provide(THEME_KEY, "light");
 
 import bus from "@/LocalBus";
+import { } from "util";
 
 
 const CONFIG_DEFAULTS = {
     topic: "src/random/100",
     field: "",
+    eval: "",
     title: "Mains Voltage",
     label: 'Volt',
     min: 0,
@@ -83,46 +85,34 @@ let option = ref({
         }
     ]
 });
+let subscriber = null;
 
-const series = toRef(option.value.series[0]);
+// const series = toRef(option.value.series[0]);
 
 function messageHandler(topic, value) {
-    console.log("Gauge received:", props.config.topic,topic, value);
+    //   console.log("Gauge received:", props.config.topic,topic, value);
     if (props.config.field !== "") value = value[props.config.field];
+    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
     option.value.series[0].data[0].value = Math.round(value);
 }
 
+
 watchEffect(() => {
-    console.log("Gauge watchEffect:", props.config.min, props.config.max);
-    option.value.series[0].max = props.config.max;
-    option.value.series[0].min = props.config.min;
-    option.value.series[0].name = props.config.title;
-    option.value.series[0].data[0].name =  props.config.label;
+    if (subscriber) subscriber.off();
+    if (props.config.topic) subscriber = bus.rxd.subscribe(props.config.topic, messageHandler);
 });
 
-/*
-watch(
-  () => [props.config.min, props.config.max],
-  ([min, max]) => {
-    option.value.series[0].min = min
-    option.value.series[0].max = max
-  }
-)*/
-/*
-watch(() => props.config,(new_prop,old_prop) => {
-    console.log("Gauge config changed:", old_prop.topic, "->", new_prop.topic);
-    bus.rxd.unsubscribe(old_prop.topic, messageHandler);
-    bus.rxd.subscribe(new_prop.topic, messageHandler);
-    option.value.series[0].name = new_prop.title || option.value.series[0].name;
-    option.value.series[0].min = new_prop.min || option.value.series[0].min;
-    option.value.series[0].max = new_prop.max || option.value.series[0].max;
-    option.value.series[0].data[0].name = new_prop.label || option.value.series[0].data[0].name;
-});*/
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id;
     emit('defaultConfig', CONFIG_DEFAULTS);
-    bus.rxd.subscribe(props.config.topic, messageHandler);
+  //  subscriber = bus.rxd.subscribe(props.config.topic, messageHandler);
+    syncMappedFields(props, option, [
+        { from: 'config.max', to: 'series[0].max' },
+        { from: 'config.min', to: 'series[0].min' }
+    ])
 });
+
+
 </script>
 
 <style scoped>
