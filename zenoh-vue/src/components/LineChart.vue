@@ -4,6 +4,7 @@
 
 <script setup>
 import bus from "@/LocalBus";
+import { syncMappedFields  } from "@/util";
 import { ref, onMounted, provide, watchEffect } from "vue";
 import {
   TitleComponent,
@@ -45,19 +46,24 @@ const props = defineProps({
 });
 
 const option = ref({
+  title: {
+        text: props.config.title || "Gauge",   // 👈 main title
+        left: 'center',
+    },
   xAxis: {
     type: 'category',
     data: []
   },
   yAxis: {
     type: 'value',
-    min: 0,
-    max: 100,
+    min: props.config.min || 0,
+    max: props.config.max || 100,
   },
   series: [
     {
       data: [],
-      type: 'line'
+      type: 'line',
+      name: props.config.title || "Linechart random",
     }
   ]
 });
@@ -65,42 +71,41 @@ const option = ref({
 const CONFIG_DEFAULTS = {
   topic: "src/random/100",
   field: "",
+  eval :"",
   title: "Linechart random",
   min: 0,
   max: 100,
   samples:100,
 }
 const emit = defineEmits(['defaultConfig', 'log'])
+let subscriber = null;
+
 
 watchEffect(() => {
-    console.log("LineChart watchEffect:", props.config.min, props.config.max);
-    option.value.yAxis.min = props.config.min;
-    option.value.yAxis.max = props.config.max;
+    if (subscriber) subscriber.off();
+    if (props.config.topic) subscriber = bus.rxd.subscribe(props.config.topic, messageHandler);
 });
 
 function messageHandler(topic, value) {
- // console.log("LineChart received:", topic, value);
   if (props.config.field !== "") value = value[props.config.field];
-  if (value > props.config.max) {
-    CONFIG_DEFAULTS.max = value;
-    emit('defaultConfig', CONFIG_DEFAULTS);
-  }
-  if (value < props.config.min) {
-    CONFIG_DEFAULTS.min = value;
-    emit('defaultConfig', CONFIG_DEFAULTS);
-  }
+  if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
+
   option.value.series[0].data.push(value);
+  option.value.xAxis.data.push(new Date().toLocaleTimeString());
   if (option.value.xAxis.data.length > props.config.samples) {
     option.value.xAxis.data.shift();
     option.value.series[0].data.shift();
   }
-  option.value.xAxis.data.push(new Date().toLocaleTimeString());
 }
 
 onMounted(() => {
   CONFIG_DEFAULTS.id = props.id;
   emit('defaultConfig', CONFIG_DEFAULTS);
-  bus.rxd.subscribe(props.config.topic, messageHandler);
+  syncMappedFields(props, option, [
+      { from: 'config.max', to: 'yAxis.max' },
+      { from: 'config.min', to: 'yAxis.min' },
+      { from: 'config.title', to: 'title.text' },
+  ])
 });
 
 </script>

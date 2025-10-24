@@ -55,10 +55,8 @@ import { ref,watch,isRef } from 'vue';
       nested[lastKey] = value;
     };*/
 
-    console.log("syncMappedFields", mappings);
 
     mappings.forEach(({ from, to }) => {
-        console.log("Mapping ", from, to);
         watch(() => getNestedValue(source.value ?? source, from), (newVal) => {
             setNestedValue(target.value ?? target, to, newVal);
         });

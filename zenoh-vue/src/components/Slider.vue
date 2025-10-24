@@ -1,6 +1,11 @@
 <template>
-    <div> {{ value }}
-        <v-slider thumb-label 
+    <div> 
+      <p>
+        {{ props.config.title }}
+      </p>
+      <p>{{ props.config.prefix }} {{ value }} {{ props.config.suffix }}
+      </p>
+      <v-slider thumb-label 
             v-model="value" 
             :step="props.config.step" 
             :max="props.config.max" 
@@ -28,9 +33,12 @@ const props = defineProps({
 })
 const value = ref(51)
 const CONFIG_DEFAULTS = {
-            topic: "dst/esp1/drive/HoverBoardCmd/speed",
+            dst: "dst/esp1/drive/HoverBoardCmd/speed",
+            src:"src/esp1/drive/HoverBoardCmd/speed",
+            field: "",
+            eval: "",
             title : "just a title",
-            prefix:"",
+            prefix:"voltage : ",
             suffix:"V",
             min:-100,
             max:100,
@@ -44,7 +52,10 @@ onMounted(() => {
 })
 
 function onChange(slider_value) {
-   bus.txd.publish(props.config.topic,slider_value)
+   bus.txd.publish(props.config.dst,slider_value)
+   bus.rxd.subscribe(props.config.src, (topic, newValue) => {
+       value.value = newValue
+   });
 }
 
 

@@ -20,16 +20,17 @@ const emit = defineEmits(['defaultConfig'])
 const id = ref(null)
 
 function pressed() {
-    bus.txd.publish(props.config.topic, props.config.pressed_msg)
+    bus.txd.publish(props.config.dst, props.config.pressed_msg)
 }
 
 const CONFIG_DEFAULTS = {
-    topic : "dst/esp1/sys/SysCmd/reset",
+    dst : "dst/esp1/sys/SysCmd/reset",
+    field:"",
+    eval:"",
     title :"Button Title",
     label : "Button Label",
     pressed_msg : "true",
     released_msg : "false",
-
 }
 
 onMounted(() => {

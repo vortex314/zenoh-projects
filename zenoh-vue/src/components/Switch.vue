@@ -6,7 +6,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, provide, watch, toRef, isRef, watchEffect } from "vue";
 import bus from '@/LocalBus'
 
 const props = defineProps({
@@ -30,25 +30,23 @@ const CONFIG_DEFAULTS = {
 }
 const emit = defineEmits(['defaultConfig'])
 const switch_state = ref(true)
-
+let subscriber = null;
+function messageHandler(topic, value) {
+    if (props.config.field !== "") value = value[props.config.field];
+    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
+    switch_state.value = value;
+}
 function state_changed() {
     bus.txd.publish(props.config.dst, switch_state.value)
 }
 
-
+watchEffect(() => {
+    if (subscriber) subscriber.off();
+    if (props.config.src) subscriber = bus.rxd.subscribe(props.config.src, messageHandler);
+});
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
-    bus.rxd.subscribe(props.config.src, (topic, value) => {
-        var v = JSON.stringify(value); // the config is translated to string 
-        switch_state.value = v;
-    });
 })
-/*
-
-        :true-value="props.config.true_value" :false-value="props.config.false_value"
-
-        */
-
 </script>

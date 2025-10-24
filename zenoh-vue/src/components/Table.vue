@@ -25,13 +25,13 @@
 </template>
 <script setup>
 import bus from "@/LocalBus";
-import { onMounted, ref } from "vue";
+import { ref, onMounted, provide, watch, toRef, isRef, watchEffect } from "vue";
 import { defineProps } from "vue";
 import "vuetify/styles";
 import { VDataTable } from "vuetify/components";
 
 const CONFIG_DEFAULTS = {
-    topic: "src/**",
+    src: "src/**",
     title: "Mains Voltage",
 }
 
@@ -50,17 +50,19 @@ const props = defineProps({
 });
 
 const items = ref([]);
+let subscriber = null;
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS);
-    bus.rxd.subscribe(props.config.topic, (topic, value) => {
-        onMessage(topic, value);
-    });
 });
 
+watchEffect(() => {
+    if (subscriber) subscriber.off();
+    if (props.config.src) subscriber = bus.rxd.subscribe(props.config.src, messageHandler);
+});
 
-function onMessage(topic, value) {
+function messageHandler(topic, value) {
     var v = JSON.stringify(value)
     var idx = findIndexOfTopic(topic);
     var ts = new Date().toTimeString().split(' ')[0]

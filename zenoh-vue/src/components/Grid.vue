@@ -402,7 +402,7 @@ function clone(v) {
 @import "gridstack/dist/gridstack.css";
 
 .grid-stack {
-  background: #FAFAD2;
+  background: #E0E0E0;
 }
 
 .grid-stack-item-content {

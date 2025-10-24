@@ -1,10 +1,13 @@
 <template>
-    <span style="display: block;" :class="alive_state" width="100%">{{ props.config.label }}</span>
-</template>
+    <span>
+        <div style="display: block;" :class="alive_state" width="100%">{{ props.config.label }}</div>
+    </span></template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import bus from '@/LocalBus'
+import { ref, onMounted, provide, watch, toRef, isRef, watchEffect } from "vue";
+import bus from "@/LocalBus";
+import { syncMappedFields } from "@/util";
+let subscriber = null;
 
 const props = defineProps({
     config: {
@@ -19,36 +22,35 @@ const props = defineProps({
 const emit = defineEmits(['defaultConfig'])
 const alive_state = ref("dead")
 const last_update = ref(Date.now())
-const found_topics=ref({})
-
-
-
 const CONFIG_DEFAULTS = {
     src: "src/random/bool",
     title: "Alive",
-    label: "Switch Label",
+    label: "Alive Status",
     timeout: 5000,
+}
+
+watchEffect(() => {
+    if (subscriber) subscriber.off();
+    if (props.config.src) subscriber = bus.rxd.subscribe(props.config.src, messageHandler);
+});
+
+function messageHandler(topic, value) {
+    alive_state.value = "alive"
+    last_update.value = Date.now()
 }
 
 onMounted(() => {
     CONFIG_DEFAULTS.id = props.id
     emit('defaultConfig', CONFIG_DEFAULTS)
-    bus.rxd.subscribe(props.config.src, (topic, value) => {
-        if ( topic in found_topics ) {
-
-        } else 
-        {
-
-        }
-        alive_state.value = "alive"
-        last_update.value = Date.now()
-    });
+    bus.rxd.subscribe(props.config.src, messageHandler);
     setInterval(() => {
- //       console.log("check alive ", Date.now() - last_update.value, props.config.timeout);
         if (Date.now() - last_update.value > props.config.timeout) {
             alive_state.value = "dead"
         }
     }, props.config.timeout)
+    syncMappedFields(props, {}, [
+        { from: 'config.label', to: 'label' },
+    ])
 })
 </script>
 

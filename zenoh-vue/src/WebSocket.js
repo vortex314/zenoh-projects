@@ -49,7 +49,6 @@ class WS {
             const message = JSON.parse(event.data);
             console.log("Message received:", message);
             if (message.type === "Publish" && this.rxd) {
-                console.log("WS RXD Publish:", message.topic, message.payload);
                 this.rxd.publish(message.topic, message.payload);
             }
         };
