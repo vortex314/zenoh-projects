@@ -28,7 +28,7 @@ use([
 provide(THEME_KEY, "light");
 
 import bus from "@/LocalBus";
-import { } from "util";
+import { syncMappedFields  } from "@/util";
 
 
 const CONFIG_DEFAULTS = {

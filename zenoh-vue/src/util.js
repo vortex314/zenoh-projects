@@ -1,6 +1,6 @@
-import { ref } from vue;
+import { ref,watch,isRef } from 'vue';
 
-export function setNestedValue(obj, path, value) {
+ function setNestedValue(obj, path, value) {
     const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.'); // convert [0] to .0
     const lastKey = keys.pop();
 
@@ -30,7 +30,7 @@ export function setNestedValue(obj, path, value) {
     current[lastKey] = value;
 }
 
-export function getNestedValue(obj, path) {
+ function getNestedValue(obj, path) {
     const keys = path.replace(/\[(\d+)\]/g, '.$1').split('.');
     const target = isRef(obj) ? obj.value : obj;
 
@@ -46,7 +46,7 @@ export function getNestedValue(obj, path) {
  * @param {Object} target - The target reactive object or ref.
  * @param {Array<{from: string, to: string}>} mappings - Field path mappings.
  */
-export function syncMappedFields(source, target, mappings) {
+ export function syncMappedFields(source, target, mappings) {
     // const getNestedValue = (obj, path) => path.split('.').reduce((o, key) => o?.[key], obj);
     /*const setNestedValue = (obj, path, value) => {
       const keys = path.split('.');
@@ -68,3 +68,5 @@ export function syncMappedFields(source, target, mappings) {
         });
     });
 }
+
+export default syncMappedFields;
