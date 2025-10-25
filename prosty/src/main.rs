@@ -18,7 +18,7 @@ struct Args {
     proto: String,
     /// Output directory for the generated files
     /// default: examples
-    #[arg(short, long, default_value = "../mc-esp32/src")]
+    #[arg(short, long, default_value = "../zenoh-esp32-eventbus/src")]
     cpp_out: String,
     #[arg(short, long, default_value = "../akka/src")]
     rust_out: String,

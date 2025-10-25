@@ -52,6 +52,8 @@ void ZenohActor::on_message(const Envelope &env)
                        { send_msg(env.src->name(), &msg); });
   msg.handle<ZenohInfo>([&](const auto &msg)
                         { send_msg(env.src->name(), &msg); });
+  msg.handle<HoverboardInfo>([&](const auto &msg)
+                             { send_msg(env.src->name(), &msg); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -347,9 +349,11 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   if (strcmp(t.message_type, SysCmd::id) == 0)
   {
     auto msg_opt = SysCmd().deserialize(buffer);
-    if ( msg_opt ) actor->emit(msg_opt);
-    else ERROR("Failed to deserialize SysCmd message");
-  } 
+    if (msg_opt)
+      actor->emit(msg_opt);
+    else
+      ERROR("Failed to deserialize SysCmd message");
+  }
   else
     actor->emit(new ZenohReceived(topic, buffer));
 }

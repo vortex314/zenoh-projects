@@ -46,10 +46,10 @@ const props = defineProps({
 });
 
 const option = ref({
-  title: {
-        text: props.config.title || "Gauge",   // 👈 main title
-        left: 'center',
-    },
+  legend: {}, // enables the legend
+
+    tooltip: { trigger: 'axis' },
+
   xAxis: {
     type: 'category',
     data: []
@@ -60,11 +60,6 @@ const option = ref({
     max: props.config.max || 100,
   },
   series: [
-    {
-      data: [],
-      type: 'line',
-      name: props.config.title || "Linechart random",
-    }
   ]
 });
 
@@ -79,6 +74,7 @@ const CONFIG_DEFAULTS = {
 }
 const emit = defineEmits(['defaultConfig', 'log'])
 let subscriber = null;
+let topics = [];
 
 
 watchEffect(() => {
@@ -88,13 +84,26 @@ watchEffect(() => {
 
 function messageHandler(topic, value) {
   if (props.config.field !== "") value = value[props.config.field];
-  if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
-
-  option.value.series[0].data.push(value);
+  if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value));
+  // find topic in topics array
+  var idx = topics.indexOf(topic);
+  if (idx === -1) {
+    topics.push(topic);
+    idx = topics.length - 1;
+    option.value.series.push({
+      data: [],
+      type: 'line',
+      name: topic+"/"+props.config.field || "value",
+    });
+  } 
+  
   option.value.xAxis.data.push(new Date().toLocaleTimeString());
+
+  option.value.series[idx].data.push(value);
+
   if (option.value.xAxis.data.length > props.config.samples) {
     option.value.xAxis.data.shift();
-    option.value.series[0].data.shift();
+    option.value.series[idx].data.shift();
   }
 }
 
@@ -104,7 +113,6 @@ onMounted(() => {
   syncMappedFields(props, option, [
       { from: 'config.max', to: 'yAxis.max' },
       { from: 'config.min', to: 'yAxis.min' },
-      { from: 'config.title', to: 'title.text' },
   ])
 });
 

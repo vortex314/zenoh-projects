@@ -23,7 +23,7 @@ const emit = defineEmits(['defaultConfig'])
 const CONFIG_DEFAULTS = {
     src: "src/esp1/sys/SysInfo",
     field: "uptime",
-    eval: "parseFloat(value).toFixed(2)",
+    eval: "new Date(value).toISOString().slice(11,19) ",
     title: "Output Title",
     label: "Output Label",
     suffix: "s",

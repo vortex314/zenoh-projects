@@ -44,6 +44,7 @@ const CONFIG_DEFAULTS = {
     minorTicks: 1,
     majorTicks: 5,
     gaugeColor: "#00ff00",
+    icon: "mdi-gauge",
 }
 const emit = defineEmits(['defaultConfig'])
 

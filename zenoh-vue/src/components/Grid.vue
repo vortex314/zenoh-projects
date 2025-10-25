@@ -1,12 +1,12 @@
 <template>
   <div>
     <v-container>
-      <v-system-bar window color="primary" >
+      <v-system-bar window color="primary">
         <div @click="config_mqtt()" style="cursor: pointer;">
-          <v-img :src="mqttIcon" width="20px" height="20px" class="ms-2" ></v-img>
+          <v-img :src="mqttIcon" width="20px" height="20px" class="ms-2"></v-img>
         </div>
         <div @click="config_zenoh()" style="cursor: pointer;">
-          <v-img :src="zenohIcon" width="20px" height="20px" class="ms-2" >
+          <v-img :src="zenohIcon" width="20px" height="20px" class="ms-2">
           </v-img>
         </div>
         <v-icon icon="mdi-lan-connect" class="ms-2" @click="connect()" hover="Connect proxy"></v-icon>
@@ -33,7 +33,7 @@
     <div class="grid-stack">
       <div v-for="(item, index) in widgets" :key="item.id" class="grid-stack-item" :gs-x="item.x" :gs-y="item.y"
         :gs-w="item.w" :gs-h="item.h" :gs-id="item.id" :id="item.id">
-        <div :class="['grid-stack-item-content',{ 'border' : !locked }]" :id="item.id" >
+        <div :class="['grid-stack-item-content',{ 'border' : !locked }]" :id="item.id">
           <div v-if="!locked" class="card-header">
             <span>{{ item.config.title }}</span>
             <v-icon icon="mdi-trash-can-outline" class="ms-2" @click="remove(item)" style="float: right;"></v-icon>
@@ -126,12 +126,12 @@ const v = defineEmits()
 
 function deepMerge(target, source, overwrite = false) {
   for (const key in source) {
-    if (source[key] instanceof Object && key in target && target[key] instanceof Object) { 
-      deepMerge(target[key], source[key], overwrite); 
-    } else { 
-      if (overwrite || !(key in target)) { 
-        target[key] = source[key]; 
-      } 
+    if (source[key] instanceof Object && key in target && target[key] instanceof Object) {
+      deepMerge(target[key], source[key], overwrite);
+    } else {
+      if (overwrite || !(key in target)) {
+        target[key] = source[key];
+      }
     }
   }
   return target;
@@ -155,6 +155,7 @@ function copy(item) {
     h: item.h, w: item.w, config: JSON.parse(JSON.stringify(item.config)),
     kind: item.kind, id: id
   };
+  new_item.config.id = id;
   widgets.value.push(new_item);
   nextTick(() => {
     const newEl = document.getElementById(id)
