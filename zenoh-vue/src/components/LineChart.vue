@@ -47,9 +47,7 @@ const props = defineProps({
 
 const option = ref({
   legend: {}, // enables the legend
-
-    tooltip: { trigger: 'axis' },
-
+  tooltip: { trigger: 'axis' },
   xAxis: {
     type: 'category',
     data: []
@@ -64,7 +62,7 @@ const option = ref({
 });
 
 const CONFIG_DEFAULTS = {
-  topic: "src/random/100",
+  src: "src/random/100",
   field: "",
   eval :"",
   title: "Linechart random",
@@ -76,10 +74,9 @@ const emit = defineEmits(['defaultConfig', 'log'])
 let subscriber = null;
 let topics = [];
 
-
 watchEffect(() => {
     if (subscriber) subscriber.off();
-    if (props.config.topic) subscriber = bus.rxd.subscribe(props.config.topic, messageHandler);
+    if (props.config.src) subscriber = bus.rxd.subscribe(props.config.src, messageHandler);
 });
 
 function messageHandler(topic, value) {
@@ -97,11 +94,11 @@ function messageHandler(topic, value) {
     });
   } 
   
-  option.value.xAxis.data.push(new Date().toLocaleTimeString());
-
+  if ( idx == 0 ) option.value.xAxis.data.push(new Date().toLocaleTimeString()); // only once per sample
   option.value.series[idx].data.push(value);
 
   if (option.value.xAxis.data.length > props.config.samples) {
+    console.log("Removing old sample : ", topics[idx]);
     option.value.xAxis.data.shift();
     option.value.series[idx].data.shift();
   }

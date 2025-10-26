@@ -1,7 +1,6 @@
 <template>
-    <span>
         <div style="display: block;" :class="alive_state" width="100%">{{ props.config.label }}</div>
-    </span></template>
+</template>
 
 <script setup>
 import { ref, onMounted, provide, watch, toRef, isRef, watchEffect } from "vue";

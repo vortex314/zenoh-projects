@@ -1,12 +1,11 @@
 <template>
-    <div ref="container" style="width: 100%; height: 100%;">
-        <v-text-field :style="{ fontSize: fontSize + 'px' }" class="text-h5">{{ props.config.prefix }} {{ text_value }}{{
-            props.config.suffix }}</v-text-field>
-    </div>
+        <div class="text-body-1 justify-xl-center">
+            {{ props.config.prefix }} {{ text_value }}{{ props.config.suffix }}
+        </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch,watchEffect } from 'vue'
+import { ref, onMounted, watch, watchEffect } from 'vue'
 import bus from '@/LocalBus'
 
 const props = defineProps({
@@ -31,7 +30,7 @@ const CONFIG_DEFAULTS = {
 }
 
 var text_value = ref("---");
-var fontSize = ref(12);
+var fontSize = ref(10);
 var container = ref(null);
 let subscriber = null;
 
@@ -46,10 +45,9 @@ watchEffect(() => {
 });
 
 function messageHandler(topic, value) {
-    console.log("Output received:", topic, value);
     if (props.config.field !== "") value = value[props.config.field];
-    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value));    
-    text_value.value = value; 
+    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value));
+    text_value.value = value;
 }
 
 function getOptimalFontSize(text, width, height, fontFamily = 'Arial') {
@@ -61,7 +59,7 @@ function getOptimalFontSize(text, width, height, fontFamily = 'Arial') {
         const metrics = ctx.measureText(value);
         const textWidth = metrics.width;
         const textHeight = size;
-        if (textWidth > width || textHeight > height) break; 
+        if (textWidth > width || textHeight > height) break;
         size++;
     }
     return size - 1;

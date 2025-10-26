@@ -59,41 +59,57 @@ const props = defineProps({
     },
 });
 let option = ref({
+    legend: {}, // enables the legend
+    tooltip: { trigger: 'axis' },
     title: {
         text: props.config.title || "Gauge",   // 👈 main title
         left: 'center',
     },
     tooltip: {
-        formatter: '{a} <br/>{b} : {c}'
+        formatter: '{b} : {c}'
     },
     series: [
+    ]
+});
+let subscriber = null;
+let topics = [];
+
+
+function messageHandler(topic, value) {
+    if (props.config.field !== "") value = value[props.config.field];
+    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
+    var idx = topics.indexOf(topic);
+    if (idx === -1) {
+        console.log("New topic for Gauge:", topic);
+        topics.push(topic);
+        idx = topics.length - 1;
+        let offset_title = 90 + (idx * 20);
+        let new_entry =
         {
-            
             min: props.config.min || 0,
             max: props.config.max || 100,
             type: 'gauge',
             progress: {
-                show: true
+                show: false
             },
             detail: {
                 valueAnimation: false,
                 formatter: '{value}'
             },
+            title: {
+                offsetCenter: [0, offset_title + '%'], // 👈 move title toward the bottom
+                fontSize: 16
+            },
             data: [
                 {
-                    value: 50,
-                    name: props.config.title || "Gauge"
+                    value: value,
+                    name: topic + "/" + (props.config.field || "value"),
                 }
             ]
-        }
-    ]
-});
-let subscriber = null;
-
-function messageHandler(topic, value) {
-    if (props.config.field !== "") value = value[props.config.field];
-    if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value))
-    option.value.series[0].data[0].value = Math.round(value);
+        };
+        option.value.series.push(new_entry);
+    }
+    option.value.series[idx].data[0].value = Math.round(value);
 }
 
 watchEffect(() => {

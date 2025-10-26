@@ -7,23 +7,23 @@ version = "0.0.0"
 
 [dependencies]
 
-embassy-executor = {workspace = true }
-embassy-futures = {workspace = true}
-embassy-sync = {workspace = true}
-embassy-time = {workspace = true}
-embedded-io-async = {workspace = true}
-esp-alloc = {workspace = true}
-esp-backtrace = {workspace = true}
-esp-hal = {workspace = true}
-esp-hal-embassy = {workspace = true}
-esp-wifi = {workspace = true}
-log = {workspace = true}
-minicbor = {workspace = true, default-features = false, features = [
+embassy-executor = "*"
+embassy-futures = "*"
+embassy-sync = "*"
+embassy-time = "*"
+embedded-io-async = "*"
+esp-alloc = "*"
+esp-backtrace = "*"
+esp-hal = "*"
+esp-hal-embassy = "*"
+esp-wifi = "*"
+log = "*"
+minicbor = {version="*", default-features = false, features = [
     "derive",
     "alloc",
     "half",
 ] }
-anyhow = {workspace = true}
+anyhow = "*"
 
 actors = {path = "../esp32-actors"}
 limero = {path = "../esp32-limero-embassy"}

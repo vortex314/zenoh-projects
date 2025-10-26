@@ -6,21 +6,21 @@ publish = false
 version = "0.1.0"
 
 [dependencies]
-embassy-futures = { workspace = true }
-embassy-time = { workspace = true }
-embassy-sync = { workspace = true }
-esp-wifi = { workspace = true }
-esp-hal = { workspace = true }
-# esp-backtrace = { workspace = true }
-embedded-io-async = { workspace = true }
+embassy-futures = "0.1.2"
+embassy-time = "0.5.0"
+embassy-sync = "0.7.2"
+esp-radio = { version="0.16.0", features=["esp32","wifi"]}
+esp-hal = { version="0.23.1", default-features = false, features = ["esp32","unstable"]}
+# esp-backtrace = "*"
+embedded-io-async = "*"
 
 
 aes = "0.8.4"
 aligned = {version = "0.4.2", optional = true}
 
 fugit = "0.3.7"
-heapless = "0.8.0"
-hex-literal = "0.4.1"
+heapless = "0.9.1"
+hex-literal = "1.0.0"
 hmac = {version = "0.12.1", default-features = false}
 
 lis3dh-async = "0.9.3"
@@ -62,3 +62,7 @@ serde = {version = "1.0.210", default-features = false, features = ["derive", "a
 
 [features]
 async = []
+
+[dependencies.esp-rom-sys]
+version = "0.1.2"
+features = ["esp32"] # Replace "esp32" with the appropriate feature for your target

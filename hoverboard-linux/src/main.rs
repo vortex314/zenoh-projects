@@ -11,7 +11,7 @@ use bytes::BytesMut;
 use tokio_serial::SerialPortBuilderExt;
 
 #[cfg(unix)]
-const DEFAULT_TTY: &str = "/dev/ttyUSB0";
+const DEFAULT_TTY: &str = "/dev/ttyUSB1";
 #[cfg(windows)]
 const DEFAULT_TTY: &str = "COM1";
 
