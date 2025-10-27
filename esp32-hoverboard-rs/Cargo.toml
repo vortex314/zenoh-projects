@@ -25,9 +25,9 @@ minicbor = {version="*", default-features = false, features = [
 ] }
 anyhow = "*"
 
-actors = {path = "../esp32-actors"}
-limero = {path = "../esp32-limero-embassy"}
-msg = {path = "../msg"}
+actors = {path = "../esp32-actors-rs"}
+limero = {path = "../esp32-limero-embassy-rs"}
+msg = {path = "../msg-rs"}
 
 [features]
 default = []

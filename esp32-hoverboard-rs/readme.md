@@ -9,7 +9,7 @@ In the direct drive mode , it accepts directives from a PS4 controller and send 
 
 ![doc/hoverboard_esp32.drawio.png](doc/hoverboard_esp32.drawio.png)
 
-# SETUP
+# Setup
 
 ```sh
 cargo install espup --locked
