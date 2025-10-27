@@ -36,7 +36,12 @@ fn main() -> anyhow::Result<()> {
     init();
     let proto_file = Path::new("proto/message.proto");
     let proto_content = fs::read_to_string(proto_file).expect("Failed to read proto file");
-    let fd = FileDescriptor::parse(&proto_content.as_bytes()).expect("Failed to parse proto file");
+
+    let res = FileDescriptor::parse(&proto_content.as_bytes());
+    if res.is_err() {
+        panic!("Failed to parse proto file: {:?}", res.err());
+    }
+    let fd = res.unwrap();
     info!("Proto file parsed successfully.");
 
     let messages = convert_rust_types(&fd);

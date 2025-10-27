@@ -35,6 +35,28 @@ pub enum Toggle {
     On,
 } 
 
+#[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum CtrlMod {
+    Voltage,
+    Speed,
+    Torque,
+} 
+
+#[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum CtrlTyp {
+    Commutation,
+    Sinusoidal,
+    Foc,
+} 
+
+#[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum InTyp {
+    Disabled,
+    NormalPot,
+    MiddleRestingPot,
+    AutoDetect,
+} 
+
 
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
@@ -288,17 +310,105 @@ impl Msg for HoverboardCmd {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct LpsInfo {
+pub struct HoverboardInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub direction:Option<i32>,
+    pub ctrl_mod:Option<CtrlMod>,
         #[serde(skip_serializing_if = "Option::is_none")]
-    pub msg:Option<String>,
+    pub ctrl_typ:Option<CtrlTyp>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub cur_mot_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub rpm_mot_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_ena:Option<uuint32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_hi:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_lo:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub phase_adv_max_deg:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_raw:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_typ:Option<InTyp>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_min:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_mid:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in1_cmd:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_raw:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_typ:Option<InTyp>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_min:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_mid:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub in2_cmd:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_raw:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_typ:Option<InTyp>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_min:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_mid:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_cmd:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_raw:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_typ:Option<InTyp>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_min:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_mid:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_max:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_cmd:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub dc_curr:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub rdc_curr:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub ldc_curr:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmdl:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmdr:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub spd_avg:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub spdl:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub spdr:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter_rate:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub spd_coef:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub str_coef:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub batv:Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub temp:Option<u32>,
         
 
 }
-impl Msg for LpsInfo {
-     const ID: u32 = 24957;
-     const NAME: &'static str = "LpsInfo";
+impl Msg for HoverboardInfo {
+     const ID: u32 = 59150;
+     const NAME: &'static str = "HoverboardInfo";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -306,7 +416,33 @@ impl Msg for LpsInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:LpsInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:HoverboardInfo = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct HoverboardCmd {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub steer:Option<i32>,
+        
+
+}
+impl Msg for HoverboardCmd {
+     const ID: u32 = 58218;
+     const NAME: &'static str = "HoverboardCmd";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:HoverboardCmd = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }

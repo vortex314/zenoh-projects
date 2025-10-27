@@ -89,106 +89,75 @@ enum Toggle {
   ON = 1;
 }
 
-
-message LpsInfo {
-     int32 direction=1;
-     string msg=3;
+enum CtrlMod {
+ VOLTAGE = 1;
+ SPEED = 2;
+ TORQUE = 3;
 }
-/*
-    RET_ERR(frame_encoder.add_map(HbVar::CTRL_MOD, ctrlModReqRaw));
-    RET_ERR(frame_encoder.add_map(HbVar::CTRL_TYP, rtP_Left.z_ctrlTypSel));
-    RET_ERR(frame_encoder.add_map(HbVar::CUR_MOT_MAX, rtP_Left.i_max));
-    RET_ERR(frame_encoder.add_map(HbVar::RPM_MOT_MAX, rtP_Left.n_max));
-    RET_ERR(frame_encoder.add_map(HbVar::FI_WEAK_ENA, rtP_Left.b_fieldWeakEna));
-    RET_ERR(frame_encoder.add_map(HbVar::FI_WEAK_HI, rtP_Left.r_fieldWeakHi));
-    RET_ERR(frame_encoder.add_map(HbVar::FI_WEAK_LO, rtP_Left.r_fieldWeakLo));
-    RET_ERR(frame_encoder.add_map(HbVar::FI_WEAK_MAX, rtP_Left.id_fieldWeakMax));
-    RET_ERR(frame_encoder.add_map(HbVar::PHASE_ADV_MAX_DEG, rtP_Left.a_phaAdvMax));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_RAW, input1[0].raw));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_TYP, input1[0].typ));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_MIN, input1[0].min));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_MID, input1[0].mid));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_MAX, input1[0].max));
-    RET_ERR(frame_encoder.add_map(HbVar::IN1_CMD, input1[0].cmd));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_RAW, input2[0].raw));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_TYP, input2[0].typ));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_MIN, input2[0].min));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_MID, input2[0].mid));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_MAX, input2[0].max));
-    RET_ERR(frame_encoder.add_map(HbVar::IN2_CMD, input2[0].cmd));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_RAW, input1[1].raw));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_TYP, input1[1].typ));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_MIN, input1[1].min));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_MID, input1[1].mid));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_MAX, input1[1].max));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN1_CMD, input1[1].cmd));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_RAW, input2[1].raw));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_TYP, input2[1].typ));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_MIN, input2[1].min));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_MID, input2[1].mid));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_MAX, input2[1].max));
-    RET_ERR(frame_encoder.add_map(HbVar::AUX_IN2_CMD, input2[1].cmd));
-    RET_ERR(frame_encoder.add_map(HbVar::DC_CURR, dc_curr));
-    RET_ERR(frame_encoder.add_map(HbVar::RDC_CURR, right_dc_curr));
-    RET_ERR(frame_encoder.add_map(HbVar::LDC_CURR, left_dc_curr));
-    RET_ERR(frame_encoder.add_map(HbVar::CMDL, cmdL));
-    RET_ERR(frame_encoder.add_map(HbVar::CMDR, cmdR));
-    RET_ERR(frame_encoder.add_map(HbVar::SPD_AVG, speedAvg));
-    RET_ERR(frame_encoder.add_map(HbVar::SPDL, rtY_Left.n_mot));
-    RET_ERR(frame_encoder.add_map(HbVar::SPDR, rtY_Right.n_mot));
-    RET_ERR(frame_encoder.add_map(HbVar::FILTER_RATE, 0));
-    RET_ERR(frame_encoder.add_map(HbVar::SPD_COEF, SPEED_COEFFICIENT));
-    RET_ERR(frame_encoder.add_map(HbVar::STR_COEF, STEER_COEFFICIENT));
-    RET_ERR(frame_encoder.add_map(HbVar::BATV, batVoltageCalib));
-    RET_ERR(frame_encoder.add_map(HbVar::TEMP, board_temp_deg_c));
+enum CtrlTyp {
+ COMMUTATION = 0;
+ SINUSOIDAL = 1;
+ FOC = 2;
+}
 
-    struct PropDescriptor {
-    HbVar id;
-    const char* name;
-    const char* description;
-    uint8_t ValueType;
-    uint8_t ValueMode;
-} props[] = {
-    {HbVar::CTRL_MOD, "CTRL_MOD", "Ctrl mode 1:Voltage 2:Speed 3:Torque", ValueType::UINT, ValueMode::READ},
-    { HbVar::CTRL_TYP, "CTRL_TYP", "Ctrl type 0:Commutation 1:Sinusoidal 2:FOC", ValueType::UINT, ValueMode::READ },
-    { HbVar::CUR_MOT_MAX,"I_MOT_MAX","Max phase current A", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::RPM_MOT_MAX,"RPM_MOT_MAX","Max motor RPM", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::FI_WEAK_ENA,"FI_WEAK_ENA","Enable field weak 0:OFF 1:ON", ValueType::UINT, ValueMode::READ },
-    { HbVar::FI_WEAK_HI,"FI_WEAK_HI","Field weak high RPM", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::FI_WEAK_LO,"FI_WEAK_LO","Field weak low RPM", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::FI_WEAK_MAX,"FI_WEAK_MAX","Field weak max current A(FOC only)", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::PHASE_ADV_MAX_DEG,"PHA_ADV_MAX","Max Phase Adv angle Deg(SIN only)", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN1_RAW,"IN1_RAW","Input1 raw value", ValueType::UINT, ValueMode::READ },
-    { HbVar::IN1_TYP,"IN1_TYP","Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN1_MIN,"IN1_MIN","Input1 minimum value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN1_MID,"IN1_MID","Input1 middle value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN1_MAX,"IN1_MAX","Input1 maximum value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN1_CMD,"IN1_CMD","Input1 command value", ValueType::UINT, ValueMode::READ },
-    { HbVar::IN2_RAW,"IN2_RAW","Input2 raw value", ValueType::UINT, ValueMode::READ },
-    { HbVar::IN2_TYP,"IN2_TYP","Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN2_MIN,"IN2_MIN","Input2 minimum value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN2_MID,"IN2_MID","Input2 middle value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN2_MAX,"IN2_MAX","Input2 maximum value", ValueType::UINT, ValueMode::WRITE },
-    { HbVar::IN2_CMD,"IN2_CMD","Input2 command value", ValueType::UINT, ValueMode::READ },
-    { HbVar::DC_CURR,"DC_CURR","Total DC Link current A *100", ValueType::UINT, ValueMode::READ },
-    { HbVar::LDC_CURR,"LDC_CURR","Left DC Link current A *100", ValueType::UINT, ValueMode::READ },
-    { HbVar::RDC_CURR,"RDC_CURR","Right DC Link current A *100", ValueType::UINT, ValueMode::READ },
-    { HbVar::CMDL,"CMDL","Left Motor Command RPM", ValueType::UINT, ValueMode::READ },
-    { HbVar::CMDR,"CMDR","Right Motor Command RPM", ValueType::UINT, ValueMode::READ },
-    { HbVar::SPD_AVG,"SPD_AVG","Motor Measured Avg RPM", ValueType::UINT, ValueMode::READ },
-    { HbVar::SPDL,"SPDL","Left Motor Measured RPM", ValueType::UINT, ValueMode::READ },
-    { HbVar::SPDR,"SPDR","Right Motor Measured RPM", ValueType::UINT, ValueMode::READ },
-    { HbVar::FILTER_RATE,"RATE","Rate *10", ValueType::UINT, ValueMode::READ },
-    { HbVar::SPD_COEF,"SPD_COEF","Speed Coefficient *10", ValueType::UINT, ValueMode::READ },
-    { HbVar::STR_COEF,"STR_COEF","Steer Coefficient *10", ValueType::UINT, ValueMode::READ },
-    { HbVar::BATV,"BATV","Calibrated Battery Voltage *100", ValueType::UINT, ValueMode::READ },
-    { HbVar::TEMP,"TEMP","Calibrated Temperature °C *10", ValueType::UINT, ValueMode::READ },
-};
-*/
+enum InTyp {
+ DISABLED = 0;
+ NORMAL_POT = 1;
+ MIDDLE_RESTING_POT = 2;
+ AUTO_DETECT = 3;
+}
+
+
 message HoverboardInfo {
-
+  CtrlMod ctrl_mod=0; // 1:Voltage 2:Speed 3:Torque
+  CtrlTyp ctrl_typ=1 ; // 0:Commutation 1:Sinusoidal 2:FOC
+  uint32 cur_mot_max=2; // Max phase current A
+  uint32 rpm_mot_max=3; // Max motor RPM
+  uuint32 fi_weak_ena=4; // Enable field weak 0:OFF 1:ON
+  uint32 fi_weak_hi=5;  // Field weak high RPM
+  uint32 fi_weak_lo=6; // Field weak low RPM
+  uint32 fi_weak_max=7; // Field weak max current A (FOC only)
+  uint32 phase_adv_max_deg=8; // Max Phase Adv angle Deg (SIN only)
+  uint32 in1_raw=9;  // Input1 raw value
+  InTyp in1_typ=10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 in1_min=11; // Input1 minimum value
+  uint32 in1_mid=12; // Input1 middle value
+  uint32 in1_max=13; // Input1 maximum value
+  uint32 in1_cmd=14; // Input1 command value
+  uint32 in2_raw=15; // Input2 raw value
+  InTyp in2_typ=16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 in2_min=17; // Input2 minimum value
+  uint32 in2_mid=18; // Input2 middle value
+  uint32 in2_max=19; // Input2 maximum value
+  uint32 in2_cmd=20; // Input2 command value
+  uint32 input1_raw =21; // Input1 raw value
+  InTyp input1_typ=22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 input1_min=23; // Input1 minimum value
+  uint32 input1_mid=24; // Input1 middle value
+  uint32 input1_max=25; // Input1 maximum value
+  uint32 input1_cmd=26; // Input1 command value
+  uint32 input2_raw=27; // Input2 raw value
+  InTyp input2_typ=28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 input2_min=29; // Input2 minimum value
+  uint32 input2_mid=30; // Input2 middle value
+  uint32 input2_max=31; // Input2 maximum value
+  uint32 input2_cmd=32; // Input2 command value
+  uint32 dc_curr=33; // Total DC Link current A *100
+  uint32 rdc_curr=34; // Right DC Link current A *100
+  uint32 ldc_curr=35; // Left DC Link current A *100
+  uint32 cmdl=36; // Left Motor Command RPM
+  uint32 cmdr=37; // Right Motor Command RPM
+  uint32 spd_avg=38; // Motor Measured Avg RPM
+  uint32 spdl=39; // Left Motor Measured RPM
+  uint32 spdr=40; // Right Motor Measured RPM
+  uint32 filter_rate=41; // Rate *10
+  uint32 spd_coef=42; // Speed Coefficient *10
+  uint32 str_coef=43; // Steer Coefficient *10
+  uint32 batv=44; // Calibrated Battery Voltage *100
+  uint32 temp=45;  // Calibrated Temperature °C *10
 }
 
 message HoverboardCmd {
-
+  int32 speed = 0;
+  int32 steer = 1;
 }

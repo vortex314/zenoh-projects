@@ -33,6 +33,25 @@ typedef enum {
     ON = 1,
 } Toggle;
 
+typedef enum {
+    VOLTAGE = 1,
+    SPEED = 2,
+    TORQUE = 3,
+} CtrlMod;
+
+typedef enum {
+    COMMUTATION = 0,
+    SINUSOIDAL = 1,
+    FOC = 2,
+} CtrlTyp;
+
+typedef enum {
+    DISABLED = 0,
+    NORMAL_POT = 1,
+    MIDDLE_RESTING_POT = 2,
+    AUTO_DETECT = 3,
+} InTyp;
+
 
 
 class ZenohInfo : public Msg {
@@ -398,35 +417,201 @@ class HoverboardCmd : public Msg {
 
 };
 
-class LpsInfo : public Msg {
+class HoverboardInfo : public Msg {
     public:
-    static constexpr const char *id = "LpsInfo";     
+    static constexpr const char *id = "HoverboardInfo";     
     inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 24957;
+    static const uint32_t ID = 59150;
 
-    std::optional<int32_t> direction;
-    std::optional<std::string> msg;
+    std::optional<CtrlMod> ctrl_mod;
+    std::optional<CtrlTyp> ctrl_typ;
+    std::optional<uint32_t> cur_mot_max;
+    std::optional<uint32_t> rpm_mot_max;
+    std::optional<uuint32> fi_weak_ena;
+    std::optional<uint32_t> fi_weak_hi;
+    std::optional<uint32_t> fi_weak_lo;
+    std::optional<uint32_t> fi_weak_max;
+    std::optional<uint32_t> phase_adv_max_deg;
+    std::optional<uint32_t> in1_raw;
+    std::optional<InTyp> in1_typ;
+    std::optional<uint32_t> in1_min;
+    std::optional<uint32_t> in1_mid;
+    std::optional<uint32_t> in1_max;
+    std::optional<uint32_t> in1_cmd;
+    std::optional<uint32_t> in2_raw;
+    std::optional<InTyp> in2_typ;
+    std::optional<uint32_t> in2_min;
+    std::optional<uint32_t> in2_mid;
+    std::optional<uint32_t> in2_max;
+    std::optional<uint32_t> in2_cmd;
+    std::optional<uint32_t> input1_raw;
+    std::optional<InTyp> input1_typ;
+    std::optional<uint32_t> input1_min;
+    std::optional<uint32_t> input1_mid;
+    std::optional<uint32_t> input1_max;
+    std::optional<uint32_t> input1_cmd;
+    std::optional<uint32_t> input2_raw;
+    std::optional<InTyp> input2_typ;
+    std::optional<uint32_t> input2_min;
+    std::optional<uint32_t> input2_mid;
+    std::optional<uint32_t> input2_max;
+    std::optional<uint32_t> input2_cmd;
+    std::optional<uint32_t> dc_curr;
+    std::optional<uint32_t> rdc_curr;
+    std::optional<uint32_t> ldc_curr;
+    std::optional<uint32_t> cmdl;
+    std::optional<uint32_t> cmdr;
+    std::optional<uint32_t> spd_avg;
+    std::optional<uint32_t> spdl;
+    std::optional<uint32_t> spdr;
+    std::optional<uint32_t> filter_rate;
+    std::optional<uint32_t> spd_coef;
+    std::optional<uint32_t> str_coef;
+    std::optional<uint32_t> batv;
+    std::optional<uint32_t> temp;
     
 
     Bytes serialize() const {
         JsonDocument doc;
-        if (direction)  doc["direction"] = *direction;
-        if (msg)  doc["msg"] = *msg;
+        if (ctrl_mod)  doc["ctrl_mod"] = *ctrl_mod;
+        if (ctrl_typ)  doc["ctrl_typ"] = *ctrl_typ;
+        if (cur_mot_max)  doc["cur_mot_max"] = *cur_mot_max;
+        if (rpm_mot_max)  doc["rpm_mot_max"] = *rpm_mot_max;
+        if (fi_weak_ena)  doc["fi_weak_ena"] = *fi_weak_ena;
+        if (fi_weak_hi)  doc["fi_weak_hi"] = *fi_weak_hi;
+        if (fi_weak_lo)  doc["fi_weak_lo"] = *fi_weak_lo;
+        if (fi_weak_max)  doc["fi_weak_max"] = *fi_weak_max;
+        if (phase_adv_max_deg)  doc["phase_adv_max_deg"] = *phase_adv_max_deg;
+        if (in1_raw)  doc["in1_raw"] = *in1_raw;
+        if (in1_typ)  doc["in1_typ"] = *in1_typ;
+        if (in1_min)  doc["in1_min"] = *in1_min;
+        if (in1_mid)  doc["in1_mid"] = *in1_mid;
+        if (in1_max)  doc["in1_max"] = *in1_max;
+        if (in1_cmd)  doc["in1_cmd"] = *in1_cmd;
+        if (in2_raw)  doc["in2_raw"] = *in2_raw;
+        if (in2_typ)  doc["in2_typ"] = *in2_typ;
+        if (in2_min)  doc["in2_min"] = *in2_min;
+        if (in2_mid)  doc["in2_mid"] = *in2_mid;
+        if (in2_max)  doc["in2_max"] = *in2_max;
+        if (in2_cmd)  doc["in2_cmd"] = *in2_cmd;
+        if (input1_raw)  doc["input1_raw"] = *input1_raw;
+        if (input1_typ)  doc["input1_typ"] = *input1_typ;
+        if (input1_min)  doc["input1_min"] = *input1_min;
+        if (input1_mid)  doc["input1_mid"] = *input1_mid;
+        if (input1_max)  doc["input1_max"] = *input1_max;
+        if (input1_cmd)  doc["input1_cmd"] = *input1_cmd;
+        if (input2_raw)  doc["input2_raw"] = *input2_raw;
+        if (input2_typ)  doc["input2_typ"] = *input2_typ;
+        if (input2_min)  doc["input2_min"] = *input2_min;
+        if (input2_mid)  doc["input2_mid"] = *input2_mid;
+        if (input2_max)  doc["input2_max"] = *input2_max;
+        if (input2_cmd)  doc["input2_cmd"] = *input2_cmd;
+        if (dc_curr)  doc["dc_curr"] = *dc_curr;
+        if (rdc_curr)  doc["rdc_curr"] = *rdc_curr;
+        if (ldc_curr)  doc["ldc_curr"] = *ldc_curr;
+        if (cmdl)  doc["cmdl"] = *cmdl;
+        if (cmdr)  doc["cmdr"] = *cmdr;
+        if (spd_avg)  doc["spd_avg"] = *spd_avg;
+        if (spdl)  doc["spdl"] = *spdl;
+        if (spdr)  doc["spdr"] = *spdr;
+        if (filter_rate)  doc["filter_rate"] = *filter_rate;
+        if (spd_coef)  doc["spd_coef"] = *spd_coef;
+        if (str_coef)  doc["str_coef"] = *str_coef;
+        if (batv)  doc["batv"] = *batv;
+        if (temp)  doc["temp"] = *temp;
         std::string str;
         serializeJson(doc,str);
         return Bytes(str.begin(),str.end());
     }
 
-    LpsInfo* deserialize(const Bytes& bytes) {
+    HoverboardInfo* deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        LpsInfo* msg = new LpsInfo();
+        HoverboardInfo* msg = new HoverboardInfo();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
             return NULL ;
         };        
-        if (doc["direction"].is<int32_t>() )  msg->direction = doc["direction"].as<int32_t>();
-        if (doc["msg"].is<std::string>() )  msg->msg = doc["msg"].as<std::string>();
+        if (doc["ctrl_mod"].is<CtrlMod>() )  msg->ctrl_mod = doc["ctrl_mod"].as<CtrlMod>();
+        if (doc["ctrl_typ"].is<CtrlTyp>() )  msg->ctrl_typ = doc["ctrl_typ"].as<CtrlTyp>();
+        if (doc["cur_mot_max"].is<uint32_t>() )  msg->cur_mot_max = doc["cur_mot_max"].as<uint32_t>();
+        if (doc["rpm_mot_max"].is<uint32_t>() )  msg->rpm_mot_max = doc["rpm_mot_max"].as<uint32_t>();
+        if (doc["fi_weak_ena"].is<uuint32>() )  msg->fi_weak_ena = doc["fi_weak_ena"].as<uuint32>();
+        if (doc["fi_weak_hi"].is<uint32_t>() )  msg->fi_weak_hi = doc["fi_weak_hi"].as<uint32_t>();
+        if (doc["fi_weak_lo"].is<uint32_t>() )  msg->fi_weak_lo = doc["fi_weak_lo"].as<uint32_t>();
+        if (doc["fi_weak_max"].is<uint32_t>() )  msg->fi_weak_max = doc["fi_weak_max"].as<uint32_t>();
+        if (doc["phase_adv_max_deg"].is<uint32_t>() )  msg->phase_adv_max_deg = doc["phase_adv_max_deg"].as<uint32_t>();
+        if (doc["in1_raw"].is<uint32_t>() )  msg->in1_raw = doc["in1_raw"].as<uint32_t>();
+        if (doc["in1_typ"].is<InTyp>() )  msg->in1_typ = doc["in1_typ"].as<InTyp>();
+        if (doc["in1_min"].is<uint32_t>() )  msg->in1_min = doc["in1_min"].as<uint32_t>();
+        if (doc["in1_mid"].is<uint32_t>() )  msg->in1_mid = doc["in1_mid"].as<uint32_t>();
+        if (doc["in1_max"].is<uint32_t>() )  msg->in1_max = doc["in1_max"].as<uint32_t>();
+        if (doc["in1_cmd"].is<uint32_t>() )  msg->in1_cmd = doc["in1_cmd"].as<uint32_t>();
+        if (doc["in2_raw"].is<uint32_t>() )  msg->in2_raw = doc["in2_raw"].as<uint32_t>();
+        if (doc["in2_typ"].is<InTyp>() )  msg->in2_typ = doc["in2_typ"].as<InTyp>();
+        if (doc["in2_min"].is<uint32_t>() )  msg->in2_min = doc["in2_min"].as<uint32_t>();
+        if (doc["in2_mid"].is<uint32_t>() )  msg->in2_mid = doc["in2_mid"].as<uint32_t>();
+        if (doc["in2_max"].is<uint32_t>() )  msg->in2_max = doc["in2_max"].as<uint32_t>();
+        if (doc["in2_cmd"].is<uint32_t>() )  msg->in2_cmd = doc["in2_cmd"].as<uint32_t>();
+        if (doc["input1_raw"].is<uint32_t>() )  msg->input1_raw = doc["input1_raw"].as<uint32_t>();
+        if (doc["input1_typ"].is<InTyp>() )  msg->input1_typ = doc["input1_typ"].as<InTyp>();
+        if (doc["input1_min"].is<uint32_t>() )  msg->input1_min = doc["input1_min"].as<uint32_t>();
+        if (doc["input1_mid"].is<uint32_t>() )  msg->input1_mid = doc["input1_mid"].as<uint32_t>();
+        if (doc["input1_max"].is<uint32_t>() )  msg->input1_max = doc["input1_max"].as<uint32_t>();
+        if (doc["input1_cmd"].is<uint32_t>() )  msg->input1_cmd = doc["input1_cmd"].as<uint32_t>();
+        if (doc["input2_raw"].is<uint32_t>() )  msg->input2_raw = doc["input2_raw"].as<uint32_t>();
+        if (doc["input2_typ"].is<InTyp>() )  msg->input2_typ = doc["input2_typ"].as<InTyp>();
+        if (doc["input2_min"].is<uint32_t>() )  msg->input2_min = doc["input2_min"].as<uint32_t>();
+        if (doc["input2_mid"].is<uint32_t>() )  msg->input2_mid = doc["input2_mid"].as<uint32_t>();
+        if (doc["input2_max"].is<uint32_t>() )  msg->input2_max = doc["input2_max"].as<uint32_t>();
+        if (doc["input2_cmd"].is<uint32_t>() )  msg->input2_cmd = doc["input2_cmd"].as<uint32_t>();
+        if (doc["dc_curr"].is<uint32_t>() )  msg->dc_curr = doc["dc_curr"].as<uint32_t>();
+        if (doc["rdc_curr"].is<uint32_t>() )  msg->rdc_curr = doc["rdc_curr"].as<uint32_t>();
+        if (doc["ldc_curr"].is<uint32_t>() )  msg->ldc_curr = doc["ldc_curr"].as<uint32_t>();
+        if (doc["cmdl"].is<uint32_t>() )  msg->cmdl = doc["cmdl"].as<uint32_t>();
+        if (doc["cmdr"].is<uint32_t>() )  msg->cmdr = doc["cmdr"].as<uint32_t>();
+        if (doc["spd_avg"].is<uint32_t>() )  msg->spd_avg = doc["spd_avg"].as<uint32_t>();
+        if (doc["spdl"].is<uint32_t>() )  msg->spdl = doc["spdl"].as<uint32_t>();
+        if (doc["spdr"].is<uint32_t>() )  msg->spdr = doc["spdr"].as<uint32_t>();
+        if (doc["filter_rate"].is<uint32_t>() )  msg->filter_rate = doc["filter_rate"].as<uint32_t>();
+        if (doc["spd_coef"].is<uint32_t>() )  msg->spd_coef = doc["spd_coef"].as<uint32_t>();
+        if (doc["str_coef"].is<uint32_t>() )  msg->str_coef = doc["str_coef"].as<uint32_t>();
+        if (doc["batv"].is<uint32_t>() )  msg->batv = doc["batv"].as<uint32_t>();
+        if (doc["temp"].is<uint32_t>() )  msg->temp = doc["temp"].as<uint32_t>();
+        return msg;
+    }
+
+};
+
+class HoverboardCmd : public Msg {
+    public:
+    static constexpr const char *id = "HoverboardCmd";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = 58218;
+
+    std::optional<int32_t> speed;
+    std::optional<int32_t> steer;
+    
+
+    Bytes serialize() const {
+        JsonDocument doc;
+        if (speed)  doc["speed"] = *speed;
+        if (steer)  doc["steer"] = *steer;
+        std::string str;
+        serializeJson(doc,str);
+        return Bytes(str.begin(),str.end());
+    }
+
+    HoverboardCmd* deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        HoverboardCmd* msg = new HoverboardCmd();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return NULL ;
+        };        
+        if (doc["speed"].is<int32_t>() )  msg->speed = doc["speed"].as<int32_t>();
+        if (doc["steer"].is<int32_t>() )  msg->steer = doc["steer"].as<int32_t>();
         return msg;
     }
 
