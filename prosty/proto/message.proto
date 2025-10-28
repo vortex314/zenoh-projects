@@ -3,6 +3,17 @@
 syntax = "proto3";
 package limero;
 
+message Sample {
+  bool flag = 1;
+  int32 id = 2;
+  string name = 3;
+  repeated float values = 4;
+  float f=5;
+  double d = 6;
+  bytes data = 7;
+
+}
+
 enum LogLevel {
   DEBUG = 1;
   INFO =2 ;
@@ -118,30 +129,30 @@ message HoverboardInfo {
   uint32 fi_weak_lo=6; // Field weak low RPM
   uint32 fi_weak_max=7; // Field weak max current A (FOC only)
   uint32 phase_adv_max_deg=8; // Max Phase Adv angle Deg (SIN only)
-  uint32 in1_raw=9;  // Input1 raw value
-  InTyp in1_typ=10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  uint32 in1_min=11; // Input1 minimum value
-  uint32 in1_mid=12; // Input1 middle value
-  uint32 in1_max=13; // Input1 maximum value
-  uint32 in1_cmd=14; // Input1 command value
-  uint32 in2_raw=15; // Input2 raw value
-  InTyp in2_typ=16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  uint32 in2_min=17; // Input2 minimum value
-  uint32 in2_mid=18; // Input2 middle value
-  uint32 in2_max=19; // Input2 maximum value
-  uint32 in2_cmd=20; // Input2 command value
-  uint32 input1_raw =21; // Input1 raw value
-  InTyp input1_typ=22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  uint32 input1_min=23; // Input1 minimum value
-  uint32 input1_mid=24; // Input1 middle value
-  uint32 input1_max=25; // Input1 maximum value
-  uint32 input1_cmd=26; // Input1 command value
-  uint32 input2_raw=27; // Input2 raw value
-  InTyp input2_typ=28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  uint32 input2_min=29; // Input2 minimum value
-  uint32 input2_mid=30; // Input2 middle value
-  uint32 input2_max=31; // Input2 maximum value
-  uint32 input2_cmd=32; // Input2 command value
+  uint32 input1_raw=9;  // Input1 raw value
+  InTyp input1_typ=10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 input1_min=11; // Input1 minimum value
+  uint32 input1_mid=12; // Input1 middle value
+  uint32 input1_max=13; // Input1 maximum value
+  uint32 input1_cmd=14; // Input1 command value
+  uint32 input2_raw=15; // Input2 raw value
+  InTyp input2_typ=16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 input2_min=17; // Input2 minimum value
+  uint32 input2_mid=18; // Input2 middle value
+  uint32 input2_max=19; // Input2 maximum value
+  uint32 input2_cmd=20; // Input2 command value
+  uint32 aux_input1_raw =21; // Input1 raw value
+  InTyp aux_input1_typ=22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 aux_input1_min=23; // Input1 minimum value
+  uint32 aux_input1_mid=24; // Input1 middle value
+  uint32 aux_input1_max=25; // Input1 maximum value
+  uint32 aux_input1_cmd=26; // Input1 command value
+  uint32 aux_input2_raw=27; // Input2 raw value
+  InTyp aux_input2_typ=28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  uint32 aux_input2_min=29; // Input2 minimum value
+  uint32 aux_input2_mid=30; // Input2 middle value
+  uint32 aux_input2_max=31; // Input2 maximum value
+  uint32 aux_input2_cmd=32; // Input2 command value
   uint32 dc_curr=33; // Total DC Link current A *100
   uint32 rdc_curr=34; // Right DC Link current A *100
   uint32 ldc_curr=35; // Left DC Link current A *100

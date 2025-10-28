@@ -1,0 +1,232 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <optional>
+#include <tinycbor/cbor.h>
+#include <tinycbor/cborparser.h>
+#include <actor.h>
+#include <result.h>
+
+typedef std::vector<uint8_t> Bytes;
+// Helper macros for serialization and deserialization
+{% macro serialize_any( encoder, field_type, field_name) %}
+    {%- if field_type == "std::string" -%}
+cbor_encode_text_stringz(&{{encoder}}, {{ field_name }}.c_str());
+    {%- elif field_type == "Bytes" -%}
+cbor_encode_byte_string(&{{encoder}}, {{ field_name }}.data(), {{ field_name }}.size());
+    {%- elif field_type  == "uint32_t" -%}
+cbor_encode_int(&{{encoder}}, static_cast<uint32_t>({{ field_name }}));
+    {%- elif field_type == "int32_t" -%}
+cbor_encode_int(&{{encoder}}, static_cast<int32_t>({{ field_name }}));
+    {%- elif field_type == "uint64_t" -%}
+cbor_encode_int(&{{encoder}}, static_cast<uint64_t>({{ field_name }}));
+    {%- elif field_type == "int64_t" -%}
+cbor_encode_int(&{{encoder}}, static_cast<int64_t>({{ field_name }}));
+    {%- elif field_type == "float" -%}
+cbor_encode_float(&{{encoder}}, static_cast<float>({{ field_name }}));
+    {%- elif field_type == "double" -%}
+cbor_encode_double(&{{encoder}}, static_cast<double>({{ field_name }}));
+    {%- else -%}
+cbor_encode_int(&{{encoder}}, static_cast<long long>({{ field_name }}));
+    {%- endif -%}
+{% endmacro %}
+
+{% macro deserialize_any( decoder, field_type,field_name) %}
+{%- if field_type == "std::string" -%}
+{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&{{decoder}})) {
+        cbor_value_copy_text_string(&{{decoder}}, valbuf, &vallen, &{{decoder}});
+        msg->{{ field_name }} = std::string(valbuf, vallen - 1);
+    }
+}
+{%- elif field_type == "Bytes" -%}
+{
+    uint8_t tmpbuf[512];
+    size_t tmplen = sizeof(tmpbuf);
+    if (cbor_value_is_byte_string(&{{decoder}})) {
+        cbor_value_copy_byte_string(&{{decoder}}, tmpbuf, &tmplen, &{{decoder}});
+        msg->{{ field_name }} = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+}
+{%- elif field_type == "uint32_t" -%}
+{
+    uint64_t v;
+    cbor_value_get_uint64(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<uint32_t>(v);
+}
+{%- elif field_type == "int32_t" -%}
+{
+    int64_t v;
+    cbor_value_get_int64(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<int32_t>(v);
+}
+{%- elif field_type == "uint64_t" -%}
+{
+    uint64_t v;
+    cbor_value_get_uint64(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<uint64_t>(v);
+    
+}
+{%- elif field_type == "int64_t" -%}
+{
+    int64_t v;
+    cbor_value_get_int64(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<int64_t>(v);
+}
+{%- elif field_type == "float" -%}
+{
+    float v;
+    cbor_value_get_float(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<float>(v);
+}
+{%- elif field_type == "double" -%} 
+{
+    double v;
+    cbor_value_get_double(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<double>(v);
+}
+{%- elif field_type == "bool" -%} 
+{
+    bool v;
+    cbor_value_get_boolean(&{{decoder}}, &v);
+    msg->{{ field_name }} = v;
+}
+{%- else -%}
+{
+    long long v;
+    cbor_value_get_int64(&{{decoder}}, &v);
+    msg->{{ field_name }} = static_cast<{{ field_type }}>(v);
+}
+{%- endif -%}
+{% endmacro %}
+
+{% for en in enums %}
+typedef enum {
+    {%- for value in en.values %}
+    {{ value.0 }} = {{ value.1 }},
+    {%- endfor %}
+} {{ en.name }};
+{% endfor %}
+
+{% for msg in messages %}
+typedef enum {
+    {%- for field in msg.fields %}
+    {{ field.name | upper }}_INDEX = {{ field.index }},
+    {%- endfor %}
+} {{ msg.name }}_Fields;
+{% endfor %}
+
+{% for msg in messages %}
+class {{ msg.name }} : public Msg {
+    public:
+    static constexpr const char *id = "{{ msg.name}}";     
+    inline const char *type_id() const override { return id; }; 
+    static const uint32_t ID = {{ msg.msg_id }};
+
+    {% for field in msg.fields %}
+        {%- if field.repeated -%}
+        std::vector<{{ field.target_type }}>
+        {%- elif field.optional -%}
+        std::optional<{{ field.target_type }}> 
+        {%- else -%}
+        {{ field.target_type }} 
+        {%- endif %} {{ field.name }};
+    {% endfor %}
+
+    Bytes serialize() const {
+        // buffer: grow if needed by changing initial size
+        std::vector<uint8_t> buffer(512);
+        CborEncoder encoder, mapEncoder, arrayEncoder;
+        cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+        // Start top-level map
+        cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+        {% for field in msg.fields %}
+            {%- if field.repeated -%}
+        if (!{{ field.name }}.empty()) {
+                cbor_encode_int(&mapEncoder, {{ msg.name}}_Fields::{{ field.name | upper }}_INDEX );
+            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, {{ field.name }}.size());
+            for (const auto & item : {{ field.name }}) {
+                {#- type-specific encode #}
+                {{ self::serialize_any(encoder="arrayEncoder", field_type=field.target_type, field_name=field.name) }}
+            }
+            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+        }
+            {%- elif field.optional -%}
+            if ({{ field.name }}.has_value()) {
+                cbor_encode_int(&mapEncoder, {{ msg.name }}_Fields::{{ field.name | upper }}_INDEX);
+                {{ self::serialize_any(encoder="mapEncoder", field_type=field.target_type, field_name=field.name) }}
+                }
+            {%- else -%}
+                // field: {{ field.name }}
+                cbor_encode_int(&mapEncoder, {{ msg.name }}_Fields::{{ field.name | upper }}_INDEX);
+                {{ self::serialize_any(encoder="mapEncoder", field_type=field.target_type, field_name=field.name) }}
+            {%- endif %}
+        {% endfor -%}
+        cbor_encoder_close_container(&encoder, &mapEncoder);
+        // get used size
+        size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+        return Bytes(buffer.begin(), buffer.begin() + used);
+    }
+
+    {{msg.name}}* deserialize(const Bytes& bytes) {
+        CborParser parser;
+        CborValue it, mapIt, tmp;
+        {{msg.name}}* msg = new {{msg.name}}();
+
+        CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+        if (err != CborNoError) {
+            delete msg;
+            return nullptr;
+        }
+
+        if (!cbor_value_is_map(&it)) {
+            delete msg;
+            return nullptr;
+        }
+
+        // enter map
+        err = cbor_value_enter_container(&it, &mapIt);
+        if (err != CborNoError) {
+            delete msg;
+            return nullptr;
+        }
+
+        // iterate key/value pairs
+        while (!cbor_value_at_end(&mapIt)) {
+            uint64_t key = 0;
+            if (cbor_value_is_unsigned_integer(&mapIt)) {
+                cbor_value_get_uint64(&mapIt, &key);
+                cbor_value_advance(&mapIt);
+            } else {
+                // invalid key type
+                delete msg;
+                return nullptr;
+            }
+            switch (key) {
+                {% for field in msg.fields %}
+                case {{ msg.name }}_Fields::{{ field.name | upper }}_INDEX:{
+                    {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, field_name=field.name ) }}
+                    break;
+                }
+                {% endfor %}
+                default:
+                    // skip unknown key
+                    cbor_value_advance(&mapIt);
+                    break;
+            }
+
+        }
+
+        // leave container
+        cbor_value_leave_container(&it, &mapIt);
+
+        return msg;
+    }
+
+};
+{% endfor %}

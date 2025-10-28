@@ -3,11 +3,40 @@ use protobuf_parser::{FieldType, FileDescriptor};
 use std::path::Path;
 use std::fs;
 mod logger;
-use log::info;
+use log::{error, info};
 use logger::init;
 
 // parse CLI line for proto file path and output directory
-use clap::Parser;
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum Lang {
+    Cpp,
+    Rust,
+}
+impl Lang {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Lang::Cpp => "cpp",
+            Lang::Rust => "rust",
+        }
+    }
+}
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum Format {
+    Json,
+    Cbor,
+}
+
+impl Format {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Format::Json => "json",
+            Format::Cbor => "cbor",
+        }
+    }
+}
+
+
+use clap::{ Parser,ValueEnum };
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -15,17 +44,16 @@ struct Args {
     /// default: proto/message.proto
     /// example: --proto proto/message.proto
     #[arg(short, long, default_value = "proto/message.proto")]
-    proto: String,
+    input: String,
     /// Output directory for the generated files
     /// default: examples
     #[arg(short, long, default_value = "../zenoh-esp32-eventbus/src")]
-    cpp_out: String,
-    #[arg(short, long, default_value = "../akka/src")]
-    rust_out: String,
-    #[arg(short, long, default_value = "rust")]
-    lang: String,
-    #[arg(short, long, default_value = "json")]
-    format: String,
+    output: String,
+
+    #[arg(short, long, value_enum,default_value_t = Lang::Rust)]
+    lang: Lang,
+    #[arg(short, long, value_enum, default_value_t = Format::Json)]
+    format: Format,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -34,7 +62,7 @@ fn main() -> anyhow::Result<()> {
         .parent()
         .expect("Failed to get parent directory");*/
     init();
-    let proto_file = Path::new("proto/message.proto");
+    let proto_file = Path::new(&args.input);
     let proto_content = fs::read_to_string(proto_file).expect("Failed to read proto file");
 
     let res = FileDescriptor::parse(&proto_content.as_bytes());
@@ -43,21 +71,28 @@ fn main() -> anyhow::Result<()> {
     }
     let fd = res.unwrap();
     info!("Proto file parsed successfully.");
+    let tera_file = format!("{}_{}.tera", args.lang.as_str(), args.format.as_str());
+    info!("Using template file: {}", tera_file);
 
-    let messages = convert_rust_types(&fd);
-    let enums = convert_enum_rust_types(&fd);
-    let rust_name = format!("{}/{}.rs", args.rust_out, fd.package);
-    let rendered = render(&enums, &messages, "rust_json.tera");
-    fs::write(&rust_name, rendered).expect("Failed to write output file");
-    info!("Generated Rust code written to {}", rust_name);
-
-    let messages = convert_cpp_types(&fd);
-    let enums = convert_enum_cpp_types(&fd);
-    let cpp_name = format!("{}/{}.cpp", args.cpp_out, fd.package);
-    let rendered = render(&enums, &messages, "cpp_json.tera");
-    fs::write(&cpp_name, rendered).expect("Failed to write output file");
-    info!("Generated C++ code written to {}", cpp_name);
-
+    if args.lang == Lang::Rust {
+        info!("Generating Rust code in {} format to {}", args.format.as_str(), args.output  );
+        let messages = convert_rust_types(&fd);
+        let enums = convert_enum_rust_types(&fd);
+        let rust_name = format!("{}/{}.rs", args.output, fd.package);
+        let rendered = render(&enums, &messages, tera_file.as_str());
+        fs::write(&rust_name, rendered).expect("Failed to write output file");
+        info!("Generated Rust code written to {}", rust_name);
+    } else if args.lang == Lang::Cpp {
+        info!("Generating C++ code in {} format to {}", args.format.as_str(), args.output);
+        let messages = convert_cpp_types(&fd);
+        let enums = convert_enum_cpp_types(&fd);
+        let cpp_name = format!("{}/{}.cpp", args.output, fd.package);
+        let rendered = render(&enums, &messages, tera_file.as_str());
+        fs::write(&cpp_name, rendered).expect("Failed to write output file");
+        info!("Generated C++ code written to {}", cpp_name);
+    } else {
+        error!("Unsupported language: {:?}", args.lang);
+    }
     Ok(())
 }
 
@@ -66,6 +101,7 @@ use serde::Serialize;
 #[derive(Serialize)]
 struct Field {
     name: String,
+    index: i32,
     target_type: String,
     repeated: bool,
     optional: bool,
@@ -126,7 +162,7 @@ fn field_type_to_cpp_type(field_type: &FieldType) -> String {
             field_type_to_cpp_type(&_other_name.1)
         )
         .to_string(),
-        FieldType::Bytes => "std::vector<uint8_t>".to_string(),
+        FieldType::Bytes => "Bytes".to_string(),
         FieldType::Bool => "bool".to_string(),
         FieldType::Double => "double".to_string(),
         FieldType::Sint32 => "int32_t".to_string(),
@@ -148,6 +184,7 @@ fn convert_rust_types(fd: &FileDescriptor) -> Vec<Message> {
                 .iter()
                 .map(|f| Field {
                     name: f.name.clone(),
+                    index : f.number,
                     target_type: field_type_to_rust_type(&f.typ),
                     repeated: match f.rule {
                         protobuf_parser::Rule::Repeated => true,
@@ -178,6 +215,7 @@ fn convert_cpp_types(fd: &FileDescriptor) -> Vec<Message> {
                 .iter()
                 .map(|f| Field {
                     name: f.name.clone(),
+                    index : f.number,
                     target_type: field_type_to_cpp_type(&f.typ),
                     repeated: match f.rule {
                         protobuf_parser::Rule::Repeated => true,

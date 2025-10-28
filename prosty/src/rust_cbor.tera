@@ -1,0 +1,53 @@
+use serde::{Serialize, Deserialize};
+use anyhow::Result;
+use crate::value::Value;
+
+pub trait Msg {
+    const ID: u32;
+    const NAME: &'static str;
+    fn serialize(&self) -> Result<Vec<u8>>;
+    fn deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized;
+}
+
+{% for en in enums %}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum {{ en.name }} {
+    {%- for value in en.values %}
+    {{ value.0 }},
+    {%- endfor %}
+}
+
+{% endfor %}
+
+{% for msg in messages %}
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct {{ msg.name }} {
+    {%- for field in msg.fields %}
+        {%- if field.repeated %}
+    pub {{ field.name }}: Vec<{{ field.target_type }}>,
+        {%- elif field.optional %}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{ field.name }}: Option<{{ field.target_type }}>,
+        {%- else %}
+    pub {{ field.name }}: {{ field.target_type }},
+        {%- endif %}
+    {%- endfor %}
+}
+
+impl Msg for {{ msg.name }} {
+    const ID: u32 = {{ msg.msg_id }};
+    const NAME: &'static str = "{{ msg.name }}";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        // Use serde_cbor to produce CBOR bytes
+        let s = serde_cbor::to_vec(self)?;
+        Ok(s)
+    }
+
+    fn deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {
+        let m: {{ msg.name }} = serde_cbor::from_slice(v.as_slice())?;
+        Ok(m)
+    }
+}
+
+{% endfor %}
