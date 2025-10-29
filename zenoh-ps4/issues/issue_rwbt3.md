@@ -325,7 +325,6 @@ I 00:00:00.725 |  wifi_actor.cpp: 432 | Max AP number ap_info can hold = 10
 I 00:00:00.734 |  wifi_actor.cpp: 435 | Total APs scanned = 0, actual AP number ap_info holds = 0
 I 00:00:00.745 |  wifi_actor.cpp: 455 | Highest RSSI = -128, AP index = 0
 I 00:00:00.754 |  wifi_actor.cpp:  41 | Scanned SSID: 
-I 00:00:00.762 |  wifi_actor.cpp: 143 | Setting WiFi configuration SSID 'Merckx2' PSWD 'LievenMarletteEwoutRonald'
 I 00:00:00.779 |  wifi_actor.cpp: 148 | Connecting to WiFi network...
 BTstack up and running at 30:AE:A4:FF:22:82
 I 00:00:00.803 |   ps4_actor.cpp:  98 | custom: on_init_complete()

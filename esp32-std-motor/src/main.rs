@@ -40,8 +40,8 @@ use led_actor::LedCmd;
 
 use limero::Actor;
 
-const SSID: &str = "Merckx2";
-const PASSWORD: &str = "LievenMarletteEwoutRonald";
+const SSID: &str ;
+const PASSWORD: &str ";
 
 mod logger;
 

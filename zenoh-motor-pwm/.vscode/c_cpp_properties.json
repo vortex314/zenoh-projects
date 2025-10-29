@@ -363,8 +363,6 @@
                 "ESP_PLATFORM",
                 "PLATFORMIO=60118",
                 "ARDUINO_ESP32_DEV",
-                "WIFI_SSID=Merckx2",
-                "WIFI_PASS=LievenMarletteEwoutRonald",
                 "__GLIBCXX_ASSERTIONS",
                 "ZENOH_ESPIDF",
                 "ZENOH_DEBUG=1",

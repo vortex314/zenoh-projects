@@ -413,8 +413,6 @@
                 "ESP_PLATFORM",
                 "PLATFORMIO=60116",
                 "ARDUINO_ESP32_DEV",
-                "WIFI_SSID=Merckx2",
-                "WIFI_PASS=LievenMarletteEwoutRonald",
                 "__GLIBCXX_ASSERTIONS",
                 "ZENOH_ESPIDF",
                 "Z_FEATURE_LINK_UDP_MULTICAST=1",
