@@ -7,7 +7,6 @@
 #include <vector>
 #include <actor.h>
 #include <wifi_actor.h>
-#include <mc_actor.h>
 #include <sys_actor.h>
 #include <led_actor.h>
 #include <zenoh_actor.h>
@@ -23,17 +22,15 @@
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
-WifiActor wifi_actor( "wifi");
+WifiActor wifi_actor("wifi");
 // McActor mc_actor(DEVICE_PREFIX "multicast");
-ZenohActor zenoh_actor( "zenoh");
-SysActor sys_actor( "sys");
-LedActor led_actor( "led");
-HoverboardActor hoverboard_actor( "hoverboard");
+ZenohActor zenoh_actor("zenoh");
+SysActor sys_actor("sys");
+LedActor led_actor("led");
+HoverboardActor hoverboard_actor("hoverboard");
 EventBus eventbus(10);
 Log logger;
 esp_err_t nvs_init();
-
-#include <value.h>
 
 extern "C" void app_main()
 {
@@ -45,17 +42,18 @@ extern "C" void app_main()
 
   zenoh_actor.prefix(DEVICE_NAME);
 
-  eventbus.register_actor(&wifi_actor);
-  eventbus.register_actor(&sys_actor);
-//  eventbus.register_actor(&mc_actor);
-  eventbus.register_actor(&zenoh_actor);
-  eventbus.register_actor(&led_actor);
-  eventbus.register_actor(&hoverboard_actor);
-  eventbus.register_handler([](const Envelope &env)
-                            { 
-                              const char* src = env.src ? env.src->name() : "";
-                              const char* dst = env.dst ? env.dst->name() : "";
-                              INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_id()); });
+  eventbus.register_actor(&wifi_actor); // manage wifi connection
+  eventbus.register_actor(&sys_actor); // manage the system
+  //  eventbus.register_actor(&mc_actor);
+  eventbus.register_actor(&zenoh_actor); // bridge the eventbus
+  eventbus.register_actor(&led_actor); // blink the led
+  eventbus.register_actor(&hoverboard_actor); // exchnage data via serial with hoverboard via UART
+  eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
+                            {
+                              const char *src = env.src ? env.src->name() : "";
+                              const char *dst = env.dst ? env.dst->name() : "";
+                              INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_id()); // comment for beauty
+                            });
   eventbus.loop();
 }
 

@@ -27,7 +27,7 @@ void HoverboardActor::on_message(const Envelope &env)
     const Msg &msg = *env.msg;
     msg.handle<HoverboardCmd>([&](auto hb_cmd)
                        { 
-                           INFO("Received HoverboardCmd: speed=%d direction=%d", hb_cmd.speed, hb_cmd.direction);
+                           INFO("Received HoverboardCmd: speed=%d direction=%d", hb_cmd.speed, hb_cmd.steer);
                        });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
@@ -43,9 +43,7 @@ void HoverboardActor::on_timer(int id)
 void HoverboardActor::publish_info()
 {
     HoverboardInfo *hb_info = new HoverboardInfo();
-    hb_info->speed = 100 + (_prop_counter % 50);
-    hb_info->direction = (_prop_counter % 360);
-    hb_info->currentA = 5 + (_prop_counter % 10);
+    hb_info->temp = 37;
     emit(hb_info);
     _prop_counter++;
 }

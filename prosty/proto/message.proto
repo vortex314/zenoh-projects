@@ -5,7 +5,7 @@ package limero;
 
 message Sample {
   bool flag = 1;
-  int32 id = 2;
+  int32 identifier = 2;
   string name = 3;
   repeated float values = 4;
   float f=5;
@@ -40,6 +40,7 @@ message LogInfo {
   int32 error_code=4;
   string file=5;
   int32 line=6;
+  uint64 timestamp=7;
 }
 
 message SysCmd {
@@ -73,18 +74,6 @@ message MulticastInfo {
    string group = 2;
    int32 port = 3;
    uint32 mtu = 4 ;
-}
-
-message HoverboardInfo {
-   int32 speed = 1;
-   int32 direction = 2;
-   int32 currentA=3;
-}
-
-message HoverboardCmd {
-  string src = 2;
-   int32 speed = 3;
-   int32 direction = 4;
 }
 
 enum MessageType {
@@ -124,7 +113,7 @@ message HoverboardInfo {
   CtrlTyp ctrl_typ=1 ; // 0:Commutation 1:Sinusoidal 2:FOC
   uint32 cur_mot_max=2; // Max phase current A
   uint32 rpm_mot_max=3; // Max motor RPM
-  uuint32 fi_weak_ena=4; // Enable field weak 0:OFF 1:ON
+  uint32 fi_weak_ena=4; // Enable field weak 0:OFF 1:ON
   uint32 fi_weak_hi=5;  // Field weak high RPM
   uint32 fi_weak_lo=6; // Field weak low RPM
   uint32 fi_weak_max=7; // Field weak max current A (FOC only)

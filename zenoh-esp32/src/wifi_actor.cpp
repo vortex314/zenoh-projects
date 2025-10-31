@@ -470,8 +470,7 @@ Res WifiActor::connect()
   bzero(&wifi_config, sizeof(wifi_config));
   strcpy((char *)wifi_config.sta.ssid, wifi_ssid.c_str());
   strcpy((char *)wifi_config.sta.password, wifi_password.c_str());
-  INFO("Setting WiFi configuration SSID '%s' PSWD '%s'", wifi_config.sta.ssid,
-       wifi_config.sta.password);
+  INFO("Setting WiFi configuration SSID '%s' ", wifi_config.sta.ssid);
   CHECK_ESP(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 
 

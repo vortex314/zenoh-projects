@@ -50,7 +50,7 @@ public:
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);
 
   Res zenoh_publish(const char *topic, const Bytes &value);
-  void send_msg(const char* topic, const Msg* msg);
+  void send_msg(const char* topic,const char* msg_type, const Bytes& bytes);
   Res collect_info();
   Res publish_props();
 //  Res publish_props_info();

@@ -65,7 +65,7 @@ public:
     if ( value ) {
       return serialize(idx,*value);
     }
-    return ResOk;
+    return Res::Ok(true);
   }
 
   template <typename V>
@@ -76,7 +76,7 @@ public:
       serialize(name);
       serialize(*value);
     }
-    return ResOk;
+    return Res::Ok(true);
   }
   Res serialize(const Serializable &value) { return value.serialize(*this); }
 
@@ -132,7 +132,7 @@ public:
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
-    return ResOk;
+    return Res::Ok(true);
   }
 
   template <typename U>
@@ -141,7 +141,7 @@ public:
     U u;
     RET_ERR(deserialize(u), "Failed to decode option");
     opt = u;
-    return ResOk;
+    return Res::Ok(true);
   }
 
   template <typename U>
@@ -197,7 +197,7 @@ public:
     else
     {
       ERROR("Expected map %d", map_type);
-      return Res(-1, "Expected map");
+      return Res::Err(-1, "Expected map");
     }
 
     while (true && (count++ < map_size))
@@ -209,7 +209,7 @@ public:
       uint32_t key;
 #ifdef KEY_TYPE_STR
       if (type != SerialType::SER_STR)
-        return Res(-1, "Expected key str");
+        return Res::Err(-1, "Expected key str");
       std::string key_str;
       RET_ERR(deserialize(key_str), "Failed to decode key str in map");
       key = H(key_str.c_str());
@@ -225,7 +225,7 @@ public:
     {
       RET_ERR(map_end(), "Failed to decode map end ");
     }
-    return ResOk;
+    return Res::Ok(true);
   }
 };
 

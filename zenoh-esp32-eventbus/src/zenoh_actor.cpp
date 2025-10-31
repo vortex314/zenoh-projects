@@ -36,24 +36,24 @@ void ZenohActor::handle_timer(int id)
     INFO("Unknown timer id: %d", id);
 }
 
-void ZenohActor::send_msg(const char *src, const Msg *msg)
+void ZenohActor::send_msg(const char *src, const char* msg_type, const Bytes& bytes)
 {
   char topic[100];
-  sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg->type_id());
-  zenoh_publish(topic, msg->serialize());
+  sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg_type);
+  zenoh_publish(topic, bytes);
 }
 
 void ZenohActor::on_message(const Envelope &env)
 {
   const Msg &msg = *env.msg;
   msg.handle<SysInfo>([&](const auto &msg)
-                      { send_msg(env.src->name(), &msg); });
+                      { send_msg(env.src->name(), msg.type_id(), msg.serialize()); });
   msg.handle<WifiInfo>([&](const auto &msg)
-                       { send_msg(env.src->name(), &msg); });
+                       { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
   msg.handle<ZenohInfo>([&](const auto &msg)
-                        { send_msg(env.src->name(), &msg); });
+                        { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
   msg.handle<HoverboardInfo>([&](const auto &msg)
-                             { send_msg(env.src->name(), &msg); });
+                             { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -115,7 +115,7 @@ Res ZenohActor::connect(void)
   collect_info();
   INFO("Zenoh session opened with ZID %s", zid.c_str());
   _connected = true;
-  return ResOk;
+  return Res::Ok(true);
 }
 
 std::string z_str_to_string(z_owned_string_t &z_str)
@@ -154,7 +154,7 @@ Res ZenohActor::collect_info()
 
   z_drop(z_move(zid_closure));
 
-  return ResOk;
+  return Res::Ok(true);
 }
 
 Res ZenohActor::disconnect()
@@ -163,7 +163,7 @@ Res ZenohActor::disconnect()
   if (z_session_is_closed(z_loan_mut(_zenoh_session)))
   {
     INFO("Zenoh session is not open");
-    return ResOk;
+    return Res::Ok(true);
   }
 
   _connected = false;
@@ -178,7 +178,7 @@ Res ZenohActor::disconnect()
   z_drop(z_move(_zenoh_session));
   //  z_drop(z_move(zenoh_session));
   INFO("Zenoh session closed ");
-  return ResOk;
+  return Res::Ok(true);
 }
 
 bool ZenohActor::is_connected() const
@@ -289,7 +289,7 @@ Res ZenohActor::zenoh_publish_serializable(const char *topic,
   CHECK(z_bytes_copy_from_buf(&payload, buffer.data(), buffer.size()));
   CHECK(z_put(z_loan(zenoh_session), z_loan(keyexpr), z_move(payload), NULL));
   z_drop(z_move(payload));
-  return ResOk;
+  return Res::Ok(true);
 }
 */
 struct Topic
@@ -370,7 +370,7 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   z_drop(z_move(payload));
   emit(new LedPulse(10));
 
-  return ResOk;
+  return Res::Ok(true);
 }
 
 Res ZenohActor::publish_props()
@@ -386,7 +386,7 @@ Res ZenohActor::publish_props()
   zenoh_info->routers = _routers;
   zenoh_info->connect = CONNECT;
   emit(zenoh_info);
-  return ResOk;
+  return Res::Ok(true);
 }
 
 //============================================================

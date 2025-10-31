@@ -3,12 +3,18 @@
 #include <vector>
 #include <cstdint>
 #include <optional>
-#include <tinycbor.h>
+#include <cbor.h>
+#include <functional>
 #include <actor.h>
-#include <result.h>
 
 typedef std::vector<uint8_t> Bytes;
+
+
 // Helper macros for serialization and deserialization
+
+
+
+
 
 typedef enum {
     DEBUG = 1,
@@ -53,143 +59,13 @@ typedef enum {
 
 
 
-typedef enum {
-    FLAG_INDEX = 1,
-    ID_INDEX = 2,
-    NAME_INDEX = 3,
-    VALUES_INDEX = 4,
-    F_INDEX = 5,
-    D_INDEX = 6,
-    DATA_INDEX = 7,
-} Sample_Fields;
+static constexpr const char SAMPLE_NAME[] = "Sample";
 
-typedef enum {
-    ZID_INDEX = 2,
-    WHAT_AM_I_INDEX = 3,
-    PEERS_INDEX = 4,
-    PREFIX_INDEX = 5,
-    ROUTERS_INDEX = 6,
-    CONNECT_INDEX = 7,
-    LISTEN_INDEX = 8,
-} ZenohInfo_Fields;
-
-typedef enum {
-    LEVEL_INDEX = 2,
-    MESSAGE_INDEX = 3,
-    ERROR_CODE_INDEX = 4,
-    FILE_INDEX = 5,
-    LINE_INDEX = 6,
-} LogInfo_Fields;
-
-typedef enum {
-    SRC_INDEX = 2,
-    SET_TIME_INDEX = 3,
-    REBOOT_INDEX = 4,
-    CONSOLE_INDEX = 5,
-} SysCmd_Fields;
-
-typedef enum {
-    UTC_INDEX = 1,
-    UPTIME_INDEX = 2,
-    FREE_HEAP_INDEX = 3,
-    FLASH_INDEX = 4,
-    CPU_BOARD_INDEX = 5,
-    BUILD_DATE_INDEX = 6,
-} SysInfo_Fields;
-
-typedef enum {
-    SSID_INDEX = 2,
-    BSSID_INDEX = 3,
-    RSSI_INDEX = 4,
-    IP_INDEX = 5,
-    MAC_INDEX = 6,
-    CHANNEL_INDEX = 7,
-    GATEWAY_INDEX = 8,
-    NETMASK_INDEX = 9,
-} WifiInfo_Fields;
-
-typedef enum {
-    GROUP_INDEX = 2,
-    PORT_INDEX = 3,
-    MTU_INDEX = 4,
-} MulticastInfo_Fields;
-
-typedef enum {
-    SPEED_INDEX = 1,
-    DIRECTION_INDEX = 2,
-    CURRENTA_INDEX = 3,
-} HoverboardInfo_Fields;
-
-typedef enum {
-    SRC_INDEX = 2,
-    SPEED_INDEX = 3,
-    DIRECTION_INDEX = 4,
-} HoverboardCmd_Fields;
-
-typedef enum {
-    CTRL_MOD_INDEX = 0,
-    CTRL_TYP_INDEX = 1,
-    CUR_MOT_MAX_INDEX = 2,
-    RPM_MOT_MAX_INDEX = 3,
-    FI_WEAK_ENA_INDEX = 4,
-    FI_WEAK_HI_INDEX = 5,
-    FI_WEAK_LO_INDEX = 6,
-    FI_WEAK_MAX_INDEX = 7,
-    PHASE_ADV_MAX_DEG_INDEX = 8,
-    INPUT1_RAW_INDEX = 9,
-    INPUT1_TYP_INDEX = 10,
-    INPUT1_MIN_INDEX = 11,
-    INPUT1_MID_INDEX = 12,
-    INPUT1_MAX_INDEX = 13,
-    INPUT1_CMD_INDEX = 14,
-    INPUT2_RAW_INDEX = 15,
-    INPUT2_TYP_INDEX = 16,
-    INPUT2_MIN_INDEX = 17,
-    INPUT2_MID_INDEX = 18,
-    INPUT2_MAX_INDEX = 19,
-    INPUT2_CMD_INDEX = 20,
-    AUX_INPUT1_RAW_INDEX = 21,
-    AUX_INPUT1_TYP_INDEX = 22,
-    AUX_INPUT1_MIN_INDEX = 23,
-    AUX_INPUT1_MID_INDEX = 24,
-    AUX_INPUT1_MAX_INDEX = 25,
-    AUX_INPUT1_CMD_INDEX = 26,
-    AUX_INPUT2_RAW_INDEX = 27,
-    AUX_INPUT2_TYP_INDEX = 28,
-    AUX_INPUT2_MIN_INDEX = 29,
-    AUX_INPUT2_MID_INDEX = 30,
-    AUX_INPUT2_MAX_INDEX = 31,
-    AUX_INPUT2_CMD_INDEX = 32,
-    DC_CURR_INDEX = 33,
-    RDC_CURR_INDEX = 34,
-    LDC_CURR_INDEX = 35,
-    CMDL_INDEX = 36,
-    CMDR_INDEX = 37,
-    SPD_AVG_INDEX = 38,
-    SPDL_INDEX = 39,
-    SPDR_INDEX = 40,
-    FILTER_RATE_INDEX = 41,
-    SPD_COEF_INDEX = 42,
-    STR_COEF_INDEX = 43,
-    BATV_INDEX = 44,
-    TEMP_INDEX = 45,
-} HoverboardInfo_Fields;
-
-typedef enum {
-    SPEED_INDEX = 0,
-    STEER_INDEX = 1,
-} HoverboardCmd_Fields;
-
-
-
-class Sample : public Msg {
+class Sample : public Msg<SAMPLE_NAME,3386> {
     public:
-    static constexpr const char *id = "Sample";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 3386;
 
     std::optional<bool> flag;
-    std::optional<int32_t> id;
+    std::optional<int32_t> identifier;
     std::optional<std::string> name;
     std::vector<float> values;
     std::optional<float> f;
@@ -197,46 +73,57 @@ class Sample : public Msg {
     std::optional<Bytes> data;
     
 
+    typedef enum {
+        FLAG_INDEX = 1,
+        IDENTIFIER_INDEX = 2,
+        NAME_INDEX = 3,
+        VALUES_INDEX = 4,
+        F_INDEX = 5,
+        D_INDEX = 6,
+        DATA_INDEX = 7,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (flag.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::FLAG_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(flag));
+        if (flag) {
+                cbor_encode_int(&mapEncoder, Field::FLAG_INDEX);
+                cbor_encode_boolean(&mapEncoder, flag.value());
                 }
-        if (id.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::ID_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(id));
+        if (identifier) {
+                cbor_encode_int(&mapEncoder, Field::IDENTIFIER_INDEX);
+                cbor_encode_int(&mapEncoder, identifier.value());
                 }
-        if (name.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::NAME_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, name.c_str());
+        if (name) {
+                cbor_encode_int(&mapEncoder, Field::NAME_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, name.value().c_str());
                 }
-        if (!values.empty()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::VALUES_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, values.size());
-            for (const auto & item : values) {
-                cbor_encode_float(&arrayEncoder, static_cast<float>(values));
-            }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
-        }
-        if (f.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::F_INDEX);
-                cbor_encode_float(&mapEncoder, static_cast<float>(f));
+        {
+                CborEncoder arrayEncoder;
+                cbor_encode_int(&mapEncoder, Field::VALUES_INDEX );
+                cbor_encoder_create_array(&mapEncoder, &arrayEncoder, values.size());
+                for (const auto & item : values) {
+                    cbor_encode_float(&arrayEncoder, item);
                 }
-        if (d.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::D_INDEX);
-                cbor_encode_double(&mapEncoder, static_cast<double>(d));
+                cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
                 }
-        if (data.has_value()) {
-                cbor_encode_int(&mapEncoder, Sample_Fields::DATA_INDEX);
-                cbor_encode_byte_string(&mapEncoder, data.data(), data.size());
+        if (f) {
+                cbor_encode_int(&mapEncoder, Field::F_INDEX);
+                cbor_encode_float(&mapEncoder, f.value());
+                }
+        if (d) {
+                cbor_encode_int(&mapEncoder, Field::D_INDEX);
+                cbor_encode_double(&mapEncoder, d.value());
+                }
+        if (data) {
+                cbor_encode_int(&mapEncoder, Field::DATA_INDEX);
+                cbor_encode_byte_string(&mapEncoder, data.value().data(), data.value().size());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -246,7 +133,7 @@ class Sample : public Msg {
 
     Sample* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         Sample* msg = new Sample();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -280,70 +167,54 @@ class Sample : public Msg {
             }
             switch (key) {
                 
-                case Sample_Fields::FLAG_INDEX:{
-                    {
-    bool v;
-    cbor_value_get_boolean(&mapIt, &v);
-    msg->flag = v;
-}
+                case Field::FLAG_INDEX:{cbor_value_get_boolean(&mapIt, &*flag);
                     break;
                 }
                 
-                case Sample_Fields::ID_INDEX:{
-                    {
+                case Field::IDENTIFIER_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->id = static_cast<int32_t>(v);
+    *identifier = v;
 }
                     break;
                 }
                 
-                case Sample_Fields::NAME_INDEX:{
-                    {
+                case Field::NAME_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->name = std::string(valbuf, vallen - 1);
+        *name = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case Sample_Fields::VALUES_INDEX:{
-                    {
-    float v;
-    cbor_value_get_float(&mapIt, &v);
-    msg->values = static_cast<float>(v);
-}
+                case Field::VALUES_INDEX:{CborValue tmp;
+                    cbor_value_enter_container(&mapIt,&tmp);
+                    while (!cbor_value_at_end(&tmp)) {
+                        float v;
+                        cbor_value_get_float(&tmp, &v);
+                        values.push_back(v);
+                    }
+                    cbor_value_leave_container(&mapIt,&tmp);
                     break;
                 }
                 
-                case Sample_Fields::F_INDEX:{
-                    {
-    float v;
-    cbor_value_get_float(&mapIt, &v);
-    msg->f = static_cast<float>(v);
-}
+                case Field::F_INDEX:{cbor_value_get_float(&mapIt, &*f);
                     break;
                 }
                 
-                case Sample_Fields::D_INDEX:{
-                    {
-    double v;
-    cbor_value_get_double(&mapIt, &v);
-    msg->d = static_cast<double>(v);
-}
+                case Field::D_INDEX:{cbor_value_get_double(&mapIt, &*d);
                     break;
                 }
                 
-                case Sample_Fields::DATA_INDEX:{
-                    {
+                case Field::DATA_INDEX:{{
     uint8_t tmpbuf[512];
     size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, &mapIt);
-        msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
+        *data = Bytes(tmpbuf, tmpbuf + tmplen);
     }
 }
                     break;
@@ -365,11 +236,10 @@ class Sample : public Msg {
 
 };
 
-class ZenohInfo : public Msg {
+static constexpr const char ZENOHINFO_NAME[] = "ZenohInfo";
+
+class ZenohInfo : public Msg<ZENOHINFO_NAME,33380> {
     public:
-    static constexpr const char *id = "ZenohInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 33380;
 
     std::optional<std::string> zid;
     std::optional<std::string> what_am_i;
@@ -380,50 +250,62 @@ class ZenohInfo : public Msg {
     std::optional<std::string> listen;
     
 
+    typedef enum {
+        ZID_INDEX = 2,
+        WHAT_AM_I_INDEX = 3,
+        PEERS_INDEX = 4,
+        PREFIX_INDEX = 5,
+        ROUTERS_INDEX = 6,
+        CONNECT_INDEX = 7,
+        LISTEN_INDEX = 8,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (zid.has_value()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::ZID_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, zid.c_str());
+        if (zid) {
+                cbor_encode_int(&mapEncoder, Field::ZID_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, zid.value().c_str());
                 }
-        if (what_am_i.has_value()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::WHAT_AM_I_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, what_am_i.c_str());
+        if (what_am_i) {
+                cbor_encode_int(&mapEncoder, Field::WHAT_AM_I_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, what_am_i.value().c_str());
                 }
-        if (!peers.empty()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::PEERS_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, peers.size());
-            for (const auto & item : peers) {
-                cbor_encode_text_stringz(&arrayEncoder, peers.c_str());
-            }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
-        }
-        if (prefix.has_value()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::PREFIX_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, prefix.c_str());
+        {
+                CborEncoder arrayEncoder;
+                cbor_encode_int(&mapEncoder, Field::PEERS_INDEX );
+                cbor_encoder_create_array(&mapEncoder, &arrayEncoder, peers.size());
+                for (const auto & item : peers) {
+                    cbor_encode_text_stringz(&arrayEncoder, item.c_str());
                 }
-        if (!routers.empty()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::ROUTERS_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, routers.size());
-            for (const auto & item : routers) {
-                cbor_encode_text_stringz(&arrayEncoder, routers.c_str());
-            }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
-        }
-        if (connect.has_value()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::CONNECT_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, connect.c_str());
+                cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
                 }
-        if (listen.has_value()) {
-                cbor_encode_int(&mapEncoder, ZenohInfo_Fields::LISTEN_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, listen.c_str());
+        if (prefix) {
+                cbor_encode_int(&mapEncoder, Field::PREFIX_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, prefix.value().c_str());
+                }
+        {
+                CborEncoder arrayEncoder;
+                cbor_encode_int(&mapEncoder, Field::ROUTERS_INDEX );
+                cbor_encoder_create_array(&mapEncoder, &arrayEncoder, routers.size());
+                for (const auto & item : routers) {
+                    cbor_encode_text_stringz(&arrayEncoder, item.c_str());
+                }
+                cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+                }
+        if (connect) {
+                cbor_encode_int(&mapEncoder, Field::CONNECT_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, connect.value().c_str());
+                }
+        if (listen) {
+                cbor_encode_int(&mapEncoder, Field::LISTEN_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, listen.value().c_str());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -433,7 +315,7 @@ class ZenohInfo : public Msg {
 
     ZenohInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         ZenohInfo* msg = new ZenohInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -467,85 +349,92 @@ class ZenohInfo : public Msg {
             }
             switch (key) {
                 
-                case ZenohInfo_Fields::ZID_INDEX:{
-                    {
+                case Field::ZID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->zid = std::string(valbuf, vallen - 1);
+        *zid = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case ZenohInfo_Fields::WHAT_AM_I_INDEX:{
-                    {
+                case Field::WHAT_AM_I_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->what_am_i = std::string(valbuf, vallen - 1);
+        *what_am_i = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case ZenohInfo_Fields::PEERS_INDEX:{
-                    {
+                case Field::PEERS_INDEX:{CborValue tmp;
+                    cbor_value_enter_container(&mapIt,&tmp);
+                    while (!cbor_value_at_end(&tmp)) {
+                        std::string v;
+                        {
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&tmp)) {
+        cbor_value_copy_text_string(&tmp, valbuf, &vallen, &tmp);
+        v = std::string(valbuf, vallen - 1);
+    }
+}
+                        peers.push_back(v);
+                    }
+                    cbor_value_leave_container(&mapIt,&tmp);
+                    break;
+                }
+                
+                case Field::PREFIX_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->peers = std::string(valbuf, vallen - 1);
+        *prefix = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case ZenohInfo_Fields::PREFIX_INDEX:{
-                    {
+                case Field::ROUTERS_INDEX:{CborValue tmp;
+                    cbor_value_enter_container(&mapIt,&tmp);
+                    while (!cbor_value_at_end(&tmp)) {
+                        std::string v;
+                        {
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&tmp)) {
+        cbor_value_copy_text_string(&tmp, valbuf, &vallen, &tmp);
+        v = std::string(valbuf, vallen - 1);
+    }
+}
+                        routers.push_back(v);
+                    }
+                    cbor_value_leave_container(&mapIt,&tmp);
+                    break;
+                }
+                
+                case Field::CONNECT_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->prefix = std::string(valbuf, vallen - 1);
+        *connect = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case ZenohInfo_Fields::ROUTERS_INDEX:{
-                    {
+                case Field::LISTEN_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->routers = std::string(valbuf, vallen - 1);
-    }
-}
-                    break;
-                }
-                
-                case ZenohInfo_Fields::CONNECT_INDEX:{
-                    {
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
-    if (cbor_value_is_text_string(&mapIt)) {
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->connect = std::string(valbuf, vallen - 1);
-    }
-}
-                    break;
-                }
-                
-                case ZenohInfo_Fields::LISTEN_INDEX:{
-                    {
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
-    if (cbor_value_is_text_string(&mapIt)) {
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->listen = std::string(valbuf, vallen - 1);
+        *listen = std::string(valbuf, vallen - 1);
     }
 }
                     break;
@@ -567,47 +456,60 @@ class ZenohInfo : public Msg {
 
 };
 
-class LogInfo : public Msg {
+static constexpr const char LOGINFO_NAME[] = "LogInfo";
+
+class LogInfo : public Msg<LOGINFO_NAME,34678> {
     public:
-    static constexpr const char *id = "LogInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 34678;
 
     std::optional<LogLevel> level;
     std::optional<std::string> message;
     std::optional<int32_t> error_code;
     std::optional<std::string> file;
     std::optional<int32_t> line;
+    std::optional<uint64_t> timestamp;
     
+
+    typedef enum {
+        LEVEL_INDEX = 2,
+        MESSAGE_INDEX = 3,
+        ERROR_CODE_INDEX = 4,
+        FILE_INDEX = 5,
+        LINE_INDEX = 6,
+        TIMESTAMP_INDEX = 7,
+    } Field;
 
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (level.has_value()) {
-                cbor_encode_int(&mapEncoder, LogInfo_Fields::LEVEL_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(level));
+        if (level) {
+                cbor_encode_int(&mapEncoder, Field::LEVEL_INDEX);
+                cbor_encode_int(&mapEncoder, level.value());
                 }
-        if (message.has_value()) {
-                cbor_encode_int(&mapEncoder, LogInfo_Fields::MESSAGE_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, message.c_str());
+        if (message) {
+                cbor_encode_int(&mapEncoder, Field::MESSAGE_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, message.value().c_str());
                 }
-        if (error_code.has_value()) {
-                cbor_encode_int(&mapEncoder, LogInfo_Fields::ERROR_CODE_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(error_code));
+        if (error_code) {
+                cbor_encode_int(&mapEncoder, Field::ERROR_CODE_INDEX);
+                cbor_encode_int(&mapEncoder, error_code.value());
                 }
-        if (file.has_value()) {
-                cbor_encode_int(&mapEncoder, LogInfo_Fields::FILE_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, file.c_str());
+        if (file) {
+                cbor_encode_int(&mapEncoder, Field::FILE_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, file.value().c_str());
                 }
-        if (line.has_value()) {
-                cbor_encode_int(&mapEncoder, LogInfo_Fields::LINE_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(line));
+        if (line) {
+                cbor_encode_int(&mapEncoder, Field::LINE_INDEX);
+                cbor_encode_int(&mapEncoder, line.value());
+                }
+        if (timestamp) {
+                cbor_encode_int(&mapEncoder, Field::TIMESTAMP_INDEX);
+                cbor_encode_int(&mapEncoder, timestamp.value());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -617,7 +519,7 @@ class LogInfo : public Msg {
 
     LogInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         LogInfo* msg = new LogInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -651,54 +553,53 @@ class LogInfo : public Msg {
             }
             switch (key) {
                 
-                case LogInfo_Fields::LEVEL_INDEX:{
-                    {
+                case Field::LEVEL_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->level = static_cast<LogLevel>(v);
+    *level = static_cast<LogLevel>(v);
 }
                     break;
                 }
                 
-                case LogInfo_Fields::MESSAGE_INDEX:{
-                    {
+                case Field::MESSAGE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->message = std::string(valbuf, vallen - 1);
+        *message = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case LogInfo_Fields::ERROR_CODE_INDEX:{
-                    {
+                case Field::ERROR_CODE_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->error_code = static_cast<int32_t>(v);
+    *error_code = v;
 }
                     break;
                 }
                 
-                case LogInfo_Fields::FILE_INDEX:{
-                    {
+                case Field::FILE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->file = std::string(valbuf, vallen - 1);
+        *file = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case LogInfo_Fields::LINE_INDEX:{
-                    {
+                case Field::LINE_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->line = static_cast<int32_t>(v);
+    *line = v;
 }
+                    break;
+                }
+                
+                case Field::TIMESTAMP_INDEX:{cbor_value_get_uint64(&mapIt, &*timestamp);
                     break;
                 }
                 
@@ -718,11 +619,10 @@ class LogInfo : public Msg {
 
 };
 
-class SysCmd : public Msg {
+static constexpr const char SYSCMD_NAME[] = "SysCmd";
+
+class SysCmd : public Msg<SYSCMD_NAME,51983> {
     public:
-    static constexpr const char *id = "SysCmd";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 51983;
 
     std::string src;
     std::optional<uint64_t> set_time;
@@ -730,29 +630,36 @@ class SysCmd : public Msg {
     std::optional<std::string> console;
     
 
+    typedef enum {
+        SRC_INDEX = 2,
+        SET_TIME_INDEX = 3,
+        REBOOT_INDEX = 4,
+        CONSOLE_INDEX = 5,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
         // field: src
-                cbor_encode_int(&mapEncoder, SysCmd_Fields::SRC_INDEX);
+                cbor_encode_int(&mapEncoder, Field::SRC_INDEX);
                 cbor_encode_text_stringz(&mapEncoder, src.c_str());
-        if (set_time.has_value()) {
-                cbor_encode_int(&mapEncoder, SysCmd_Fields::SET_TIME_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint64_t>(set_time));
+        if (set_time) {
+                cbor_encode_int(&mapEncoder, Field::SET_TIME_INDEX);
+                cbor_encode_int(&mapEncoder, set_time.value());
                 }
-        if (reboot.has_value()) {
-                cbor_encode_int(&mapEncoder, SysCmd_Fields::REBOOT_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(reboot));
+        if (reboot) {
+                cbor_encode_int(&mapEncoder, Field::REBOOT_INDEX);
+                cbor_encode_boolean(&mapEncoder, reboot.value());
                 }
-        if (console.has_value()) {
-                cbor_encode_int(&mapEncoder, SysCmd_Fields::CONSOLE_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, console.c_str());
+        if (console) {
+                cbor_encode_int(&mapEncoder, Field::CONSOLE_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, console.value().c_str());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -762,7 +669,7 @@ class SysCmd : public Msg {
 
     SysCmd* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         SysCmd* msg = new SysCmd();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -796,44 +703,31 @@ class SysCmd : public Msg {
             }
             switch (key) {
                 
-                case SysCmd_Fields::SRC_INDEX:{
-                    {
+                case Field::SRC_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->src = std::string(valbuf, vallen - 1);
+        src = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case SysCmd_Fields::SET_TIME_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->set_time = static_cast<uint64_t>(v);
-    
-}
+                case Field::SET_TIME_INDEX:{cbor_value_get_uint64(&mapIt, &*set_time);
                     break;
                 }
                 
-                case SysCmd_Fields::REBOOT_INDEX:{
-                    {
-    bool v;
-    cbor_value_get_boolean(&mapIt, &v);
-    msg->reboot = v;
-}
+                case Field::REBOOT_INDEX:{cbor_value_get_boolean(&mapIt, &*reboot);
                     break;
                 }
                 
-                case SysCmd_Fields::CONSOLE_INDEX:{
-                    {
+                case Field::CONSOLE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->console = std::string(valbuf, vallen - 1);
+        *console = std::string(valbuf, vallen - 1);
     }
 }
                     break;
@@ -855,11 +749,10 @@ class SysCmd : public Msg {
 
 };
 
-class SysInfo : public Msg {
+static constexpr const char SYSINFO_NAME[] = "SysInfo";
+
+class SysInfo : public Msg<SYSINFO_NAME,10347> {
     public:
-    static constexpr const char *id = "SysInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 10347;
 
     std::optional<uint64_t> utc;
     std::optional<uint64_t> uptime;
@@ -869,38 +762,47 @@ class SysInfo : public Msg {
     std::optional<std::string> build_date;
     
 
+    typedef enum {
+        UTC_INDEX = 1,
+        UPTIME_INDEX = 2,
+        FREE_HEAP_INDEX = 3,
+        FLASH_INDEX = 4,
+        CPU_BOARD_INDEX = 5,
+        BUILD_DATE_INDEX = 6,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (utc.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::UTC_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint64_t>(utc));
+        if (utc) {
+                cbor_encode_int(&mapEncoder, Field::UTC_INDEX);
+                cbor_encode_int(&mapEncoder, utc.value());
                 }
-        if (uptime.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::UPTIME_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint64_t>(uptime));
+        if (uptime) {
+                cbor_encode_int(&mapEncoder, Field::UPTIME_INDEX);
+                cbor_encode_int(&mapEncoder, uptime.value());
                 }
-        if (free_heap.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::FREE_HEAP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint64_t>(free_heap));
+        if (free_heap) {
+                cbor_encode_int(&mapEncoder, Field::FREE_HEAP_INDEX);
+                cbor_encode_int(&mapEncoder, free_heap.value());
                 }
-        if (flash.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::FLASH_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint64_t>(flash));
+        if (flash) {
+                cbor_encode_int(&mapEncoder, Field::FLASH_INDEX);
+                cbor_encode_int(&mapEncoder, flash.value());
                 }
-        if (cpu_board.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::CPU_BOARD_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, cpu_board.c_str());
+        if (cpu_board) {
+                cbor_encode_int(&mapEncoder, Field::CPU_BOARD_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, cpu_board.value().c_str());
                 }
-        if (build_date.has_value()) {
-                cbor_encode_int(&mapEncoder, SysInfo_Fields::BUILD_DATE_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, build_date.c_str());
+        if (build_date) {
+                cbor_encode_int(&mapEncoder, Field::BUILD_DATE_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, build_date.value().c_str());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -910,7 +812,7 @@ class SysInfo : public Msg {
 
     SysInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         SysInfo* msg = new SysInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -944,65 +846,39 @@ class SysInfo : public Msg {
             }
             switch (key) {
                 
-                case SysInfo_Fields::UTC_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->utc = static_cast<uint64_t>(v);
-    
-}
+                case Field::UTC_INDEX:{cbor_value_get_uint64(&mapIt, &*utc);
                     break;
                 }
                 
-                case SysInfo_Fields::UPTIME_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->uptime = static_cast<uint64_t>(v);
-    
-}
+                case Field::UPTIME_INDEX:{cbor_value_get_uint64(&mapIt, &*uptime);
                     break;
                 }
                 
-                case SysInfo_Fields::FREE_HEAP_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->free_heap = static_cast<uint64_t>(v);
-    
-}
+                case Field::FREE_HEAP_INDEX:{cbor_value_get_uint64(&mapIt, &*free_heap);
                     break;
                 }
                 
-                case SysInfo_Fields::FLASH_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->flash = static_cast<uint64_t>(v);
-    
-}
+                case Field::FLASH_INDEX:{cbor_value_get_uint64(&mapIt, &*flash);
                     break;
                 }
                 
-                case SysInfo_Fields::CPU_BOARD_INDEX:{
-                    {
+                case Field::CPU_BOARD_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->cpu_board = std::string(valbuf, vallen - 1);
+        *cpu_board = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case SysInfo_Fields::BUILD_DATE_INDEX:{
-                    {
+                case Field::BUILD_DATE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->build_date = std::string(valbuf, vallen - 1);
+        *build_date = std::string(valbuf, vallen - 1);
     }
 }
                     break;
@@ -1024,11 +900,10 @@ class SysInfo : public Msg {
 
 };
 
-class WifiInfo : public Msg {
+static constexpr const char WIFIINFO_NAME[] = "WifiInfo";
+
+class WifiInfo : public Msg<WIFIINFO_NAME,15363> {
     public:
-    static constexpr const char *id = "WifiInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 15363;
 
     std::optional<std::string> ssid;
     std::optional<std::string> bssid;
@@ -1040,46 +915,57 @@ class WifiInfo : public Msg {
     std::optional<std::string> netmask;
     
 
+    typedef enum {
+        SSID_INDEX = 2,
+        BSSID_INDEX = 3,
+        RSSI_INDEX = 4,
+        IP_INDEX = 5,
+        MAC_INDEX = 6,
+        CHANNEL_INDEX = 7,
+        GATEWAY_INDEX = 8,
+        NETMASK_INDEX = 9,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (ssid.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::SSID_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, ssid.c_str());
+        if (ssid) {
+                cbor_encode_int(&mapEncoder, Field::SSID_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, ssid.value().c_str());
                 }
-        if (bssid.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::BSSID_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, bssid.c_str());
+        if (bssid) {
+                cbor_encode_int(&mapEncoder, Field::BSSID_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, bssid.value().c_str());
                 }
-        if (rssi.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::RSSI_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(rssi));
+        if (rssi) {
+                cbor_encode_int(&mapEncoder, Field::RSSI_INDEX);
+                cbor_encode_int(&mapEncoder, rssi.value());
                 }
-        if (ip.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::IP_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, ip.c_str());
+        if (ip) {
+                cbor_encode_int(&mapEncoder, Field::IP_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, ip.value().c_str());
                 }
-        if (mac.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::MAC_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, mac.c_str());
+        if (mac) {
+                cbor_encode_int(&mapEncoder, Field::MAC_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, mac.value().c_str());
                 }
-        if (channel.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::CHANNEL_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(channel));
+        if (channel) {
+                cbor_encode_int(&mapEncoder, Field::CHANNEL_INDEX);
+                cbor_encode_int(&mapEncoder, channel.value());
                 }
-        if (gateway.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::GATEWAY_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, gateway.c_str());
+        if (gateway) {
+                cbor_encode_int(&mapEncoder, Field::GATEWAY_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, gateway.value().c_str());
                 }
-        if (netmask.has_value()) {
-                cbor_encode_int(&mapEncoder, WifiInfo_Fields::NETMASK_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, netmask.c_str());
+        if (netmask) {
+                cbor_encode_int(&mapEncoder, Field::NETMASK_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, netmask.value().c_str());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -1089,7 +975,7 @@ class WifiInfo : public Msg {
 
     WifiInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         WifiInfo* msg = new WifiInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -1123,91 +1009,83 @@ class WifiInfo : public Msg {
             }
             switch (key) {
                 
-                case WifiInfo_Fields::SSID_INDEX:{
-                    {
+                case Field::SSID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->ssid = std::string(valbuf, vallen - 1);
+        *ssid = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::BSSID_INDEX:{
-                    {
+                case Field::BSSID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->bssid = std::string(valbuf, vallen - 1);
+        *bssid = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::RSSI_INDEX:{
-                    {
+                case Field::RSSI_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->rssi = static_cast<int32_t>(v);
+    *rssi = v;
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::IP_INDEX:{
-                    {
+                case Field::IP_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->ip = std::string(valbuf, vallen - 1);
+        *ip = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::MAC_INDEX:{
-                    {
+                case Field::MAC_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->mac = std::string(valbuf, vallen - 1);
+        *mac = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::CHANNEL_INDEX:{
-                    {
+                case Field::CHANNEL_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->channel = static_cast<int32_t>(v);
+    *channel = v;
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::GATEWAY_INDEX:{
-                    {
+                case Field::GATEWAY_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->gateway = std::string(valbuf, vallen - 1);
+        *gateway = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case WifiInfo_Fields::NETMASK_INDEX:{
-                    {
+                case Field::NETMASK_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->netmask = std::string(valbuf, vallen - 1);
+        *netmask = std::string(valbuf, vallen - 1);
     }
 }
                     break;
@@ -1229,37 +1107,42 @@ class WifiInfo : public Msg {
 
 };
 
-class MulticastInfo : public Msg {
+static constexpr const char MULTICASTINFO_NAME[] = "MulticastInfo";
+
+class MulticastInfo : public Msg<MULTICASTINFO_NAME,61310> {
     public:
-    static constexpr const char *id = "MulticastInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 61310;
 
     std::optional<std::string> group;
     std::optional<int32_t> port;
     std::optional<uint32_t> mtu;
     
 
+    typedef enum {
+        GROUP_INDEX = 2,
+        PORT_INDEX = 3,
+        MTU_INDEX = 4,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (group.has_value()) {
-                cbor_encode_int(&mapEncoder, MulticastInfo_Fields::GROUP_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, group.c_str());
+        if (group) {
+                cbor_encode_int(&mapEncoder, Field::GROUP_INDEX);
+                cbor_encode_text_stringz(&mapEncoder, group.value().c_str());
                 }
-        if (port.has_value()) {
-                cbor_encode_int(&mapEncoder, MulticastInfo_Fields::PORT_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(port));
+        if (port) {
+                cbor_encode_int(&mapEncoder, Field::PORT_INDEX);
+                cbor_encode_int(&mapEncoder, port.value());
                 }
-        if (mtu.has_value()) {
-                cbor_encode_int(&mapEncoder, MulticastInfo_Fields::MTU_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(mtu));
+        if (mtu) {
+                cbor_encode_int(&mapEncoder, Field::MTU_INDEX);
+                cbor_encode_int(&mapEncoder, mtu.value());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -1269,7 +1152,7 @@ class MulticastInfo : public Msg {
 
     MulticastInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         MulticastInfo* msg = new MulticastInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -1303,32 +1186,29 @@ class MulticastInfo : public Msg {
             }
             switch (key) {
                 
-                case MulticastInfo_Fields::GROUP_INDEX:{
-                    {
+                case Field::GROUP_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->group = std::string(valbuf, vallen - 1);
+        *group = std::string(valbuf, vallen - 1);
     }
 }
                     break;
                 }
                 
-                case MulticastInfo_Fields::PORT_INDEX:{
-                    {
+                case Field::PORT_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->port = static_cast<int32_t>(v);
+    *port = v;
 }
                     break;
                 }
                 
-                case MulticastInfo_Fields::MTU_INDEX:{
-                    {
+                case Field::MTU_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->mtu = static_cast<uint32_t>(v);
+    *mtu = v;
 }
                     break;
                 }
@@ -1349,254 +1229,16 @@ class MulticastInfo : public Msg {
 
 };
 
-class HoverboardInfo : public Msg {
+static constexpr const char HOVERBOARDINFO_NAME[] = "HoverboardInfo";
+
+class HoverboardInfo : public Msg<HOVERBOARDINFO_NAME,59150> {
     public:
-    static constexpr const char *id = "HoverboardInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 59150;
-
-    std::optional<int32_t> speed;
-    std::optional<int32_t> direction;
-    std::optional<int32_t> currentA;
-    
-
-    Bytes serialize() const {
-        // buffer: grow if needed by changing initial size
-        std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
-        cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
-
-        // Start top-level map
-        cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
-
-        if (speed.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::SPEED_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(speed));
-                }
-        if (direction.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::DIRECTION_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(direction));
-                }
-        if (currentA.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CURRENTA_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(currentA));
-                }
-        cbor_encoder_close_container(&encoder, &mapEncoder);
-        // get used size
-        size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-        return Bytes(buffer.begin(), buffer.begin() + used);
-    }
-
-    HoverboardInfo* deserialize(const Bytes& bytes) {
-        CborParser parser;
-        CborValue it, mapIt, tmp;
-        HoverboardInfo* msg = new HoverboardInfo();
-
-        CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
-        if (err != CborNoError) {
-            delete msg;
-            return nullptr;
-        }
-
-        if (!cbor_value_is_map(&it)) {
-            delete msg;
-            return nullptr;
-        }
-
-        // enter map
-        err = cbor_value_enter_container(&it, &mapIt);
-        if (err != CborNoError) {
-            delete msg;
-            return nullptr;
-        }
-
-        // iterate key/value pairs
-        while (!cbor_value_at_end(&mapIt)) {
-            uint64_t key = 0;
-            if (cbor_value_is_unsigned_integer(&mapIt)) {
-                cbor_value_get_uint64(&mapIt, &key);
-                cbor_value_advance(&mapIt);
-            } else {
-                // invalid key type
-                delete msg;
-                return nullptr;
-            }
-            switch (key) {
-                
-                case HoverboardInfo_Fields::SPEED_INDEX:{
-                    {
-    int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->speed = static_cast<int32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::DIRECTION_INDEX:{
-                    {
-    int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->direction = static_cast<int32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::CURRENTA_INDEX:{
-                    {
-    int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->currentA = static_cast<int32_t>(v);
-}
-                    break;
-                }
-                
-                default:
-                    // skip unknown key
-                    cbor_value_advance(&mapIt);
-                    break;
-            }
-
-        }
-
-        // leave container
-        cbor_value_leave_container(&it, &mapIt);
-
-        return msg;
-    }
-
-};
-
-class HoverboardCmd : public Msg {
-    public:
-    static constexpr const char *id = "HoverboardCmd";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 58218;
-
-    std::optional<std::string> src;
-    std::optional<int32_t> speed;
-    std::optional<int32_t> direction;
-    
-
-    Bytes serialize() const {
-        // buffer: grow if needed by changing initial size
-        std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
-        cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
-
-        // Start top-level map
-        cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
-
-        if (src.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardCmd_Fields::SRC_INDEX);
-                cbor_encode_text_stringz(&mapEncoder, src.c_str());
-                }
-        if (speed.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardCmd_Fields::SPEED_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(speed));
-                }
-        if (direction.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardCmd_Fields::DIRECTION_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(direction));
-                }
-        cbor_encoder_close_container(&encoder, &mapEncoder);
-        // get used size
-        size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-        return Bytes(buffer.begin(), buffer.begin() + used);
-    }
-
-    HoverboardCmd* deserialize(const Bytes& bytes) {
-        CborParser parser;
-        CborValue it, mapIt, tmp;
-        HoverboardCmd* msg = new HoverboardCmd();
-
-        CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
-        if (err != CborNoError) {
-            delete msg;
-            return nullptr;
-        }
-
-        if (!cbor_value_is_map(&it)) {
-            delete msg;
-            return nullptr;
-        }
-
-        // enter map
-        err = cbor_value_enter_container(&it, &mapIt);
-        if (err != CborNoError) {
-            delete msg;
-            return nullptr;
-        }
-
-        // iterate key/value pairs
-        while (!cbor_value_at_end(&mapIt)) {
-            uint64_t key = 0;
-            if (cbor_value_is_unsigned_integer(&mapIt)) {
-                cbor_value_get_uint64(&mapIt, &key);
-                cbor_value_advance(&mapIt);
-            } else {
-                // invalid key type
-                delete msg;
-                return nullptr;
-            }
-            switch (key) {
-                
-                case HoverboardCmd_Fields::SRC_INDEX:{
-                    {
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
-    if (cbor_value_is_text_string(&mapIt)) {
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
-        msg->src = std::string(valbuf, vallen - 1);
-    }
-}
-                    break;
-                }
-                
-                case HoverboardCmd_Fields::SPEED_INDEX:{
-                    {
-    int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->speed = static_cast<int32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardCmd_Fields::DIRECTION_INDEX:{
-                    {
-    int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->direction = static_cast<int32_t>(v);
-}
-                    break;
-                }
-                
-                default:
-                    // skip unknown key
-                    cbor_value_advance(&mapIt);
-                    break;
-            }
-
-        }
-
-        // leave container
-        cbor_value_leave_container(&it, &mapIt);
-
-        return msg;
-    }
-
-};
-
-class HoverboardInfo : public Msg {
-    public:
-    static constexpr const char *id = "HoverboardInfo";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 59150;
 
     std::optional<CtrlMod> ctrl_mod;
     std::optional<CtrlTyp> ctrl_typ;
     std::optional<uint32_t> cur_mot_max;
     std::optional<uint32_t> rpm_mot_max;
-    std::optional<uuint32> fi_weak_ena;
+    std::optional<uint32_t> fi_weak_ena;
     std::optional<uint32_t> fi_weak_hi;
     std::optional<uint32_t> fi_weak_lo;
     std::optional<uint32_t> fi_weak_max;
@@ -1640,198 +1282,247 @@ class HoverboardInfo : public Msg {
     std::optional<uint32_t> temp;
     
 
+    typedef enum {
+        CTRL_MOD_INDEX = 0,
+        CTRL_TYP_INDEX = 1,
+        CUR_MOT_MAX_INDEX = 2,
+        RPM_MOT_MAX_INDEX = 3,
+        FI_WEAK_ENA_INDEX = 4,
+        FI_WEAK_HI_INDEX = 5,
+        FI_WEAK_LO_INDEX = 6,
+        FI_WEAK_MAX_INDEX = 7,
+        PHASE_ADV_MAX_DEG_INDEX = 8,
+        INPUT1_RAW_INDEX = 9,
+        INPUT1_TYP_INDEX = 10,
+        INPUT1_MIN_INDEX = 11,
+        INPUT1_MID_INDEX = 12,
+        INPUT1_MAX_INDEX = 13,
+        INPUT1_CMD_INDEX = 14,
+        INPUT2_RAW_INDEX = 15,
+        INPUT2_TYP_INDEX = 16,
+        INPUT2_MIN_INDEX = 17,
+        INPUT2_MID_INDEX = 18,
+        INPUT2_MAX_INDEX = 19,
+        INPUT2_CMD_INDEX = 20,
+        AUX_INPUT1_RAW_INDEX = 21,
+        AUX_INPUT1_TYP_INDEX = 22,
+        AUX_INPUT1_MIN_INDEX = 23,
+        AUX_INPUT1_MID_INDEX = 24,
+        AUX_INPUT1_MAX_INDEX = 25,
+        AUX_INPUT1_CMD_INDEX = 26,
+        AUX_INPUT2_RAW_INDEX = 27,
+        AUX_INPUT2_TYP_INDEX = 28,
+        AUX_INPUT2_MIN_INDEX = 29,
+        AUX_INPUT2_MID_INDEX = 30,
+        AUX_INPUT2_MAX_INDEX = 31,
+        AUX_INPUT2_CMD_INDEX = 32,
+        DC_CURR_INDEX = 33,
+        RDC_CURR_INDEX = 34,
+        LDC_CURR_INDEX = 35,
+        CMDL_INDEX = 36,
+        CMDR_INDEX = 37,
+        SPD_AVG_INDEX = 38,
+        SPDL_INDEX = 39,
+        SPDR_INDEX = 40,
+        FILTER_RATE_INDEX = 41,
+        SPD_COEF_INDEX = 42,
+        STR_COEF_INDEX = 43,
+        BATV_INDEX = 44,
+        TEMP_INDEX = 45,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (ctrl_mod.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CTRL_MOD_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(ctrl_mod));
+        if (ctrl_mod) {
+                cbor_encode_int(&mapEncoder, Field::CTRL_MOD_INDEX);
+                cbor_encode_int(&mapEncoder, ctrl_mod.value());
                 }
-        if (ctrl_typ.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CTRL_TYP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(ctrl_typ));
+        if (ctrl_typ) {
+                cbor_encode_int(&mapEncoder, Field::CTRL_TYP_INDEX);
+                cbor_encode_int(&mapEncoder, ctrl_typ.value());
                 }
-        if (cur_mot_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CUR_MOT_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(cur_mot_max));
+        if (cur_mot_max) {
+                cbor_encode_int(&mapEncoder, Field::CUR_MOT_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, cur_mot_max.value());
                 }
-        if (rpm_mot_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::RPM_MOT_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(rpm_mot_max));
+        if (rpm_mot_max) {
+                cbor_encode_int(&mapEncoder, Field::RPM_MOT_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, rpm_mot_max.value());
                 }
-        if (fi_weak_ena.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::FI_WEAK_ENA_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(fi_weak_ena));
+        if (fi_weak_ena) {
+                cbor_encode_int(&mapEncoder, Field::FI_WEAK_ENA_INDEX);
+                cbor_encode_int(&mapEncoder, fi_weak_ena.value());
                 }
-        if (fi_weak_hi.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::FI_WEAK_HI_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(fi_weak_hi));
+        if (fi_weak_hi) {
+                cbor_encode_int(&mapEncoder, Field::FI_WEAK_HI_INDEX);
+                cbor_encode_int(&mapEncoder, fi_weak_hi.value());
                 }
-        if (fi_weak_lo.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::FI_WEAK_LO_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(fi_weak_lo));
+        if (fi_weak_lo) {
+                cbor_encode_int(&mapEncoder, Field::FI_WEAK_LO_INDEX);
+                cbor_encode_int(&mapEncoder, fi_weak_lo.value());
                 }
-        if (fi_weak_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::FI_WEAK_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(fi_weak_max));
+        if (fi_weak_max) {
+                cbor_encode_int(&mapEncoder, Field::FI_WEAK_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, fi_weak_max.value());
                 }
-        if (phase_adv_max_deg.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::PHASE_ADV_MAX_DEG_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(phase_adv_max_deg));
+        if (phase_adv_max_deg) {
+                cbor_encode_int(&mapEncoder, Field::PHASE_ADV_MAX_DEG_INDEX);
+                cbor_encode_int(&mapEncoder, phase_adv_max_deg.value());
                 }
-        if (input1_raw.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_RAW_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input1_raw));
+        if (input1_raw) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_RAW_INDEX);
+                cbor_encode_int(&mapEncoder, input1_raw.value());
                 }
-        if (input1_typ.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_TYP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(input1_typ));
+        if (input1_typ) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_TYP_INDEX);
+                cbor_encode_int(&mapEncoder, input1_typ.value());
                 }
-        if (input1_min.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_MIN_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input1_min));
+        if (input1_min) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_MIN_INDEX);
+                cbor_encode_int(&mapEncoder, input1_min.value());
                 }
-        if (input1_mid.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_MID_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input1_mid));
+        if (input1_mid) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_MID_INDEX);
+                cbor_encode_int(&mapEncoder, input1_mid.value());
                 }
-        if (input1_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input1_max));
+        if (input1_max) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, input1_max.value());
                 }
-        if (input1_cmd.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT1_CMD_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input1_cmd));
+        if (input1_cmd) {
+                cbor_encode_int(&mapEncoder, Field::INPUT1_CMD_INDEX);
+                cbor_encode_int(&mapEncoder, input1_cmd.value());
                 }
-        if (input2_raw.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_RAW_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input2_raw));
+        if (input2_raw) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_RAW_INDEX);
+                cbor_encode_int(&mapEncoder, input2_raw.value());
                 }
-        if (input2_typ.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_TYP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(input2_typ));
+        if (input2_typ) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_TYP_INDEX);
+                cbor_encode_int(&mapEncoder, input2_typ.value());
                 }
-        if (input2_min.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_MIN_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input2_min));
+        if (input2_min) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_MIN_INDEX);
+                cbor_encode_int(&mapEncoder, input2_min.value());
                 }
-        if (input2_mid.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_MID_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input2_mid));
+        if (input2_mid) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_MID_INDEX);
+                cbor_encode_int(&mapEncoder, input2_mid.value());
                 }
-        if (input2_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input2_max));
+        if (input2_max) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, input2_max.value());
                 }
-        if (input2_cmd.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::INPUT2_CMD_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(input2_cmd));
+        if (input2_cmd) {
+                cbor_encode_int(&mapEncoder, Field::INPUT2_CMD_INDEX);
+                cbor_encode_int(&mapEncoder, input2_cmd.value());
                 }
-        if (aux_input1_raw.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_RAW_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input1_raw));
+        if (aux_input1_raw) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_RAW_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_raw.value());
                 }
-        if (aux_input1_typ.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_TYP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(aux_input1_typ));
+        if (aux_input1_typ) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_TYP_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_typ.value());
                 }
-        if (aux_input1_min.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_MIN_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input1_min));
+        if (aux_input1_min) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_MIN_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_min.value());
                 }
-        if (aux_input1_mid.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_MID_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input1_mid));
+        if (aux_input1_mid) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_MID_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_mid.value());
                 }
-        if (aux_input1_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input1_max));
+        if (aux_input1_max) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_max.value());
                 }
-        if (aux_input1_cmd.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT1_CMD_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input1_cmd));
+        if (aux_input1_cmd) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT1_CMD_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input1_cmd.value());
                 }
-        if (aux_input2_raw.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_RAW_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input2_raw));
+        if (aux_input2_raw) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_RAW_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_raw.value());
                 }
-        if (aux_input2_typ.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_TYP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<long long>(aux_input2_typ));
+        if (aux_input2_typ) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_TYP_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_typ.value());
                 }
-        if (aux_input2_min.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_MIN_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input2_min));
+        if (aux_input2_min) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_MIN_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_min.value());
                 }
-        if (aux_input2_mid.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_MID_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input2_mid));
+        if (aux_input2_mid) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_MID_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_mid.value());
                 }
-        if (aux_input2_max.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_MAX_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input2_max));
+        if (aux_input2_max) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_MAX_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_max.value());
                 }
-        if (aux_input2_cmd.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::AUX_INPUT2_CMD_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(aux_input2_cmd));
+        if (aux_input2_cmd) {
+                cbor_encode_int(&mapEncoder, Field::AUX_INPUT2_CMD_INDEX);
+                cbor_encode_int(&mapEncoder, aux_input2_cmd.value());
                 }
-        if (dc_curr.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::DC_CURR_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(dc_curr));
+        if (dc_curr) {
+                cbor_encode_int(&mapEncoder, Field::DC_CURR_INDEX);
+                cbor_encode_int(&mapEncoder, dc_curr.value());
                 }
-        if (rdc_curr.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::RDC_CURR_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(rdc_curr));
+        if (rdc_curr) {
+                cbor_encode_int(&mapEncoder, Field::RDC_CURR_INDEX);
+                cbor_encode_int(&mapEncoder, rdc_curr.value());
                 }
-        if (ldc_curr.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::LDC_CURR_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(ldc_curr));
+        if (ldc_curr) {
+                cbor_encode_int(&mapEncoder, Field::LDC_CURR_INDEX);
+                cbor_encode_int(&mapEncoder, ldc_curr.value());
                 }
-        if (cmdl.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CMDL_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(cmdl));
+        if (cmdl) {
+                cbor_encode_int(&mapEncoder, Field::CMDL_INDEX);
+                cbor_encode_int(&mapEncoder, cmdl.value());
                 }
-        if (cmdr.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::CMDR_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(cmdr));
+        if (cmdr) {
+                cbor_encode_int(&mapEncoder, Field::CMDR_INDEX);
+                cbor_encode_int(&mapEncoder, cmdr.value());
                 }
-        if (spd_avg.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::SPD_AVG_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(spd_avg));
+        if (spd_avg) {
+                cbor_encode_int(&mapEncoder, Field::SPD_AVG_INDEX);
+                cbor_encode_int(&mapEncoder, spd_avg.value());
                 }
-        if (spdl.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::SPDL_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(spdl));
+        if (spdl) {
+                cbor_encode_int(&mapEncoder, Field::SPDL_INDEX);
+                cbor_encode_int(&mapEncoder, spdl.value());
                 }
-        if (spdr.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::SPDR_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(spdr));
+        if (spdr) {
+                cbor_encode_int(&mapEncoder, Field::SPDR_INDEX);
+                cbor_encode_int(&mapEncoder, spdr.value());
                 }
-        if (filter_rate.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::FILTER_RATE_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(filter_rate));
+        if (filter_rate) {
+                cbor_encode_int(&mapEncoder, Field::FILTER_RATE_INDEX);
+                cbor_encode_int(&mapEncoder, filter_rate.value());
                 }
-        if (spd_coef.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::SPD_COEF_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(spd_coef));
+        if (spd_coef) {
+                cbor_encode_int(&mapEncoder, Field::SPD_COEF_INDEX);
+                cbor_encode_int(&mapEncoder, spd_coef.value());
                 }
-        if (str_coef.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::STR_COEF_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(str_coef));
+        if (str_coef) {
+                cbor_encode_int(&mapEncoder, Field::STR_COEF_INDEX);
+                cbor_encode_int(&mapEncoder, str_coef.value());
                 }
-        if (batv.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::BATV_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(batv));
+        if (batv) {
+                cbor_encode_int(&mapEncoder, Field::BATV_INDEX);
+                cbor_encode_int(&mapEncoder, batv.value());
                 }
-        if (temp.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardInfo_Fields::TEMP_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<uint32_t>(temp));
+        if (temp) {
+                cbor_encode_int(&mapEncoder, Field::TEMP_INDEX);
+                cbor_encode_int(&mapEncoder, temp.value());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -1841,7 +1532,7 @@ class HoverboardInfo : public Msg {
 
     HoverboardInfo* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         HoverboardInfo* msg = new HoverboardInfo();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -1875,416 +1566,370 @@ class HoverboardInfo : public Msg {
             }
             switch (key) {
                 
-                case HoverboardInfo_Fields::CTRL_MOD_INDEX:{
-                    {
+                case Field::CTRL_MOD_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->ctrl_mod = static_cast<CtrlMod>(v);
+    *ctrl_mod = static_cast<CtrlMod>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::CTRL_TYP_INDEX:{
-                    {
+                case Field::CTRL_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->ctrl_typ = static_cast<CtrlTyp>(v);
+    *ctrl_typ = static_cast<CtrlTyp>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::CUR_MOT_MAX_INDEX:{
-                    {
+                case Field::CUR_MOT_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->cur_mot_max = static_cast<uint32_t>(v);
+    *cur_mot_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::RPM_MOT_MAX_INDEX:{
-                    {
+                case Field::RPM_MOT_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->rpm_mot_max = static_cast<uint32_t>(v);
+    *rpm_mot_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::FI_WEAK_ENA_INDEX:{
-                    {
+                case Field::FI_WEAK_ENA_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *fi_weak_ena = v;
+}
+                    break;
+                }
+                
+                case Field::FI_WEAK_HI_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *fi_weak_hi = v;
+}
+                    break;
+                }
+                
+                case Field::FI_WEAK_LO_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *fi_weak_lo = v;
+}
+                    break;
+                }
+                
+                case Field::FI_WEAK_MAX_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *fi_weak_max = v;
+}
+                    break;
+                }
+                
+                case Field::PHASE_ADV_MAX_DEG_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *phase_adv_max_deg = v;
+}
+                    break;
+                }
+                
+                case Field::INPUT1_RAW_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &v);
+    *input1_raw = v;
+}
+                    break;
+                }
+                
+                case Field::INPUT1_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->fi_weak_ena = static_cast<uuint32>(v);
+    *input1_typ = static_cast<InTyp>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::FI_WEAK_HI_INDEX:{
-                    {
+                case Field::INPUT1_MIN_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->fi_weak_hi = static_cast<uint32_t>(v);
+    *input1_min = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::FI_WEAK_LO_INDEX:{
-                    {
+                case Field::INPUT1_MID_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->fi_weak_lo = static_cast<uint32_t>(v);
+    *input1_mid = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::FI_WEAK_MAX_INDEX:{
-                    {
+                case Field::INPUT1_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->fi_weak_max = static_cast<uint32_t>(v);
+    *input1_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::PHASE_ADV_MAX_DEG_INDEX:{
-                    {
+                case Field::INPUT1_CMD_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->phase_adv_max_deg = static_cast<uint32_t>(v);
+    *input1_cmd = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_RAW_INDEX:{
-                    {
+                case Field::INPUT2_RAW_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input1_raw = static_cast<uint32_t>(v);
+    *input2_raw = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_TYP_INDEX:{
-                    {
+                case Field::INPUT2_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->input1_typ = static_cast<InTyp>(v);
+    *input2_typ = static_cast<InTyp>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_MIN_INDEX:{
-                    {
+                case Field::INPUT2_MIN_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input1_min = static_cast<uint32_t>(v);
+    *input2_min = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_MID_INDEX:{
-                    {
+                case Field::INPUT2_MID_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input1_mid = static_cast<uint32_t>(v);
+    *input2_mid = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_MAX_INDEX:{
-                    {
+                case Field::INPUT2_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input1_max = static_cast<uint32_t>(v);
+    *input2_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT1_CMD_INDEX:{
-                    {
+                case Field::INPUT2_CMD_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input1_cmd = static_cast<uint32_t>(v);
+    *input2_cmd = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_RAW_INDEX:{
-                    {
+                case Field::AUX_INPUT1_RAW_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input2_raw = static_cast<uint32_t>(v);
+    *aux_input1_raw = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_TYP_INDEX:{
-                    {
+                case Field::AUX_INPUT1_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->input2_typ = static_cast<InTyp>(v);
+    *aux_input1_typ = static_cast<InTyp>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_MIN_INDEX:{
-                    {
+                case Field::AUX_INPUT1_MIN_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input2_min = static_cast<uint32_t>(v);
+    *aux_input1_min = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_MID_INDEX:{
-                    {
+                case Field::AUX_INPUT1_MID_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input2_mid = static_cast<uint32_t>(v);
+    *aux_input1_mid = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_MAX_INDEX:{
-                    {
+                case Field::AUX_INPUT1_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input2_max = static_cast<uint32_t>(v);
+    *aux_input1_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::INPUT2_CMD_INDEX:{
-                    {
+                case Field::AUX_INPUT1_CMD_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->input2_cmd = static_cast<uint32_t>(v);
+    *aux_input1_cmd = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_RAW_INDEX:{
-                    {
+                case Field::AUX_INPUT2_RAW_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input1_raw = static_cast<uint32_t>(v);
+    *aux_input2_raw = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_TYP_INDEX:{
-                    {
+                case Field::AUX_INPUT2_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->aux_input1_typ = static_cast<InTyp>(v);
+    *aux_input2_typ = static_cast<InTyp>(v);
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_MIN_INDEX:{
-                    {
+                case Field::AUX_INPUT2_MIN_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input1_min = static_cast<uint32_t>(v);
+    *aux_input2_min = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_MID_INDEX:{
-                    {
+                case Field::AUX_INPUT2_MID_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input1_mid = static_cast<uint32_t>(v);
+    *aux_input2_mid = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_MAX_INDEX:{
-                    {
+                case Field::AUX_INPUT2_MAX_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input1_max = static_cast<uint32_t>(v);
+    *aux_input2_max = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT1_CMD_INDEX:{
-                    {
+                case Field::AUX_INPUT2_CMD_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input1_cmd = static_cast<uint32_t>(v);
+    *aux_input2_cmd = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT2_RAW_INDEX:{
-                    {
+                case Field::DC_CURR_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input2_raw = static_cast<uint32_t>(v);
+    *dc_curr = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT2_TYP_INDEX:{
-                    {
-    long long v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->aux_input2_typ = static_cast<InTyp>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::AUX_INPUT2_MIN_INDEX:{
-                    {
+                case Field::RDC_CURR_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input2_min = static_cast<uint32_t>(v);
+    *rdc_curr = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT2_MID_INDEX:{
-                    {
+                case Field::LDC_CURR_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input2_mid = static_cast<uint32_t>(v);
+    *ldc_curr = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT2_MAX_INDEX:{
-                    {
+                case Field::CMDL_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input2_max = static_cast<uint32_t>(v);
+    *cmdl = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::AUX_INPUT2_CMD_INDEX:{
-                    {
+                case Field::CMDR_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->aux_input2_cmd = static_cast<uint32_t>(v);
+    *cmdr = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::DC_CURR_INDEX:{
-                    {
+                case Field::SPD_AVG_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->dc_curr = static_cast<uint32_t>(v);
+    *spd_avg = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::RDC_CURR_INDEX:{
-                    {
+                case Field::SPDL_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->rdc_curr = static_cast<uint32_t>(v);
+    *spdl = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::LDC_CURR_INDEX:{
-                    {
+                case Field::SPDR_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->ldc_curr = static_cast<uint32_t>(v);
+    *spdr = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::CMDL_INDEX:{
-                    {
+                case Field::FILTER_RATE_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->cmdl = static_cast<uint32_t>(v);
+    *filter_rate = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::CMDR_INDEX:{
-                    {
+                case Field::SPD_COEF_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->cmdr = static_cast<uint32_t>(v);
+    *spd_coef = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::SPD_AVG_INDEX:{
-                    {
+                case Field::STR_COEF_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->spd_avg = static_cast<uint32_t>(v);
+    *str_coef = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::SPDL_INDEX:{
-                    {
+                case Field::BATV_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->spdl = static_cast<uint32_t>(v);
+    *batv = v;
 }
                     break;
                 }
                 
-                case HoverboardInfo_Fields::SPDR_INDEX:{
-                    {
+                case Field::TEMP_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
-    msg->spdr = static_cast<uint32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::FILTER_RATE_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->filter_rate = static_cast<uint32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::SPD_COEF_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->spd_coef = static_cast<uint32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::STR_COEF_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->str_coef = static_cast<uint32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::BATV_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->batv = static_cast<uint32_t>(v);
-}
-                    break;
-                }
-                
-                case HoverboardInfo_Fields::TEMP_INDEX:{
-                    {
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &v);
-    msg->temp = static_cast<uint32_t>(v);
+    *temp = v;
 }
                     break;
                 }
@@ -2305,32 +1950,36 @@ class HoverboardInfo : public Msg {
 
 };
 
-class HoverboardCmd : public Msg {
+static constexpr const char HOVERBOARDCMD_NAME[] = "HoverboardCmd";
+
+class HoverboardCmd : public Msg<HOVERBOARDCMD_NAME,58218> {
     public:
-    static constexpr const char *id = "HoverboardCmd";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = 58218;
 
     std::optional<int32_t> speed;
     std::optional<int32_t> steer;
     
 
+    typedef enum {
+        SPEED_INDEX = 0,
+        STEER_INDEX = 1,
+    } Field;
+
     Bytes serialize() const {
         // buffer: grow if needed by changing initial size
         std::vector<uint8_t> buffer(512);
-        CborEncoder encoder, mapEncoder, arrayEncoder;
+        CborEncoder encoder, mapEncoder;
         cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
         // Start top-level map
         cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-        if (speed.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardCmd_Fields::SPEED_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(speed));
+        if (speed) {
+                cbor_encode_int(&mapEncoder, Field::SPEED_INDEX);
+                cbor_encode_int(&mapEncoder, speed.value());
                 }
-        if (steer.has_value()) {
-                cbor_encode_int(&mapEncoder, HoverboardCmd_Fields::STEER_INDEX);
-                cbor_encode_int(&mapEncoder, static_cast<int32_t>(steer));
+        if (steer) {
+                cbor_encode_int(&mapEncoder, Field::STEER_INDEX);
+                cbor_encode_int(&mapEncoder, steer.value());
                 }
         cbor_encoder_close_container(&encoder, &mapEncoder);
         // get used size
@@ -2340,7 +1989,7 @@ class HoverboardCmd : public Msg {
 
     HoverboardCmd* deserialize(const Bytes& bytes) {
         CborParser parser;
-        CborValue it, mapIt, tmp;
+        CborValue it, mapIt;
         HoverboardCmd* msg = new HoverboardCmd();
 
         CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
@@ -2374,20 +2023,18 @@ class HoverboardCmd : public Msg {
             }
             switch (key) {
                 
-                case HoverboardCmd_Fields::SPEED_INDEX:{
-                    {
+                case Field::SPEED_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->speed = static_cast<int32_t>(v);
+    *speed = v;
 }
                     break;
                 }
                 
-                case HoverboardCmd_Fields::STEER_INDEX:{
-                    {
+                case Field::STEER_INDEX:{{
     int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->steer = static_cast<int32_t>(v);
+    *steer = v;
 }
                     break;
                 }

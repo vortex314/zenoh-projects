@@ -5,7 +5,6 @@
 #include <msg_info.h>
 #include <serdes.h>
 #include <vector>
-#include <value.h>
 #include <option.h>
 #include <ArduinoJson.h>
 #include <limero.cpp>

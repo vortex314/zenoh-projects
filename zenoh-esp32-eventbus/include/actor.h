@@ -13,7 +13,6 @@
 #include <util.h>
 #include <serdes.h>
 #include <option.h>
-#include <value.h>
 #include <result.h>
 #include <memory>
 #include <stdint.h>
@@ -38,48 +37,31 @@ public:
 };
 
 extern ActorRef NULL_ACTOR;
+#include <msg.h>
 
-class Msg
-{
-public:
-    virtual const char *type_id() const = 0;
-    virtual ~Msg() = default;
-    virtual Bytes serialize() const = 0 ;
-    template <typename T>
-    void handle(std::function<void(const T &)> f) const
-    {
-        if (type_id() == T::id)
-        {
-            const T &msg = static_cast<const T &>(*this);
-            f(msg);
-        }
-    }
-};
 
-#define MSG(MSG_TYPE, ...)                                          \
-    class MSG_TYPE : public Msg                                     \
-    {                                                               \
-    public:                                                         \
-        static constexpr const char *id = STRINGIZE(MSG_TYPE);      \
-        inline const char *type_id() const override { return id; }; \
-        inline Bytes serialize() const { return Bytes(); };                \
+
+/*
+   inline Bytes serialize() const { return Bytes(); };                \
         inline bool deserialize(const Bytes &) { return false;};                         \
-        ~MSG_TYPE() = default;                                      \
-        __VA_ARGS__;                                                \
-    }
-
+   
+*/
 class Envelope
 {
 public:
     std::optional<ActorRef> src = std::nullopt;
     std::optional<ActorRef> dst = std::nullopt;
-    const Msg *msg;
-    Envelope(Msg *msg) : msg(msg) {}
-    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg) {}
+    const MsgBase *msg;
+    Envelope(MsgBase *msg) : msg(msg) {}
+    Envelope(ActorRef src, const MsgBase *msg) : src(src), msg(msg) {}
     ~Envelope() { delete msg; }
 };
 
-MSG(TimerMsg, int timer_id; TimerMsg(int id) : timer_id(id){});
+DEFINE_MSG(TimerMsg){
+    int timer_id;
+    TimerMsg(int id) : timer_id(id) {}
+};
+
 
 /*template <typename T>
 void handle(const Msg &message, std::function<void(const T &)> f)
@@ -259,7 +241,7 @@ public:
     const char *name() { return _self.name(); }
     EventBus *eventbus() const { return _eventbus; }
 
-    void emit(const Msg *msg);
+    void emit(const MsgBase *msg);
     void set_eventbus(EventBus *eventbus);
 
     void handle_expired_timers()
@@ -331,13 +313,22 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
-MSG(StopActorMsg);
-MSG(PublishTxd, JsonDocument doc;
-    PublishTxd(const JsonDocument &doc) : doc(doc){});
-MSG(PublishRxd, JsonDocument doc;
-    PublishRxd(const JsonDocument &doc) : doc(doc){});
-MSG(Subscribe, std::string src; std::string dst; uint32_t timeout;
-    Subscribe(const std::string &src, const std::string &dst, uint32_t timeout) : src(src), dst(dst), timeout(timeout){});
+DEFINE_MSG(PublishTxd) {
+    JsonDocument doc;
+    PublishTxd(const JsonDocument &doc) : doc(doc) {}
+};
+DEFINE_MSG(PublishRxd) {
+    JsonDocument doc;
+    PublishRxd(const JsonDocument &doc) : doc(doc) {}
+};
+DEFINE_MSG(Subscribe) {
+    std::string pattern;
+    Subscribe(const std::string &pattern) : pattern(pattern) {}
+};
+DEFINE_MSG(Unsubscribe) {
+    std::string pattern;
+    Unsubscribe(const std::string &pattern) : pattern(pattern) {}
+};
 
 template <typename T>
 void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)

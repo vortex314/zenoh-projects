@@ -54,9 +54,9 @@ void WifiActor::on_start()
       INFO("Scanned SSID: %s", wifi_ssid.c_str());
       break;
     }
-    else
+    if ( r.is_err())
     {
-      INFO("Failed to scan: %s", r.msg());
+      INFO("Failed to scan: %s", r.err()->msg);
       vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
   }
@@ -73,7 +73,7 @@ void WifiActor::on_start()
   auto r = connect();
   if (r.is_err())
   {
-    INFO("Failed to connect to WiFi %d:%s", r.rc(), r.msg());
+    INFO("Failed to connect to WiFi %d:%s", r.err()->rc, r.err()->msg);
     return;
   }
 }
@@ -218,21 +218,6 @@ static PropInfo wifi_prop_info[] = {
 
 static constexpr int info_size = sizeof(wifi_prop_info) / sizeof(PropInfo);
 
-Result<Value> WifiActor::publish_info()
-{
-  Value v;
-  int idx = _prop_counter % info_size;
-  PropInfo &pi = wifi_prop_info[idx];
-  v[pi.name]["type"] = pi.type;
-  v[pi.name]["desc"] = pi.desc;
-  v[pi.name]["mode"] = pi.mode;
-  pi.min.inspect([&](const float &min)
-                 { v[pi.name]["min"] = min; });
-  pi.max.inspect([&](const float &max)
-                 { v[pi.name]["max"] = max; });
-  _prop_counter++;
-  return Result<Value>(v);
-}
 
 /*const InfoProp *WifiMsg::info(int idx)
 {
@@ -449,7 +434,7 @@ Res WifiActor::scan()
   ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
   ESP_ERROR_CHECK(esp_wifi_stop());
   ESP_ERROR_CHECK(esp_wifi_deinit());
-  return ResOk;
+  return Res::Ok(true);
 }
 
 Res WifiActor::connect()
@@ -472,5 +457,5 @@ Res WifiActor::connect()
       IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, this, &handler_got_ip);
   CHECK_ESP(esp_wifi_start());
 
-  return ResOk;
+  return Res::Ok(true);
 }
