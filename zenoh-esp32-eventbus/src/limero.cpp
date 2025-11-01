@@ -5,7 +5,7 @@
 #include <optional>
 #include <cbor.h>
 #include <functional>
-#include <actor.h>
+#include <msg.h>
 
 typedef std::vector<uint8_t> Bytes;
 
@@ -61,7 +61,8 @@ typedef enum {
 
 static constexpr const char SAMPLE_NAME[] = "Sample";
 
-class Sample : public Msg<SAMPLE_NAME,3386> {
+class Sample : public Msg{
+    MSG(Sample);
     public:
 
     std::optional<bool> flag;
@@ -238,7 +239,8 @@ class Sample : public Msg<SAMPLE_NAME,3386> {
 
 static constexpr const char ZENOHINFO_NAME[] = "ZenohInfo";
 
-class ZenohInfo : public Msg<ZENOHINFO_NAME,33380> {
+class ZenohInfo : public Msg{
+    MSG(ZenohInfo);
     public:
 
     std::optional<std::string> zid;
@@ -458,7 +460,8 @@ class ZenohInfo : public Msg<ZENOHINFO_NAME,33380> {
 
 static constexpr const char LOGINFO_NAME[] = "LogInfo";
 
-class LogInfo : public Msg<LOGINFO_NAME,34678> {
+class LogInfo : public Msg{
+    MSG(LogInfo);
     public:
 
     std::optional<LogLevel> level;
@@ -621,7 +624,8 @@ class LogInfo : public Msg<LOGINFO_NAME,34678> {
 
 static constexpr const char SYSCMD_NAME[] = "SysCmd";
 
-class SysCmd : public Msg<SYSCMD_NAME,51983> {
+class SysCmd : public Msg{
+    MSG(SysCmd);
     public:
 
     std::string src;
@@ -751,7 +755,8 @@ class SysCmd : public Msg<SYSCMD_NAME,51983> {
 
 static constexpr const char SYSINFO_NAME[] = "SysInfo";
 
-class SysInfo : public Msg<SYSINFO_NAME,10347> {
+class SysInfo : public Msg{
+    MSG(SysInfo);
     public:
 
     std::optional<uint64_t> utc;
@@ -902,7 +907,8 @@ class SysInfo : public Msg<SYSINFO_NAME,10347> {
 
 static constexpr const char WIFIINFO_NAME[] = "WifiInfo";
 
-class WifiInfo : public Msg<WIFIINFO_NAME,15363> {
+class WifiInfo : public Msg{
+    MSG(WifiInfo);
     public:
 
     std::optional<std::string> ssid;
@@ -1109,7 +1115,8 @@ class WifiInfo : public Msg<WIFIINFO_NAME,15363> {
 
 static constexpr const char MULTICASTINFO_NAME[] = "MulticastInfo";
 
-class MulticastInfo : public Msg<MULTICASTINFO_NAME,61310> {
+class MulticastInfo : public Msg{
+    MSG(MulticastInfo);
     public:
 
     std::optional<std::string> group;
@@ -1231,7 +1238,8 @@ class MulticastInfo : public Msg<MULTICASTINFO_NAME,61310> {
 
 static constexpr const char HOVERBOARDINFO_NAME[] = "HoverboardInfo";
 
-class HoverboardInfo : public Msg<HOVERBOARDINFO_NAME,59150> {
+class HoverboardInfo : public Msg{
+    MSG(HoverboardInfo);
     public:
 
     std::optional<CtrlMod> ctrl_mod;
@@ -1952,7 +1960,8 @@ class HoverboardInfo : public Msg<HOVERBOARDINFO_NAME,59150> {
 
 static constexpr const char HOVERBOARDCMD_NAME[] = "HoverboardCmd";
 
-class HoverboardCmd : public Msg<HOVERBOARDCMD_NAME,58218> {
+class HoverboardCmd : public Msg{
+    MSG(HoverboardCmd);
     public:
 
     std::optional<int32_t> speed;

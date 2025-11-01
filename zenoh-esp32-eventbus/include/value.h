@@ -15,7 +15,21 @@
 #include <result.h>
 
 #define FLOAT_TYPE float
-// #define VAL_OR_RET(V,RF)  { auto __r=RF; if (__r.is_err()) return __r;V=__r.unwrap();}
+#define VAL_OR_RET(L, F)           \
+    {                              \
+        auto v = F;                \
+        if (v.is_err())            \
+            return Result<Value>::Err(v.err()->rc, v.err()->msg);              \
+        L = v.unwrap(); \
+    }
+
+#define RET_ER(T, F)                               \
+    {                                              \
+        auto __r = F;                              \
+        if (__r.is_err())                          \
+            return Result<T>::Err(__r.err()->rc, __r.err()->msg); \
+    }
+    
 class Value;
 
 typedef const Value *SharedValue;
@@ -339,254 +353,9 @@ public:
     }*/
 
     size_t size() const;
-    // CBOR
-    std::vector<uint8_t> toCbor() const;
-    static Result<Value> fromCbor(const uint8_t *data, size_t size);
-    static Result<Value> fromCbor(const std::vector<uint8_t> &data);
-    // JSON
-    std::string toJson(bool pretty = false, int indent = 0) const;
-    static Result<Value> fromJson(const uint8_t *data, size_t size);
-    static Result<Value> fromJson(const std::string &jsonStr);
-
-    void serializeCbor(std::vector<uint8_t> &output) const;
-    void serializeJson(std::string &os, bool pretty, int indent) const;
-    void serializeJsonString(std::string &os, const std::string &str) const;
-    void serializeJsonArray(std::string &os, bool pretty, int indent) const;
-    void serializeJsonObject(std::string &os, bool pretty, int indent) const;
+  
 };
 
-#define RET_ER(T, F)                               \
-    {                                              \
-        auto __r = F;                              \
-        if (__r.is_err())                          \
-            return Result<T>(__r.rc(), __r.msg()); \
-    }
 
-namespace Base64
-{
-    static const std::string chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    static inline bool is_base64(uint8_t c)
-    {
-        return (isalnum(c) || (c == '+') || (c == '/'));
-    }
-
-    std::string encode(const uint8_t *buf, size_t bufLen);
-
-    std::vector<uint8_t> decode(const std::string &encoded_string);
-};
-
-void serializeCborInt(std::vector<uint8_t> &output, int64_t value);
-void serializeCborString(std::vector<uint8_t> &output, const std::string &str);
-void serializeCborByteArray(std::vector<uint8_t> &output, const Value::BytesType &data);
-void serializeCborArray(std::vector<uint8_t> &output, const Value::ArrayType &array);
-void serializeCborObject(std::vector<uint8_t> &output, const Value::ObjectType &object);
-void serializeCborLength(std::vector<uint8_t> &output, uint8_t majorType, size_t length);
-template <typename T>
-void pushBigEndian(std::vector<uint8_t> &output, T value)
-{
-    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
-    for (int i = sizeof(T) - 1; i >= 0; i--)
-    {
-        output.push_back(bytes[i]);
-    }
-}
-
-#include <stdexcept>
-
-class CborParser
-{
-public:
-    static Result<Value> parse(const uint8_t *data, size_t size)
-    {
-        CborParser parser(data, size);
-        return parser.parseValue();
-    }
-
-private:
-    CborParser(const uint8_t *data, size_t size)
-        : data(data), size(size), pos(0) {}
-
-    Result<Value> parseValue();
-    Result<uint64_t> parseLength(uint8_t minorType);
-
-    inline Value parseUnsignedInt(uint64_t value)
-    {
-        return Value(static_cast<int64_t>(value));
-    }
-
-    inline Value parseNegativeInt(uint64_t value)
-    {
-        return Value(-1 - static_cast<int64_t>(value));
-    }
-
-    Result<Value> parseByteString(uint64_t length);
-
-    Result<Value> parseTextString(uint64_t length);
-
-    Result<Value> parseArray(uint64_t length);
-
-    Result<Value> parseMap(uint64_t length);
-
-    inline Result<Value> parseTaggedValue(uint64_t tag)
-    {
-        // For simplicity, we just skip tags in this implementation
-        // A more complete implementation would handle specific tags
-        return parseValue();
-    }
-
-    Result<Value> parseSimpleValue(uint8_t minorType, uint64_t length);
-
-    // Helper functions
-    inline Result<Void> checkAvailable(size_t needed) const
-    {
-        if (pos + needed > size)
-        {
-            return Result<Void>(-1, "Unexpected end of CBOR data");
-        }
-        return ResOk;
-    }
-
-    inline Result<uint8_t> readUint8()
-    {
-        RET_ER(uint8_t, checkAvailable(1));
-
-        return data[pos++];
-    }
-
-    inline Result<uint16_t> readUint16()
-    {
-        RET_ER(uint8_t, checkAvailable(2));
-        uint16_t value = (static_cast<uint16_t>(data[pos]) << 8) | data[pos + 1];
-        pos += 2;
-        return value;
-    }
-
-    inline Result<uint32_t> readUint32()
-    {
-        return checkAvailable(4).and_then([&](Void v)
-                                          {
-        uint32_t value = (static_cast<uint32_t>(data[pos]) << 24) |
-                         (static_cast<uint32_t>(data[pos + 1]) << 16) |
-                         (static_cast<uint32_t>(data[pos + 2]) << 8) |
-                         data[pos + 3];
-        pos += 4;
-        return value; });
-    }
-
-    inline Result<uint64_t> readUint64()
-    {
-        return checkAvailable(4).and_then([&](Void v)
-                                          {
-        uint64_t value = (static_cast<uint64_t>(data[pos]) << 56) |
-                         (static_cast<uint64_t>(data[pos + 1]) << 48) |
-                         (static_cast<uint64_t>(data[pos + 2]) << 40) |
-                         (static_cast<uint64_t>(data[pos + 3]) << 32) |
-                         (static_cast<uint64_t>(data[pos + 4]) << 24) |
-                         (static_cast<uint64_t>(data[pos + 5]) << 16) |
-                         (static_cast<uint64_t>(data[pos + 6]) << 8) |
-                         data[pos + 7];
-        pos += 8;
-        return value; });
-    }
-
-    inline Result<float> readFloat()
-    {
-        return readUint32().and_then([&](uint32_t v)
-                                     { return *reinterpret_cast<float *>(&v); });
-    }
-
-    inline Result<double> readDouble()
-    {
-        return readUint64().and_then([&](uint64_t v)
-                                     { return *reinterpret_cast<double *>(&v); });
-    }
-
-    const uint8_t *data;
-    size_t size;
-    size_t pos;
-};
-
-// Implement the static fromCbor method
-inline Result<Value> Value::fromCbor(const uint8_t *data, size_t size)
-{
-    return CborParser::parse(data, size);
-}
-
-#include <stack>
-#include <stdexcept>
-
-class JsonParser
-{
-public:
-    static Result<Value> parse(const std::string &jsonStr)
-    {
-        JsonParser parser(jsonStr);
-        return parser.parseValue();
-    }
-
-private:
-    JsonParser(const std::string &str) : input(str), pos(0) {}
-
-    Result<Value> parseValue();
-    Result<Value> parseObject();
-
-    Result<Value> parseArray();
-    Result<Value> parseString();
-    Result<Value> parseNumber();
-    Result<Value> parseBoolean();
-    Result<Value> parseNull();
-
-    // Helper functions
-    inline char peekChar()
-    {
-        if (pos >= input.size())
-            return '\0';
-        return input[pos];
-    }
-
-    inline Result<char> getChar()
-    {
-        if (pos >= input.size())
-            return Result<char>(-1, "Unexpected end of JSON");
-        return input[pos++];
-    }
-
-    inline void skipWhitespace()
-    {
-        while (pos < input.size() && isspace(input[pos]))
-        {
-            pos++;
-        }
-    }
-
-    inline Result<Void> expectChar(char expected)
-    {
-        char c;
-        VAL_OR_RET(c, getChar());
-        if (c != expected)
-        {
-            return Result<Void>(-1, "Expected char not found ");
-        }
-        return ResOk;
-    }
-
-    inline Result<Void> expectString(const std::string &expected)
-    {
-        for (char c : expected)
-        {
-            auto r = expectChar(c);
-            if (r.is_err())
-                return r;
-        }
-        return ResOk;
-    }
-
-    std::string input;
-    size_t pos;
-};
 
 #endif

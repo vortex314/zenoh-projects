@@ -5,6 +5,8 @@
 #include <functional>
 #include <type_traits>
 #include <result.h>
+#include <stdint.h>
+#include <util.h>
 
 using Bytes = std::vector<uint8_t>;
 
@@ -12,8 +14,8 @@ typedef uint32_t MsgId;
 // ————————————————————————————————————————
 // 1. Non-virtual base (for polymorphic use)
 // ————————————————————————————————————————
-struct MsgBase {
-    virtual ~MsgBase() = default;
+struct Msg {
+    virtual ~Msg() = default;
     // Runtime ID (fast)
     public:
     virtual MsgId type_id() const = 0;
@@ -31,19 +33,18 @@ protected:
     template<typename T> struct Derived;
 };
 
-// ————————————————————————————————————————
-// 2. CRTP template (no virtuals inside)
-// ————————————————————————————————————————
-template<const char* Name >
-struct Msg : public MsgBase<MSG_NAME> {
-    static constexpr MsgId id_value = fnv32(FNV32_OFFSET, Name);
-    static constexpr const char* name_value = Name;
-public:
-    inline MsgId type_id() const noexcept override { return id_value; }
-    inline const char* type_name() const noexcept override { return name_value; }
-};
+#define MSG(Name) \
+public: \
+    static constexpr const char* name_value = #Name; \
+    static constexpr MsgId id_value = fnv32(FNV32_OFFSET, #Name); \
+    inline MsgId type_id() const noexcept override { return id_value; }; \
+    inline const char* type_name() const noexcept override { return #Name; }; \
+    ~Name() override = default; 
 
-#define DEFINE_MSG(Name) \
-    constexpr const char Name##_NAME[] = #Name; \
-    struct Name : Msg<Name##_NAME> 
+#define DEFINE_MSG(Name,...) \
+struct Name : public Msg { \
+    MSG(Name) \
+    __VA_ARGS__; \
+    Name() = default; \
+};
 

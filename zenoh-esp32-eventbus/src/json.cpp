@@ -12,89 +12,89 @@ Res JsonSerializer::reset()
 {
     _bytes.clear();
     
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const uint8_t v)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const int8_t v)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const int i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const bool b)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const int32_t i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const uint32_t i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const int64_t i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const uint64_t i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const char *s)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const std::string &s)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const Bytes b)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize(const float f)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::map_begin()
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::map_end()
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::array_begin()
 {
     _state = ARRAY;
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::array_begin(size_t count)
 {
     _state = ARRAY_FIXED;
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::array_end()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonSerializer::serialize_null()
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonSerializer::serialize(const Serializable &value) { return value.serialize(*this); }
@@ -116,100 +116,100 @@ JsonDeserializer::JsonDeserializer(const uint8_t *bytes, size_t size)     {
 
 Res JsonDeserializer::deserialize(uint8_t &i)
 {
-        return ResOk;
+        return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(int8_t &i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(int32_t &i)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(uint64_t &val)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(int64_t &val)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(uint32_t &val)
 {
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(std::string &s)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::deserialize(Bytes &bytes)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::deserialize(float &f)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize(bool &b)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::skip_next()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::map_begin()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::map_begin(size_t &count)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::map_end()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::array_begin()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::array_begin(size_t &count)
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::array_end()
 {
 
-    return ResOk;
+    return Res::Ok(true);
 }
 Res JsonDeserializer::peek_type(SerialType &serial_type)
 {
     
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res JsonDeserializer::deserialize_null()
 {
-    return ResOk;
+    return Res::Ok(true);
 }

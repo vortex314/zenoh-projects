@@ -30,30 +30,31 @@ void ZenohActor::handle_timer(int id)
 {
   if (id == _timer_publish)
   {
-    publish_props();
+    auto r = publish_props();
   }
   else
     INFO("Unknown timer id: %d", id);
 }
 
-void ZenohActor::send_msg(const char *src, const char* msg_type, const Bytes& bytes)
+void ZenohActor::send_msg(const char *src, const char *msg_type, const Bytes &bytes)
 {
   char topic[100];
   sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg_type);
-  zenoh_publish(topic, bytes);
+  zenoh_publish(topic, bytes).or_else([](auto v)
+                                      { INFO("Failed to publish message: %s", v.msg); return Res::Err(-1,""); });
 }
 
 void ZenohActor::on_message(const Envelope &env)
 {
   const Msg &msg = *env.msg;
   msg.handle<SysInfo>([&](const auto &msg)
-                      { send_msg(env.src->name(), msg.type_id(), msg.serialize()); });
+                      { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
   msg.handle<WifiInfo>([&](const auto &msg)
-                       { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
+                       { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
   msg.handle<ZenohInfo>([&](const auto &msg)
-                        { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
+                        { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
   msg.handle<HoverboardInfo>([&](const auto &msg)
-                             { send_msg(env.src->name(),  msg.type_id(), msg.serialize()); });
+                             { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -62,7 +63,8 @@ void ZenohActor::on_message(const Envelope &env)
                                INFO("Failed to publish message");
                              } });
   msg.handle<ZenohSubscribe>([&](const ZenohSubscribe &sub)
-                             { subscribe(sub.topic); });
+                             { auto r = subscribe(sub.topic);
+                             });
   msg.handle<ZenohUnsubscribe>([&](const ZenohUnsubscribe &unsub)
                                { zenoh_unsubscribe(unsub.topic); });
   msg.handle<ZenohConnect>([&](auto _)
@@ -71,17 +73,18 @@ void ZenohActor::on_message(const Envelope &env)
                                Res res = connect();
                                if (res.is_err())
                                {
-                                 INFO("Failed to connect to Zenoh: %s", res.msg());
+                                 INFO("Failed to connect to Zenoh: %s", res.err()->msg);
                                  vTaskDelay(1000 / portTICK_PERIOD_MS);
                                  emit(new ZenohConnect());
                              } else {
                                INFO("Connected to Zenoh");
                              }
-                             subscribe("dst/esp1/**");
+                             auto r = subscribe("dst/esp1/**");
                            } });
   msg.handle<ZenohDisconnect>([&](auto _)
                               { if (_connected)
-                                { disconnect(); } });
+                                { auto r = disconnect();
+                                } });
 }
 
 void zid_to_hex(const z_id_t *id, char *hex)
@@ -112,7 +115,7 @@ Res ZenohActor::connect(void)
   // Start the receive and the session lease loop for zenoh-pico
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), NULL));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL));
-  collect_info();
+  auto r = collect_info();
   INFO("Zenoh session opened with ZID %s", zid.c_str());
   _connected = true;
   return Res::Ok(true);
@@ -195,25 +198,25 @@ void ZenohActor::prefix(const char *device_name)
   _subscribed_topics.push_back(_dst_device + "/**");
 }
 
-Result<Void> ZenohActor::subscribe(const std::string &topic)
+Result<bool> ZenohActor::subscribe(const std::string &topic)
 {
   if (_connected)
   {
     auto sub = declare_subscriber(topic.c_str());
     if (sub.is_err())
     {
-      return Result<Void>(-1, "Failed to declare subscriber");
+      return Result<bool>::Err(-1, "Failed to declare subscriber");
     }
     else
     {
-      _subscribers.emplace(topic, sub.ref());
+      _subscribers.emplace(topic, sub.unwrap());
     }
   }
   else
   {
-    return Result<Void>(-1, "Not connected to Zenoh");
+    return Result<bool>::Err(-1, "Not connected to Zenoh");
   }
-  return Result<Void>(true);
+  return Result<bool>(true);
 }
 
 Result<z_owned_subscriber_t> ZenohActor::declare_subscriber(const char *topic)
@@ -346,7 +349,7 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   Topic t;
   t.deserialize(topic.c_str());
 
-  if (strcmp(t.message_type, SysCmd::id) == 0)
+  if (strcmp(t.message_type, SysCmd::name_value) == 0)
   {
     auto msg_opt = SysCmd().deserialize(buffer);
     if (msg_opt)
@@ -377,7 +380,7 @@ Res ZenohActor::publish_props()
 {
   if (!_connected)
   {
-    return Res(ENOTCONN, "Not connected to Zenoh");
+    return Res::Err(ENOTCONN, "Not connected to Zenoh");
   }
   ZenohInfo *zenoh_info = new ZenohInfo();
   zenoh_info->zid = zid;

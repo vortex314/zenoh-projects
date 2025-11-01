@@ -5,7 +5,7 @@
 #include <optional>
 #include <cbor.h>
 #include <functional>
-#include <actor.h>
+#include <msg.h>
 
 typedef std::vector<uint8_t> Bytes;
 
@@ -96,7 +96,8 @@ typedef enum {
 {% for msg in messages %}
 static constexpr const char {{ msg.name | upper }}_NAME[] = "{{msg.name}}";
 
-class {{ msg.name }} : public Msg<{{ msg.name | upper }}_NAME> {
+class {{ msg.name }} : public Msg{
+    MSG({{ msg.name }});
     public:
 
     {% for field in msg.fields %}

@@ -10,8 +10,6 @@
 #include <limero.cpp>
 #include <zenoh_actor.h>
 
-MSG(SysPub,Option<uint64_t> uptime;Option<std::string> version;Option<std::string> cpu_board;Option<uint32_t> free_heap);
-
 class SysActor : public Actor
 {
 private:

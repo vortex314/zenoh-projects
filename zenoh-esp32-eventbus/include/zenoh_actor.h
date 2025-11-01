@@ -20,23 +20,32 @@
 #include <limero.cpp>
 #include <led_actor.h>
 
-
-MSG(ZenohPublish, std::string topic; Bytes payload; ZenohPublish(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){});
-MSG(ZenohSubscribe, std::string topic; ZenohSubscribe(const std::string &topic) : topic(topic){});
-MSG(ZenohUnsubscribe, std::string topic; ZenohUnsubscribe(const std::string &topic) : topic(topic){});
-MSG(ZenohReceived, std::string topic; Bytes payload; ZenohReceived(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){});
-MSG(ZenohConnect);
-MSG(ZenohDisconnect);
-
-
+DEFINE_MSG(ZenohPublish,std::string topic;
+  Bytes payload;
+  ZenohPublish(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){};
+);
+DEFINE_MSG(ZenohSubscribe, std::string topic;
+  ZenohSubscribe(const std::string &topic) : topic(topic){};
+);
+DEFINE_MSG(ZenohUnsubscribe,
+  std::string topic;
+  ZenohUnsubscribe(const std::string &topic) : topic(topic){};
+);
+DEFINE_MSG(ZenohReceived,std::string topic;
+  Bytes payload;
+  ZenohReceived(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){};
+);
+DEFINE_MSG(ZenohConnect);
+DEFINE_MSG(ZenohDisconnect);
 
 class ZenohActor : public Actor
 {
-  int _timer_publish=-1;
-  int _timer_publish_props=-1;
+  int _timer_publish = -1;
+  int _timer_publish_props = -1;
   int _prop_counter = 0;
+
 public:
-  ZenohActor(const char* name);
+  ZenohActor(const char *name);
   ~ZenohActor();
   void run();
   void on_message(const Envelope &env);
@@ -50,12 +59,12 @@ public:
   // Res zenoh_publish_serializable(const char *topic, Serializable &value);
 
   Res zenoh_publish(const char *topic, const Bytes &value);
-  void send_msg(const char* topic,const char* msg_type, const Bytes& bytes);
+  void send_msg(const char *topic, const char *msg_type, const Bytes &bytes);
   Res collect_info();
   Res publish_props();
-//  Res publish_props_info();
+  //  Res publish_props_info();
 
-  Result<Void> subscribe(const std::string &topic);
+  Result<bool> subscribe(const std::string &topic);
   void zenoh_unsubscribe(const std::string &topic);
 
   Result<z_owned_subscriber_t> declare_subscriber(const char *topic);
@@ -75,7 +84,6 @@ private:
   std::string zid;
   std::vector<std::string> _routers;
   std::vector<std::string> _peers;
-
 
   std::vector<std::string> _subscribed_topics;
   std::map<std::string, z_owned_subscriber_t> _subscribers;

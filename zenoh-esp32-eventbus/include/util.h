@@ -34,7 +34,7 @@ typedef std::vector<uint8_t> Bytes;
     {                                            \
       INFO(MSG);                                 \
       INFO("=%d %s:%d", rc, __FILE__, __LINE__); \
-      return Result<TYPE>(rc, MSG);         \
+      return Result<TYPE>::Err(rc, MSG);         \
     }                                            \
   }
 #define TEST_R(TYPE, VAL, MSG)                       \

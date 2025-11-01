@@ -2,8 +2,6 @@
 #include <actor.h>
 #include <queue>
 
-MSG(TestMsg, float speed; uint32_t rpm);
-
 ActorRef NULL_ACTOR = ActorRef("null");
 
 void Actor::set_eventbus(EventBus *eventbus)
@@ -21,27 +19,6 @@ void Actor::emit(const Msg *msg)
     {
         ERROR("EventBus not set for actor %s", name());
     }
-}
-
-class TestActor : public Actor
-{
-public:
-    TestActor(const char *name) : Actor(name) {};
-    void on_message(const Envelope &env)
-    {
-        const char* src = env.src ? env.src->name() : "unknown";
-        const char* dst = env.dst ? env.dst->name() : "unknown";
-        INFO("Env %s => %s : %s ", src,dst, env.msg->type_id());
-    }
-};
-
-void tester1()
-{
-    EventBus eb(10);
-    eb.register_actor(new TestActor("tester"));
-
-    eb.push(new Envelope(new TestMsg()));
-    eb.loop();
 }
 
 void panic_here(const char *s)
@@ -227,7 +204,7 @@ Res Thread::start()
         {
             panic_here("Failed to add actor to queue set");
 
-            return Res(-1, "xQueueAddToSet failed");
+            return Res::Err(-1, "xQueueAddToSet failed");
         }
     }
 
@@ -243,7 +220,7 @@ Res Thread::start()
                        self->run();
                    },
                    name(), _stack_size, this, _priority, &_task_handle));*/
-    return ResOk;
+    return Res::Ok(true);
 }
 
 Res Thread::add_actor(ThreadSupport &actor)
@@ -251,7 +228,7 @@ Res Thread::add_actor(ThreadSupport &actor)
     INFO("Adding actor %s:%X to thread %s", actor.name(), &actor, name());
     _actors.push_back(&actor);
 
-    return ResOk;
+    return Res::Ok(true);
 }
 
 /*void Thread::handle_all_cmd()

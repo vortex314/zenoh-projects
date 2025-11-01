@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <serdes.h>
 #include <ArduinoJson.h>
+#include <msg.h>
 #pragma once
 
 uint64_t current_time();
@@ -37,30 +38,22 @@ public:
 };
 
 extern ActorRef NULL_ACTOR;
-#include <msg.h>
 
-
-
-/*
-   inline Bytes serialize() const { return Bytes(); };                \
-        inline bool deserialize(const Bytes &) { return false;};                         \
-   
-*/
 class Envelope
 {
 public:
     std::optional<ActorRef> src = std::nullopt;
     std::optional<ActorRef> dst = std::nullopt;
-    const MsgBase *msg;
-    Envelope(MsgBase *msg) : msg(msg) {}
-    Envelope(ActorRef src, const MsgBase *msg) : src(src), msg(msg) {}
+    const Msg *msg;
+    Envelope(Msg *msg) : msg(msg) {}
+    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg) {}
     ~Envelope() { delete msg; }
 };
 
-DEFINE_MSG(TimerMsg){
+DEFINE_MSG(TimerMsg,
     int timer_id;
     TimerMsg(int id) : timer_id(id) {}
-};
+);
 
 
 /*template <typename T>
@@ -241,7 +234,7 @@ public:
     const char *name() { return _self.name(); }
     EventBus *eventbus() const { return _eventbus; }
 
-    void emit(const MsgBase *msg);
+    void emit(const Msg *msg);
     void set_eventbus(EventBus *eventbus);
 
     void handle_expired_timers()
@@ -313,22 +306,18 @@ typedef struct PropInfo
     Option<float> max;
 } PropInfo;
 
-DEFINE_MSG(PublishTxd) {
-    JsonDocument doc;
-    PublishTxd(const JsonDocument &doc) : doc(doc) {}
-};
-DEFINE_MSG(PublishRxd) {
-    JsonDocument doc;
-    PublishRxd(const JsonDocument &doc) : doc(doc) {}
-};
-DEFINE_MSG(Subscribe) {
-    std::string pattern;
-    Subscribe(const std::string &pattern) : pattern(pattern) {}
-};
-DEFINE_MSG(Unsubscribe) {
-    std::string pattern;
-    Unsubscribe(const std::string &pattern) : pattern(pattern) {}
-};
+DEFINE_MSG(PublishTxd,
+           JsonDocument doc;
+           PublishTxd(const JsonDocument &doc) : doc(doc){});
+DEFINE_MSG(PublishRxd,
+           JsonDocument doc;
+           PublishRxd(const JsonDocument &doc) : doc(doc){});
+DEFINE_MSG(Subscribe,
+           std::string pattern;
+           Subscribe(const std::string &pattern) : pattern(pattern){});
+DEFINE_MSG(Unsubscribe,
+           std::string pattern;
+           Unsubscribe(const std::string &pattern) : pattern(pattern){});
 
 template <typename T>
 void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)

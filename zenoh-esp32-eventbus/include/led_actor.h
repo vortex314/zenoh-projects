@@ -9,13 +9,30 @@
 #define GPIO_LED GPIO_NUM_2
 #endif
 
-MSG(LedBlink,uint32_t interval_msec);
-MSG(LedOff);
-MSG(LedOn);
-MSG(LedPulse,uint32_t duration_msec;LedPulse( uint32_t duration_msec) : duration_msec(duration_msec) { });
+DEFINE_MSG(LedBlink, uint32_t interval_msec;LedBlink(uint32_t interval_msec) : interval_msec(interval_msec) {};);
+DEFINE_MSG(LedOff);
+DEFINE_MSG(LedOn);
+/*
+struct LedPulse : public Msg
+{
+public:
+    static constexpr MsgId id_value = fnv32(2166136261, "LedPulse");
+    inline MsgId type_id() const noexcept override { return id_value; };
+    inline const char *type_name() const noexcept override { return "LedPulse"; };
+    ~LedPulse() override = default;
+    uint32_t duration_msec;
+    LedPulse(uint32_t duration_msec) : duration_msec(duration_msec) {};
+    ;
+    LedPulse() = default;
+};*/
+DEFINE_MSG(LedPulse,
+           uint32_t duration_msec;
+           LedPulse(uint32_t duration_msec) : duration_msec(duration_msec) {});
 
-class LedActor : public Actor {
-    typedef enum State {
+class LedActor : public Actor
+{
+    typedef enum State
+    {
         LED_STATE_OFF,
         LED_STATE_ON,
         LED_STATE_BLINK,
@@ -26,12 +43,13 @@ class LedActor : public Actor {
     int _gpio_led = GPIO_LED;
     bool _led_is_on = false;
     int _timer_led = -1;
+
 public:
-    LedActor(const char* name);
+    LedActor(const char *name);
     ~LedActor();
-    void on_message(const Envelope& msg);
+    void on_message(const Envelope &msg);
     void on_timer(int timer_id);
     void on_start();
 };
-    
+
 #endif

@@ -20,7 +20,7 @@ namespace result_detail {
     };
 
     inline void set_panic(panic_fn f) noexcept { g_panic = f; }
-    [[noreturn]] inline void panic(const char* msg) { g_panic(msg); }
+    [[noreturn]] inline void panic(const char* msg) { g_panic(msg); while(1){};}
 }
 
 typedef struct Error {
