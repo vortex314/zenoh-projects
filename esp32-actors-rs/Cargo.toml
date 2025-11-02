@@ -6,12 +6,14 @@ publish = false
 version = "0.1.0"
 
 [dependencies]
+limero = { path = "../esp32-limero-embassy-rs" }
 embassy-futures = "0.1.2"
 embassy-time = "0.5.0"
 embassy-sync = "0.7.2"
-esp-radio = { version="0.16.0", features=["esp32","wifi"]}
-esp-hal = { version="0.23.1", default-features = false, features = ["esp32","unstable"]}
-# esp-backtrace = "*"
+esp-radio = { version="0.17.0", features=["esp32","wifi","unstable"]}
+esp-idf-hal = { version="0.45.2",features=["unstable"] }
+xtensa-lx = { version = "0.13.0", features = [] }
+esp-backtrace = { version="0.18.1", features =["esp32","println"]}
 embedded-io-async = "*"
 
 
@@ -48,15 +50,14 @@ minicbor = {version = "*", default-features = false, features = [
 ]}
 # minicbor-ser = { version = "*", default-features = false, features = ["alloc"] }
 anyhow = {version = "1.0", default-features = false}
-bitfield = "0.16.1"
+bitfield = "0.19.3"
 byte = {version = "0.2.7"}
-cobs = {version = "0.2.3", default-features = false, features = []}
+cobs = {version = "0.5.0", default-features = false, features = []}
 crc = {version = "3.0.1", features = []}
 
-limero = {path = "../esp32-limero-embassy"}
 # pubsub = { path = "../pubsub" }
 # serdes = { path = "../serdes" }
-msg = {path = "../msg"}
+msg = {path = "../msg-rs"}
 serde = {version = "1.0.210", default-features = false, features = ["derive", "alloc"]}
 # serde_json= { version="*",default-features = false, features = ["alloc"] }
 

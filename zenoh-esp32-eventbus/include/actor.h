@@ -25,7 +25,7 @@ uint64_t current_time();
 
 class ActorRef
 {
-    const char *_actor_name;
+    const char *_actor_name="";
 
 public:
     ActorRef() = delete;

@@ -229,6 +229,39 @@ public:
   }
 };
 
+#ifdef ESP_PLATFORM
+#include "mbedtls/base64.h"
 
+
+
+static inline Bytes base64_decode(const std::string &input)
+{
+  size_t olen = 0;
+  mbedtls_base64_decode(NULL, 0, &olen, (const unsigned char *)input.data(), input.size());
+  Bytes output; // Change from std::vector<uint8_t> to Bytes
+  output.resize(olen);
+  if (mbedtls_base64_decode(output.data(), olen, &olen, (const unsigned char *)input.data(), input.size()) != 0)
+  {
+    return {};
+  }
+  output.resize(olen);
+  return output;
+}
+
+static inline std::string base64_encode(const Bytes &input)
+{
+  size_t olen = 0;
+  mbedtls_base64_encode(NULL, 0, &olen, input.data(), input.size());
+  std::string output;
+  output.resize(olen);
+  if (mbedtls_base64_encode((unsigned char *)output.data(), olen, &olen, input.data(), input.size()) != 0)
+  {
+    return "";
+  }
+  output.resize(olen);
+  return output;
+}
+
+#endif
 
 #endif

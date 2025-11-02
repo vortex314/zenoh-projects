@@ -40,8 +40,11 @@ void ZenohActor::send_msg(const char *src, const char *msg_type, const Bytes &by
 {
   char topic[100];
   sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg_type);
-  zenoh_publish(topic, bytes).or_else([](auto v)
-                                      { INFO("Failed to publish message: %s", v.msg); return Res::Err(-1,""); });
+  auto r = zenoh_publish(topic, bytes);
+  if (r.is_err())
+  {
+    INFO("Failed to send message to topic %s: %s", topic, r.err()->msg);
+  }
 }
 
 void ZenohActor::on_message(const Envelope &env)
@@ -63,8 +66,7 @@ void ZenohActor::on_message(const Envelope &env)
                                INFO("Failed to publish message");
                              } });
   msg.handle<ZenohSubscribe>([&](const ZenohSubscribe &sub)
-                             { auto r = subscribe(sub.topic);
-                             });
+                             { auto r = subscribe(sub.topic); });
   msg.handle<ZenohUnsubscribe>([&](const ZenohUnsubscribe &unsub)
                                { zenoh_unsubscribe(unsub.topic); });
   msg.handle<ZenohConnect>([&](auto _)

@@ -47,12 +47,12 @@ extern "C" void app_main()
   //  eventbus.register_actor(&mc_actor);
   eventbus.register_actor(&zenoh_actor); // bridge the eventbus
   eventbus.register_actor(&led_actor); // blink the led
-  eventbus.register_actor(&hoverboard_actor); // exchnage data via serial with hoverboard via UART
+  eventbus.register_actor(&hoverboard_actor); // exchange data via serial with hoverboard via UART
   eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
                               const char *src = env.src ? env.src->name() : "";
                               const char *dst = env.dst ? env.dst->name() : "";
-                              INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_id()); // comment for beauty
+                              INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
                             });
   eventbus.loop();
 }

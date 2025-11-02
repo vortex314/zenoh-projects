@@ -94,7 +94,6 @@ typedef enum {
 {% endfor %}
 
 {% for msg in messages %}
-static constexpr const char {{ msg.name | upper }}_NAME[] = "{{msg.name}}";
 
 class {{ msg.name }} : public Msg{
     MSG({{ msg.name }});

@@ -20,7 +20,7 @@
                 "--input", "proto/message.proto",
                 "--output", "../zenoh-esp32-eventbus/src",
                 "--lang", "cpp",
-                "--format", "cbor"
+                "--format", "json"
             ],
             "group": {
                 "kind": "build",

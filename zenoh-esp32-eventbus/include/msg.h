@@ -38,7 +38,7 @@ public: \
     static constexpr const char* name_value = #Name; \
     static constexpr MsgId id_value = fnv32(FNV32_OFFSET, #Name); \
     inline MsgId type_id() const noexcept override { return id_value; }; \
-    inline const char* type_name() const noexcept override { return #Name; }; \
+    inline const char* type_name() const noexcept override { return name_value; }; \
     ~Name() override = default; 
 
 #define DEFINE_MSG(Name,...) \
@@ -47,4 +47,6 @@ struct Name : public Msg { \
     __VA_ARGS__; \
     Name() = default; \
 };
+
+
 

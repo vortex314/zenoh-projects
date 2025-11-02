@@ -4,8 +4,9 @@
 #include <cstdint>
 #include <optional>
 #include <ArduinoJson.h>
-#include <actor.h>
-#include <result.h>
+#include <msg.h>
+#include <serdes.h>
+
 
 
 typedef std::vector<uint8_t> Bytes;
@@ -20,11 +21,8 @@ typedef enum {
 
 {% for msg in messages %}
 class {{ msg.name }} : public Msg {
+    MSG({{ msg.name }});
     public:
-    static constexpr const char *id = "{{ msg.name}}";     
-    inline const char *type_id() const override { return id; }; 
-    static const uint32_t ID = {{ msg.msg_id }};
-
     {% for field in msg.fields %}
         {%- if field.repeated -%}
         std::vector<{{ field.target_type }}>
@@ -39,20 +37,27 @@ class {{ msg.name }} : public Msg {
         JsonDocument doc;
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        {
-            JsonArray arr = doc["{{ field.name }}"].to<JsonArray>();
-            for (const auto& item : {{ field.name }}) {
-                arr.add(item);
-            }
-        }
+                {
+                    JsonArray arr = doc["{{ field.name }}"].to<JsonArray>();
+                    for (const auto& item : {{ field.name }}) {
+                        arr.add(item);
+                    }
+                }
             {%- elif field.optional -%}
-        if ({{ field.name }})  doc["{{ field.name }}"] = *{{ field.name }}; 
+                if ({{ field.name }})  
+                {%- if field.target_type == "Bytes" %}
+                        doc["{{ field.name }}"] = base64_encode(*{{ field.name }});
+                    {%- else -%}
+                        doc["{{ field.name }}"] = *{{ field.name }};
+                    {%- endif-%}
+            {%- elif field.target_type == "Bytes" -%}
+                doc["{{ field.name }}"] = base64_encode({{ field.name }}); 
             {%- else -%}
-        doc["{{ field.name }}"] = {{ field.name }};
+                doc["{{ field.name }}"] = {{ field.name }};
             {%- endif %}
         {% endfor -%}
         std::string str;
-        serializeJson(doc,str);
+        ArduinoJson::serializeJson(doc,str);
         return Bytes(str.begin(),str.end());
     }
 
@@ -66,15 +71,27 @@ class {{ msg.name }} : public Msg {
         };        
         {% for field in msg.fields %}
             {%- if field.repeated -%}
-        if (doc["{{ field.name }}"].is<JsonArray>()) {
-            JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
-            msg->{{ field.name }}.clear();
-            for (JsonVariant v : arr) {
-                msg->{{ field.name }}.push_back(v.as<{{ field.target_type }}>());
-            }
-        }
+                if (doc["{{ field.name }}"].is<JsonArray>()) {
+                    JsonArray arr = doc["{{ field.name }}"].as<JsonArray>();
+                    msg->{{ field.name }}.clear();
+                    for (JsonVariant v : arr) {
+                        msg->{{ field.name }}.push_back(v.as<{{ field.target_type }}>());
+                    }
+                }
             {%- elif field.optional -%}
-        if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )  msg->{{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();
+                    {%- if field.target_type == "Bytes" -%}
+                    if (doc["{{ field.name }}"].is<std::string>() )  
+                        msg->{{ field.name }} = base64_decode(doc["{{ field.name }}"].as<std::string>());
+                    {%- else -%}
+                    if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )  
+                        msg->{{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();
+                    {%- endif-%}
+            {%- elif field.target_type == "Bytes" -%}
+                if (doc["{{ field.name }}"].is<std::string>()) 
+                    msg->{{ field.name }} = base64_decode(doc["{{ field.name }}"].as<std::string>());
+            {%- else -%}
+                if (doc["{{ field.name }}"].is<{{ field.target_type }}>() )
+                    msg->{{ field.name }} = doc["{{ field.name }}"].as<{{ field.target_type }}>();        
             {%- endif %}
         {% endfor -%}
         return msg;
