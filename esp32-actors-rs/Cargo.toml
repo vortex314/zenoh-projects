@@ -10,7 +10,7 @@ limero = { path = "../esp32-limero-embassy-rs" }
 embassy-futures = "0.1.2"
 embassy-time = "0.5.0"
 embassy-sync = "0.7.2"
-esp-radio = { version="0.17.0", features=["esp32","wifi","unstable"]}
+esp-radio = { version="0.17.0", features=["esp32","wifi"]}
 esp-idf-hal = { version="0.45.2",features=["unstable"] }
 xtensa-lx = { version = "0.13.0", features = [] }
 esp-backtrace = { version="0.18.1", features =["esp32","println"]}

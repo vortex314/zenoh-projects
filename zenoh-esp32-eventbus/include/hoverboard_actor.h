@@ -24,6 +24,7 @@ class HoverboardActor : public Actor
 {
 private:
     int _timer_publish = -1;
+    int _timer_hb_alive = -1;
     int _prop_counter = 0;
 
 public:
