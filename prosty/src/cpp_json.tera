@@ -33,7 +33,7 @@ class {{ msg.name }} : public Msg {
         {%- endif %} {{ field.name }};
     {% endfor %}
 
-    Bytes serialize() const {
+    Bytes json_serialize() const {
         JsonDocument doc;
         {% for field in msg.fields %}
             {%- if field.repeated -%}
@@ -61,7 +61,7 @@ class {{ msg.name }} : public Msg {
         return Bytes(str.begin(),str.end());
     }
 
-    {{msg.name}}* deserialize(const Bytes& bytes) {
+    {{msg.name}}* json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
         {{msg.name}}* msg = new {{msg.name}}();
         auto err = deserializeJson(doc,bytes);
@@ -96,6 +96,7 @@ class {{ msg.name }} : public Msg {
         {% endfor -%}
         return msg;
     }
+
 
 };
 {% endfor %}

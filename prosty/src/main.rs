@@ -24,6 +24,7 @@ impl Lang {
 enum Format {
     Json,
     Cbor,
+    Mix,
 }
 
 impl Format {
@@ -31,6 +32,7 @@ impl Format {
         match self {
             Format::Json => "json",
             Format::Cbor => "cbor",
+            Format::Mix => "mix",
         }
     }
 }

@@ -136,6 +136,22 @@ Result<Bytes> HoverboardActor::cobs_decode(const Bytes &input)
     output.resize(write_index);
     return Result<Bytes>::Ok(output);
 }
+
+uint16_t crc16(const uint8_t* data, size_t length) {
+    uint16_t crc = 0xFFFF;
+    for (size_t i = 0; i < length; i++) {
+        crc ^= data[i] << 8;
+        for (uint8_t j = 0; j < 8; j++) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            }
+            else {
+                crc <<= 1;
+            }
+        }
+    }
+    return crc;
+}
 /*
  * @brief Check CRC of the input data.
  *
@@ -148,13 +164,9 @@ Result<Bytes> HoverboardActor::check_crc(const Bytes &input)
     {
         return Result<Bytes>::Err(-1, "Data too short for CRC check");
     }
-    uint16_t received_crc = static_cast<uint16_t>(input[input.size() - 2]) |
-                            (static_cast<uint16_t>(input[input.size() - 1]) << 8);
-    uint16_t calculated_crc = 0;
-    for (size_t i = 0; i < input.size() - 2; i++)
-    {
-        calculated_crc ^= static_cast<uint16_t>(input[i]);
-    }
+    uint16_t received_crc = static_cast<uint16_t>(input[input.size() - 1]) |
+                            (static_cast<uint16_t>(input[input.size() - 2]) << 8);
+    uint16_t calculated_crc = crc16(input.data(), input.size() - 2);
     if (received_crc != calculated_crc)
     {
         return Result<Bytes>::Err(-2, "CRC mismatch");
@@ -164,7 +176,14 @@ Result<Bytes> HoverboardActor::check_crc(const Bytes &input)
 
 Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
 {
-    HoverboardInfo *info = HoverboardInfo::deserialize(input);
+    // print hex buffer for debugging
+    INFO("Parsing HoverboardInfo message (%d bytes):", input.size());
+    for (size_t i = 0; i < input.size(); i++)
+    {
+        printf("%02X ", input[i]);
+    }
+    printf("\n");
+    HoverboardInfo *info = HoverboardInfo::cbor_deserialize(input);
     if (info)
     {
         return Result<HoverboardInfo *>::Ok(info);
@@ -205,6 +224,7 @@ void HoverboardActor::handle_uart_bytes(const Bytes &data)
     {
         if (b == COBS_SEPARATOR)
         {
+            INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
             (void)cobs_decode(uart_read_buffer)
                 .and_then(check_crc)
                 .and_then(parse_info_msg)
