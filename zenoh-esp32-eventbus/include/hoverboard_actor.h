@@ -15,10 +15,6 @@ DEFINE_MSG(UartRxd,
     UartRxd(const Bytes &payload) : payload(payload){};
 );
 
-DEFINE_MSG(UartTxd,
-    Bytes payload;
-    UartTxd(const Bytes &payload) : payload(payload){};
-);
 
 class HoverboardActor : public Actor
 {
@@ -32,6 +28,7 @@ public:
     TaskHandle_t uart_task_handle = NULL;
     static const int UART_PORT = UART_NUM_1;
     static const int UART_BUF_SIZE = 1024;
+    Bytes uart_read_buffer;
 
 public:
     HoverboardActor(const char *name);
@@ -39,11 +36,12 @@ public:
     void on_message(const Envelope &msg);
     void on_timer(int timer_id);
     void on_start();
-    void publish_info();
-    void init_uart();
+    Result<bool> init_uart();
     void write_uart(const Bytes &);
-    void read_uart(Bytes &);
-    void process_uart();
+    void handle_uart_bytes(const Bytes &);
+    static Result<Bytes> cobs_decode(const Bytes &input);
+    static Result<Bytes> check_crc(const Bytes &input);
+    static Result<HoverboardInfo*> parse_info_msg(const Bytes &input);
 };
 
 #endif

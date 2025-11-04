@@ -527,7 +527,7 @@ class HoverboardInfo : public Msg {
         return Bytes(str.begin(),str.end());
     }
 
-    HoverboardInfo* deserialize(const Bytes& bytes) {
+    static HoverboardInfo* deserialize(const Bytes& bytes) {
         JsonDocument doc;
         HoverboardInfo* msg = new HoverboardInfo();
         auto err = deserializeJson(doc,bytes);

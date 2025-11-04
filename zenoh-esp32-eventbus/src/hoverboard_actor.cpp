@@ -10,10 +10,10 @@
 #define UART_RX_PIN GPIO_NUM_16
 #define UART_BAUD_RATE 115200
 #define UART_BUF_SIZE 1024
+#define COBS_SEPARATOR 0x00
+const uint16_t START_FRAME = 0xABCD;
 
 void uart_event_task(void *pvParameters);
-
-const uint16_t START_FRAME = 0xABCD;
 
 class HbCmd
 {
@@ -56,10 +56,23 @@ HoverboardActor::HoverboardActor(const char *name) : Actor(name)
 {
     _timer_publish = timer_repetitive(5000);
     _timer_hb_alive = timer_repetitive(100);
-    init_uart();
+    (void)init_uart().or_else([&](Error e)
+                              {
+        ERROR("Failed to initialize UART: %s", e.msg);
+        return Result<bool>::Ok(false); });
 }
 
-void HoverboardActor::init_uart()
+#define ESP_ERROR_RET(x)                                                              \
+    do                                                                                \
+    {                                                                                 \
+        esp_err_t rc = (x);                                                           \
+        if (rc != 0)                                                                  \
+        {                                                                             \
+            return Result<bool>::Err(rc, "ESP error @" __FILE__ STRINGIZE(__LINE__)); \
+        }                                                                             \
+    } while (0)
+
+Result<bool> HoverboardActor::init_uart()
 {
     const uart_config_t uart_config = {
         .baud_rate = UART_BAUD_RATE,
@@ -70,22 +83,96 @@ void HoverboardActor::init_uart()
         .rx_flow_ctrl_thresh = 0,
         .source_clk = UART_SCLK_DEFAULT,
     };
-    ESP_ERROR_CHECK(uart_param_config(UART_PORT, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-    ESP_ERROR_CHECK(uart_driver_install(UART_PORT, UART_BUF_SIZE * 2, UART_BUF_SIZE, 10, &uart_queue, 0));
+    ESP_ERROR_RET(uart_param_config(UART_PORT, &uart_config));
+    ESP_ERROR_RET(uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_RET(uart_driver_install(UART_PORT, UART_BUF_SIZE * 2, UART_BUF_SIZE, 10, &uart_queue, 0));
 
     INFO("UART%d initialized at %d baud", UART_PORT, UART_BAUD_RATE);
     auto rc = xTaskCreate(uart_event_task, "uart_event_task", 4096, this, 12, &uart_task_handle);
     if (rc != pdPASS)
     {
-        ERROR("Failed to create UART event task");
+        return Result<bool>::Err(-1, "Failed to create UART event task");
     }
+    return Result<bool>::Ok(true);
 }
 
 void HoverboardActor::on_start()
 {
     INFO("Starting HoverboardActor");
     emit(new ZenohSubscribe("src/time_server/clock/utc"));
+}
+
+/**
+ * @brief Decode a COBS-encoded byte sequence.
+ *
+ * @param input The COBS-encoded input bytes.
+ * @return The decoded bytes or an error.
+ */
+
+Result<Bytes> HoverboardActor::cobs_decode(const Bytes &input)
+{
+    std::vector<uint8_t> output(input.size());
+    size_t read_index = 0, write_index = 0;
+    uint8_t code = 0, i = 0;
+
+    while (read_index < input.size())
+    {
+        code = input[read_index];
+        if (read_index + code > input.size() && code != 1)
+        {
+            output.clear();
+            return Result<Bytes>::Err(-1, "COBS decode error");
+        }
+        read_index++;
+        for (i = 1; i < code; i++)
+        {
+            output[write_index++] = input[read_index++];
+        }
+        if (code != 0xFF && read_index < input.size())
+        {
+            output[write_index++] = 0;
+        }
+    }
+    output.resize(write_index);
+    return Result<Bytes>::Ok(output);
+}
+/*
+ * @brief Check CRC of the input data.
+ *
+ * @param input The input bytes with CRC at the end.
+ * @return The data without CRC if valid, or an error.
+ */
+Result<Bytes> HoverboardActor::check_crc(const Bytes &input)
+{
+    if (input.size() < 4)
+    {
+        return Result<Bytes>::Err(-1, "Data too short for CRC check");
+    }
+    uint16_t received_crc = static_cast<uint16_t>(input[input.size() - 2]) |
+                            (static_cast<uint16_t>(input[input.size() - 1]) << 8);
+    uint16_t calculated_crc = 0;
+    for (size_t i = 0; i < input.size() - 2; i++)
+    {
+        calculated_crc ^= static_cast<uint16_t>(input[i]);
+    }
+    if (received_crc != calculated_crc)
+    {
+        return Result<Bytes>::Err(-2, "CRC mismatch");
+    }
+    return Result<Bytes>::Ok(Bytes(input.begin(), input.end() - 2));
+}
+
+Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
+{
+    HoverboardInfo *info = HoverboardInfo::deserialize(input);
+    if (info)
+    {
+        return Result<HoverboardInfo *>::Ok(info);
+    }
+    else
+    {
+        return Result<HoverboardInfo *>::Err(-2, "Failed to deserialize HoverboardInfo");
+    }
 }
 
 HoverboardActor::~HoverboardActor()
@@ -103,20 +190,45 @@ void HoverboardActor::on_message(const Envelope &env)
 {
     const Msg &msg = *env.msg;
     msg.handle<HoverboardCmd>([&](auto hb_cmd)
-                              { INFO("Received HoverboardCmd: speed=%d direction=%d", hb_cmd.speed, hb_cmd.steer); });
+                              { write_uart(HbCmd(hb_cmd.speed ? *hb_cmd.speed : 0, hb_cmd.steer ? *hb_cmd.steer : 0).encode()); });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
     msg.handle<UartRxd>([&](const UartRxd &uart_rxd)
-                        {
-                            INFO("Processing UART RX data (%d bytes)", uart_rxd.payload.size());
-                            // Process the received UART data here
-                        });
+                        { handle_uart_bytes(uart_rxd.payload); });
 }
+
+
+void HoverboardActor::handle_uart_bytes(const Bytes &data)
+{
+    INFO("Processing UART RX data (%d bytes)", data.size());
+    for (auto b : data)
+    {
+        if (b == COBS_SEPARATOR)
+        {
+            (void)cobs_decode(uart_read_buffer)
+                .and_then(check_crc)
+                .and_then(parse_info_msg)
+                .and_then([&](HoverboardInfo *info)
+                          {
+                            emit(info);
+                            return Result<bool>::Ok(true); })
+                .or_else([&](Error e)
+                         {
+                        WARN("Failed to process UART data: %s", e.msg);
+                        return Result<bool>::Ok(false); });
+            uart_read_buffer.clear();
+        } else 
+        {
+            uart_read_buffer.push_back(b);
+        }
+    }
+}
+
 void HoverboardActor::on_timer(int id)
 {
     if (id == _timer_publish)
     {
-        publish_info();
+        // Publish hoverboard info request
     }
     else if (id == _timer_hb_alive)
     {
@@ -128,14 +240,8 @@ void HoverboardActor::on_timer(int id)
     }
 }
 
-void HoverboardActor::publish_info()
-{
-    HoverboardInfo *hb_info = new HoverboardInfo();
-    hb_info->temp = 37;
-    emit(hb_info);
-    _prop_counter++;
-}
 
+// task to handle UART events and make it events on the bus
 void uart_event_task(void *pvParameters)
 {
     uart_event_t event;

@@ -5,6 +5,7 @@
 #include <wifi_actor.h>
 #include <esp_mac.h>
 #include <zenoh_actor.h>
+#include <util.h>
 
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -23,10 +24,11 @@
 #error "WIFI_SSID not defined"
 #endif
 
-static int s_retry_count = 0;
-#define STRINGIFY(X) #X
-#define S(X) STRINGIFY(X)
 #define ESP_MAXIMUM_RETRY 5
+
+
+static int s_retry_count = 0;
+
 
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
@@ -34,7 +36,7 @@ WifiActor::WifiActor(const char *name) : Actor(name)
   _timer_publish = timer_repetitive(5000);
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
-  wifi_password = S(WIFI_PASS);
+  wifi_password = STRINGIZE(WIFI_PASS);
   esp_wifi_set_ps(WIFI_PS_NONE); // no power save
                                  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
 }
@@ -63,8 +65,8 @@ void WifiActor::on_start()
 
   if (wifi_ssid.empty())
   {
-    INFO("Set default SSID : %s", S(WIFI_SSID));
-    wifi_ssid = S(WIFI_SSID);
+    INFO("Set default SSID : %s", STRINGIZE(WIFI_SSID));
+    wifi_ssid = STRINGIZE(WIFI_SSID);
   }
   else
   {

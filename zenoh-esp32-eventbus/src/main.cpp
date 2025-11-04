@@ -23,7 +23,6 @@
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
 WifiActor wifi_actor("wifi");
-// McActor mc_actor(DEVICE_PREFIX "multicast");
 ZenohActor zenoh_actor("zenoh");
 SysActor sys_actor("sys");
 LedActor led_actor("led");
