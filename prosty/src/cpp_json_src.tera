@@ -8,43 +8,7 @@
 #include <msg.h>
 #include <serdes.h>
 
-
-
-typedef std::vector<uint8_t> Bytes;
-
-{% for en in enums %}
-typedef enum {
-    {%- for value in en.values %}
-    {{ value.0 }} = {{ value.1 }},
-    {%- endfor %}
-} {{ en.name }};
-{% endfor %}
-
-{% for msg in messages %}
-class {{ msg.name }} : public Msg {
-    MSG({{ msg.name }});
-    public:
-    {% for field in msg.fields %}
-        {%- if field.repeated -%}
-        std::vector<{{ field.target_type }}>
-        {%- elif field.optional -%}
-        std::optional<{{ field.target_type }}> 
-        {%- else -%}
-        {{ field.target_type }} 
-        {%- endif %} {{ field.name }};
-    {% endfor %}
-    // Field indexes
-        typedef enum {
-    {%- for field in msg.fields %}
-        {{ field.name | upper }}_INDEX = {{ field.index }},
-    {%- endfor %}
-    } Field;
-    static Result<Bytes> json_serialize(const {{msg.name}}&);
-    static Result<{{msg.name}}*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const {{msg.name}}&);
-    static Result<{{msg.name}}*> cbor_deserialize(const Bytes&);
-};
-{% endfor %}
+#include "{{ package }}.h"
 
 {% for msg in messages %}
 Result<Bytes> {{msg.name}}::json_serialize(const {{msg.name}}& msg)  {
@@ -259,7 +223,6 @@ Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
-            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -281,7 +244,7 @@ Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
                 {%- elif field.optional -%}
                 {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="*msg->" ~ field.name) }}
                 {%- else -%}
-                {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="*msg->" ~ field.name) }}
+                {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="msg->" ~ field.name) }}
                 {%- endif %}
                 break;
             }

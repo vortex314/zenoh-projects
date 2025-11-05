@@ -7,7 +7,7 @@
 #include <vector>
 #include <option.h>
 #include <ArduinoJson.h>
-#include <limero.cpp>
+#include <limero.h>
 #include <zenoh_actor.h>
 
 DEFINE_MSG(UartRxd,

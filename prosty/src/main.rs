@@ -1,8 +1,9 @@
 use convert_case::Casing;
 use protobuf_parser::{FieldType, FileDescriptor};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 mod logger;
+use anyhow::Result;
 use log::{error, info};
 use logger::init;
 
@@ -37,8 +38,7 @@ impl Format {
     }
 }
 
-
-use clap::{ Parser,ValueEnum };
+use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -61,8 +61,8 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     /*  pkg = Path::new(&args.proto)
-        .parent()
-        .expect("Failed to get parent directory");*/
+    .parent()
+    .expect("Failed to get parent directory");*/
     init();
     let proto_file = Path::new(&args.input);
     let proto_content = fs::read_to_string(proto_file).expect("Failed to read proto file");
@@ -77,21 +77,48 @@ fn main() -> anyhow::Result<()> {
     info!("Using template file: {}", tera_file);
 
     if args.lang == Lang::Rust {
-        info!("Generating Rust code in {} format to {}", args.format.as_str(), args.output  );
+        info!(
+            "Generating Rust code in {} format to {}",
+            args.format.as_str(),
+            args.output
+        );
+        let tera_file = format!("rust_{}.tera", args.format.as_str());
+        let package = fd.package.clone();
         let messages = convert_rust_types(&fd);
         let enums = convert_enum_rust_types(&fd);
-        let rust_name = format!("{}/{}.rs", args.output, fd.package);
-        let rendered = render(&enums, &messages, tera_file.as_str());
-        fs::write(&rust_name, rendered).expect("Failed to write output file");
+        let rust_name = format!("{}/{}.rs", args.output, &fd.package);
+        let rendered = render(&package, &enums, &messages, tera_file.as_str())?;
+        fs::write(&rust_name, rendered)?;
+
         info!("Generated Rust code written to {}", rust_name);
     } else if args.lang == Lang::Cpp {
-        info!("Generating C++ code in {} format to {}", args.format.as_str(), args.output);
+        info!(
+            "Generating C++ code in {} format to {}",
+            args.format.as_str(),
+            args.output
+        );
+        let tera_file_src = format!("cpp_{}_src.tera", args.format.as_str());
+        let tera_file_inc = format!("cpp_{}_inc.tera", args.format.as_str());
+        let package = fd.package.clone();
         let messages = convert_cpp_types(&fd);
         let enums = convert_enum_cpp_types(&fd);
-        let cpp_name = format!("{}/{}.cpp", args.output, fd.package);
-        let rendered = render(&enums, &messages, tera_file.as_str());
-        fs::write(&cpp_name, rendered).expect("Failed to write output file");
-        info!("Generated C++ code written to {}", cpp_name);
+        let cpp_name = format!("{}/{}.cpp", args.output, &fd.package);
+        let inc_name = format!("{}/{}.h", args.output, &fd.package);
+        let rendered = render(&package, &enums, &messages, tera_file_src.as_str())?;
+        fs::write(&cpp_name, rendered)?;
+        info!(
+            "Generating Rust code from {} format to {}",
+            tera_file_src,
+            cpp_name
+        );
+
+        let header_rendered = render(&package, &enums, &messages, tera_file_inc.as_str())?;
+        fs::write(&inc_name, header_rendered)?;
+        info!(
+            "Generating C++ code from {} format to {}",
+            tera_file_inc,
+            inc_name
+        );
     } else {
         error!("Unsupported language: {:?}", args.lang);
     }
@@ -186,7 +213,7 @@ fn convert_rust_types(fd: &FileDescriptor) -> Vec<Message> {
                 .iter()
                 .map(|f| Field {
                     name: f.name.clone(),
-                    index : f.number,
+                    index: f.number,
                     target_type: field_type_to_rust_type(&f.typ),
                     repeated: match f.rule {
                         protobuf_parser::Rule::Repeated => true,
@@ -217,7 +244,7 @@ fn convert_cpp_types(fd: &FileDescriptor) -> Vec<Message> {
                 .iter()
                 .map(|f| Field {
                     name: f.name.clone(),
-                    index : f.number,
+                    index: f.number,
                     target_type: field_type_to_cpp_type(&f.typ),
                     repeated: match f.rule {
                         protobuf_parser::Rule::Repeated => true,
@@ -283,7 +310,7 @@ fn convert_enum_cpp_types(fd: &FileDescriptor) -> Vec<EnumType> {
 }
 
 use tera::{Context, Tera};
-/* 
+/*
 fn fnv1a_32(data: &[u8]) -> u32 {
     const FNV_OFFSET_BASIS: u32 = 0x811c9dc5;
     const FNV_PRIME: u32 = 0x01000193;
@@ -306,10 +333,19 @@ fn fnv1a_16(data: &[u8]) -> u16 {
     hash
 }
 
-fn render(enums: &Vec<EnumType>, messages: &Vec<Message>, tera_file: &str) -> String {
+fn render(
+    package: &String,
+    enums: &Vec<EnumType>,
+    messages: &Vec<Message>,
+    tera_file: &str,
+) -> Result<String> {
     let tera = Tera::new("src/*.tera").unwrap();
     let mut context = Context::new();
     context.insert("messages", messages);
     context.insert("enums", enums);
-    tera.render(tera_file, &context).unwrap()
+    context.insert("package", package);
+    tera.render(tera_file, &context).map_err(|e| {
+        error!("Error rendering template: {}", e);
+        anyhow::Error::new(e) // Convert std::io::Error to anyhow::Error
+    })
 }

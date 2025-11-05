@@ -88,7 +88,7 @@ Result<bool> HoverboardActor::init_uart()
     ESP_ERROR_RET(uart_driver_install(UART_PORT, UART_BUF_SIZE * 2, UART_BUF_SIZE, 10, &uart_queue, 0));
 
     INFO("UART%d initialized at %d baud", UART_PORT, UART_BAUD_RATE);
-    auto rc = xTaskCreate(uart_event_task, "uart_event_task", 4096, this, 12, &uart_task_handle);
+    auto rc = xTaskCreate(uart_event_task, "uart_event_task", 5120, this, 12, &uart_task_handle);
     if (rc != pdPASS)
     {
         return Result<bool>::Err(-1, "Failed to create UART event task");
@@ -137,15 +137,20 @@ Result<Bytes> HoverboardActor::cobs_decode(const Bytes &input)
     return Result<Bytes>::Ok(output);
 }
 
-uint16_t crc16(const uint8_t* data, size_t length) {
+uint16_t crc16(const uint8_t *data, size_t length)
+{
     uint16_t crc = 0xFFFF;
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++)
+    {
         crc ^= data[i] << 8;
-        for (uint8_t j = 0; j < 8; j++) {
-            if (crc & 0x8000) {
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            if (crc & 0x8000)
+            {
                 crc = (crc << 1) ^ 0x1021;
             }
-            else {
+            else
+            {
                 crc <<= 1;
             }
         }
@@ -183,7 +188,7 @@ Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
         printf("%02X ", input[i]);
     }
     printf("\n");
-    return  HoverboardInfo::cbor_deserialize(input);
+    return HoverboardInfo::cbor_deserialize(input);
 }
 
 HoverboardActor::~HoverboardActor()
@@ -208,7 +213,6 @@ void HoverboardActor::on_message(const Envelope &env)
                         { handle_uart_bytes(uart_rxd.payload); });
 }
 
-
 void HoverboardActor::handle_uart_bytes(const Bytes &data)
 {
     INFO("Processing UART RX data (%d bytes)", data.size());
@@ -229,7 +233,8 @@ void HoverboardActor::handle_uart_bytes(const Bytes &data)
                         WARN("Failed to process UART data: %s", e.msg);
                         return Result<bool>::Ok(false); });
             uart_read_buffer.clear();
-        } else 
+        }
+        else
         {
             uart_read_buffer.push_back(b);
         }
@@ -252,13 +257,13 @@ void HoverboardActor::on_timer(int id)
     }
 }
 
-
 // task to handle UART events and make it events on the bus
 void uart_event_task(void *pvParameters)
 {
     uart_event_t event;
     uint8_t data[UART_BUF_SIZE];
     HoverboardActor *actor = static_cast<HoverboardActor *>(pvParameters);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     while (true)
     {
