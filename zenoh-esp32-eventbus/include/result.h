@@ -271,6 +271,19 @@ public:
         else                  std::cout << "Err(" << err_ << ")\n";
     }
 #endif
+template<class F>
+constexpr void just(F&& f) const noexcept {
+    if (tag_ == Tag::Ok) {
+        f(ok_); // Execute the lambda with the `Ok` value
+    }
+}
+
+template<class F>
+constexpr void just_err(F&& f) const noexcept {
+    if (tag_ == Tag::Err) {
+        f(err_); // Execute the lambda with the `Err` value
+    }
+}
 };
 
 // ---------------------------------------------------------------------------
@@ -290,5 +303,7 @@ constexpr Result<T> Ok(T v) noexcept(std::is_nothrow_move_constructible_v<T>)
 template<class T, class E>
 constexpr Result<T> Err(E e) noexcept(std::is_nothrow_move_constructible_v<E>)
 { return Result<T>::Err(std::move(e)); }
+
+
 
 typedef Result<bool> Res;

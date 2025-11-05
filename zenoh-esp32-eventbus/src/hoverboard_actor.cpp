@@ -183,15 +183,7 @@ Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
         printf("%02X ", input[i]);
     }
     printf("\n");
-    HoverboardInfo *info = HoverboardInfo::cbor_deserialize(input);
-    if (info)
-    {
-        return Result<HoverboardInfo *>::Ok(info);
-    }
-    else
-    {
-        return Result<HoverboardInfo *>::Err(-2, "Failed to deserialize HoverboardInfo");
-    }
+    return  HoverboardInfo::cbor_deserialize(input);
 }
 
 HoverboardActor::~HoverboardActor()

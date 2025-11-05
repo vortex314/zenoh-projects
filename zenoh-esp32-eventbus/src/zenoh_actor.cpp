@@ -51,13 +51,22 @@ void ZenohActor::on_message(const Envelope &env)
 {
   const Msg &msg = *env.msg;
   msg.handle<SysInfo>([&](const auto &msg)
-                      { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
+
+                      { SysInfo::json_serialize(msg)
+                            .just([&](const auto &serialized_msg)
+                                      { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<WifiInfo>([&](const auto &msg)
-                       { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
+                       { WifiInfo::json_serialize(msg)
+                             .just([&](const auto &serialized_msg)
+                                       { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<ZenohInfo>([&](const auto &msg)
-                        { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
-  msg.handle<HoverboardInfo>([&](const auto &msg)
-                             { send_msg(env.src->name(), msg.type_name(), msg.serialize()); });
+                        { ZenohInfo::json_serialize(msg)
+                             .just([&](const auto &serialized_msg)
+                                       { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
+  msg.handle<HoverboardInfo>([&](const auto &msg) 
+                             { HoverboardInfo::json_serialize(msg)
+                               .just([&](const auto &serialized_msg)
+                                         { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -353,9 +362,10 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 
   if (strcmp(t.message_type, SysCmd::name_value) == 0)
   {
-    auto msg_opt = SysCmd().deserialize(buffer);
-    if (msg_opt)
-      actor->emit(msg_opt);
+    auto r = SysCmd::json_deserialize(buffer);
+
+    if (r.is_ok())
+      actor->emit(r.unwrap());
     else
       ERROR("Failed to deserialize SysCmd message");
   }
