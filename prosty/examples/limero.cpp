@@ -312,6 +312,52 @@ public:
             switch (key)
             {
 
+                if ( key == Sample_Fields::FLAG_INDEX && cbor_value_is_boolean(&mapIt) )
+                {
+                    bool v;
+                    cbor_value_get_boolean(&mapIt, &v);
+                    msg->flag = v;
+                    break;
+
+                } else if ( key == Sample_Fields::ID_INDEX && cbor_value_is_integer(&mapIt) )
+                {
+                    int64_t v;
+                    cbor_value_get_int64(&mapIt, &v);
+                    msg->id = static_cast<int32_t>(v);
+                    break;
+
+                } else if ( key == Sample_Fields::NAME_INDEX && cbor_value_is_text_string(&mapIt) )
+                {
+                    char valbuf[256];
+                    size_t vallen = sizeof(valbuf);
+                    cbor_value_copy_text_string(&mapIt, valbuf, &vallen, &mapIt);
+                    msg->name = std::string(valbuf, vallen - 1);
+                    break;
+
+                } else if ( key == Sample_Fields::VALUES_INDEX && cbor_value_is_array(&mapIt) )
+                {
+                    // enter array
+                    CborValue arrayIt;
+                    err = cbor_value_enter_container(&mapIt, &arrayIt);
+                    if (err != CborNoError)
+                    {
+                        delete msg;
+                        return nullptr;
+                    }
+                    // iterate array items
+                    while (!cbor_value_at_end(&arrayIt))
+                    {
+                        float v;
+                        cbor_value_get_float(&arrayIt, &v);
+                        msg->values.push_back(static_cast<float>(v));
+                        cbor_value_advance(&arrayIt);
+                    }
+                    // leave array
+                    cbor_value_leave_container(&mapIt, &arrayIt);
+                } else {
+                    cbor_value_advance(&mapIt);
+                }
+
             case Sample_Fields::FLAG_INDEX:
             {
                 {

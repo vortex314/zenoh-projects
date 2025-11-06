@@ -108,7 +108,7 @@ cbor_encode_int(&{{encoder}}, {{ target }});
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&{{decoder}})) {
-        cbor_value_copy_text_string(&{{decoder}}, valbuf, &vallen, &{{decoder}});
+        cbor_value_copy_text_string(&{{decoder}}, valbuf, &vallen, NULL);
         {{ target }} = std::string(valbuf, vallen - 1);
     }
 }
@@ -117,7 +117,7 @@ cbor_encode_int(&{{encoder}}, {{ target }});
     uint8_t tmpbuf[512];
     size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&{{decoder}})) {
-        cbor_value_copy_byte_string(&{{decoder}}, tmpbuf, &tmplen, &{{decoder}});
+        cbor_value_copy_byte_string(&{{decoder}}, tmpbuf, &tmplen, NULL);
         {{ target }} = Bytes(tmpbuf, tmpbuf + tmplen);
     }
 }
@@ -150,6 +150,7 @@ cbor_encode_int(&{{encoder}}, {{ target }});
     {{ target }} = static_cast<{{ field_type }}>(v);
 }
 {%- endif -%}
+    cbor_value_advance(&{{decoder}});
 {% endmacro %}
 
 // CBOR Serialization/Deserialization
