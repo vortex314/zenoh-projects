@@ -111,7 +111,7 @@ cbor_encode_int(&{{encoder}}, {{ target }});
         cbor_value_copy_text_string(&{{decoder}}, valbuf, &vallen, NULL);
         {{ target }} = std::string(valbuf, vallen - 1);
     }
-}
+};
 {%- elif field_type == "Bytes" -%}
 {
     uint8_t tmpbuf[512];
@@ -120,36 +120,45 @@ cbor_encode_int(&{{encoder}}, {{ target }});
         cbor_value_copy_byte_string(&{{decoder}}, tmpbuf, &tmplen, NULL);
         {{ target }} = Bytes(tmpbuf, tmpbuf + tmplen);
     }
-}
+};
 {%- elif field_type == "uint32_t" -%}
 {
     uint64_t v;
     cbor_value_get_uint64(&{{decoder}}, &(v));
     {{ target }} = v;
-}
+};
 {%- elif field_type == "int32_t" -%}
-{
     int64_t v;
-    cbor_value_get_int64(&{{decoder}}, &(v));
+    cbor_value_get_int64(&{{decoder}}, &v);
     {{ target }} = v;
-}
+
 {%- elif field_type == "uint64_t" -%}
-    cbor_value_get_uint64(&{{decoder}}, &({{target}}));
+    uint64_t v;
+    cbor_value_get_uint64(&{{decoder}}, &v);
+    {{ target }} = v;  // Assigning the value to target
 {%- elif field_type == "int64_t" -%}
-    cbor_value_get_int64(&{{decoder}}, &({{target}}));
+    int64_t v;
+    cbor_value_get_int64(&{{decoder}}, &v);
+    {{ target }} = v;
 {%- elif field_type == "float" -%}
-    cbor_value_get_float(&{{decoder}}, &({{target}}));
+    float f;
+    cbor_value_get_float(&{{decoder}}, &f);
+    {{target}} = f;
 {%- elif field_type == "double" -%} 
-    cbor_value_get_double(&{{decoder}}, &({{target}}));
+    double d;
+    cbor_value_get_double(&{{decoder}}, &d);
+    {{target}} = d;
 {%- elif field_type == "bool" -%} 
-    cbor_value_get_boolean(&{{decoder}}, &({{target}}));
+    bool b;
+    cbor_value_get_boolean(&{{decoder}}, &b);
+    {{target}} = b;
 {%- else -%}
 {
     long long v;
     cbor_value_get_int64(&{{decoder}}, &(v));
     {{ target }} = static_cast<{{ field_type }}>(v);
-}
-{%- endif -%}
+};
+{%- endif %}
     cbor_value_advance(&{{decoder}});
 {% endmacro %}
 
@@ -240,10 +249,10 @@ Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
                     {{field.target_type}} v;
                     {{ self::deserialize_any( decoder="tmp", field_type=field.target_type, target="v" ) }}
                     msg->{{field.name}}.push_back(v);
-                }
+                };
                 cbor_value_leave_container(&mapIt,&tmp);
                 {%- elif field.optional -%}
-                {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="*msg->" ~ field.name) }}
+                {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="msg->" ~ field.name) }}
                 {%- else -%}
                 {{ self::deserialize_any( decoder="mapIt", field_type=field.target_type, target="msg->" ~ field.name) }}
                 {%- endif %}

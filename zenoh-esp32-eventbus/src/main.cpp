@@ -27,7 +27,7 @@ ZenohActor zenoh_actor("zenoh");
 SysActor sys_actor("sys");
 LedActor led_actor("led");
 HoverboardActor hoverboard_actor("hoverboard");
-EventBus eventbus(10);
+EventBus eventbus(20);
 Log logger;
 esp_err_t nvs_init();
 

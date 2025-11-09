@@ -182,12 +182,12 @@ Result<Bytes> HoverboardActor::check_crc(const Bytes &input)
 Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
 {
     // print hex buffer for debugging
-    INFO("Parsing HoverboardInfo message (%d bytes):", input.size());
-    for (size_t i = 0; i < input.size(); i++)
-    {
-        printf("%02X ", input[i]);
-    }
-    printf("\n");
+    /* INFO("Parsing HoverboardInfo message (%d bytes):", input.size());
+     for (size_t i = 0; i < input.size(); i++)
+     {
+         printf("%02X ", input[i]);
+     }
+     printf("\n");*/
     return HoverboardInfo::cbor_deserialize(input);
 }
 
@@ -206,7 +206,8 @@ void HoverboardActor::on_message(const Envelope &env)
 {
     const Msg &msg = *env.msg;
     msg.handle<HoverboardCmd>([&](auto hb_cmd)
-                              { write_uart(HbCmd(hb_cmd.speed ? *hb_cmd.speed : 0, hb_cmd.steer ? *hb_cmd.steer : 0).encode()); });
+                              { if (hb_cmd.speed) _speed = hb_cmd.speed.value(); 
+                                if (hb_cmd.steer) _steer = hb_cmd.steer.value() ; });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
     msg.handle<UartRxd>([&](const UartRxd &uart_rxd)
@@ -215,12 +216,12 @@ void HoverboardActor::on_message(const Envelope &env)
 
 void HoverboardActor::handle_uart_bytes(const Bytes &data)
 {
-    INFO("Processing UART RX data (%d bytes)", data.size());
+//    INFO("Processing UART RX data (%d bytes)", data.size());
     for (auto b : data)
     {
         if (b == COBS_SEPARATOR)
         {
-            INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
+            //  INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
             (void)cobs_decode(uart_read_buffer)
                 .and_then(check_crc)
                 .and_then(parse_info_msg)
@@ -249,7 +250,7 @@ void HoverboardActor::on_timer(int id)
     }
     else if (id == _timer_hb_alive)
     {
-        write_uart(HbCmd(200, 0).encode());
+        write_uart(HbCmd(_speed, _steer).encode());
     }
     else
     {
@@ -267,11 +268,11 @@ void uart_event_task(void *pvParameters)
 
     while (true)
     {
-        INFO("UART event task waiting for data...");
+      //  INFO("UART event task waiting for data...");
         // Wait for UART event
         if (xQueueReceive(actor->uart_queue, (void *)&event, portMAX_DELAY))
         {
-            INFO("UART event received: %d", event.type);
+        //    INFO("UART event received: %d", event.type);
             switch (event.type)
             {
             case UART_DATA:
@@ -281,7 +282,6 @@ void uart_event_task(void *pvParameters)
                 if (len > 0)
                 {
                     data[len] = '\0'; // Null-terminate
-                    INFO("Received: [%d]", len);
                     Bytes payload(data, data + len);
                     actor->emit(new UartRxd(payload));
                 }

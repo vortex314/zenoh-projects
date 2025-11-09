@@ -74,6 +74,13 @@ let option = ref({
 let subscriber = null;
 let topics = [];
 
+function roundToStep(value, step) {
+  const rounded = Math.round(value / step) * step;
+  const decimals = step.toString().includes('.') 
+    ? step.toString().split('.')[1].length 
+    : 0;
+  return +rounded.toFixed(decimals);  // + converts to number
+}
 
 function messageHandler(topic, value) {
     if (props.config.field !== "") value = value[props.config.field];
@@ -109,7 +116,7 @@ function messageHandler(topic, value) {
         };
         option.value.series.push(new_entry);
     }
-    option.value.series[idx].data[0].value = Math.round(value);
+    option.value.series[idx].data[0].value = roundToStep(value, props.config.round);
 }
 
 watchEffect(() => {

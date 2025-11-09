@@ -22,6 +22,8 @@ private:
     int _timer_publish = -1;
     int _timer_hb_alive = -1;
     int _prop_counter = 0;
+    uint16_t _speed=200;
+    uint16_t _steer=0;
 
 public:
     QueueHandle_t uart_queue = NULL;

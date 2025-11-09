@@ -124,8 +124,16 @@ Res ZenohActor::connect(void)
   CHECK(z_open(&_zenoh_session, z_move(config), NULL));
 
   // Start the receive and the session lease loop for zenoh-pico
-  CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), NULL));
-  CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), NULL));
+  zp_task_lease_options_t lease_options;
+  zp_task_lease_options_default(&lease_options);
+ // lease_options.task_attributes->stack_depth = 8192;
+
+  zp_task_read_options_t read_options;
+  zp_task_read_options_default(&read_options);
+  // read_options.task_attributes->stack_depth = 8192;
+
+  CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), &read_options));
+  CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), &lease_options  ));
   auto r = collect_info();
   INFO("Zenoh session opened with ZID %s", zid.c_str());
   _connected = true;
@@ -375,7 +383,7 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
-  INFO("Publishing message on topic '%s' (%d bytes)", topic, value.size());
+ // INFO("Publishing message on topic '%s' (%d bytes)", topic, value.size());
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic);

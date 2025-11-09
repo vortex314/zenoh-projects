@@ -80,6 +80,7 @@ watchEffect(() => {
 });
 
 function messageHandler(topic, value) {
+  // extract field and apply eval if set
   if (props.config.field !== "") value = value[props.config.field];
   if (props.config.eval !== "") value = eval(props.config.eval.replace('value', value));
   // find topic in topics array
