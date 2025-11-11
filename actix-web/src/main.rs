@@ -103,7 +103,7 @@ impl actix::Handler<BroadcastMsg> for WsActor {
     fn handle(&mut self, msg: BroadcastMsg, ctx: &mut Self::Context) {
         let str = String::from_utf8(msg.0.value.clone()).unwrap_or_default();
         let js: serde_json::Value = serde_json::from_str(&str).unwrap_or_default();
-        info!("📢 Broadcasting Zenoh message to WebSocket client {:?}", str);
+        info!("📢 Broadcasting Zenoh message to WebSocket client {:?}", msg.0.key);
 
         let json = serde_json::json!({
             "type": "Publish",

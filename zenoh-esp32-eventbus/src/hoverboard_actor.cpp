@@ -216,12 +216,12 @@ void HoverboardActor::on_message(const Envelope &env)
 
 void HoverboardActor::handle_uart_bytes(const Bytes &data)
 {
-//    INFO("Processing UART RX data (%d bytes)", data.size());
+    INFO("Processing UART RX data (%d bytes)", data.size());
     for (auto b : data)
     {
         if (b == COBS_SEPARATOR)
         {
-            //  INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
+            INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
             (void)cobs_decode(uart_read_buffer)
                 .and_then(check_crc)
                 .and_then(parse_info_msg)

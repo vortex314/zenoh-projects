@@ -52,7 +52,7 @@ onMounted(() => {
 })
 
 function onChange(slider_value) {
-   bus.txd.publish(props.config.dst,slider_value)
+   bus.txd.publish(props.config.dst, { [props.config.field]: slider_value })
    bus.rxd.subscribe(props.config.src, (topic, newValue) => {
        value.value = newValue
    });
