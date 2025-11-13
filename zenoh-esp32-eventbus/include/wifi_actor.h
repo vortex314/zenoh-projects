@@ -34,7 +34,7 @@ public:
   void handle_timer(int id);
   Res net_init();
   Res wifi_set_config(const char *ssid, const char *password);
-  void pubish_props(esp_netif_t *esp_netif);
+  void publish_info(esp_netif_t *esp_netif);
 
   static void event_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data);

@@ -351,3 +351,83 @@ class HoverboardCmd : public Msg {
     static Result<HoverboardCmd*> cbor_deserialize(const Bytes&);
 };
 
+class Ps4Info : public Msg {
+    MSG(Ps4Info);
+    public:
+    std::optional<bool> button_left;
+    std::optional<bool> button_right;
+    std::optional<bool> button_up;
+    std::optional<bool> button_down;
+    std::optional<bool> button_square;
+    std::optional<bool> button_cross;
+    std::optional<bool> button_circle;
+    std::optional<bool> button_triangle;
+    std::optional<bool> button_left_sholder;
+    std::optional<bool> button_right_sholder;
+    std::optional<bool> button_left_trigger;
+    std::optional<bool> button_right_trigger;
+    std::optional<bool> button_left_joystick;
+    std::optional<bool> button_right_joystick;
+    std::optional<bool> button_share;
+    std::optional<int32_t> axis_lx;
+    std::optional<int32_t> axis_ly;
+    std::optional<int32_t> axis_rx;
+    std::optional<int32_t> axis_ry;
+    std::optional<int32_t> gyro_x;
+    std::optional<int32_t> gyro_y;
+    std::optional<int32_t> gyro_z;
+    std::optional<int32_t> accel_x;
+    std::optional<int32_t> accel_y;
+    std::optional<int32_t> accel_z;
+    
+    // Field indexes
+        typedef enum {
+        BUTTON_LEFT_INDEX = 1,
+        BUTTON_RIGHT_INDEX = 2,
+        BUTTON_UP_INDEX = 3,
+        BUTTON_DOWN_INDEX = 4,
+        BUTTON_SQUARE_INDEX = 5,
+        BUTTON_CROSS_INDEX = 6,
+        BUTTON_CIRCLE_INDEX = 7,
+        BUTTON_TRIANGLE_INDEX = 8,
+        BUTTON_LEFT_SHOLDER_INDEX = 9,
+        BUTTON_RIGHT_SHOLDER_INDEX = 10,
+        BUTTON_LEFT_TRIGGER_INDEX = 11,
+        BUTTON_RIGHT_TRIGGER_INDEX = 12,
+        BUTTON_LEFT_JOYSTICK_INDEX = 13,
+        BUTTON_RIGHT_JOYSTICK_INDEX = 14,
+        BUTTON_SHARE_INDEX = 15,
+        AXIS_LX_INDEX = 16,
+        AXIS_LY_INDEX = 17,
+        AXIS_RX_INDEX = 18,
+        AXIS_RY_INDEX = 19,
+        GYRO_X_INDEX = 20,
+        GYRO_Y_INDEX = 21,
+        GYRO_Z_INDEX = 22,
+        ACCEL_X_INDEX = 23,
+        ACCEL_Y_INDEX = 24,
+        ACCEL_Z_INDEX = 25,
+    } Field;
+    static Result<Bytes> json_serialize(const Ps4Info&);
+    static Result<Ps4Info*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Ps4Info&);
+    static Result<Ps4Info*> cbor_deserialize(const Bytes&);
+};
+
+class Ps4Cmd : public Msg {
+    MSG(Ps4Cmd);
+    public:
+    std::optional<int32_t> rumble;
+    std::optional<int32_t> led_rgb;
+    
+    // Field indexes
+        typedef enum {
+        RUMBLE_INDEX = 1,
+        LED_RGB_INDEX = 2,
+    } Field;
+    static Result<Bytes> json_serialize(const Ps4Cmd&);
+    static Result<Ps4Cmd*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Ps4Cmd&);
+    static Result<Ps4Cmd*> cbor_deserialize(const Bytes&);
+};
+

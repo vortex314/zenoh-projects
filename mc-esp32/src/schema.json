@@ -1,0 +1,48 @@
+{
+    "SystemInfo" : {
+        "uptime":"u64",
+        "cpu_board":"string",
+        "image":"bytes",
+        "factors":["float"],
+        "build":{
+            "version":"string",
+            "date":"string"
+        },
+        "kind":["SERVER","PEER","BROKER"]
+    },
+    "SystemCmd":{
+        "reboot":"bool",
+        "set_time":"u64"
+    },
+    "MotorInfo":{
+        "speed":"i32",
+        "direction":"i32",
+        "current_a":"float"
+    },
+    "MotorCmd":{
+        "speed":"i16",
+        "direction":"i16"
+    },
+    "CompassInfo":{
+        "direction":"float",
+        "tilt":"float"
+    },
+    "Msg":{
+        "src":"string",
+        "dst":"string",
+        "KEY":"bytes"
+    },
+    "base_types":["float","u32","i32","i64","u64","string","bytes","array","map"],
+    "example": {
+        "src":"esp1/sys",
+        "SystemInfo": {
+            "uptime":98779879,
+            "cpu_board":"ESP32_DEVKIT"
+        }
+    }
+}
+
+
+
+
+

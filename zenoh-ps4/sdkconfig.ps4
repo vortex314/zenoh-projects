@@ -2183,6 +2183,12 @@ CONFIG_WIFI_PROV_STA_ALL_CHANNEL_SCAN=y
 # end of Wi-Fi Provisioning Manager
 
 #
+# BTstack Configuration
+#
+CONFIG_BTSTACK_AUDIO=y
+# end of BTstack Configuration
+
+#
 # Bluepad32
 #
 # CONFIG_BLUEPAD32_PLATFORM_AIRLIFT is not set
@@ -2202,12 +2208,6 @@ CONFIG_BLUEPAD32_ENABLE_BLE_BY_DEFAULT=y
 CONFIG_BLUEPAD32_MAX_ALLOWLIST=4
 # CONFIG_BLUEPAD32_ENABLE_VIRTUAL_DEVICE_BY_DEFAULT is not set
 # end of Bluepad32
-
-#
-# BTstack Configuration
-#
-CONFIG_BTSTACK_AUDIO=y
-# end of BTstack Configuration
 # end of Component config
 
 # CONFIG_IDF_EXPERIMENTAL_FEATURES is not set

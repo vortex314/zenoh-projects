@@ -1,9 +1,0 @@
-cutter-cmd = {
-    pwm: int,
-}
-
-cutter-event = {
-    current: int,
-    temperature: int
-}
-

@@ -107,6 +107,7 @@ enum InTyp {
  AUTO_DETECT = 3;
 }
 
+// Hoverboard Message
 
 message HoverboardInfo {
   CtrlMod ctrl_mod=0; // 1:Voltage 2:Speed 3:Torque
@@ -160,4 +161,57 @@ message HoverboardInfo {
 message HoverboardCmd {
   int32 speed = 0;
   int32 steer = 1;
+}
+
+// PS4 Controller Message
+
+message Ps4Info {
+  bool button_left = 1;
+  bool button_right = 2;
+  bool button_up = 3;
+  bool button_down = 4;
+
+  bool button_square = 5;
+  bool button_cross = 6;
+  bool button_circle = 7;
+  bool button_triangle = 8;
+
+  bool button_left_sholder = 9;
+  bool button_right_sholder = 10;
+  bool button_left_trigger = 11;
+  bool button_right_trigger = 12;
+  bool button_left_joystick = 13;
+  bool button_right_joystick = 14;
+  bool button_share = 15;
+
+  int32 axis_lx = 16;
+  int32 axis_ly = 17;
+  int32 axis_rx = 18;
+  int32 axis_ry = 19;
+
+  int32 gyro_x = 20;
+  int32 gyro_y = 21;
+  int32 gyro_z = 22;
+
+  int32 accel_x = 23;
+  int32 accel_y = 24;
+  int32 accel_z = 25;
+}
+
+message Ps4Cmd {
+  int32 rumble = 1;
+  int32 led_rgb = 2;
+}
+
+message CameraInfo {
+  int32 width = 1;
+  int32 height = 2;
+  string format = 3;
+  bytes data = 4;
+  bool led = 5;
+}
+
+message CameraCmd {
+  bool led = 1;
+  int32 quality = 4;
 }

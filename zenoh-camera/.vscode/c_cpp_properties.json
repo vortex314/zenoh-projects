@@ -382,6 +382,8 @@
                 "PLATFORMIO=60118",
                 "ARDUINO_ESP32_DEV",
                 "BOARD_HAS_PSRAM",
+                "WIFI_SSID=Merckx2",
+                "WIFI_PASS=LievenMarletteEwoutRonald",
                 "GPIO_LED=GPIO_NUM_33",
                 "__GLIBCXX_ASSERTIONS",
                 "ZENOH_ESPIDF",

@@ -92,7 +92,7 @@ void WifiActor::handle_timer(int timer_id)
   {
     if (_wifi_connected)
     {
-      pubish_props(esp_netif);
+      publish_info(esp_netif);
     }
   }
   else if (timer_id == _timer_publish_props)
@@ -188,28 +188,7 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-void WifiActor::pubish_props(esp_netif_t *esp_netif)
-{
-  WifiInfo* wifi_info = new WifiInfo();
-  // get IP address and publish
-  esp_netif_ip_info_t ip_info;
-  if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)
-  {
-    ERROR("Failed to get IP info")  ;
-    return;
-  }
-  wifi_info->ip = ip4addr_to_str(&ip_info.ip);
-  wifi_info->gateway = ip4addr_to_str(&ip_info.gw);
-  wifi_info->netmask = ip4addr_to_str(&ip_info.netmask);
-  // get MAC address
-  uint8_t mac[6];
-  esp_read_mac(mac, ESP_MAC_WIFI_STA);
-  char macStr[18];
-  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
-          mac[3], mac[4], mac[5]);
-  wifi_info->mac = macStr;
-  emit(wifi_info);
-}
+
 
 static PropInfo wifi_prop_info[] = {
     {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
@@ -459,4 +438,27 @@ Res WifiActor::connect()
   CHECK_ESP(esp_wifi_start());
 
   return Res::Ok(true);
+}
+
+void WifiActor::publish_info(esp_netif_t *esp_netif)
+{
+  WifiInfo* wifi_info = new WifiInfo();
+  // get IP address and publish
+  esp_netif_ip_info_t ip_info;
+  if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)
+  {
+    ERROR("Failed to get IP info")  ;
+    return;
+  }
+  wifi_info->ip = ip4addr_to_str(&ip_info.ip);
+  wifi_info->gateway = ip4addr_to_str(&ip_info.gw);
+  wifi_info->netmask = ip4addr_to_str(&ip_info.netmask);
+  // get MAC address
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+  char macStr[18];
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2],
+          mac[3], mac[4], mac[5]);
+  wifi_info->mac = macStr;
+  emit(wifi_info);
 }
