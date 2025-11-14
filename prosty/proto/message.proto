@@ -209,6 +209,7 @@ message CameraInfo {
   string format = 3;
   bytes data = 4;
   bool led = 5;
+  int32 quality = 6;
 }
 
 message CameraCmd {

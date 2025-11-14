@@ -1,3 +1,21 @@
+## IDEAS
+- make single esp32 zenoh-pico program with feature flags 
+    - OTA
+    - Camera
+    - Hoverboard
+    - Cutter
+    - Compass
+    - Gyro
+    - Tri-lateration
+    - Ultrasonic
+    - Steppermotor
+- feature flags inf platformio.ini entries
+- Value structure , DOM alike 
+
+- every topic has 1 schema ( with optional fields )
+- The schema can be derived from the leaf string
+- zenohd should also support MQTT to merge landscapes
+
 # Lawn-mower robotics - Zenoh integration of micro-services
 
 ![Architecture](doc/design-architecture.drawio.png)
@@ -38,8 +56,8 @@ Looks good on paper, letś go.
 - Should support shared memory 
 
 # sub projects
-- actix-web : 
-- akka
+- actix-web : zenoh web socket server for dashboards and controls
+- akka : actor tests in rust
 - doc : documentation about hardware 
 - esp_no_std : esp32 no std rust project with embassy. NZ ( no zenoh )
 - esp32-actors-rs : NZ
@@ -52,12 +70,12 @@ Looks good on paper, letś go.
 - esp32-idf : rust wifi mqtt NZ
 - esp32-idf-dc-motor
 - esp32-idf-std-motor
-esp32-limero-embassy-rs
+- esp32-limero-embassy-rs : library with akka alike FW
 esp32-limero-std
 esp32-std-motor
-eventbus
+- eventbus : an own rust eventbus implementation
 hoverboard-espnow.drawio
-hoverboard-linux
+- hoverboard-linux : rust linux serial driver for hoverboard 
 LICENSE-APACHE
 LICENSE-MIT
 limero-linux-tokio
@@ -70,9 +88,9 @@ package-lock.json
 pubsub
 README.MD
 rust-toolchain.toml.old
-scripts
+- scripts : zenoh pub sub scripts 
 sdkconfig.defaults
-serdes
+- serdes : Serialization with Rust
 stm32-udp
 uip-stm32cube
 vue-dashboard-app
