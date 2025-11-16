@@ -1,0 +1,84 @@
+# PubSub-Dashboard Features
+
+- Goal is to have an easy deployable browser-based dashboard to visualize ad-hoc PubSub data  and to generate PubSub Events
+- Supported PubSub engines : MQTT , Zenoh
+- The Dashboard speaks Topic/Payload semnatics, with the payload being JSON send from/to the Websocket proxy.
+- The WebSocket proxy is taking care of any mapping to other serialization formats and can eventualyy have its own dictionary.
+
+## My own idiomatic format of topics
+- 'srcDst/Device/Component/MessageType'
+- Supported wild cards /** or  /* for single or multiple level
+- Example src/*/sys/SysInfo 
+- Example : dst/esp1/gps/LocationTarget { lon:23.445,lat:56.77 }
+- Example : dst/esp1/sys/SystemCmd => { reboot:true }. or dst/esp1/sys/SysCmd/reboot => true 
+
+## 
+
+## Websocket protocol
+- assumption : the protocol uses the lowest granularity of the topics and is always JSON serialized
+- example : src/esp1/motor/MotorInfo/rpm = 2324 or src/esp2/gps/GpsInfo = { "lon":37.44, "lat":4.0 }
+```json
+{
+    "publish":{
+        "topic":"dst/esp1/sys/SysCmd/", // "dst/server/dashboard/ListCmd", "dst/server/broker/BrokerCmd"
+        "payload": { "reboot" :true },
+        "message_topics":{"topics":["src/esp1/sys/SysInfo","src/esp1/motor/MotorInfo"]}
+    } // "topics","sub","unsub","save_dashboard","load_dashboard","list_dashboard"
+
+}
+{
+    "subscribe":{
+        "topic":"src/esp1/*"
+    }
+}
+{
+    "save":{
+        "file":"filename1"
+    },
+    "save_reply" :{
+        "rc":0,
+        "msg":"OK"
+    }
+}
+{
+    "reply":"save",
+    "rc":0,
+    "msg":"OK"
+}
+{
+    "request":"load",
+    "topic":"db2"
+}
+{
+    "reply":"load",
+    "topic":"db2",
+    "rc":0,
+    "msg":"OK",
+    "payload":{"items":[],"meta": {}}
+}
+```
+## Recommended IDE Setup
+
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Project Setup
+
+```sh
+npm install
+```
+
+### Compile and Hot-Reload for Development
+
+```sh
+npm run dev
+```
+
+### Compile and Minify for Production
+
+```sh
+npm run build
+```

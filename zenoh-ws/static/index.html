@@ -1,0 +1,119 @@
+<html>
+
+<head>
+    <title>WebSocket Example</title>
+</head>
+
+<body>
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.0.0/dist/vuetify.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.0.0/dist/vuetify.min.css" rel="stylesheet">
+    <div id="app">
+        <v-app>
+            <v-container>
+                <v-row>
+                    <v-col>
+                        <v-btn @click="connectWebSocket" color="primary">Connect WebSocket</v-btn>
+                    </v-col>
+                    <v-col>
+                        <v-btn @click="sendMessage" color="success">Send JSON Message</v-btn>
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <v-col>
+                        <p>Status: {{ status }}</p>
+                    </v-col>
+                </v-row>
+            </v-container>
+        </v-app>
+    </div>
+    <script>
+        const { createApp } = Vue;
+        const { createVuetify } = Vuetify;
+
+        // Create a Vuetify instance
+        const vuetify = createVuetify();
+        createApp({
+            data() {
+                return {
+                    websocket: null,
+                    status: 'Disconnected'
+                };
+            },
+            methods: {
+                connectWebSocket() {
+                    if (this.websocket) {
+                        this.websocket.close();
+                    }
+                    this.websocket = new WebSocket('ws://localhost:8080/ws'); // Fixed typo in 'localhost'
+                    this.websocket.onopen = () => {
+                        this.status = 'Connected';
+                    };
+                    this.websocket.onclose = () => {
+                        this.status = 'Disconnected';
+                    };
+                    this.websocket.onerror = (error) => {
+                        console.error('WebSocket Error:', error);
+                        this.status = 'Error';
+                    };
+                    // recv message handler can be added here if needed
+                    this.websocket.onmessage = (event) => {
+                        console.log('Message from server:', event.data);
+                    };
+                },
+                sendMessage() {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        var message = { type:"Publish", topic: 'src/esp1/sys/SysInfo', payload: { uptime: 12345 } } ;
+                        this.websocket.send(JSON.stringify(message));
+                         message = { type:"Subscribe", topic: 'src/esp1/sys/SysInfo' } ;
+                        this.websocket.send(JSON.stringify(message));
+                        message = { type:"Load", key: 'config/device1' } ;
+                        this.websocket.send(JSON.stringify(message));
+                        message = { type:"Save", key: 'config/device1', payload: { setting: 'value' } } ;
+                        this.websocket.send(JSON.stringify(message));
+                    } else {
+                        alert('WebSocket is not connected.');
+                    }
+                },
+                subscribe(topic_pattern) {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        var message = { type: "Subscribe", topic: topic_pattern };
+                        this.websocket.send(JSON.stringify(message));
+                    } else {
+                        alert('WebSocket is not connected.');
+                    }
+                },
+                publish(topic, payload) {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        var message = { type: "Publish", topic: topic, payload: payload };
+                        this.websocket.send(JSON.stringify(message));
+                    } else {
+                        alert('WebSocket is not connected.');
+                    }
+                },
+                save(key, payload) {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        var message = { type: "Save", key: key, payload: payload };
+                        this.websocket.send(JSON.stringify(message));
+                    } else {
+                        alert('WebSocket is not connected.');
+                    }
+                },
+                load(key) {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        var message = { type: "Load", key: key };
+                        this.websocket.send(JSON.stringify(message));
+                    } else {
+                        alert('WebSocket is not connected.');   
+                    }
+
+            }
+        }).use(vuetify).mount('#app');
+    </script>
+    <h1>WebSocket Connection</h1>
+    <script>
+        // WebSocket connection logic will go here
+    </script>
+</body>
+
+</html>
