@@ -10,7 +10,6 @@
 #include <sys_actor.h>
 #include <led_actor.h>
 #include <zenoh_actor.h>
-#include <hoverboard_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -29,6 +28,22 @@ EventBus eventbus(20);
 Log logger;
 esp_err_t nvs_init();
 
+#ifdef ENABLE_HOVERBOARD
+#include <hoverboard_actor.h>
+HoverboardActor hoverboard_actor("hb");
+void register_component()
+{
+  eventbus.register_actor(&hoverboard_actor);
+}
+#elif defined(ENABLE_PS4_CONTROLLER)
+#include <ps4_actor.h>
+Ps4Actor ps4_actor("ps4");
+void register_component()
+{
+  eventbus.register_actor(&ps4_actor);
+}
+#endif
+
 extern "C" void app_main()
 {
 
@@ -40,18 +55,11 @@ extern "C" void app_main()
   zenoh_actor.prefix(DEVICE_NAME);
 
   eventbus.register_actor(&wifi_actor); // manage wifi connection
-  eventbus.register_actor(&sys_actor); // manage the system
+  eventbus.register_actor(&sys_actor);  // manage the system
   //  eventbus.register_actor(&mc_actor);
   eventbus.register_actor(&zenoh_actor); // bridge the eventbus
-  eventbus.register_actor(&led_actor); // blink the led
-  #ifdef ENABLE_HOVERBOARD
-  static HoverboardActor hoverboard_actor("hoverboard");
-  eventbus.register_actor(&hoverboard_actor); // exchange data via serial with hoverboard via UART
-  #endif
-  #ifdef ENABLE_PS4_CONTROLLER
-  static Ps4Actor ps4_actor("ps4controller");
-  eventbus.register_actor(&ps4_actor); // manage PS4 controller
-  #endif
+  eventbus.register_actor(&led_actor);   // blink the led
+  register_component();
   eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
                               const char *src = env.src ? env.src->name() : "";

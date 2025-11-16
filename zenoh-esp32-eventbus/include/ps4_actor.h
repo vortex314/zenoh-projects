@@ -10,7 +10,7 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #include <msg_info.h>
 #include <esp_event.h>
 #include <esp_wifi.h>
-#include <esp_bt.h>
+//#include <esp_bt.h>
 
 #include <btstack_port_esp32.h>
 #include <btstack_run_loop.h>
@@ -18,6 +18,7 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #include <hci_dump.h>
 #include <hci_dump_embedded_stdout.h>
 #include <uni.h>
+#include <limero.h>
 
 // #include "sdkconfig.h"
 
@@ -25,7 +26,7 @@ https://bluepad32.readthedocs.io/en/latest/plat_esp32/
 #ifndef CONFIG_BLUEPAD32_PLATFORM_CUSTOM
 #error "Must use BLUEPAD32_PLATFORM_CUSTOM"
 #endif
-
+/*
 typedef enum Ps4Props {
   BUTTON_LEFT = 0,
   BUTTON_RIGHT,
@@ -157,7 +158,7 @@ struct Ps4Cmd
 {
   std::optional<PublishSerdes> serdes = std::nullopt;
   std::optional<bool> stop_actor = std::nullopt;
-};
+};*/
 
 typedef enum BlueEvent
 {
@@ -170,27 +171,24 @@ typedef enum BlueEvent
 
 } BlueEvent;
 
-struct Ps4Event
-{
-  std::optional<PublishSerdes> serdes = std::nullopt;
-  std::optional<BlueEvent> blue_event = std::nullopt;
-  std::optional<Ps4Msg> output = std::nullopt;
-  std::optional<PublishSerdes> prop_info = std::nullopt;
-};
+DEFINE_MSG(Ps4Event,
+    BlueEvent blue_event;
+    Ps4Event(BlueEvent ev) : blue_event(ev) {}
+);
 
-class Ps4Actor : public Actor<Ps4Event, Ps4Cmd>
+
+
+class Ps4Actor : public Actor
 {
   int _timer_id = 0;
   int _prop_counter = 0;
 
 public:
-  Ps4Actor();
-  Ps4Actor(const char *name, size_t stack_size, int priority, size_t queue_depth);
+  Ps4Actor(const char* name);
   ~Ps4Actor();
   void on_cmd(Ps4Cmd &cmd);
   void on_timer(int timer_id);
   void on_start();
-  Ps4Msg ps4_output;
 
   void gamepad_to_output(uni_gamepad_t *gp);
 
