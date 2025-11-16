@@ -206,7 +206,8 @@ void HoverboardActor::on_message(const Envelope &env)
 {
     const Msg &msg = *env.msg;
     msg.handle<HoverboardCmd>([&](auto hb_cmd)
-                              { if (hb_cmd.speed) _speed = hb_cmd.speed.value(); 
+                              { INFO("Received HoverboardCmd: speed=%d, steer=%d", hb_cmd.speed.value_or(-1), hb_cmd.steer.value_or(-1));
+                                if (hb_cmd.speed) _speed = hb_cmd.speed.value(); 
                                 if (hb_cmd.steer) _steer = hb_cmd.steer.value() ; });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { on_timer(msg.timer_id); });
@@ -268,11 +269,11 @@ void uart_event_task(void *pvParameters)
 
     while (true)
     {
-      //  INFO("UART event task waiting for data...");
+        //  INFO("UART event task waiting for data...");
         // Wait for UART event
         if (xQueueReceive(actor->uart_queue, (void *)&event, portMAX_DELAY))
         {
-        //    INFO("UART event received: %d", event.type);
+            //    INFO("UART event received: %d", event.type);
             switch (event.type)
             {
             case UART_DATA:

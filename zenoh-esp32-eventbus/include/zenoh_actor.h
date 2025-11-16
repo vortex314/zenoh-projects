@@ -89,6 +89,7 @@ public:
       auto r = T::json_deserialize(buffer);
       if (r.is_ok())
       {
+        INFO("Received %s message", T::name_value);
         emit(r.unwrap());
         return true;
       }
@@ -97,7 +98,8 @@ public:
         ERROR("Failed to deserialize %s message", T::name_value);
         return true;
       }
-    }
+    };
+    return false;
   }
 
 

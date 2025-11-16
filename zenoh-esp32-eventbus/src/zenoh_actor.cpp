@@ -1,6 +1,6 @@
 #include <zenoh_actor.h>
 
-#define CLIENT_OR_PEER 1 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
 #define MODE "client"
 #define CONNECT "" // If empty, it will scout
@@ -77,7 +77,7 @@ void ZenohActor::on_message(const Envelope &env)
   msg.handle<ZenohConnect>([&](auto _)
                            { if (!_connected)
                              {  
-                              
+                              connect_and_subscribe();
                              } });
   msg.handle<ZenohDisconnect>([&](auto _)
                               { if (_connected)
@@ -140,11 +140,11 @@ Res ZenohActor::connect(void)
   // Start the receive and the session lease loop for zenoh-pico
   zp_task_lease_options_t lease_options;
   zp_task_lease_options_default(&lease_options);
-  // lease_options.task_attributes->stack_depth = 8192;
+//  lease_options.task_attributes->stack_depth = 16384;
 
   zp_task_read_options_t read_options;
   zp_task_read_options_default(&read_options);
-  // read_options.task_attributes->stack_depth = 8192;
+//  read_options.task_attributes->stack_depth = 16384;
 
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), &read_options));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), &lease_options));
@@ -379,17 +379,24 @@ void ZenohActor::subscription_handler(z_loaned_sample_t *sample, void *arg)
   {
     actor->emit(new ZenohReceived(topic, buffer));
   }
-
 }
 
 Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
 {
+  if (!_connected || z_session_is_closed(z_loan(_zenoh_session)))
+  {
+    return Res::Err(-1, "Zenoh session is not connected or closed");
+  }
   // INFO("Publishing message on topic '%s' (%d bytes)", topic, value.size());
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic);
 
   CHECK(z_bytes_copy_from_buf(&payload, value.data(), value.size()));
+  if (value.empty())
+  {
+    return Res::Err(-1, "Payload is empty");
+  }
   CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &put_options));
   z_drop(z_move(payload));
   emit(new LedPulse(10));

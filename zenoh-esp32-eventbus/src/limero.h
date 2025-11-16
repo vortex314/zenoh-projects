@@ -431,3 +431,45 @@ class Ps4Cmd : public Msg {
     static Result<Ps4Cmd*> cbor_deserialize(const Bytes&);
 };
 
+class CameraInfo : public Msg {
+    MSG(CameraInfo);
+    public:
+    std::optional<int32_t> width;
+    std::optional<int32_t> height;
+    std::optional<std::string> format;
+    std::optional<Bytes> data;
+    std::optional<bool> led;
+    std::optional<int32_t> quality;
+    
+    // Field indexes
+        typedef enum {
+        WIDTH_INDEX = 1,
+        HEIGHT_INDEX = 2,
+        FORMAT_INDEX = 3,
+        DATA_INDEX = 4,
+        LED_INDEX = 5,
+        QUALITY_INDEX = 6,
+    } Field;
+    static Result<Bytes> json_serialize(const CameraInfo&);
+    static Result<CameraInfo*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const CameraInfo&);
+    static Result<CameraInfo*> cbor_deserialize(const Bytes&);
+};
+
+class CameraCmd : public Msg {
+    MSG(CameraCmd);
+    public:
+    std::optional<bool> led;
+    std::optional<int32_t> quality;
+    
+    // Field indexes
+        typedef enum {
+        LED_INDEX = 1,
+        QUALITY_INDEX = 4,
+    } Field;
+    static Result<Bytes> json_serialize(const CameraCmd&);
+    static Result<CameraCmd*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const CameraCmd&);
+    static Result<CameraCmd*> cbor_deserialize(const Bytes&);
+};
+

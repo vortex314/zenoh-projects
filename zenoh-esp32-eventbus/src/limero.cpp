@@ -599,6 +599,69 @@ Result<Bytes> Ps4Cmd::json_serialize(const Ps4Cmd& msg)  {
     }
 
 
+Result<Bytes> CameraInfo::json_serialize(const CameraInfo& msg)  {
+        JsonDocument doc;
+        if (msg.width)doc["width"] = *msg.width;
+        if (msg.height)doc["height"] = *msg.height;
+        if (msg.format)doc["format"] = *msg.format;
+        if (msg.data)
+                        doc["data"] = base64_encode(*msg.data);
+        if (msg.led)doc["led"] = *msg.led;
+        if (msg.quality)doc["quality"] = *msg.quality;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<CameraInfo*> CameraInfo::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        CameraInfo* msg = new CameraInfo();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<CameraInfo*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["width"].is<int32_t>() )  
+                        msg->width = doc["width"].as<int32_t>();
+        if (doc["height"].is<int32_t>() )  
+                        msg->height = doc["height"].as<int32_t>();
+        if (doc["format"].is<std::string>() )  
+                        msg->format = doc["format"].as<std::string>();
+        if (doc["data"].is<std::string>() )  
+                        msg->data = base64_decode(doc["data"].as<std::string>());
+        if (doc["led"].is<bool>() )  
+                        msg->led = doc["led"].as<bool>();
+        if (doc["quality"].is<int32_t>() )  
+                        msg->quality = doc["quality"].as<int32_t>();
+        return Result<CameraInfo*>::Ok(msg);
+    }
+
+
+Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
+        JsonDocument doc;
+        if (msg.led)doc["led"] = *msg.led;
+        if (msg.quality)doc["quality"] = *msg.quality;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<CameraCmd*> CameraCmd::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        CameraCmd* msg = new CameraCmd();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<CameraCmd*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["led"].is<bool>() )  
+                        msg->led = doc["led"].as<bool>();
+        if (doc["quality"].is<int32_t>() )  
+                        msg->quality = doc["quality"].as<int32_t>();
+        return Result<CameraCmd*>::Ok(msg);
+    }
+
+
 
 // Helper macros for serialization and deserialization
 
@@ -686,6 +749,7 @@ Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -864,6 +928,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1060,6 +1125,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1202,6 +1268,7 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1335,6 +1402,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1492,6 +1560,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1665,6 +1734,7 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -1947,6 +2017,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -2402,6 +2473,7 @@ Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -2585,6 +2657,7 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -2860,6 +2933,7 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
@@ -2896,5 +2970,247 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<Ps4Cmd*>::Ok(msg);
+}
+
+Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.width) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::WIDTH_INDEX);
+            cbor_encode_int(&mapEncoder, msg.width.value());
+            }
+    if (msg.height) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::HEIGHT_INDEX);
+            cbor_encode_int(&mapEncoder, msg.height.value());
+            }
+    if (msg.format) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::FORMAT_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.format.value().c_str());
+            }
+    if (msg.data) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::DATA_INDEX);
+            cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size());
+            }
+    if (msg.led) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::LED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.led.value());
+            }
+    if (msg.quality) {
+            cbor_encode_int(&mapEncoder, CameraInfo::Field::QUALITY_INDEX);
+            cbor_encode_int(&mapEncoder, msg.quality.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<CameraInfo*> CameraInfo::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    CameraInfo* msg = new CameraInfo();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<CameraInfo*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<CameraInfo*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<CameraInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<CameraInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case CameraInfo::Field::WIDTH_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->width = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraInfo::Field::HEIGHT_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->height = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraInfo::Field::FORMAT_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->format = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraInfo::Field::DATA_INDEX:{{
+    uint8_t tmpbuf[512];
+    size_t tmplen = sizeof(tmpbuf);
+    if (cbor_value_is_byte_string(&mapIt)) {
+        cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
+        msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraInfo::Field::LED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->led = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraInfo::Field::QUALITY_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->quality = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<CameraInfo*>::Ok(msg);
+}
+
+Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.led) {
+            cbor_encode_int(&mapEncoder, CameraCmd::Field::LED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.led.value());
+            }
+    if (msg.quality) {
+            cbor_encode_int(&mapEncoder, CameraCmd::Field::QUALITY_INDEX);
+            cbor_encode_int(&mapEncoder, msg.quality.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<CameraCmd*> CameraCmd::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    CameraCmd* msg = new CameraCmd();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<CameraCmd*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<CameraCmd*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<CameraCmd*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<CameraCmd*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case CameraCmd::Field::LED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->led = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraCmd::Field::QUALITY_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->quality = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<CameraCmd*>::Ok(msg);
 }
 

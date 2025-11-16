@@ -25,7 +25,6 @@ WifiActor wifi_actor("wifi");
 ZenohActor zenoh_actor("zenoh");
 SysActor sys_actor("sys");
 LedActor led_actor("led");
-HoverboardActor hoverboard_actor("hoverboard");
 EventBus eventbus(20);
 Log logger;
 esp_err_t nvs_init();
@@ -45,7 +44,14 @@ extern "C" void app_main()
   //  eventbus.register_actor(&mc_actor);
   eventbus.register_actor(&zenoh_actor); // bridge the eventbus
   eventbus.register_actor(&led_actor); // blink the led
+  #ifdef ENABLE_HOVERBOARD
+  static HoverboardActor hoverboard_actor("hoverboard");
   eventbus.register_actor(&hoverboard_actor); // exchange data via serial with hoverboard via UART
+  #endif
+  #ifdef ENABLE_PS4_CONTROLLER
+  static Ps4Actor ps4_actor("ps4controller");
+  eventbus.register_actor(&ps4_actor); // manage PS4 controller
+  #endif
   eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
                               const char *src = env.src ? env.src->name() : "";

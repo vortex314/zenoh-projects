@@ -233,6 +233,7 @@ Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
         uint64_t key = 0;
         if (cbor_value_is_unsigned_integer(&mapIt)) {
             cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
         } else {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
