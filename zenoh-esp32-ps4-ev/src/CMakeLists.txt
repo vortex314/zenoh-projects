@@ -3,4 +3,4 @@
 
 FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/src/*.*)
 
-idf_component_register(SRCS ${app_sources} REQUIRES bt  )
+idf_component_register(SRCS ${app_sources} REQUIRES bluepad32 zenoh-pico freertos nvs_flash esp_wifi esp_event esp_system btstack)

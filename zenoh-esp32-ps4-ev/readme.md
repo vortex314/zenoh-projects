@@ -171,3 +171,17 @@ Commands
     }
 }
 ```
+
+Bluepad32 for ESP‑IDF requires and uses BTstack—not ESP-IDF’s native Bluedroid or NimBLE stack.
+### Integration Overview
+
+Bluepad32 includes an external/btstack directory, which must be patched and integrated into your project. After cloning the repo you run:
+Shellcd external/btstack/port/esp32IDF_PATH=../../../../src ./integrate_btstack.pyShow more lines
+This installs BTstack as a component in your ESP-IDF project. [github.com]
+The build instructions emphasize patching BTstack before compiling Bluepad32. [bluepad32....thedocs.io]
+
+### Why not Bluedroid or NimBLE?
+
+BTstack is tailored by Bluepad32 to support HID host functionality (gamepads, mice, keyboards) over both Classic and BLE.
+ESP-IDF’s built-in stacks — Bluedroid (supports Classic + BLE) or NimBLE (BLE-only) — are not used. Instead, BTstack runs on a dedicated BTstack task in ESP-IDF. [bluepad32....thedocs.io], [bluepad32....thedocs.io]
+
