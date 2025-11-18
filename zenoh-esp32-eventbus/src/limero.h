@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <ArduinoJson.h>
-#include <cbor.h>
+#include "cbor.h"
 #include <msg.h>
 #include <serdes.h>
 
