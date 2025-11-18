@@ -1,0 +1,339 @@
+#ifndef ACTOR_H
+#define ACTOR_H
+#include <freertos/FreeRTOS.h>
+#include <freertos/mpu_wrappers.h>
+#include <freertos/portmacro.h>
+#include <freertos/queue.h>
+#include <freertos/timers.h>
+#include <stddef.h>
+#include <vector>
+#include <functional>
+#include <esp_timer.h>
+#include <log.h>
+#include <util.h>
+#include <serdes.h>
+#include <option.h>
+#include <result.h>
+#include <memory>
+#include <stdint.h>
+#include <serdes.h>
+#include <ArduinoJson.h>
+#include <msg.h>
+#pragma once
+
+uint64_t current_time();
+
+class ActorRef
+{
+    const char *_actor_name="";
+
+public:
+    ActorRef() = delete;
+    constexpr ActorRef(const char *name) : _actor_name(name) {};
+    ActorRef(const ActorRef &other) : _actor_name(other._actor_name) {};
+    bool operator==(ActorRef &other) { return _actor_name == other._actor_name; }; // matches same id
+    void operator=(ActorRef other) { _actor_name = other._actor_name; }
+    bool match_name(ActorRef &other) { return strcmp(_actor_name, other._actor_name) == 0; };
+    inline const char *name() const { return _actor_name; };
+};
+
+extern ActorRef NULL_ACTOR;
+
+class Envelope
+{
+public:
+    std::optional<ActorRef> src = std::nullopt;
+    std::optional<ActorRef> dst = std::nullopt;
+    const Msg *msg;
+    Envelope(Msg *msg) : msg(msg) {}
+    Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg) {}
+    ~Envelope() { delete msg; }
+};
+
+DEFINE_MSG(TimerMsg,
+    int timer_id;
+    TimerMsg(int id) : timer_id(id) {}
+);
+
+
+/*template <typename T>
+void handle(const Msg &message, std::function<void(const T &)> f)
+{
+    if (message.type_id() == T::id)
+    {
+        T &msg = (T &)message;
+        f(msg);
+    }
+}*/
+
+template <class T>
+class Queue
+{
+private:
+    QueueHandle_t queue;
+    size_t _depth;
+
+public:
+    Queue(size_t depth) : _depth(depth)
+    {
+        queue = xQueueCreate(depth, sizeof(T));
+        INFO("Channel created [%d][%d]", depth, sizeof(T));
+    }
+
+    int getDepth() const { return _depth; }
+    int getSize() const { return uxQueueMessagesWaiting(queue); }
+
+    bool send(T qt, TickType_t timeout = portMAX_DELAY)
+    {
+        return xQueueSend(queue, &qt, timeout) == pdTRUE ? true : false;
+    }
+
+    bool sendFromIsr(T qt, TickType_t timeout = portMAX_DELAY)
+    {
+        return xQueueSendFromISR(queue, &qt, nullptr) == pdTRUE;
+    }
+
+    bool receive(T *qt, TickType_t timeout = portMAX_DELAY)
+    {
+        if (xQueueReceive(queue, qt, timeout) == pdTRUE)
+        {
+            return true;
+        };
+        return false;
+    }
+    size_t size() { return uxQueueMessagesWaiting(queue); }
+    ~Queue() { vQueueDelete(queue); }
+    QueueHandle_t getQueue() { return queue; }
+    size_t getQueueDepth() { return _depth; }
+};
+
+// Queue Set wrapper
+class QueueSet
+{
+private:
+    QueueSetHandle_t set;
+
+public:
+    QueueSet(size_t maxQueues) { set = xQueueCreateSet(maxQueues); }
+
+    inline void addQueue(QueueHandle_t queue)
+    {
+        if (xQueueAddToSet(queue, set) != pdTRUE)
+        {
+            ERROR("Failed to add queue to set");
+        }
+    }
+
+    inline QueueHandle_t wait(TickType_t timeout = portMAX_DELAY)
+    {
+        return xQueueSelectFromSet(set, timeout);
+    }
+
+    inline ~QueueSet() { vQueueDelete(set); }
+};
+
+struct Timer
+{
+    bool _auto_reload;
+    uint64_t _expires_at;
+    uint64_t _period;
+    bool _active = false;
+
+public:
+    Timer(bool auto_reload, bool active, uint64_t period,
+          uint64_t expires_at);
+    static Timer Repetitive(uint64_t period);
+    static Timer OneShot(uint64_t delay);
+    void make_one_shot(uint64_t delay);
+    void make_repetitive(uint64_t period);
+    bool is_expired(uint64_t now) const &;
+    void refresh(uint64_t now);
+    void start();
+    inline void stop() { _active = false; }
+    void reset();
+    void fire(uint64_t delay);
+};
+
+void refresh_expired_timers(std::vector<Timer> &timers);
+
+class Timers
+{
+    std::vector<Timer> _timers;
+
+public:
+    Timers() {}
+    uint64_t get_next_expires_at();
+    uint64_t sleep_time();
+    std::vector<int> get_expired_timers();
+    void refresh_expired_timers();
+    void refresh(int id);
+    int create_one_shot(uint64_t delay);
+    int create_repetitive(uint64_t period);
+    int start();
+    void fire(int id, uint64_t delay);
+    void stop(int id);
+};
+
+class ThreadSupport
+{
+public:
+    virtual void on_start() = 0;
+    virtual void on_stop() = 0;
+    virtual QueueHandle_t queue_handle() = 0;
+    Option<QueueHandle_t> additional_queue() { return Option<QueueHandle_t>::None(); }
+    virtual uint64_t sleep_time() = 0;
+    virtual void handle_expired_timers() = 0;
+    virtual const char *name() = 0;
+    virtual ~ThreadSupport() = default;
+};
+
+class Actor;
+
+class EventBus : public Queue<const Envelope *>
+{
+    std::vector<Actor *> _actors;
+    std::vector<std::function<void(const Envelope &)>> _message_handlers;
+    size_t _stack_size = 1024;
+    TaskHandle_t _task_handle;
+
+public:
+    EventBus(size_t size);
+    void push(const Envelope *env);
+    void register_actor(Actor *);
+    void register_handler(std::function<void(const Envelope &)> handler)
+    {
+        _message_handlers.push_back(handler);
+    }
+    void loop();
+    void start();
+    ActorRef find_actor(const char *name);
+    const std::vector<Actor *> &actors() { return _actors; }
+};
+
+class Actor
+{
+private:
+    ActorRef _self;
+    Timers _timers;
+    EventBus *_eventbus = nullptr;
+
+public:
+    Actor(const char *name) : _self(name) {};
+    ~Actor() { INFO("Destroying actor %s", name()); }
+
+    virtual void on_start() { INFO("actor %s default started.", _self.name()); }
+    virtual void on_stop() { INFO("actor %s default stopped.", _self.name()); }
+    virtual void on_message(const Envelope &env)
+    {
+        WARN(" No message handler for actor %s ", _self.name());
+    }
+    std::vector<int> get_expired_timers() { return _timers.get_expired_timers(); }
+    Timers &timers() { return _timers; }
+    uint64_t sleep_time() { return _timers.sleep_time(); }
+    ActorRef ref() const { return _self; }
+    const char *name() { return _self.name(); }
+    EventBus *eventbus() const { return _eventbus; }
+
+    void emit(const Msg *msg);
+    void set_eventbus(EventBus *eventbus);
+
+    void handle_expired_timers()
+    {
+        for (int id : _timers.get_expired_timers())
+        {
+            Envelope *env = new Envelope(ref(), new TimerMsg(id));
+            on_message(*env);
+            _timers.refresh(id);
+        }
+    };
+    void loop() {};
+    void stop() {}
+    int timer_one_shot(uint64_t delay) { return _timers.create_one_shot(delay); }
+    int timer_repetitive(uint64_t period) { return _timers.create_repetitive(period); }
+    void timer_stop(int id) { _timers.stop(id); }
+    void timer_start(int id, uint64_t delay) { _timers.refresh(id); }
+    void refresh(int id) { _timers.refresh(id); }
+    void timer_fire(int id, uint64_t delay) { _timers.fire(id, delay); }
+};
+
+/*
+
+A thread is created to manage multiple actors. The thread will wait for the actor with the lowest sleep time and handle the command or timer event.
+
+*/
+
+typedef enum Cpu
+{
+    CPU0,
+    CPU1,
+    CPU_ANY
+} Cpu;
+
+class Thread
+{
+    std::vector<ThreadSupport *> _actors;
+    QueueSetHandle_t _queue_set;
+    std::string _name;
+    size_t _stack_size;
+    TaskHandle_t _task_handle;
+    bool _stop_thread = false;
+    int _priority;
+    Cpu _preferred_cpu;
+    size_t _queue_set_size;
+
+public:
+    Thread(const char *name, size_t stack_size, size_t queue_set_size, int priority = 5, Cpu preferred_cpu = Cpu::CPU_ANY) : _name(name),
+                                                                                                                             _stack_size(stack_size),
+                                                                                                                             _priority(priority),
+                                                                                                                             _preferred_cpu(preferred_cpu), _queue_set_size(queue_set_size)
+    {
+    }
+    const char *name() { return _name.c_str(); }
+    Res start();
+    Res add_actor(ThreadSupport &actor);
+    void run();
+    void step();
+    void handle_expired_timers();
+};
+
+typedef struct PropInfo
+{
+    const char *name;
+    const char *type;
+    const char *desc;
+    const char *mode;
+    Option<float> min;
+    Option<float> max;
+} PropInfo;
+
+DEFINE_MSG(PublishTxd,
+           JsonDocument doc;
+           PublishTxd(const JsonDocument &doc) : doc(doc){});
+DEFINE_MSG(PublishRxd,
+           JsonDocument doc;
+           PublishRxd(const JsonDocument &doc) : doc(doc){});
+DEFINE_MSG(Subscribe,
+           std::string pattern;
+           Subscribe(const std::string &pattern) : pattern(pattern){});
+DEFINE_MSG(Unsubscribe,
+           std::string pattern;
+           Unsubscribe(const std::string &pattern) : pattern(pattern){});
+
+template <typename T>
+void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)
+{
+    if (doc.containsKey(key) && doc[key].is<T>())
+    {
+        T value = doc[key].as<T>();
+        f(value);
+    }
+}
+
+template <typename T>
+void handle(std::optional<T> &v, std::function<void(const T &)> f)
+{
+    if (v)
+        f(*v);
+}
+
+#endif

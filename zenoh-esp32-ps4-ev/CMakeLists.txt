@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16.0)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-set(EXTRA_COMPONENT_DIRS components/bluepad32)
+set(EXTRA_COMPONENT_DIRS ../../bluepad32/src/components ../../bluepad32/external/btstack/port/esp32/components)
+project(zenoh-esp32-ps4-ev)
 
 #  list(APPEND EXTRA_COMPONENT_DIRS /home/lieven/workspace/bluepad32/src/components )
 #  list(APPEND EXTRA_COMPONENT_DIRS /home/lieven/esp/esp-idf/components/btstack)
@@ -11,4 +12,3 @@ set(EXTRA_COMPONENT_DIRS components/bluepad32)
 # list(APPEND EXTRA_COMPONENT_DIRS .pio/libdeps/ps4/bluepad32/external/btstack/port/esp32/components )
 # list(APPEND EXTRA_COMPONENT_DIRS .pio/libdeps/ps4/bluepad32/src/components)
 
-project(zenoh-lib)

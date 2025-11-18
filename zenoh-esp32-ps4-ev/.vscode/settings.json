@@ -1,0 +1,7 @@
+{
+    "idf.pythonInstallPath": "/usr/bin/python",
+    "idf.port": "/dev/ttyUSB1",
+    "files.associations": {
+        "*.cpp-old": "cpp"
+    }
+}

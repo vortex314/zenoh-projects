@@ -1,0 +1,1 @@
+socat STDIO UDP4-RECVFROM:6502,ip-add-membership=225.0.0.1:192.168.0.148
