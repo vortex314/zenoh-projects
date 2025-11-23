@@ -1,0 +1,26 @@
+# Cross.toml  ← create this file in your project directory
+[build]
+default-target="aarch64-unknown-linux-musl"
+[target.aarch64-unknown-linux-gnu]
+# image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest"
+image = "cross-aarch64-libudev"
+# env = {PKG_CONFIG_ALLOW_CROSS="1",PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig"}
+# pre-build = [
+#    "dpkg --add-architecture arm64",
+#    "apt-get update",
+#    "apt-get install -y libudev-dev:arm64 libuv1:arm64  libevdev-dev:arm64 pkg-config:arm64"
+#	]
+[target.aarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:latest"
+env = {PKG_CONFIG_ALLOW_CROSS="1",PKG_CONFIG_PATH="/usr/lib/aarch64-linux-musl/pkgconfig"}
+pre-build = [
+	"dpkg --add-architecture arm64",
+    "apt-get update",
+    "apt-get install -y libudev-dev:arm64 libuv1:arm64 libevdev-dev:arm64 pkg-config:arm64"
+	]
+[target.x86_64_unknown_linux_gnu]
+pre-build = [
+    "dpkg --add-architecture arm64",
+    "apt-get update",
+    "apt-get install -y libudev-dev libevdev-dev pkg-config"
+	]

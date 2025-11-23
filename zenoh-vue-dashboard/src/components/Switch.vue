@@ -37,7 +37,10 @@ function messageHandler(topic, value) {
     switch_state.value = value;
 }
 function state_changed() {
-    bus.txd.publish(props.config.dst, switch_state.value)
+    if (switch_state.value) 
+        bus.txd.publish(props.config.dst, { [props.config.field]: props.config.true_value });
+    else
+        bus.txd.publish(props.config.dst, { [props.config.field]: props.config.false_value });
 }
 
 watchEffect(() => {

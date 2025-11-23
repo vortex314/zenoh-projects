@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <ArduinoJson.h>
-#include "cbor.h"
+#include <cbor.h>
 #include <msg.h>
 #include <serdes.h>
 
@@ -379,6 +379,7 @@ class Ps4Info : public Msg {
     std::optional<int32_t> accel_x;
     std::optional<int32_t> accel_y;
     std::optional<int32_t> accel_z;
+    std::optional<bool> connected;
     
     // Field indexes
         typedef enum {
@@ -407,6 +408,7 @@ class Ps4Info : public Msg {
         ACCEL_X_INDEX = 23,
         ACCEL_Y_INDEX = 24,
         ACCEL_Z_INDEX = 25,
+        CONNECTED_INDEX = 26,
     } Field;
     static Result<Bytes> json_serialize(const Ps4Info&);
     static Result<Ps4Info*> json_deserialize(const Bytes&);

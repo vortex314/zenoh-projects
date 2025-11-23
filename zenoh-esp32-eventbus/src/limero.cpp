@@ -506,6 +506,7 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
         if (msg.accel_x)doc["accel_x"] = *msg.accel_x;
         if (msg.accel_y)doc["accel_y"] = *msg.accel_y;
         if (msg.accel_z)doc["accel_z"] = *msg.accel_z;
+        if (msg.connected)doc["connected"] = *msg.connected;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
@@ -569,6 +570,8 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
                         msg->accel_y = doc["accel_y"].as<int32_t>();
         if (doc["accel_z"].is<int32_t>() )  
                         msg->accel_z = doc["accel_z"].as<int32_t>();
+        if (doc["connected"].is<bool>() )  
+                        msg->connected = doc["connected"].as<bool>();
         return Result<Ps4Info*>::Ok(msg);
     }
 
@@ -2620,6 +2623,10 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
             cbor_encode_int(&mapEncoder, Ps4Info::Field::ACCEL_Z_INDEX);
             cbor_encode_int(&mapEncoder, msg.accel_z.value());
             }
+    if (msg.connected) {
+            cbor_encode_int(&mapEncoder, Ps4Info::Field::CONNECTED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.connected.value());
+            }
     cbor_encoder_close_container(&encoder, &mapEncoder);
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
@@ -2860,6 +2867,14 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
             case Ps4Info::Field::ACCEL_Z_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->accel_z = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Info::Field::CONNECTED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->connected = b;
     cbor_value_advance(&mapIt);
 
                 break;

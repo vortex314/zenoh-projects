@@ -196,6 +196,8 @@ message Ps4Info {
   int32 accel_x = 23;
   int32 accel_y = 24;
   int32 accel_z = 25;
+
+  bool connected = 26;
 }
 
 message Ps4Cmd {
