@@ -165,6 +165,13 @@ message HoverboardCmd {
 
 // PS4 Controller Message
 
+message TouchPoint {
+  bool active = 4;
+  int32 id = 1;
+  int32 x = 2;
+  int32 y = 3;
+}
+
 message Ps4Info {
   bool button_left = 1;
   bool button_right = 2;
@@ -178,31 +185,43 @@ message Ps4Info {
 
   bool button_left_shoulder = 9;
   bool button_right_shoulder = 10;
+
   bool button_left_trigger = 11;
   bool button_right_trigger = 12;
+
   bool button_left_joystick = 13;
   bool button_right_joystick = 14;
+
   bool button_share = 15;
+  bool button_options = 16;
+  bool button_touchpad = 33;
 
-  int32 axis_lx = 16;
-  int32 axis_ly = 17;
-  int32 axis_rx = 18;
-  int32 axis_ry = 19;
+  int32 axis_lx = 17;
+  int32 axis_ly = 18;
+  int32 axis_rx = 19;
+  int32 axis_ry = 20;
 
-  int32 gyro_x = 20;
-  int32 gyro_y = 21;
-  int32 gyro_z = 22;
+  int32 gyro_x = 21;
+  int32 gyro_y = 22;
+  int32 gyro_z = 23;
+  int32 accel_x = 24;
+  int32 accel_y = 25;
+  int32 accel_z = 26;
 
-  int32 accel_x = 23;
-  int32 accel_y = 24;
-  int32 accel_z = 25;
-
-  bool connected = 26;
+  bool connected = 27;
+  int32 battery_level = 28;
+  repeated TouchPoint touch_points = 29;
+  bool bluetooth = 30;
+   string debug = 31;
+   int32 temp = 32;
 }
 
 message Ps4Cmd {
-  int32 rumble = 1;
+  int32 rumble_small = 1;
+  int32 rumble_large = 3;
   int32 led_rgb = 2;
+  int32 led_flash_on = 4;
+  int32 led_flash_off = 5;
 }
 
 message CameraInfo {

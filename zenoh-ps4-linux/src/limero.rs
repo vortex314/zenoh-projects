@@ -429,6 +429,36 @@ impl Msg for HoverboardCmd {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct TouchPoint {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub id:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub x:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub y:Option<i32>,
+        
+
+}
+impl Msg for TouchPoint {
+     const ID: u32 = 49173;
+     const NAME: &'static str = "TouchPoint";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:TouchPoint = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct Ps4Info {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button_left:Option<bool>,
@@ -461,6 +491,10 @@ pub struct Ps4Info {
         #[serde(skip_serializing_if = "Option::is_none")]
     pub button_share:Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
+    pub button_options:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub button_touchpad:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
     pub axis_lx:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub axis_ly:Option<i32>,
@@ -482,6 +516,14 @@ pub struct Ps4Info {
     pub accel_z:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub connected:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_level:Option<i32>,
+        pub touch_points:Vec<TouchPoint>,#[serde(skip_serializing_if = "Option::is_none")]
+    pub bluetooth:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub temp:Option<i32>,
         
 
 }
@@ -505,9 +547,15 @@ impl Msg for Ps4Info {
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct Ps4Cmd {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rumble:Option<i32>,
+    pub rumble_small:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub rumble_large:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub led_rgb:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub led_flash_on:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub led_flash_off:Option<i32>,
         
 
 }
