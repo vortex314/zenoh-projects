@@ -1,6 +1,5 @@
 use serde::{Serialize, Deserialize};
 use anyhow::Result;
-use crate::value::Value;
 
 pub trait Msg {
     const ID: u32;

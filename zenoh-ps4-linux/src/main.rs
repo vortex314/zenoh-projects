@@ -1,10 +1,18 @@
 // src/main.rs
 use gilrs::{Button, Event, EventType, Gilrs};
+use log::warn;
 use serde::Serialize;
 use std::time::Duration;
 use zenoh::Result as ZResult;
 use zenoh::Session;
 use zenoh::bytes::ZBytes;
+
+mod limero;
+use limero::Ps4Cmd;
+use limero::Ps4Info;
+mod logger;
+use hidapi::HidApi;
+use log::info;
 
 #[derive(Serialize, Debug)]
 struct ControllerState {
@@ -22,28 +30,50 @@ struct ControllerState {
 
 #[tokio::main]
 async fn main() -> ZResult<()> {
+    logger::init();
+    unsafe {
+        std::env::set_var("HIDAPI_SKIP_SYSTEM_DEVICES", "0");
+    }
+
+    match HidApi::new() {
+        Ok(api) => {
+            for dev in api.device_list() {
+                    info!(
+                        "{:04x}:{:04x}  {}  {}",
+                        dev.vendor_id(),
+                        dev.product_id(),
+                        dev.manufacturer_string().unwrap_or(""),
+                        dev.product_string().unwrap_or("")
+                    );
+            }
+        }
+        Err(e) => warn!("HidApi init failed: {}", e),
+    }
+    info!("going to sleep for a long time");
+    tokio::time::sleep(Duration::from_millis(16000000000000)).await;
+
     // Open Zenoh session (auto-peers with local router or cloud if configured)
     let session = zenoh::open(zenoh::Config::default()).await?;
-    println!("Zenoh session opened");
+    info!("Zenoh session opened");
 
     // Key expression to publish to (e.g. "controller/ps4/1")
     let key_expr = "src/ps4/Ps4Info";
 
     let mut gilrs = Gilrs::new().unwrap();
-    println!("Looking for PS4 controller...");
+    info!("Looking for PS4 controller...");
 
     // Wait for at least one gamepad
     loop {
         if let Some((_id, gamepad)) = gilrs.gamepads().next() {
-            println!("Found controller: {} (PS4 detected)", gamepad.name());
+            info!("Found controller: {} (PS4 detected)", gamepad.name());
             break;
         }
         gilrs.next_event();
         std::thread::sleep(Duration::from_millis(500));
     }
 
-    println!("Publishing controller state to Zenoh key: {}", key_expr);
-    println!("Press Ctrl+C to quit");
+    info!("Publishing controller state to Zenoh key: {}", key_expr);
+    info!("Press Ctrl+C to quit");
 
     loop {
         // Process all events
@@ -51,7 +81,7 @@ async fn main() -> ZResult<()> {
             let gamepad = gilrs.gamepad(id);
 
             if matches!(event, EventType::Disconnected) {
-                println!("Controller disconnected!");
+                info!("Controller disconnected!");
                 let state = ControllerState {
                     left_stick_x: 0.0,
                     left_stick_y: 0.0,
@@ -71,109 +101,92 @@ async fn main() -> ZResult<()> {
 
         // Build current state
         if let Some((_id, gamepad)) = gilrs.gamepads().next() {
-            let state = ControllerState {
-                connected: true,
-                left_stick_x: gamepad
-                    .axis_data(gilrs::Axis::LeftStickX)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                left_stick_y: gamepad
-                    .axis_data(gilrs::Axis::LeftStickY)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                right_stick_x: gamepad
-                    .axis_data(gilrs::Axis::RightStickX)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                right_stick_y: gamepad
-                    .axis_data(gilrs::Axis::RightStickY)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                l2_trigger: gamepad
-                    .axis_data(gilrs::Axis::LeftZ)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                r2_trigger: gamepad
-                    .axis_data(gilrs::Axis::RightZ)
-                    .map(|a| a.value())
-                    .unwrap_or(0.0),
-                dpad_x: if gamepad.is_pressed(Button::DPadLeft) {
-                    -1
-                } else if gamepad.is_pressed(Button::DPadRight) {
-                    1
-                } else {
-                    0
-                },
-                dpad_y: if gamepad.is_pressed(Button::DPadDown) {
-                    -1
-                } else if gamepad.is_pressed(Button::DPadUp) {
-                    1
-                } else {
-                    0
-                },
-                buttons: vec![
-                    if gamepad.is_pressed(Button::South) {
-                        "Cross".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::East) {
-                        "Circle".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::North) {
-                        "Triangle".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::West) {
-                        "Square".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::LeftTrigger) {
-                        "L1".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::RightTrigger) {
-                        "R1".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::Select) {
-                        "Share".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::Start) {
-                        "Options".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::LeftThumb) {
-                        "L3".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::RightThumb) {
-                        "R3".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                    if gamepad.is_pressed(Button::Mode) {
-                        "PS".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                ]
-                .into_iter()
-                .filter(|s| !s.is_empty())
-                .collect(), 
+            let mut ps4_info = Ps4Info::default();
+            ps4_info.axis_lx = gamepad
+                .axis_data(gilrs::Axis::LeftStickX)
+                .map(|a| Some((a.value() * 1000.0) as i32))
+                .unwrap_or(None);
+            ps4_info.axis_ly = gamepad
+                .axis_data(gilrs::Axis::LeftStickY)
+                .map(|a| Some((a.value() * 1000.0) as i32))
+                .unwrap_or(None);
+            ps4_info.axis_rx = gamepad
+                .axis_data(gilrs::Axis::RightStickX)
+                .map(|a| Some((a.value() * 1000.0) as i32))
+                .unwrap_or(None);
+            ps4_info.axis_ry = gamepad
+                .axis_data(gilrs::Axis::RightStickY)
+                .map(|a| Some((a.value() * 1000.0) as i32))
+                .unwrap_or(None);
+            ps4_info.button_up = if gamepad.is_pressed(Button::DPadUp) {
+                Some(true)
+            } else {
+                Some(false)
             };
+            ps4_info.button_down = if gamepad.is_pressed(Button::DPadDown) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_left = if gamepad.is_pressed(Button::DPadLeft) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_right = if gamepad.is_pressed(Button::DPadRight) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_cross = if gamepad.is_pressed(Button::South) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_circle = if gamepad.is_pressed(Button::East) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_square = if gamepad.is_pressed(Button::West) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_triangle = if gamepad.is_pressed(Button::North) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_left_trigger = if gamepad.is_pressed(Button::LeftTrigger) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_right_trigger = if gamepad.is_pressed(Button::RightTrigger) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_share = if gamepad.is_pressed(Button::Select) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_left_shoulder = if gamepad.is_pressed(Button::LeftThumb) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            ps4_info.button_right_shoulder = if gamepad.is_pressed(Button::RightThumb) {
+                Some(true)
+            } else {
+                Some(false)
+            };
+            let json = serde_json::to_string(&ps4_info).unwrap();
+            info!("PS4 Info: {:?}", json);
 
-            let json = serde_json::to_string(&state).unwrap();
+            let json = serde_json::to_string(&ps4_info).unwrap();
             // convert string to zbytes
             let zb: ZBytes = ZBytes::from(json);
             session.put(key_expr, zb).await?;

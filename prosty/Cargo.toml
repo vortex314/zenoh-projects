@@ -16,6 +16,7 @@ clap = { version = "4.3", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 fnv = "1.0.7"
 convert_case = "0.8.0"
+hidapi = "*"
 
 [build-dependencies]
 prost-build = "0.14.1"

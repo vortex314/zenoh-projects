@@ -176,8 +176,8 @@ message Ps4Info {
   bool button_circle = 7;
   bool button_triangle = 8;
 
-  bool button_left_sholder = 9;
-  bool button_right_sholder = 10;
+  bool button_left_shoulder = 9;
+  bool button_right_shoulder = 10;
   bool button_left_trigger = 11;
   bool button_right_trigger = 12;
   bool button_left_joystick = 13;

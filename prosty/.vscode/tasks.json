@@ -56,6 +56,33 @@
             "presentation": {
                 "clear": true                        // <-- this line
             }
+        },
+        {
+            "label": "Ps4",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
+                }
+            },
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "run",
+                "--",
+                "--input", "proto/message.proto",
+                "--output", "../zenoh-ps4-linux/src",
+                "--lang", "rust",
+                "--format", "json"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true                        // <-- this line
+            }
         }
     ]
 }
