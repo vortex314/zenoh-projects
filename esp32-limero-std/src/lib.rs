@@ -9,7 +9,7 @@ pub mod timer;
 pub use timer::Timer;
 pub use timer::Timers;
 
-use async_io::Timer as AsyncTimer;
+use embassy_time::Timer as AsyncTimer;
 
 pub mod logger;
 pub use logger::semi_logger_init as init_logger;
@@ -182,9 +182,7 @@ impl<T> Handler<T> for EventHandlers<T> {
 }
 
 pub async fn async_wait_millis(millis: u32) -> () {
-    AsyncTimer::after(std::time::Duration::from_millis(millis as u64)).await;
- //   smol::Timer::after(std::time::Duration::from_millis(millis as u64)).await;
-   // embassy_time::Timer::after_millis(millis as u64).await;
+    AsyncTimer::after(embassy_time::Duration::from_millis(millis as u64)).await;
 }
 
 

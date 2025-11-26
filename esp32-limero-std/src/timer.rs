@@ -106,7 +106,7 @@ impl Timers {
         }
         expired
     }
-    pub fn with_timer<F>(&mut self, id: u32, func : F ) -> Result<()> where F: Fn(&mut Timer)-> () {
+    pub fn with_timer<F>(&mut self, id: u32, func : F ) -> anyhow::Result<()> where F: Fn(&mut Timer)-> () {
         self.timers.get_mut(&id).map(|timer| func(timer)).ok_or_else(|| anyhow::anyhow!("Timer not found"))
     }
     pub fn set_interval(&mut self, id: u32, interval: Duration) {

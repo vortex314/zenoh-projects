@@ -12,7 +12,7 @@ use log::warn;
 use limero::Ps4Cmd;
 use limero::Ps4Event;
 
-pub trait MapEvent<EI,EO> {
+pub trait MapEvent<EI, EO> {
     fn map(input: &EI) -> Option<EO>;
 }
 
@@ -39,18 +39,26 @@ const VID: u16 = 0x054C;
 const PID_V1: u16 = 0x05C4; // DS4 v1 (USB)
 const PID_V2: u16 = 0x09CC; // DS4 v2 (USB/Bluetooth)
 
+fn stringify(x: Box<dyn std::error::Error + Send + Sync>) -> String {
+    format!("error code: {x}")
+}
+
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     logger::init();
-    // Open Zenoh session
-    let session = zenoh::open(zenoh::Config::default()).await.unwrap();
+    // Open Zenoh session?
+    let session = zenoh::open(zenoh::Config::default())
+        .await
+        .map_err(stringify)?;
     info!("Zenoh session opened");
+
+    let (mut cmd_sender, mut cmd_receiver) = tokio::sync::mpsc::unbounded_channel::<Ps4Cmd>();
 
     // Zenoh topics
     let event_topic = "src/brain/ps4/Ps4Event";
-    let command_topic = "dst/brain/ps4/Ps4Command";
-    let event_publisher = session.declare_publisher(event_topic).await.unwrap();
-    let command_subscriber = session.declare_subscriber(command_topic).await.unwrap();
+    let command_topic = "dst/brain/ps4/Ps4Cmd";
+    let event_publisher = session.declare_publisher(event_topic).await?;
+    let command_subscriber = session.declare_subscriber(command_topic).await?;
     // HID setup
     let api = HidApi::new()?;
     let device = find_ps4_controller(&api)?;
@@ -61,38 +69,35 @@ async fn main() -> anyhow::Result<()> {
             .unwrap_or("Unknown".to_string())
     );
 
-
     // For Bluetooth we need output report 0x05 (USB) or 0x11 (Bluetooth with CRC)
     // We'll detect mode by checking report ID
     let mut is_bluetooth = false;
-    let mut report_buffer = [0u8; 78]; // Max size (Bluetooth)
 
     // Command receiver task
-    /*let device_clone = device;
-    let cmd_session = session.clone();
-        tokio::spawn(async move {
-        while let Ok(sample) = subscriber_cmd.recv() {
+
+    tokio::spawn(async move {
+        while let Ok(sample) = command_subscriber.recv_async().await {
+            info!("Received command");
             let x = sample.payload().to_bytes();
             if let Ok(cmd) = serde_json::from_slice::<Ps4Cmd>(&x) {
-                send_command(&device_clone, &cmd, is_bluetooth).unwrap_or_else(|e| warn!("Send error: {}", e));
+                cmd_sender.send(cmd.clone()).unwrap();
+            } else {
+                warn!("Failed to parse command");
             }
         }
-    });*/
+    });
 
-    // Main loop: read input reports and publish state
+    // Main loop: read input reports and publish states
     let mut buf = [0u8; 64];
     let mut ps4_prev = Ps4Event::default();
     let mut counter = 0;
     loop {
         // in recv loop check for commands
-        if let Ok(msg) = command_subscriber.recv().await {
-            let x = msg.payload().to_bytes();
-            if let Ok(cmd) = serde_json::from_slice::<Ps4Cmd>(&x) {
-                send_command(&device, &cmd, is_bluetooth)
-                    .unwrap_or_else(|e| warn!("Send error: {}", e));
-            }
+        if let Ok(cmd) = cmd_receiver.try_recv() {
+            send_command(&device, &cmd, is_bluetooth)
+                .unwrap_or_else(|e| warn!("Send error: {}", e));
         }
-        match device.read_timeout(&mut buf, 16) {
+        match device.read_timeout(&mut buf, 100) {
             Ok(n) if n > 0 => {
                 if buf[0] == 0x01 || buf[0] == 0x11 {
                     // Valid input report
@@ -100,16 +105,15 @@ async fn main() -> anyhow::Result<()> {
 
                     counter += 1;
                     if counter % 50 == 0 {
-                       
-                    let state = parse_input_report(&buf, is_bluetooth);
-                    let changes = find_changes(&ps4_prev, &state);
-                    ps4_prev = state.clone();
-                    let json = serde_json::to_string(&changes).unwrap();
+                        let state = parse_input_report(&buf, is_bluetooth);
+                        let changes = find_changes(&ps4_prev, &state);
+                        ps4_prev = state.clone();
+                        let json = serde_json::to_string(&state).unwrap();
 
-                    event_publisher
-                        .put(json)
-                        .await
-                        .unwrap_or_else(|e| warn!("Publish error: {}", e));
+                        event_publisher
+                            .put(json)
+                            .await
+                            .unwrap_or_else(|e| warn!("Publish error: {}", e));
                     }
                 }
             }
@@ -135,7 +139,7 @@ fn find_ps4_controller(api: &HidApi) -> anyhow::Result<HidDevice> {
 
 fn find_changes(prev: &Ps4Event, current: &Ps4Event) -> Ps4Event {
     let mut changes = Ps4Event::default();
-    
+
     if prev.accel_x != current.accel_x {
         changes.accel_x = current.accel_x;
     }
@@ -218,7 +222,7 @@ fn find_changes(prev: &Ps4Event, current: &Ps4Event) -> Ps4Event {
         changes.button_right_joystick = current.button_right_joystick;
     }
     // Add other fields as needed
-  //  changes.debug = current.debug.clone();
+    //  changes.debug = current.debug.clone();
     changes.temp = current.temp;
     if Some(0) != current.axis_lx {
         changes.axis_lx = current.axis_lx;
@@ -273,7 +277,7 @@ fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Event {
     // Face buttons (upper bits)
     ps4_info.debug = Some(format!(
         "{:10} {:10} {:10} ",
-        ps4_info.gyro_x.unwrap(),       
+        ps4_info.gyro_x.unwrap(),
         ps4_info.gyro_y.unwrap(),
         ps4_info.gyro_z.unwrap()
     ));
@@ -289,7 +293,7 @@ fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Event {
     ps4_info.button_left_shoulder = Some((buf[6 + offset] & 0x01) != 0);
     ps4_info.button_right_shoulder = Some((buf[6 + offset] & 0x02) != 0);
 
-    ps4_info.button_options = Some((buf[6 + offset] & 0x20) != 0);  
+    ps4_info.button_options = Some((buf[6 + offset] & 0x20) != 0);
     ps4_info.button_share = Some((buf[6 + offset] & 0x10) != 0);
     ps4_info.button_touchpad = Some((buf[7 + offset] & 0x02) != 0);
     ps4_info.button_ps = Some((buf[7 + offset] & 0x01) != 0);
@@ -321,36 +325,92 @@ fn parse_touchpad(data: &[u8], bluetooth: bool) -> Vec<TouchPoint> {
 }
 
 fn send_command(device: &HidDevice, cmd: &Ps4Cmd, bluetooth: bool) -> anyhow::Result<()> {
-    let mut report = if bluetooth { [0u8; 78] } else { [0u8; 78] }; // was 32 for USB
+    info!(
+        "Command to send: rumble_small={}, rumble_large={}, led_rgb=({}, {}, {}), led_flash_on={}, led_flash_off={}",
+        cmd.rumble_small.unwrap_or(0),
+        cmd.rumble_large.unwrap_or(0),
+        cmd.led_red.unwrap_or_else(|| 0),
+        cmd.led_green.unwrap_or_else(|| 0),
+        cmd.led_blue.unwrap_or_else(|| 0),
+        cmd.led_flash_on.unwrap_or_else(|| 0),
+        cmd.led_flash_off.unwrap_or_else(|| 0),
+    );
 
-    let idx = if bluetooth { 4 } else { 1 };
-
-    report[idx + 0] = 0x05 | if bluetooth { 0x10 } else { 0x00 }; // Report ID
-    report[idx + 3] = cmd.rumble_small.unwrap_or(0) as u8;
-    report[idx + 4] = cmd.rumble_large.unwrap_or(0) as u8;
-    report[idx + 5] = (cmd.led_rgb.unwrap_or_else(|| 0) >> 16) as u8; // Scale 0-255 to 0-15
-    report[idx + 6] = ((cmd.led_rgb.unwrap_or_else(|| 0) >> 8) & 0xFF) as u8;
-    report[idx + 7] = (cmd.led_rgb.unwrap_or_else(|| 0) & 0xFF) as u8;
-    report[idx + 8] = cmd.led_flash_on.unwrap_or_else(|| 0) as u8;
-    report[idx + 9] = cmd.led_flash_off.unwrap_or_else(|| 0) as u8;
     if bluetooth {
-        // Bluetooth needs report ID 0x11 and CRC32 at the end
-        report[0] = 0xA2; // HID BT output report
-        report[1] = 0x11;
-        report[2] = 0xC0;
-        report[3] = 0x20;
-        report[4] = 0x07; // Valid flag
+        // Bluetooth: 78-byte report (HID BT header + 74-byte payload + CRC)
+        let mut report = [0u8; 78];
+        report[0] = 0xA2; // HID BT output
+        report[1] = 0x11; // Report ID for output
+        report[2] = 0xC0; // Unknown/required
+        report[3] = 0x20; // Unknown/required
+        report[4] = 0x07; // Valid flag (enables rumble/LED)
 
-        // CRC32 (Sony custom polynomial)
-        let crc = crc32(&report[0..74]);
-        report[74..78].copy_from_slice(&crc.to_le_bytes());
+        // Control byte (byte 5): Enable rumble/LED updates
+        report[5] = 0x01; // Bit 0: Rumble enable, Bit 1: LED enable (set both)
+
+        // Runtime data (bytes 6-9): Rumble + timestamp (low byte)
+        report[6] = cmd.rumble_small.unwrap_or(0) as u8;
+        report[7] = cmd.rumble_large.unwrap_or(0) as u8;
+        report[8] = 0x00; // Timestamp low (fixed for simplicity)
+        report[9] = 0x00; // Timestamp high
+
+        // LED data (bytes 10-16): RGB + brightness + blink
+        report[10] = cmd.led_red.unwrap_or(0) as u8;
+        report[11] = cmd.led_green.unwrap_or(0) as u8;
+        report[12] = cmd.led_blue.unwrap_or(0) as u8;
+        report[13] = 0x00; // LED brightness (0x00 = full; adjust if dimming needed)
+        report[14] = cmd.led_flash_on.unwrap_or(0) as u8; // Blink on duration
+        report[15] = cmd.led_flash_off.unwrap_or(0) as u8; // Blink off duration
+        report[16] = 0x00; // LED delay? (fixed)
+
+        // Pad the rest with zeros (required for valid report)
+        for i in 17..74 {
+            report[i] = 0x00;
+        }
+
+        // CRC32 over bytes 0-73
+        let crc_bytes = crc32(&report[0..74]);
+        report[74..78].copy_from_slice(&crc_bytes.to_le_bytes());
+
+        println!("BT Report sent: {:?}", &report[0..20]); // Debug: first 20 bytes
         device.write(&report)?;
     } else {
-        // USB: just send 32-byte report starting with 0x05
-        let mut usb_report = [0u8; 32];
-        usb_report[0] = 0x05;
-        usb_report[1..].copy_from_slice(&report[1..33]);
-        device.write(&usb_report)?;
+        // USB: 32-byte report (report ID + 31-byte payload)
+        let mut report = [0u8; 32];
+        report[0] = 0x05; // Report ID
+
+        // Control byte (byte 1): Enable rumble/LED updates
+        let mut v: u8 = 0x00;
+        if cmd.rumble_small.unwrap_or(0) > 0 || cmd.rumble_large.unwrap_or(0) > 0 {
+            v |= 0x01; // Enable rumble
+        }
+        if cmd.led_red.unwrap_or(0) > 0
+            || cmd.led_green.unwrap_or(0) > 0
+            || cmd.led_blue.unwrap_or(0) > 0
+        {
+            v |= 0x02; // Enable LED
+        }
+        v |= 0x04; // Always set bit 2
+        report[1] = v;
+        report[2] = 0x00; // Unknown/required
+        // Rumble (bytes 2-3)
+        report[3] = cmd.rumble_small.unwrap_or(0) as u8;
+        report[4] = cmd.rumble_large.unwrap_or(0) as u8;
+        // LED data (bytes 4-10): RGB + blink (note: offset shifted vs BT)
+        report[6] = cmd.led_red.unwrap_or(0) as u8;
+        report[7] = cmd.led_green.unwrap_or(0) as u8;
+        report[8] = cmd.led_blue.unwrap_or(0) as u8;
+        report[9] = 0x00; // LED brightness (full)
+        report[10] = cmd.led_flash_on.unwrap_or(0) as u8;
+        report[11] = cmd.led_flash_off.unwrap_or(0) as u8;
+        report[12] = 0x00; // Delay?
+        // Pad the rest with zeros (required)
+        for i in 13..32 {
+            report[i] = 0x00;
+        }
+
+        println!("USB Report sent: {:?}", &report); // Debug: full report
+        device.write(&report)?;
     }
 
     Ok(())

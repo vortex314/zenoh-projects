@@ -8,7 +8,7 @@ message Sample {
   int32 identifier = 2;
   string name = 3;
   repeated float values = 4;
-  float f=5;
+  float f = 5;
   double d = 6;
   bytes data = 7;
 
@@ -16,31 +16,31 @@ message Sample {
 
 enum LogLevel {
   DEBUG = 1;
-  INFO =2 ;
+  INFO = 2;
   WARN = 3;
   ERROR = 4;
   FATAL = 5;
-  ALERT =6 ;
+  ALERT = 6;
 }
 
 
 message ZenohEvent {
-  string zid=2;
-  string what_am_i=3;
-  repeated string peers=4;
-  string prefix=5;
-  repeated string routers=6;
-  string connect=7;
-  string listen=8;
+  string zid = 2;
+  string what_am_i = 3;
+  repeated string peers = 4;
+  string prefix = 5;
+  repeated string routers = 6;
+  string connect = 7;
+  string listen = 8;
 }
 
 message LogEvent {
-  LogLevel level=2;
-  string message=3;
-  int32 error_code=4;
-  string file=5;
-  int32 line=6;
-  uint64 timestamp=7;
+  LogLevel level = 2;
+  string message = 3;
+  int32 error_code = 4;
+  string file = 5;
+  int32 line = 6;
+  uint64 timestamp = 7;
 }
 
 message SysCmd {
@@ -51,29 +51,29 @@ message SysCmd {
 }
 
 message SysEvent {
-   uint64 utc = 1;
-   uint64 uptime = 2;
-   uint64 free_heap = 3;
-   uint64 flash = 4;
-   string cpu_board = 5;
-   string build_date = 6;
+  uint64 utc = 1;
+  uint64 uptime = 2;
+  uint64 free_heap = 3;
+  uint64 flash = 4;
+  string cpu_board = 5;
+  string build_date = 6;
 }
 
 message WifiEvent {
-   string ssid = 2;
-   string bssid = 3;
-   int32 rssi = 4;
-   string ip = 5;
-   string mac = 6;
-   int32 channel = 7;
-   string gateway = 8;
-   string netmask = 9;
+  string ssid = 2;
+  string bssid = 3;
+  int32 rssi = 4;
+  string ip = 5;
+  string mac = 6;
+  int32 channel = 7;
+  string gateway = 8;
+  string netmask = 9;
 }
 
 message MulticastEvent {
-   string group = 2;
-   int32 port = 3;
-   uint32 mtu = 4 ;
+  string group = 2;
+  int32 port = 3;
+  uint32 mtu = 4;
 }
 
 enum MessageType {
@@ -90,72 +90,72 @@ enum Toggle {
 }
 
 enum CtrlMod {
- VOLTAGE = 1;
- SPEED = 2;
- TORQUE = 3;
+  VOLTAGE = 1;
+  SPEED = 2;
+  TORQUE = 3;
 }
 enum CtrlTyp {
- COMMUTATION = 0;
- SINUSOIDAL = 1;
- FOC = 2;
+  COMMUTATION = 0;
+  SINUSOIDAL = 1;
+  FOC = 2;
 }
 
 enum InTyp {
- DISABLED = 0;
- NORMAL_POT = 1;
- MIDDLE_RESTING_POT = 2;
- AUTO_DETECT = 3;
+  DISABLED = 0;
+  NORMAL_POT = 1;
+  MIDDLE_RESTING_POT = 2;
+  AUTO_DETECT = 3;
 }
 
 // Hoverboard Message
 
 message HoverboardEvent {
-  CtrlMod ctrl_mod=0; // 1:Voltage 2:Speed 3:Torque
-  CtrlTyp ctrl_typ=1 ; // 0:Commutation 1:Sinusoidal 2:FOC
-  int32 cur_mot_max=2; // Max phase current A
-  int32 rpm_mot_max=3; // Max motor RPM
-  int32 fi_weak_ena=4; // Enable field weak 0:OFF 1:ON
-  int32 fi_weak_hi=5;  // Field weak high RPM
-  int32 fi_weak_lo=6; // Field weak low RPM
-  int32 fi_weak_max=7; // Field weak max current A (FOC only)
-  int32 phase_adv_max_deg=8; // Max Phase Adv angle Deg (SIN only)
-  int32 input1_raw=9;  // Input1 raw value
-  InTyp input1_typ=10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  int32 input1_min=11; // Input1 minimum value
-  int32 input1_mid=12; // Input1 middle value
-  int32 input1_max=13; // Input1 maximum value
-  int32 input1_cmd=14; // Input1 command value
-  int32 input2_raw=15; // Input2 raw value
-  InTyp input2_typ=16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  int32 input2_min=17; // Input2 minimum value
-  int32 input2_mid=18; // Input2 middle value
-  int32 input2_max=19; // Input2 maximum value
-  int32 input2_cmd=20; // Input2 command value
-  int32 aux_input1_raw =21; // Input1 raw value
-  InTyp aux_input1_typ=22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  int32 aux_input1_min=23; // Input1 minimum value
-  int32 aux_input1_mid=24; // Input1 middle value
-  int32 aux_input1_max=25; // Input1 maximum value
-  int32 aux_input1_cmd=26; // Input1 command value
-  int32 aux_input2_raw=27; // Input2 raw value
-  InTyp aux_input2_typ=28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
-  int32 aux_input2_min=29; // Input2 minimum value
-  int32 aux_input2_mid=30; // Input2 middle value
-  int32 aux_input2_max=31; // Input2 maximum value
-  int32 aux_input2_cmd=32; // Input2 command value
-  int32 dc_curr=33; // Total DC Link current A *100
-  int32 rdc_curr=34; // Right DC Link current A *100
-  int32 ldc_curr=35; // Left DC Link current A *100
-  int32 cmdl=36; // Left Motor Command RPM
-  int32 cmdr=37; // Right Motor Command RPM
-  int32 spd_avg=38; // Motor Measured Avg RPM
-  int32 spdl=39; // Left Motor Measured RPM
-  int32 spdr=40; // Right Motor Measured RPM
-  int32 filter_rate=41; // Rate *10
-  int32 spd_coef=42; // Speed Coefficient *10
-  int32 str_coef=43; // Steer Coefficient *10
-  int32 batv=44; // Calibrated Battery Voltage *100
-  int32 temp=45;  // Calibrated Temperature °C *10
+  CtrlMod ctrl_mod = 0;// 1:Voltage 2:Speed 3:Torque
+  CtrlTyp ctrl_typ = 1;// 0:Commutation 1:Sinusoidal 2:FOC
+  int32 cur_mot_max = 2;// Max phase current A
+  int32 rpm_mot_max = 3;// Max motor RPM
+  int32 fi_weak_ena = 4;// Enable field weak 0:OFF 1:ON
+  int32 fi_weak_hi = 5;// Field weak high RPM
+  int32 fi_weak_lo = 6;// Field weak low RPM
+  int32 fi_weak_max = 7;// Field weak max current A (FOC only)
+  int32 phase_adv_max_deg = 8;// Max Phase Adv angle Deg (SIN only)
+  int32 input1_raw = 9;// Input1 raw value
+  InTyp input1_typ = 10;// Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input1_min = 11;// Input1 minimum value
+  int32 input1_mid = 12;// Input1 middle value
+  int32 input1_max = 13;// Input1 maximum value
+  int32 input1_cmd = 14;// Input1 command value
+  int32 input2_raw = 15;// Input2 raw value
+  InTyp input2_typ = 16;// Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input2_min = 17;// Input2 minimum value
+  int32 input2_mid = 18;// Input2 middle value
+  int32 input2_max = 19;// Input2 maximum value
+  int32 input2_cmd = 20;// Input2 command value
+  int32 aux_input1_raw = 21;// Input1 raw value
+  InTyp aux_input1_typ = 22;// Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input1_min = 23;// Input1 minimum value
+  int32 aux_input1_mid = 24;// Input1 middle value
+  int32 aux_input1_max = 25;// Input1 maximum value
+  int32 aux_input1_cmd = 26;// Input1 command value
+  int32 aux_input2_raw = 27;// Input2 raw value
+  InTyp aux_input2_typ = 28;// Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input2_min = 29;// Input2 minimum value
+  int32 aux_input2_mid = 30;// Input2 middle value
+  int32 aux_input2_max = 31;// Input2 maximum value
+  int32 aux_input2_cmd = 32;// Input2 command value
+  int32 dc_curr = 33;// Total DC Link current A *100
+  int32 rdc_curr = 34;// Right DC Link current A *100
+  int32 ldc_curr = 35;// Left DC Link current A *100
+  int32 cmdl = 36;// Left Motor Command RPM
+  int32 cmdr = 37;// Right Motor Command RPM
+  int32 spd_avg = 38;// Motor Measured Avg RPM
+  int32 spdl = 39;// Left Motor Measured RPM
+  int32 spdr = 40;// Right Motor Measured RPM
+  int32 filter_rate = 41;// Rate *10
+  int32 spd_coef = 42;// Speed Coefficient *10
+  int32 str_coef = 43;// Steer Coefficient *10
+  int32 batv = 44;// Calibrated Battery Voltage *100
+  int32 temp = 45;// Calibrated Temperature °C *10
 }
 
 message HoverboardCmd {
@@ -213,16 +213,18 @@ message Ps4Event {
   int32 battery_level = 28;
   repeated TouchPoint touch_points = 29;
   bool bluetooth = 30;
-   string debug = 31;
-   int32 temp = 32;
+  string debug = 31;
+  int32 temp = 32;
 }
 
 message Ps4Cmd {
   int32 rumble_small = 1;
-  int32 rumble_large = 3;
-  int32 led_rgb = 2;
-  int32 led_flash_on = 4;
-  int32 led_flash_off = 5;
+  int32 rumble_large = 2;
+  int32 led_red = 3;
+  int32 led_green = 4;
+  int32 led_blue = 5;
+  int32 led_flash_on = 6;
+  int32 led_flash_off = 7;
 }
 
 message CameraEvent {

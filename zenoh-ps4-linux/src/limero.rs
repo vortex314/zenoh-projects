@@ -93,7 +93,7 @@ impl Msg for Sample {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct ZenohInfo {
+pub struct ZenohEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub zid:Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,9 +107,9 @@ pub struct ZenohInfo {
         
 
 }
-impl Msg for ZenohInfo {
-     const ID: u32 = 33380;
-     const NAME: &'static str = "ZenohInfo";
+impl Msg for ZenohEvent {
+     const ID: u32 = 48902;
+     const NAME: &'static str = "ZenohEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -117,7 +117,7 @@ impl Msg for ZenohInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:ZenohInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:ZenohEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -125,7 +125,7 @@ impl Msg for ZenohInfo {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct LogInfo {
+pub struct LogEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level:Option<LogLevel>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -141,9 +141,9 @@ pub struct LogInfo {
         
 
 }
-impl Msg for LogInfo {
-     const ID: u32 = 34678;
-     const NAME: &'static str = "LogInfo";
+impl Msg for LogEvent {
+     const ID: u32 = 29204;
+     const NAME: &'static str = "LogEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -151,7 +151,7 @@ impl Msg for LogInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:LogInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:LogEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -189,7 +189,7 @@ impl Msg for SysCmd {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct SysInfo {
+pub struct SysEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub utc:Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,9 +205,9 @@ pub struct SysInfo {
         
 
 }
-impl Msg for SysInfo {
-     const ID: u32 = 10347;
-     const NAME: &'static str = "SysInfo";
+impl Msg for SysEvent {
+     const ID: u32 = 23049;
+     const NAME: &'static str = "SysEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -215,7 +215,7 @@ impl Msg for SysInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:SysInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:SysEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -223,7 +223,7 @@ impl Msg for SysInfo {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct WifiInfo {
+pub struct WifiEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssid:Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -243,9 +243,9 @@ pub struct WifiInfo {
         
 
 }
-impl Msg for WifiInfo {
-     const ID: u32 = 15363;
-     const NAME: &'static str = "WifiInfo";
+impl Msg for WifiEvent {
+     const ID: u32 = 54881;
+     const NAME: &'static str = "WifiEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -253,7 +253,7 @@ impl Msg for WifiInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:WifiInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:WifiEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -261,7 +261,7 @@ impl Msg for WifiInfo {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct MulticastInfo {
+pub struct MulticastEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group:Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -271,9 +271,9 @@ pub struct MulticastInfo {
         
 
 }
-impl Msg for MulticastInfo {
-     const ID: u32 = 61310;
-     const NAME: &'static str = "MulticastInfo";
+impl Msg for MulticastEvent {
+     const ID: u32 = 53788;
+     const NAME: &'static str = "MulticastEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -281,7 +281,7 @@ impl Msg for MulticastInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:MulticastInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:MulticastEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -289,7 +289,7 @@ impl Msg for MulticastInfo {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct HoverboardInfo {
+pub struct HoverboardEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ctrl_mod:Option<CtrlMod>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -385,9 +385,9 @@ pub struct HoverboardInfo {
         
 
 }
-impl Msg for HoverboardInfo {
-     const ID: u32 = 59150;
-     const NAME: &'static str = "HoverboardInfo";
+impl Msg for HoverboardEvent {
+     const ID: u32 = 31340;
+     const NAME: &'static str = "HoverboardEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -395,7 +395,7 @@ impl Msg for HoverboardInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:HoverboardInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:HoverboardEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -459,7 +459,7 @@ impl Msg for TouchPoint {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct Ps4Info {
+pub struct Ps4Event {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub button_left:Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -495,6 +495,8 @@ pub struct Ps4Info {
         #[serde(skip_serializing_if = "Option::is_none")]
     pub button_touchpad:Option<bool>,
         #[serde(skip_serializing_if = "Option::is_none")]
+    pub button_ps:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
     pub axis_lx:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub axis_ly:Option<i32>,
@@ -527,9 +529,9 @@ pub struct Ps4Info {
         
 
 }
-impl Msg for Ps4Info {
-     const ID: u32 = 62501;
-     const NAME: &'static str = "Ps4Info";
+impl Msg for Ps4Event {
+     const ID: u32 = 29767;
+     const NAME: &'static str = "Ps4Event";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -537,7 +539,7 @@ impl Msg for Ps4Info {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:Ps4Info = serde_json::from_slice(v.as_slice()) ?;
+        let m:Ps4Event = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -551,7 +553,11 @@ pub struct Ps4Cmd {
         #[serde(skip_serializing_if = "Option::is_none")]
     pub rumble_large:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
-    pub led_rgb:Option<i32>,
+    pub led_red:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub led_green:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub led_blue:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub led_flash_on:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -577,7 +583,7 @@ impl Msg for Ps4Cmd {
     
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
-pub struct CameraInfo {
+pub struct CameraEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub width:Option<i32>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -593,9 +599,9 @@ pub struct CameraInfo {
         
 
 }
-impl Msg for CameraInfo {
-     const ID: u32 = 60683;
-     const NAME: &'static str = "CameraInfo";
+impl Msg for CameraEvent {
+     const ID: u32 = 32617;
+     const NAME: &'static str = "CameraEvent";
 
     fn serialize(&self) -> Result<Vec<u8>> {
         let s = serde_json::to_vec(self) ?;
@@ -603,7 +609,7 @@ impl Msg for CameraInfo {
     }
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:CameraInfo = serde_json::from_slice(v.as_slice()) ?;
+        let m:CameraEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }
@@ -630,6 +636,202 @@ impl Msg for CameraCmd {
      
     fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
         let m:CameraCmd = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LawnmowerManualEvent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub forward:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub backward:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub left:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub right:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub blade_on:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub blade_off:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed:Option<i32>,
+        
+
+}
+impl Msg for LawnmowerManualEvent {
+     const ID: u32 = 24124;
+     const NAME: &'static str = "LawnmowerManualEvent";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:LawnmowerManualEvent = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LawnmowerManualCmd {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub steering:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub blade:Option<bool>,
+        
+
+}
+impl Msg for LawnmowerManualCmd {
+     const ID: u32 = 1850;
+     const NAME: &'static str = "LawnmowerManualCmd";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:LawnmowerManualCmd = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LawnmowerAutoEvent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub stopped:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub paused:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub resumed:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub path:Option<String>,
+        
+
+}
+impl Msg for LawnmowerAutoEvent {
+     const ID: u32 = 58665;
+     const NAME: &'static str = "LawnmowerAutoEvent";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:LawnmowerAutoEvent = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LawnmowerAutoCmd {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub pause:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub resume:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub path:Option<String>,
+        
+
+}
+impl Msg for LawnmowerAutoCmd {
+     const ID: u32 = 22063;
+     const NAME: &'static str = "LawnmowerAutoCmd";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:LawnmowerAutoCmd = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct LawnmowerStatus {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_level:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub blade_status:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_mode:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message:Option<String>,
+        
+
+}
+impl Msg for LawnmowerStatus {
+     const ID: u32 = 21374;
+     const NAME: &'static str = "LawnmowerStatus";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:LawnmowerStatus = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct MotorEvent {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub motor_id:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature:Option<f32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub voltage:Option<f32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub current:Option<f32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed:Option<f32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub position:Option<f32>,
+        
+
+}
+impl Msg for MotorEvent {
+     const ID: u32 = 55067;
+     const NAME: &'static str = "MotorEvent";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:MotorEvent = serde_json::from_slice(v.as_slice()) ?;
         Ok(m)
         }
 }

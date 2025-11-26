@@ -1,7 +1,0 @@
-#!/Users/mg61dd/Developer/zenoh-projects/zenoh-esp32-compass-rs/.embuild/espressif/python_env/idf5.2_py3.11_env/bin/python
-import sys
-from genconfig import main
-if __name__ == '__main__':
-    if sys.argv[0].endswith('.exe'):
-        sys.argv[0] = sys.argv[0][:-4]
-    sys.exit(main())
