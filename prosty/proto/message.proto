@@ -24,7 +24,7 @@ enum LogLevel {
 }
 
 
-message ZenohInfo {
+message ZenohEvent {
   string zid=2;
   string what_am_i=3;
   repeated string peers=4;
@@ -34,7 +34,7 @@ message ZenohInfo {
   string listen=8;
 }
 
-message LogInfo {
+message LogEvent {
   LogLevel level=2;
   string message=3;
   int32 error_code=4;
@@ -50,7 +50,7 @@ message SysCmd {
   string console = 5;
 }
 
-message SysInfo {
+message SysEvent {
    uint64 utc = 1;
    uint64 uptime = 2;
    uint64 free_heap = 3;
@@ -59,7 +59,7 @@ message SysInfo {
    string build_date = 6;
 }
 
-message WifiInfo {
+message WifiEvent {
    string ssid = 2;
    string bssid = 3;
    int32 rssi = 4;
@@ -70,7 +70,7 @@ message WifiInfo {
    string netmask = 9;
 }
 
-message MulticastInfo {
+message MulticastEvent {
    string group = 2;
    int32 port = 3;
    uint32 mtu = 4 ;
@@ -109,7 +109,7 @@ enum InTyp {
 
 // Hoverboard Message
 
-message HoverboardInfo {
+message HoverboardEvent {
   CtrlMod ctrl_mod=0; // 1:Voltage 2:Speed 3:Torque
   CtrlTyp ctrl_typ=1 ; // 0:Commutation 1:Sinusoidal 2:FOC
   int32 cur_mot_max=2; // Max phase current A
@@ -172,7 +172,7 @@ message TouchPoint {
   int32 y = 3;
 }
 
-message Ps4Info {
+message Ps4Event {
   bool button_left = 1;
   bool button_right = 2;
   bool button_up = 3;
@@ -195,6 +195,7 @@ message Ps4Info {
   bool button_share = 15;
   bool button_options = 16;
   bool button_touchpad = 33;
+  bool button_ps = 34;
 
   int32 axis_lx = 17;
   int32 axis_ly = 18;
@@ -224,7 +225,7 @@ message Ps4Cmd {
   int32 led_flash_off = 5;
 }
 
-message CameraInfo {
+message CameraEvent {
   int32 width = 1;
   int32 height = 2;
   string format = 3;
@@ -236,4 +237,56 @@ message CameraInfo {
 message CameraCmd {
   bool led = 1;
   int32 quality = 4;
+}
+
+// Lawnmower Manual Events
+
+message LawnmowerManualEvent {
+  bool forward = 1;
+  bool backward = 2;
+  bool left = 3;
+  bool right = 4;
+  bool blade_on = 5;
+  bool blade_off = 6;
+  int32 speed = 7;
+}
+
+message LawnmowerManualCmd {
+  int32 speed = 1;
+  int32 steering = 2;
+  bool blade = 3;
+}
+
+message LawnmowerAutoEvent {
+  bool started = 1;
+  bool stopped = 2;
+  bool paused = 3;
+  bool resumed = 4;
+  string mode = 5;
+  string path = 6;
+}
+
+message LawnmowerAutoCmd {
+  bool start = 1;
+  bool stop = 2;
+  bool pause = 3;
+  bool resume = 4;
+  string mode = 5;
+  string path = 6;
+}
+
+message LawnmowerStatus {
+  int32 battery_level = 1;
+  bool blade_status = 2;
+  string current_mode = 3;
+  string error_message = 4;
+}
+
+message MotorEvent {
+  int32 motor_id = 1;
+  float temperature = 2;
+  float voltage = 3;
+  float current = 4;
+  float speed = 5;
+  float position = 6;
 }

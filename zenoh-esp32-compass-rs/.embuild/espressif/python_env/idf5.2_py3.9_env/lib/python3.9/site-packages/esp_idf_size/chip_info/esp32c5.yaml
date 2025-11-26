@@ -1,0 +1,20 @@
+# Data_type:
+#   primary_address: value
+#   length: value or equation
+#   secondary_address: value if exist
+DRAM:
+  primary_address: 0x40800000
+  length: 0x60000
+  secondary_address: 0x40800000
+  name: HP SRAM
+CACHE_I:
+  primary_address: 0x42000000
+  length: 0x2000000
+  name: Flash
+CACHE_D: # This could be removed, but keep it for consistency with other definitions.
+  primary_address: 0x42000000
+  length: 0x2000000
+RTC_SLOW_D:
+  primary_address: 0x50000000
+  length: 0x4000
+  name: LP SRAM

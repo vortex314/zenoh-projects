@@ -1,0 +1,2 @@
+[console_scripts]
+idf_clang_tidy = pyclang.scripts.idf_clang_tidy:main

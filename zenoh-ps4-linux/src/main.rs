@@ -10,23 +10,10 @@ use log::info;
 use log::warn;
 
 use limero::Ps4Cmd;
-use limero::Ps4Info;
+use limero::Ps4Event;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct ControllerState {
-    timestamp: u64,
-    buttons: u32,
-    dpad_hat: u8,
-    left_stick_x: u8,
-    left_stick_y: u8,
-    right_stick_x: u8,
-    right_stick_y: u8,
-    l2_analog: u8,
-    r2_analog: u8,
-    gyro: [i16; 3],
-    accel: [i16; 3],
-    battery_level: u8,
-    touchpad: Vec<TouchPoint>,
+pub trait MapEvent<EI,EO> {
+    fn map(input: &EI) -> Option<EO>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -60,10 +47,10 @@ async fn main() -> anyhow::Result<()> {
     info!("Zenoh session opened");
 
     // Zenoh topics
-    let info_topic = "src/brain/ps4/Ps4Info";
+    let event_topic = "src/brain/ps4/Ps4Event";
     let command_topic = "dst/brain/ps4/Ps4Command";
-    let publisher_info = session.declare_publisher(info_topic).await.unwrap();
-    let subscriber_cmd = session.declare_subscriber(command_topic).await.unwrap();
+    let event_publisher = session.declare_publisher(event_topic).await.unwrap();
+    let command_subscriber = session.declare_subscriber(command_topic).await.unwrap();
     // HID setup
     let api = HidApi::new()?;
     let device = find_ps4_controller(&api)?;
@@ -73,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
             .get_product_string()?
             .unwrap_or("Unknown".to_string())
     );
+
 
     // For Bluetooth we need output report 0x05 (USB) or 0x11 (Bluetooth with CRC)
     // We'll detect mode by checking report ID
@@ -93,9 +81,17 @@ async fn main() -> anyhow::Result<()> {
 
     // Main loop: read input reports and publish state
     let mut buf = [0u8; 64];
-    let mut ps4_prev = Ps4Info::default();
+    let mut ps4_prev = Ps4Event::default();
     let mut counter = 0;
     loop {
+        // in recv loop check for commands
+        if let Ok(msg) = command_subscriber.recv().await {
+            let x = msg.payload().to_bytes();
+            if let Ok(cmd) = serde_json::from_slice::<Ps4Cmd>(&x) {
+                send_command(&device, &cmd, is_bluetooth)
+                    .unwrap_or_else(|e| warn!("Send error: {}", e));
+            }
+        }
         match device.read_timeout(&mut buf, 16) {
             Ok(n) if n > 0 => {
                 if buf[0] == 0x01 || buf[0] == 0x11 {
@@ -110,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
                     ps4_prev = state.clone();
                     let json = serde_json::to_string(&changes).unwrap();
 
-                    publisher_info
+                    event_publisher
                         .put(json)
                         .await
                         .unwrap_or_else(|e| warn!("Publish error: {}", e));
@@ -137,8 +133,8 @@ fn find_ps4_controller(api: &HidApi) -> anyhow::Result<HidDevice> {
     anyhow::bail!("PS4 Controller not found. Is it connected?");
 }
 
-fn find_changes(prev: &Ps4Info, current: &Ps4Info) -> Ps4Info {
-    let mut changes = Ps4Info::default();
+fn find_changes(prev: &Ps4Event, current: &Ps4Event) -> Ps4Event {
+    let mut changes = Ps4Event::default();
     
     if prev.accel_x != current.accel_x {
         changes.accel_x = current.accel_x;
@@ -245,14 +241,14 @@ https://www.psdevwiki.com/ps4/DS4-USB
 
 */
 
-fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Info {
+fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Event {
     let offset = if bluetooth { 2 } else { 0 }; // Bluetooth has 2-byte header
 
     // D-pad is encoded as a hat value in lower 4 bits of byte 5
     let dpad_hat = buf[5 + offset] & 0x0F;
     let right_buttons = buf[5 + offset] & 0xF0;
 
-    let mut ps4_info = Ps4Info::default();
+    let mut ps4_info = Ps4Event::default();
     ps4_info.bluetooth = Some(bluetooth);
 
     ps4_info.accel_x = Some(i16::from_le_bytes([buf[19 + offset], buf[20 + offset]]) as i32);
@@ -295,6 +291,8 @@ fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Info {
 
     ps4_info.button_options = Some((buf[6 + offset] & 0x20) != 0);  
     ps4_info.button_share = Some((buf[6 + offset] & 0x10) != 0);
+    ps4_info.button_touchpad = Some((buf[7 + offset] & 0x02) != 0);
+    ps4_info.button_ps = Some((buf[7 + offset] & 0x01) != 0);
 
     ps4_info.button_left_joystick = Some((buf[6 + offset] & 0x40) != 0);
     ps4_info.button_right_joystick = Some((buf[6 + offset] & 0x80) != 0);
@@ -302,36 +300,7 @@ fn parse_input_report(buf: &[u8], bluetooth: bool) -> Ps4Info {
     ps4_info.battery_level = Some((buf[30 + offset] & 0x0F) as i32);
     ps4_info.temp = Some(buf[12 + offset] as i32); // Temperature sensor value
 
-
-
     ps4_info
-    /*
-    ControllerState {
-        timestamp: std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64,
-        buttons,
-        dpad_hat,
-        left_stick_x: buf[1 + offset],
-        left_stick_y: buf[2 + offset],
-        right_stick_x: buf[3 + offset],
-        right_stick_y: buf[4 + offset],
-        l2_analog: buf[8 + offset],
-        r2_analog: buf[9 + offset],
-        gyro: [
-            i16::from_le_bytes([buf[16 + offset], buf[17 + offset]]),
-            i16::from_le_bytes([buf[18 + offset], buf[19 + offset]]),
-            i16::from_le_bytes([buf[20 + offset], buf[21 + offset]]),
-        ],
-        accel: [
-            i16::from_le_bytes([buf[22 + offset], buf[23 + offset]]),
-            i16::from_le_bytes([buf[24 + offset], buf[25 + offset]]),
-            i16::from_le_bytes([buf[26 + offset], buf[27 + offset]]),
-        ],
-        battery_level: buf[12 + offset] & 0x0F,
-        touchpad: parse_touchpad(&buf[(33 + offset)..], bluetooth),
-    }*/
 }
 
 fn parse_touchpad(data: &[u8], bluetooth: bool) -> Vec<TouchPoint> {

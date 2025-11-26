@@ -1,0 +1,2 @@
+[console_scripts]
+esp-coredump = esp_coredump.__main__:main

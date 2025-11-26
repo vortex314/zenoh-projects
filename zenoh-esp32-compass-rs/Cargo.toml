@@ -1,0 +1,23 @@
+[package]
+name = "esp32-zenoh-compass"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+esp-idf-hal = "0.45.2"
+esp-idf-svc = "0.51.0"
+esp-idf-sys = { version = "0.36.1", features = ["binstart"] }
+esp-backtrace = { version = "0.18.1", features = ["esp32", "println"] }
+esp-println = { version = "0.16.1", features = ["log-04","esp32"] }
+lsm303agr = "1.1.0"
+heapless = "0.9.2"
+nb = "1.0"
+embedded-hal = "1.0.0"
+log = { version = "0.4", default-features = false, features = [] }
+
+# No zenoh here— we'll bind to C zenoh-pico manually
+
+[build-dependencies]
+embuild = "0.33.1"  # For ESP-IDF component linking
+cc = "1.0"        # For compiling C code if needed
+bindgen = "0.72.1"

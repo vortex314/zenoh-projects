@@ -7,5 +7,6 @@
     "files.exclude": {
         "**/.git/objects/**": true,
         "**/target/**": true
-    }
+    },
+    "idf.pythonInstallPath": "/opt/homebrew/bin/python3"
 }
