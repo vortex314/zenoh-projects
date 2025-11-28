@@ -1,0 +1,23 @@
+[package]
+name = "zenoh-pico-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = ["std"]
+std = []
+no_std = []
+tls = []
+
+[dependencies]
+bitflags = "2"
+thiserror = "2.0.17"
+esp-idf-sys = "0.36.1"
+
+[build-dependencies]
+bindgen = "0.72.1"
+pkg-config = "0.3"
+
+[dev-dependencies]
+anyhow = "1"

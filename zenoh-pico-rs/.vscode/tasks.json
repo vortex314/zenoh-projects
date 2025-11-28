@@ -1,0 +1,90 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "build",
+                "--release"],
+            "type": "shell",
+            "label": "Build ",
+            "group": {
+                "kind": "build",
+                "isDefault": true   
+            }
+               
+        },
+        {
+            "label": "Deploy & Run on Remote (full chain)",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "compile",
+                "remote_copy",
+                "remote_exec"
+            ],
+            "group": {
+                "kind": "build",
+ //               "isDefault": true // ← this line is the important one
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "compile",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
+                }
+            },
+            "command": "~/.cargo/bin/cross", // note: full path to the cargo
+            "args": [
+                "build",
+                "--release",
+                "--target",
+                "aarch64-unknown-linux-gnu"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "remote_copy",
+                "type": "shell",
+                "command": "scp",
+            "args": [
+                "target/aarch64-unknown-linux-gnu/release/zenoh-ps4-linux",
+                "lieven@pi.local:."
+            ],
+            "dependsOn": "compile",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "remote_exec",
+            "type": "shell",
+            "command": "ssh",
+            "args": [
+                "lieven@pi.local",
+                "./zenoh-ps4-linux"
+            ],
+            "dependsOn": "remote_copy",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+    ]
+}
