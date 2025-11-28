@@ -4,16 +4,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "command": "bash",// note: full path to the cargo
             "args": [
-                "build",
-                "--release"],
+                "-c",
+                ". $HOME/export-esp.sh && cargo build --target xtensa-esp32-espidf --release"],
             "type": "shell",
             "label": "Build ",
             "group": {
                 "kind": "build",
                 "isDefault": true   
-            }
+            },
                
         },
         {

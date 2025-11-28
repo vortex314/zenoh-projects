@@ -1,5 +1,8 @@
 #![cfg_attr(feature = "no_std", no_std)]
-
+// src/lib.rs
+#![allow(non_upper_case_globals)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
 mod ffi;
 mod error;
 pub mod session;

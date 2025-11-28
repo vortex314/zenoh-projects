@@ -242,6 +242,7 @@ fn find_changes(prev: &Ps4Event, current: &Ps4Event) -> Ps4Event {
 /*
 Buffer description for PS4 controller input report:
 https://www.psdevwiki.com/ps4/DS4-USB
+https://www.psdevwiki.com/ps4/DS4-USB#Report_Structure
 
 */
 

@@ -23,5 +23,5 @@
         "**/target/**": true
     },
     "terminal.integrated.scrollback": 100000,
-    "idf.pythonInstallPath": "/opt/homebrew/bin/python3",
+    "idf.pythonInstallPath": "/usr/bin/python",
 }

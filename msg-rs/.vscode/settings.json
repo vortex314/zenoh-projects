@@ -1,4 +1,0 @@
-{
-    "rust-analyzer.check.allTargets": false,
-    "git.ignoreLimitWarning": true,
-}

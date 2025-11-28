@@ -13,7 +13,8 @@
             "cwd": "${workspaceRoot}",
             "sourceLanguages": [
                 "rust"
-            ]
+            ],
+
         }
     ]
 }
