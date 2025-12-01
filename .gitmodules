@@ -1,0 +1,4 @@
+[submodule "zenoh-pico-lib/zenoh-pico"]
+	path = zenoh-pico-lib/zenoh-pico
+	url = https://github.com/eclipse-zenoh/zenoh-pico.git
+	branch = 1.6.1

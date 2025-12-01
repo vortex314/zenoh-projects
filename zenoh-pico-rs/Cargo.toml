@@ -19,6 +19,7 @@ esp-idf-sys = "0.36.1"
 cc="1.0"
 bindgen = "0.72.1"
 pkg-config = "0.3"
+glob = "0.3"
 
 [dev-dependencies]
 anyhow = "1"

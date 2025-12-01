@@ -1,0 +1,13 @@
+[target.xtensa-esp32-espidf]
+runner = "espflash flash --monitor"
+#runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB1" # Select this runner for espflash v2.x.x
+
+
+[env]
+ESP_LOGLEVEL="INFO"
+
+[build]
+target = "xtensa-esp32-espidf"
+
+[unstable]
+build-std = ["std", "panic_abort"]
