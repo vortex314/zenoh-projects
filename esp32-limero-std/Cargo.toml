@@ -27,14 +27,10 @@ embassy = ["esp-idf-svc/embassy-sync", "esp-idf-svc/critical-section", "esp-idf-
 
 [dependencies]
 log = { version = "0.4", default-features = false }
-esp-idf-svc = { version = "0.50", default-features = false }
+esp-idf-svc = { version = "0.51", default-features = false }
 esp-println = { version = "0.12.0", default-features = false, features = ["uart","esp32"] }
-embassy-time = { version = "0.3", features = ["generic-queue"] }
-embassy-futures = "0.1"
-embassy-sync = "0.6"
 futures = { version = "0.3", default-features = false }
-anyhow = { version = "1.0", default-features = false }
-async-channel = "2.3"
+anyhow = { version = "1", default-features = false }
 
 [build-dependencies]
 embuild = "0.32.0"

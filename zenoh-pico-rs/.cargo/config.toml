@@ -10,6 +10,10 @@ linker = "ldproxy"
 
 [env]
 ESP_LOGLEVEL="INFO"
+ESP_IDF_SYS_ROOT_CRATE="zenoh-pico-rs"
+# Use the ESP-IDF installation's own tools, not the Rust esp toolchain
+IDF_PATH="/home/lieven/esp/esp-idf"
+ESP_IDF_TOOLS_INSTALL_DIR="fromenv"
 
 [build]
 target = "xtensa-esp32-espidf"
