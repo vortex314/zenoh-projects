@@ -1,7 +1,12 @@
 [target.xtensa-esp32-espidf]
 runner = "espflash flash --monitor"
-#runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB1" # Select this runner for espflash v2.x.x
+linker = "ldproxy"
 
+#runner = "espflash flash --monitor --speed 921600 /dev/ttyUSB1" # Select this runner for espflash v2.x.x
+[target.xtensa-esp32-none-elf]
+linker = "ldproxy"
+[target.riscv32imc-esp-espidf]
+linker = "ldproxy"
 
 [env]
 ESP_LOGLEVEL="INFO"

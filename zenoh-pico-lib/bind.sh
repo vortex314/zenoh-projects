@@ -2,6 +2,7 @@ set -x
 COMP=$IDF_PATH/components
 XTA=~/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf
 bindgen zenoh-pico/include/zenoh-pico.h -o zenoh_pico_bindings.rs \
+    --allowlist-function '^(zenoh_.*|z_.*)$' \
     -- \
     -I./config \
     -I./include \
