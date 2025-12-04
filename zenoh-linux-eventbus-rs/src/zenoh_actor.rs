@@ -18,25 +18,18 @@ use crate::limero::Msg;
 use crate::limero::MulticastEvent;
 use crate::limero::WifiEvent;
 use crate::limero::SysEvent;
+use crate::limero::ZenohEvent;
 use crate::MyHandler;
 use crate::MyActor;
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize, Debug, Clone)]
 pub enum ZenohCmd {
-    Connect,
-    Disconnect,
     Publish { topic: String, payload: Vec<u8> },
-    Subscribe { topic: String },
-    Unsubscribe { topic: String },
-}
-#[derive(Debug)]
-pub enum ZenohEvent {
-    Connected,
-    Disconnected,
-    Publish { topic: String, payload: Vec<u8> },
+    // Subscribe { topic: String },
 }
 
 pub struct ZenohActor {
+    name : String,
     config: Option<zenoh::config::Config>,
     zenoh_session: Option<Session>,
     subscriber: Option<Subscriber<FifoChannelHandler<Sample>>>,
@@ -56,6 +49,7 @@ impl ZenohActor {
         //     config.insert_json5("connect/endpoints",r#"["tcp/limero.ddns.net:7447"]"#).unwrap();
 
         ZenohActor {
+            name: "ZenohActor".to_string(),
             config,
             zenoh_session: None,
             subscriber: None,
@@ -109,8 +103,7 @@ impl ZenohActor {
 }
 
 impl MyHandler for ZenohActor {
-    fn handle(&mut self, event: &Box<dyn Any + Send + 'static>) {
-        info!("{} handling event", self.name);
+    async fn handle(&mut self, event: &Box<dyn Any + Send + 'static>) {
         handle_type(event, |s: &String| {
             self.name = s.clone();
             info!("{} received String event: {}", self.name, s);

@@ -1,6 +1,16 @@
+# PS4 controller to Zenoh
+## Synopsis
+Use a cheap PS4 Controller as a remote control for robotics. Send all events on the cntrols via zenoh to brain or devices.
+Cross compile for Raspberry Pi linux Contoller
 
+## Architecture
 
+// TODO
 # Build instructions
+Cross compilation is using the 'cross' crate approach. Using a docker linux image to compile for the target platform.
+The docker image needs besides the compiler also some packages that are specific for the target platform.
+In this case libudev is required.
+The docker images can be created separately , before compiling. Or created on the fly with some pre-build istructionss.
 ## Build docker image with libudev for arm64 based on Dockerfile
 ```sh
 docker build -t cross-aarch64-libudev .

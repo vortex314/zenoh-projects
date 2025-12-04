@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Eventbus",
+            "label": "ESP32 Eventbus",
             "type": "shell",
             "options": {
                 "cwd": "${workspaceFolder}",
@@ -47,6 +47,33 @@
                 "--input", "proto/message.proto",
                 "--output", "../../bluepad32/examples/esp32/main",
                 "--lang", "cpp",
+                "--format", "json"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true                        // <-- this line
+            }
+        },
+        {
+            "label": "Rust Eventbus",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
+                }
+            },
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "run",
+                "--",
+                "--input", "proto/message.proto",
+                "--output", "../akka/src",
+                "--lang", "rust",
                 "--format", "json"
             ],
             "group": {

@@ -7,9 +7,9 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 
 use crate::limero::Msg;
-use crate::limero::MulticastInfo;
-use crate::limero::WifiInfo;
-use crate::limero::SysInfo;
+use crate::limero::MulticastEvent;
+use crate::limero::WifiEvent;
+use crate::limero::SysEvent;
 
 use socket2::Domain;
 use socket2::Protocol;
@@ -154,12 +154,12 @@ impl Actor for McActor {
                          let slice = String::from_utf8_lossy(&buf[..len]);
                             info!("MC recv {} => {}", src, message);
                             let  v = Value::from_json(&message).unwrap();
-                            v[SysInfo::NAME].as_::<IndexMap<String, Value>>().map(|sys_info| {
-                                if let Some(wifi_info) = sys_info.get(WifiInfo::NAME) {
-                                    if let Some(multicast_info) = wifi_info.get(MulticastInfo::NAME) {
+                            v[SysEvent::NAME].as_::<IndexMap<String, Value>>().map(|sys_info| {
+                                if let Some(wifi_info) = sys_info.get(WifiEvent::NAME) {
+                                    if let Some(multicast_info) = wifi_info.get(MulticastEvent::NAME) {
                                         if let Some(ip) = multicast_info.get("ip") {
                                             if let Some(port) = multicast_info.get("port") {
-                                                info!("Multicast Info: ip={} port={}", ip, port);
+                                                info!("Multicast Event: ip={} port={}", ip, port);
                                             }
                                         }
                                     }

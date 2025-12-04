@@ -1,0 +1,912 @@
+/Users/mg61dd/Library/Java/JavaVirtualMachines/corretto-11.0.17/Contents/Home/bin/java -agentlib:jdwp=transport=dt_socket,address=127.0.0.1:57413,suspend=y,server=n -javaagent:/Users/mg61dd/Library/Caches/JetBrains/IdeaIC2025.1/captureAgent/debugger-agent.jar=file:///var/folders/r0/6dftwc_d3z7g9dw4c2f7qmtw0000gq/T/capture14989661571339356285.props -Dkotlinx.coroutines.debug.enable.creation.stack.trace=false -Ddebugger.agent.enable.coroutines=true -Dkotlinx.coroutines.debug.enable.flows.stack.trace=true -Dkotlinx.coroutines.debug.enable.mutable.state.flows.stack.trace=true -Dfile.encoding=UTF-8 -classpath /Users/mg61dd/Developer/P00002-lieven-playground/target/scala-2.13/classes:/Users/mg61dd/Developer/P00002-lieven-playground/lib/ojdbc8.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/Cobol2Xml.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/JRecord.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/Cobol2Cobol.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/Xml2Cobol.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/cb2xml_definitions.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/JRecordTest.jar:/Users/mg61dd/Developer/P00002-lieven-playground/lib/cb2xml.jar:/Users/mg61dd/.ivy2/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.7.36.jar:/Users/mg61dd/.ivy2/cache/org.json/json/bundles/json-20211205.jar:/Users/mg61dd/.ivy2/cache/commons-codec/commons-codec/jars/commons-codec-1.11.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-stream_2.13/jars/akka-stream_2.13-2.7.0.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.play/play-json_2.13/jars/play-json_2.13-2.9.0.jar:/Users/mg61dd/.ivy2/cache/org.openjfx/javafx-fxml/jars/javafx-fxml-11-ea+25-mac.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-discovery_2.13/jars/akka-discovery_2.13-2.7.0.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.13.2.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang.modules/scala-parser-combinators_2.13/bundles/scala-parser-combinators_2.13-1.1.2.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/ucp/jars/ucp-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/com.ing.log/kafka-appender-common/jars/kafka-appender-common-0.4.4.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-protobuf-v3_2.13/jars/akka-protobuf-v3_2.13-2.7.0.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-slf4j_2.13/jars/akka-slf4j_2.13-2.7.0.jar:/Users/mg61dd/.ivy2/cache/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/bundles/jackson-datatype-jdk8-2.10.4.jar:/Users/mg61dd/.ivy2/cache/com.github.xmlet/xsdParser/jars/xsdParser-1.2.19.jar:/Users/mg61dd/.ivy2/cache/javax.xml.bind/jaxb-api/jars/jaxb-api-2.3.0.jar:/Users/mg61dd/.ivy2/cache/org.apache.kafka/kafka-clients/jars/kafka-clients-3.0.0.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/oraclepki/jars/oraclepki-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang/scala-reflect/jars/scala-reflect-2.13.2.jar:/Users/mg61dd/.ivy2/cache/com.typesafe/config/bundles/config-1.4.2.jar:/Users/mg61dd/.ivy2/cache/com.github.luben/zstd-jni/jars/zstd-jni-1.5.0-2.jar:/Users/mg61dd/.ivy2/cache/org.reactivestreams/reactive-streams/jars/reactive-streams-1.0.4.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/simplefan/jars/simplefan-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/org.openjfx/javafx-base/jars/javafx-base-11-ea+25-mac.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang.modules/scala-java8-compat_2.13/bundles/scala-java8-compat_2.13-1.0.0.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.play/play-functional_2.13/jars/play-functional_2.13-2.9.0.jar:/Users/mg61dd/.ivy2/cache/org.apache.commons/commons-compress/jars/commons-compress-1.21.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-http_2.13/jars/akka-http_2.13-10.4.0.jar:/Users/mg61dd/.ivy2/cache/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/bundles/jackson-datatype-jsr310-2.10.4.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/osdt_cert/jars/osdt_cert-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/org.apache.commons/commons-lang3/jars/commons-lang3-3.12.0.jar:/Users/mg61dd/.ivy2/cache/javax.jms/javax.jms-api/jars/javax.jms-api-2.0.1.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/ons/jars/ons-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/org.apache.logging.log4j/log4j-core/jars/log4j-core-2.25.0.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-http-xml_2.13/jars/akka-http-xml_2.13-10.4.0.jar:/Users/mg61dd/.ivy2/cache/com.ibm.mq/com.ibm.mq.allclient/jars/com.ibm.mq.allclient-9.0.4.0.jar:/Users/mg61dd/.ivy2/cache/org.xerial.snappy/snappy-java/bundles/snappy-java-1.1.8.1.jar:/Users/mg61dd/.ivy2/cache/org.projectlombok/lombok/jars/lombok-1.18.20.jar:/Users/mg61dd/.ivy2/cache/org.apache.logging.log4j/log4j-api/jars/log4j-api-2.25.0.jar:/Users/mg61dd/.ivy2/cache/org.bouncycastle/bcprov-jdk15on/jars/bcprov-jdk15on-1.57.jar:/Users/mg61dd/.ivy2/cache/org.lz4/lz4-java/jars/lz4-java-1.7.1.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-stream-kafka_2.13/jars/akka-stream-kafka_2.13-2.0.3.jar:/Users/mg61dd/.ivy2/cache/ch.qos.logback/logback-classic/jars/logback-classic-1.2.6.jar:/Users/mg61dd/.ivy2/cache/ch.qos.logback/logback-core/jars/logback-core-1.2.6.jar:/Users/mg61dd/.ivy2/cache/org.openjfx/javafx-graphics/jars/javafx-graphics-11-ea+25-mac.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/ojdbc8/jars/ojdbc8-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/com.fasterxml.jackson.core/jackson-annotations/bundles/jackson-annotations-2.12.5.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang.modules/scala-collection-compat_2.13/bundles/scala-collection-compat_2.13-2.1.2.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-http-spray-json_2.13/jars/akka-http-spray-json_2.13-10.4.0.jar:/Users/mg61dd/.ivy2/cache/com.oracle.ojdbc/osdt_core/jars/osdt_core-19.3.0.0.jar:/Users/mg61dd/.ivy2/cache/com.ing.log/logback-kafka-appender/jars/logback-kafka-appender-0.4.4.jar:/Users/mg61dd/.ivy2/cache/org.scala-lang.modules/scala-xml_2.13/bundles/scala-xml_2.13-1.3.0.jar:/Users/mg61dd/.ivy2/cache/org.apache.avro/avro/bundles/avro-1.11.0.jar:/Users/mg61dd/.ivy2/cache/com.typesafe/ssl-config-core_2.13/bundles/ssl-config-core_2.13-0.4.3.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-parsing_2.13/jars/akka-parsing_2.13-10.4.0.jar:/Users/mg61dd/.ivy2/cache/javax.validation/validation-api/jars/validation-api-1.0.0.GA.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-actor_2.13/jars/akka-actor_2.13-2.7.0.jar:/Users/mg61dd/.ivy2/cache/com.fasterxml.jackson.core/jackson-core/jars/jackson-core-2.19.1.jar:/Users/mg61dd/.ivy2/cache/io.spray/spray-json_2.13/jars/spray-json_2.13-1.3.6.jar:/Users/mg61dd/.ivy2/cache/commons-io/commons-io/jars/commons-io-1.3.2.jar:/Users/mg61dd/.ivy2/cache/com.fasterxml.jackson.core/jackson-databind/bundles/jackson-databind-2.12.5.jar:/Users/mg61dd/.ivy2/cache/com.lightbend.akka/akka-stream-alpakka-jms_2.13/jars/akka-stream-alpakka-jms_2.13-2.0.2.jar:/Users/mg61dd/.ivy2/cache/org.bouncycastle/bcpkix-jdk15on/jars/bcpkix-jdk15on-1.57.jar:/Users/mg61dd/.ivy2/cache/org.openjfx/javafx-controls/jars/javafx-controls-11-ea+25-mac.jar:/Users/mg61dd/.ivy2/cache/com.typesafe.akka/akka-http-core_2.13/jars/akka-http-core_2.13-10.4.0.jar:/Users/mg61dd/.ivy2/cache/org.slf4j/slf4j-simple/jars/slf4j-simple-1.7.26.jar:/Applications/IntelliJ IDEA CE.app/Contents/lib/idea_rt.jar com.ing.gfme.model.TreeBuilder
+Connected to the target VM, address: '127.0.0.1:57413', transport: 'socket'
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/Users/mg61dd/.ivy2/cache/ch.qos.logback/logback-classic/jars/logback-classic-1.2.6.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/Users/mg61dd/.ivy2/cache/org.slf4j/slf4j-simple/jars/slf4j-simple-1.7.26.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+13:39:27,056 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback-test.xml]
+13:39:27,056 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Could NOT find resource [logback.groovy]
+13:39:27,056 |-INFO in ch.qos.logback.classic.LoggerContext[default] - Found resource [logback.xml] at [file:/Users/mg61dd/Developer/P00002-lieven-playground/target/scala-2.13/classes/logback.xml]
+13:39:27,114 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - debug attribute not set
+13:39:27,114 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.ConsoleAppender]
+13:39:27,117 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [STDOUT]
+13:39:27,119 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+13:39:27,154 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.rolling.RollingFileAppender]
+13:39:27,157 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [FILE]
+13:39:27,161 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1708169732 - No compression will be used
+13:39:27,161 |-INFO in c.q.l.core.rolling.TimeBasedRollingPolicy@1708169732 - Will use the pattern /tmp/configstore.%d{yyyy-MM-dd-HH-mm}.log for the active file
+13:39:27,163 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - The date pattern is 'yyyy-MM-dd-HH-mm' from file name pattern '/tmp/configstore.%d{yyyy-MM-dd-HH-mm}.log'.
+13:39:27,163 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - Roll-over every minute.
+13:39:27,167 |-INFO in c.q.l.core.rolling.DefaultTimeBasedFileNamingAndTriggeringPolicy - Setting initial period to Fri Jul 25 13:39:21 CEST 2025
+13:39:27,167 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [ch.qos.logback.classic.encoder.PatternLayoutEncoder] for [encoder] property
+13:39:27,169 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FILE] - Active log file name: configstore.log
+13:39:27,169 |-INFO in ch.qos.logback.core.rolling.RollingFileAppender[FILE] - File property is set to [configstore.log]
+13:39:27,170 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.core.read.CyclicBufferAppender]
+13:39:27,170 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [cyclicBuffer]
+13:39:27,171 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [com.ing.log.logback.KafkaAppender]
+13:39:27,171 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [HOME_AVRO_ENC]
+13:39:27,172 |-INFO in ch.qos.logback.core.joran.action.NestedComplexPropertyIA - Assuming default type [com.ing.log.logback.config.TopicMapping] for [topicMapping] property
+13:39:27,172 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - Starting KafkaAppender[Logback] [v0.4.4]
+13:39:27,179 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - [DEBUG] Parsing config kafkaProducerProperties=bootstrap.servers=kafka-tst-0.europe.intranet:9092,kafka-tst-1.europe.intranet:9092
+13:39:27,179 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - [DEBUG] Parsing config component=Dex2Oracle
+13:39:27,179 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - [DEBUG] Parsing config cmdbId=GFME
+13:39:27,179 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - [DEBUG] Parsing config environment=DEV
+13:39:27,179 |-ERROR in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - Missing configuration for the 'purposecode' in the logback config. Please check the <purposecode> section of your xml, and update based on the documentation
+13:39:27,179 |-INFO in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - [DEBUG] Parsing config topicMapping=com.ing.log.logback.config.TopicMapping@70325e14
+13:39:27,179 |-ERROR in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - Missing configuration for the 'encoder' in the logback config. Please check the <encoder> section of your xml, and update based on the documentation
+13:39:27,179 |-ERROR in com.ing.log.logback.KafkaAppender[HOME_AVRO_ENC] - One or more Invalid configuration(S) found
+13:39:27,179 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - About to instantiate appender of type [ch.qos.logback.classic.AsyncAppender]
+13:39:27,180 |-INFO in ch.qos.logback.core.joran.action.AppenderAction - Naming appender as [ASYNC_KAFKA]
+13:39:27,180 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [HOME_AVRO_ENC] to ch.qos.logback.classic.AsyncAppender[ASYNC_KAFKA]
+13:39:27,180 |-INFO in ch.qos.logback.classic.AsyncAppender[ASYNC_KAFKA] - Attaching appender named [HOME_AVRO_ENC] to AsyncAppender.
+13:39:27,181 |-INFO in ch.qos.logback.classic.AsyncAppender[ASYNC_KAFKA] - Setting discardingThreshold to 2048
+13:39:27,181 |-INFO in ch.qos.logback.classic.joran.action.RootLoggerAction - Setting level of ROOT logger to INFO
+13:39:27,181 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [STDOUT] to Logger[ROOT]
+13:39:27,181 |-INFO in ch.qos.logback.core.joran.action.AppenderRefAction - Attaching appender named [FILE] to Logger[ROOT]
+13:39:27,181 |-INFO in ch.qos.logback.classic.joran.action.ConfigurationAction - End of configuration.
+13:39:27,181 |-INFO in ch.qos.logback.classic.joran.JoranConfigurator@33c911a1 - Registering current configuration as safe fallback point
+
+SLF4J: Actual binding is of type [ch.qos.logback.classic.util.ContextSelectorStaticBinder]
+13:39:27.252 [main] INFO  com.ing.gfme.util.Environment:22   using location pattern : 'APM.*'
+13:39:27.253 [main] INFO  com.ing.gfme.model.TreeBuilder:148   using location pattern : 'APM.*'
+13:39:27.256 [main] INFO  com.ing.gfme.config.FdpxStore:203   connecting to jdbc:oracle:thin:@//localhost:1521/xe
+13:39:27.935 [main] INFO  com.ing.gfme.config.FdpxStore:210   connected to RDBMS jdbc:oracle:thin:@//localhost:1521/xe
+13:39:28.245 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/BOFEED-17.xml
+13:39:28.251 [main] INFO  com.ing.gfme.util.Environment:22   using location pattern : 'APM.*'
+13:39:28.252 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:20   using location pattern : 'APM.*'
+13:39:28.253 [main] INFO  com.ing.gfme.config.FdpxStore:203   connecting to jdbc:oracle:thin:@//localhost:1521/xe
+13:39:28.636 [main] INFO  com.ing.gfme.config.FdpxStore:210   connected to RDBMS jdbc:oracle:thin:@//localhost:1521/xe
+13:39:28.636 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-LIB/// cache size 0
+13:39:28.927 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-CODE/// cache size 8209
+13:39:29.737 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-FIELD/// cache size 51752
+13:39:29.769 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-SUBFI/// cache size 52770
+13:39:29.796 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-BLOC/// cache size 54433
+13:39:29.948 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-MT/// cache size 60571
+13:39:30.103 [main] INFO  com.ing.gfme.model.FdpxNativeBlock:29  loading cache for FDPX://P/1/COMMON/NATIVE-SWIFT/// cache size 62032
+13:39:30.256 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/BOITF-11.xml
+13:39:30.263 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/BOREQ-11.xml
+13:39:30.276 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/BTRXML-06.xml
+13:39:30.371 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/CFGC01-07.xml
+13:39:30.407 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/CFGL01-07.xml
+13:39:30.476 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/FFEED-17.xml
+13:39:30.480 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/GMTT-18.xml
+13:39:30.490 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/INQF01-05.xml
+13:39:30.804 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/INQR01-05.xml
+13:39:30.850 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/META-17.xml
+13:39:30.869 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT010-07.xml
+13:39:30.880 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT011-07.xml
+13:39:30.892 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT012-07.xml
+13:39:30.902 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT015-07.xml
+13:39:30.906 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT019-07.xml
+13:39:30.922 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT020-07.xml
+13:39:30.931 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT020E-07.xml
+13:39:30.992 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT021-07.xml
+13:39:30.994 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT022-07.xml
+13:39:30.996 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT022E-07.xml
+13:39:31.030 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT023-07.xml
+13:39:31.034 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT039-07.xml
+13:39:31.036 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT044-07.xml
+13:39:31.038 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT044E-10.xml
+13:39:31.043 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT055-08.xml
+13:39:31.045 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT057-08.xml
+13:39:31.048 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT059-07.xml
+13:39:31.050 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT064-07.xml
+13:39:31.052 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT072-13.xml
+13:39:31.055 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT072E-13.xml
+13:39:31.058 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT074-07.xml
+13:39:31.060 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT074E-14.xml
+13:39:31.077 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT075-07.xml
+13:39:31.080 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT081-07.xml
+13:39:31.082 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT082-07.xml
+13:39:31.086 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT087-07.xml
+13:39:31.088 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT092-07.xml
+13:39:31.090 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT094-09.xml
+13:39:31.115 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT096-10.xml
+13:39:31.119 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT100-07.xml
+13:39:31.252 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT101-17.xml
+13:39:37.892 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT101 B   01
+13:39:37.904 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT101A-07.xml
+13:39:37.970 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT101B-07.xml
+13:39:38.137 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT101BB   01
+13:39:38.155 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT102-17.xml
+13:39:38.305 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT102 B   01
+13:39:38.316 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT102A-07.xml
+13:39:38.339 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT102B-07.xml
+13:39:38.370 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT102BB   01
+13:39:38.375 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT102C-07.xml
+13:39:38.397 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT103-21.xml
+13:39:38.523 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT104-10.xml
+13:39:38.620 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT105-07.xml
+13:39:38.636 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT106-11.xml
+13:39:38.645 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT107-10.xml
+13:39:38.736 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT107 B   01
+13:39:38.746 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT110-21.xml
+13:39:38.805 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT111-07.xml
+13:39:38.832 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT112-07.xml
+13:39:38.866 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT121-11.xml
+13:39:38.869 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT190-07.xml
+13:39:38.892 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT191-07.xml
+13:39:38.930 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT192-21.xml
+13:39:38.940 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT193-07.xml
+13:39:38.952 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT195-07.xml
+13:39:38.968 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT196-20.xml
+13:39:38.982 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT198-07.xml
+13:39:38.988 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT198E-07.xml
+13:39:39.000 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT199-07.xml
+13:39:39.010 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT200-21.xml
+13:39:39.042 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT201-21.xml
+13:39:39.074 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT202-21.xml
+13:39:39.178 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT203-21.xml
+13:39:39.242 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT204-21.xml
+13:39:39.276 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT205-21.xml
+13:39:39.386 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT206-11.xml
+13:39:39.442 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT207-19.xml
+13:39:39.479 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT207 B   01
+13:39:39.485 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT210-09.xml
+13:39:39.507 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT256-19.xml
+13:39:39.580 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT290-07.xml
+13:39:39.597 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT291-07.xml
+13:39:39.618 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT292-21.xml
+13:39:39.627 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT293-07.xml
+13:39:39.638 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT295-07.xml
+13:39:39.660 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT296-20.xml
+13:39:39.675 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT298-07.xml
+13:39:39.680 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT299-07.xml
+13:39:39.684 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT300-26.xml
+13:39:39.907 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT300 E1  01
+13:39:39.909 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1a 01 is not repetitive in MT300 E1a 01
+13:39:40.007 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT303-19.xml
+13:39:40.695 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT303 D   01
+13:39:40.721 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT304-26.xml
+13:39:41.354 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT304 C1  01
+13:39:41.381 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT305-26.xml
+13:39:42.005 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT305 B1  01
+13:39:42.005 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a 01 is not repetitive in MT305 B1a 01
+13:39:42.034 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT306-26.xml
+13:39:43.154 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block J1  01 is not repetitive in MT306 J1  01
+13:39:43.155 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block J2  01 is not repetitive in MT306 J2  01
+13:39:43.156 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block M1  01 is not repetitive in MT306 M1  01
+13:39:43.156 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block M1a 01 is not repetitive in MT306 M1a 01
+13:39:43.214 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT307-19.xml
+13:39:43.438 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B3  01 is not repetitive in MT307 B3  01
+13:39:43.453 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT308-12.xml
+13:39:43.633 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT308 B   01
+13:39:43.639 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B4  01 is not repetitive in MT308 B4  01
+13:39:43.662 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT320-20.xml
+13:39:44.479 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT321-20.xml
+13:39:44.674 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT321 C   01
+13:39:44.674 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT321 C1  01
+13:39:44.686 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT324-07.xml
+13:39:45.020 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT330-20.xml
+13:39:45.744 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT335-07.xml
+13:39:45.940 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT340-26.xml
+13:39:46.682 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block G1  01 is not repetitive in MT340 G1  01
+13:39:46.682 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block G1a 01 is not repetitive in MT340 G1a 01
+13:39:46.720 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT341-26.xml
+13:39:47.290 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT341 D1  01
+13:39:47.290 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1a 01 is not repetitive in MT341 D1a 01
+13:39:47.313 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT350-18.xml
+13:39:47.711 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT360-26.xml
+13:39:48.594 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block O1  01 is not repetitive in MT360 O1  01
+13:39:48.661 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT361-26.xml
+13:39:49.918 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT362-18.xml
+13:39:50.306 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT364-18.xml
+13:39:50.677 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT365-18.xml
+13:39:51.166 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT370-17.xml
+13:39:51.391 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT380-20.xml
+13:39:51.637 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT381-20.xml
+13:39:51.898 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT390-07.xml
+13:39:51.971 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT391-07.xml
+13:39:52.062 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT392-21.xml
+13:39:52.099 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT393-07.xml
+13:39:52.151 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT395-07.xml
+13:39:52.212 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT396-20.xml
+13:39:52.278 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT398-07.xml
+13:39:52.302 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT399-07.xml
+13:39:52.326 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT400-07.xml
+13:39:52.607 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT405-13.xml
+13:39:53.019 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT405 B   01
+13:39:53.035 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT410-07.xml
+13:39:53.088 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT412-07.xml
+13:39:53.113 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT416-07.xml
+13:39:53.262 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT420-07.xml
+13:39:53.323 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT422-10.xml
+13:39:53.376 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   01 is not repetitive in MT422 A   01
+13:39:53.379 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT430-07.xml
+13:39:53.466 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT450-07.xml
+13:39:53.553 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT455-07.xml
+13:39:53.643 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT456-07.xml
+13:39:53.763 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT490-07.xml
+13:39:53.848 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT491-07.xml
+13:39:53.966 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT492-21.xml
+13:39:54.006 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT493-07.xml
+13:39:54.057 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT495-07.xml
+13:39:54.120 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT496-20.xml
+13:39:54.181 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT498-07.xml
+13:39:54.204 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT499-10.xml
+13:39:54.221 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT500-24.xml
+13:39:54.813 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT500 C   01
+13:39:54.849 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT501-24.xml
+13:39:55.416 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT501 C   01
+13:39:55.449 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT502-24.xml
+13:39:56.214 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT502 B1  01
+13:39:56.216 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT502 B2  01
+13:39:56.221 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT502 C1  01
+13:39:56.222 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT502 C2  01
+13:39:56.222 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT502 C3  01
+13:39:56.223 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT502 D   01
+13:39:56.349 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT503-24.xml
+13:39:56.643 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT503 C   01
+13:39:56.667 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT504-24.xml
+13:39:57.163 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT504 C   01
+13:39:57.170 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1a101 is not repetitive in MT504 C1a101
+13:39:57.177 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2a101 is not repetitive in MT504 C2a101
+13:39:57.179 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT504 D1  01
+13:39:57.180 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT504 E1  01
+13:39:57.249 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT505-24.xml
+13:39:57.759 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT505 B   01
+13:39:57.760 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a101 is not repetitive in MT505 B1a101
+13:39:57.767 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2a101 is not repetitive in MT505 B2a101
+13:39:57.769 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT505 C1  01
+13:39:57.770 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT505 D1  01
+13:39:57.835 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT506-24.xml
+13:39:58.386 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT506 C   01
+13:39:58.388 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT506 D   01
+13:39:58.439 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT507-24.xml
+13:39:58.814 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT507 B   01
+13:39:58.815 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a101 is not repetitive in MT507 B1a101
+13:39:58.822 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1b101 is not repetitive in MT507 B1b101
+13:39:58.861 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT508-24.xml
+13:39:59.361 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT509-24.xml
+13:39:59.810 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT509 A2  01
+13:39:59.814 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT509 B1  01
+13:39:59.850 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT510-24.xml
+13:40:00.237 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT510 A2  01
+13:40:00.255 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT512-07.xml
+13:40:00.531 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT513-24.xml
+13:40:01.549 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT513 B1  01
+13:40:01.554 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT513 C2  01
+13:40:01.559 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT513 D1  01
+13:40:01.560 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D2  01 is not repetitive in MT513 D2  01
+13:40:01.561 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D3  01 is not repetitive in MT513 D3  01
+13:40:01.561 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT513 E   01
+13:40:01.714 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT514-24.xml
+13:40:02.529 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT514 B1  01
+13:40:02.534 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT514 C1  01
+13:40:02.535 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT514 C2  01
+13:40:02.536 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT514 C3  01
+13:40:02.536 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT514 D   01
+13:40:02.649 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT515-24.xml
+13:40:03.452 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT515 B   01
+13:40:03.455 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT515 C1  01
+13:40:03.461 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT515 D1  01
+13:40:03.463 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D2  01 is not repetitive in MT515 D2  01
+13:40:03.464 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D3  01 is not repetitive in MT515 D3  01
+13:40:03.464 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT515 E   01
+13:40:03.588 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT516-08.xml
+13:40:03.983 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT517-21.xml
+13:40:04.159 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT518-24.xml
+13:40:04.981 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT518 B1  01
+13:40:04.985 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT518 C1  01
+13:40:04.986 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT518 C2  01
+13:40:04.987 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT518 C3  01
+13:40:04.987 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT518 D   01
+13:40:05.096 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT519-24.xml
+13:40:05.622 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT519 C   01
+13:40:05.648 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT520-07.xml
+13:40:05.875 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT521-07.xml
+13:40:06.266 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT522-07.xml
+13:40:06.467 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT523-07.xml
+13:40:06.870 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT524-24.xml
+13:40:07.381 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT526-08.xml
+13:40:07.486 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT527-24.xml
+13:40:07.999 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A1  01 is not repetitive in MT527 A1  01
+13:40:08.003 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT527 E   01
+13:40:08.031 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT528-13.xml
+13:40:08.797 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT528 B1  01
+13:40:08.801 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT528 C1  01
+13:40:08.802 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT528 C2  01
+13:40:08.802 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT528 C3  01
+13:40:08.803 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT528 D   01
+13:40:08.905 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT529-13.xml
+13:40:09.693 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT529 B1  01
+13:40:09.698 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT529 C1  01
+13:40:09.699 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT529 C2  01
+13:40:09.699 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT529 C3  01
+13:40:09.699 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT529 D   01
+13:40:09.806 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT530-24.xml
+13:40:10.182 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT530 B   01
+13:40:10.184 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT530 C   01
+13:40:10.203 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT531-07.xml
+13:40:10.651 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT532-07.xml
+13:40:10.858 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT533-07.xml
+13:40:11.266 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT534-07.xml
+13:40:11.446 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT535-24.xml
+13:40:12.283 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT535 B   01
+13:40:12.284 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT535 B1  01
+13:40:12.286 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1b 01 is not repetitive in MT535 B1b 01
+13:40:12.287 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1b101 is not repetitive in MT535 B1b101
+13:40:12.288 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1c 01 is not repetitive in MT535 B1c 01
+13:40:12.289 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT535 C   01
+13:40:12.354 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT536-24.xml
+13:40:12.991 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT536 B   01
+13:40:12.991 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT536 B1  01
+13:40:12.992 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a 01 is not repetitive in MT536 B1a 01
+13:40:13.004 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a291 is not repetitive in MT536 B1a291
+13:40:13.050 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT537-25.xml
+13:40:14.046 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT537 B   01
+13:40:14.048 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT537 B2  01
+13:40:14.091 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2b101 is not repetitive in MT537 B2b101
+13:40:14.095 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT537 C   01
+13:40:14.098 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2a 01 is not repetitive in MT537 C2a 01
+13:40:14.099 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C3  01 is not repetitive in MT537 C3  01
+13:40:14.105 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 1010 is not repetitive in MT537 D 1010
+13:40:14.111 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 2110 is not repetitive in MT537 D 2110
+13:40:14.118 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 3110 is not repetitive in MT537 D 3110
+13:40:14.125 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 4110 is not repetitive in MT537 D 4110
+13:40:14.134 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 5110 is not repetitive in MT537 D 5110
+13:40:14.141 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 6110 is not repetitive in MT537 D 6110
+13:40:14.164 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D 7210 is not repetitive in MT537 D 7210
+13:40:14.326 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT538-24.xml
+13:40:14.862 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT538 B   01
+13:40:14.863 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT538 B2  01
+13:40:14.864 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2a 01 is not repetitive in MT538 B2a 01
+13:40:14.895 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT539-07.xml
+13:40:15.043 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT540-24.xml
+13:40:15.987 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT540 E1  01
+13:40:15.989 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT540 E2  01
+13:40:15.990 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT540 E3  01
+13:40:15.990 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT540 F   01
+13:40:16.095 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT541-24.xml
+13:40:16.933 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT541 E1  01
+13:40:16.934 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT541 E2  01
+13:40:16.935 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT541 E3  01
+13:40:16.936 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT541 F   01
+13:40:17.040 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT542-24.xml
+13:40:17.909 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT542 E1  01
+13:40:17.911 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT542 E2  01
+13:40:17.912 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT542 E3  01
+13:40:17.912 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT542 F   01
+13:40:18.015 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT543-24.xml
+13:40:18.871 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT543 E1  01
+13:40:18.873 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT543 E2  01
+13:40:18.874 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT543 E3  01
+13:40:18.875 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT543 F   01
+13:40:18.980 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT544-24.xml
+13:40:19.823 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT544 C1  01
+13:40:19.829 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT544 E1  01
+13:40:19.830 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT544 E2  01
+13:40:19.831 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT544 E3  01
+13:40:19.831 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT544 F   01
+13:40:19.935 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT545-24.xml
+13:40:20.763 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT545 C1  01
+13:40:20.767 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT545 E1  01
+13:40:20.768 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT545 E2  01
+13:40:20.769 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT545 E3  01
+13:40:20.769 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT545 F   01
+13:40:20.876 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT546-24.xml
+13:40:21.764 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT546 C1  01
+13:40:21.768 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT546 E1  01
+13:40:21.769 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT546 E2  01
+13:40:21.770 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT546 E3  01
+13:40:21.771 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT546 F   01
+13:40:21.878 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT547-24.xml
+13:40:22.732 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT547 C1  01
+13:40:22.736 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT547 E1  01
+13:40:22.737 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT547 E2  01
+13:40:22.737 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT547 E3  01
+13:40:22.738 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT547 F   01
+13:40:22.846 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT548-24.xml
+13:40:23.679 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT548 A2  01
+13:40:23.683 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT548 B1  01
+13:40:23.689 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 1010 is not repetitive in MT548 C 1010
+13:40:23.695 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 2110 is not repetitive in MT548 C 2110
+13:40:23.701 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 3110 is not repetitive in MT548 C 3110
+13:40:23.707 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 4110 is not repetitive in MT548 C 4110
+13:40:23.716 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 5110 is not repetitive in MT548 C 5110
+13:40:23.721 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 6110 is not repetitive in MT548 C 6110
+13:40:23.745 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C 7210 is not repetitive in MT548 C 7210
+13:40:23.756 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT548 D   01
+13:40:23.886 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT549-24.xml
+13:40:24.184 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT549 B   01
+13:40:24.186 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT549 C   01
+13:40:24.204 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT550-07.xml
+13:40:24.403 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT551-07.xml
+13:40:24.483 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT552-07.xml
+13:40:24.725 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT553-07.xml
+13:40:24.950 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT554-07.xml
+13:40:25.219 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT555-07.xml
+13:40:25.499 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT556-07.xml
+13:40:25.688 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT557-07.xml
+13:40:25.791 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT558-24.xml
+13:40:26.332 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A1  01 is not repetitive in MT558 A1  01
+13:40:26.333 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT558 A2  01
+13:40:26.336 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT558 C   01
+13:40:26.337 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT558 D   01
+13:40:26.338 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT558 E   01
+13:40:26.381 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT559-08.xml
+13:40:26.630 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT559 A   02
+13:40:26.642 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT560-07.xml
+13:40:26.740 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT560 B   01
+13:40:26.741 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT560 B1  01
+13:40:26.747 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT561-07.xml
+13:40:26.842 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT561 B   01
+13:40:26.842 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT561 B1  01
+13:40:26.846 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT562-07.xml
+13:40:26.978 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT562 B   01
+13:40:26.985 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT563-07.xml
+13:40:27.335 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT563 B   01
+13:40:27.345 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT564-26.xml
+13:40:28.941 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT564 B2  01
+13:40:28.955 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT564 E   01
+13:40:28.960 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT564 E1  01
+13:40:28.969 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT564 E2  01
+13:40:29.164 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT565-25.xml
+13:40:29.888 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT565 C   01
+13:40:29.936 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT566-26.xml
+13:40:31.275 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT566 D1  01
+13:40:31.281 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1b 01 is not repetitive in MT566 D1b 01
+13:40:31.282 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D2  01 is not repetitive in MT566 D2  01
+13:40:31.283 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D2a 01 is not repetitive in MT566 D2a 01
+13:40:31.432 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT567-26.xml
+13:40:31.888 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT567 A2  01
+13:40:31.920 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT568-25.xml
+13:40:32.397 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT569-24.xml
+13:40:33.002 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A1  01 is not repetitive in MT569 A1  01
+13:40:33.003 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT569 C   01
+13:40:33.003 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT569 C1  01
+13:40:33.003 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1a 01 is not repetitive in MT569 C1a 01
+13:40:33.004 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1a101 is not repetitive in MT569 C1a101
+13:40:33.010 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1a151 is not repetitive in MT569 C1a151
+13:40:33.011 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT569 D   01
+13:40:33.058 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT570-07.xml
+13:40:33.143 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT570 B   01
+13:40:33.148 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT571-07.xml
+13:40:33.309 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT571 B   01
+13:40:33.315 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT572-07.xml
+13:40:33.540 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT572 B   01
+13:40:33.540 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   02 is not repetitive in MT572 B   02
+13:40:33.541 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   03 is not repetitive in MT572 B   03
+13:40:33.550 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT573-07.xml
+13:40:33.761 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT573 B   01
+13:40:33.762 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   02 is not repetitive in MT573 B   02
+13:40:33.762 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT573 C   01
+13:40:33.762 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   02 is not repetitive in MT573 C   02
+13:40:33.772 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT574-19.xml
+13:40:34.033 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT574 B   01
+13:40:34.033 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT574 B1  01
+13:40:34.033 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT574 B2  01
+13:40:34.045 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT574+-19.xml
+13:40:34.318 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT574+B   01
+13:40:34.318 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT574+B1  01
+13:40:34.320 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT574+B2  01
+13:40:34.331 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT575-24.xml
+13:40:34.963 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT575 B   01
+13:40:34.964 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT575 B1  01
+13:40:34.964 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a 01 is not repetitive in MT575 B1a 01
+13:40:34.983 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a401 is not repetitive in MT575 B1a401
+13:40:34.985 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT575 C   01
+13:40:34.988 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2a 01 is not repetitive in MT575 C2a 01
+13:40:35.059 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT576-24.xml
+13:40:35.622 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT576 B   01
+13:40:35.623 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT576 B2  01
+13:40:35.625 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2c 01 is not repetitive in MT576 B2c 01
+13:40:35.692 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT577-19.xml
+13:40:35.794 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT578-24.xml
+13:40:36.560 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT578 E1  01
+13:40:36.562 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E2  01 is not repetitive in MT578 E2  01
+13:40:36.564 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E3  01 is not repetitive in MT578 E3  01
+13:40:36.564 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block F   01 is not repetitive in MT578 F   01
+13:40:36.652 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT579-19.xml
+13:40:36.679 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT580-19.xml
+13:40:37.115 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT580 A   02
+13:40:37.133 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT581-08.xml
+13:40:37.208 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT582-13.xml
+13:40:37.504 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT583-19.xml
+13:40:37.644 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT584-13.xml
+13:40:38.466 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT584 B   01
+13:40:38.468 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT584 B2  01
+13:40:38.468 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2b 01 is not repetitive in MT584 B2b 01
+13:40:38.469 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2b101 is not repetitive in MT584 B2b101
+13:40:38.485 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2b201 is not repetitive in MT584 B2b201
+13:40:38.486 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT584 C   01
+13:40:38.486 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1  01 is not repetitive in MT584 C1  01
+13:40:38.488 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1c 01 is not repetitive in MT584 C1c 01
+13:40:38.495 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1c101 is not repetitive in MT584 C1c101
+13:40:38.502 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C1c201 is not repetitive in MT584 C1c201
+13:40:38.605 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT586-24.xml
+13:40:39.467 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT586 B   01
+13:40:39.487 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B5a 01 is not repetitive in MT586 B5a 01
+13:40:39.493 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B5b 01 is not repetitive in MT586 B5b 01
+13:40:39.493 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT586 C   01
+13:40:39.585 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT587-13.xml
+13:40:39.948 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT587 B   01
+13:40:39.949 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT587 B1  01
+13:40:39.950 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT587 C   01
+13:40:39.967 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT588-13.xml
+13:40:40.460 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT588 B1  01
+13:40:40.462 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C   01 is not repetitive in MT588 C   01
+13:40:40.463 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block C2  01 is not repetitive in MT588 C2  01
+13:40:40.463 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D   01 is not repetitive in MT588 D   01
+13:40:40.464 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E   01 is not repetitive in MT588 E   01
+13:40:40.464 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block E1  01 is not repetitive in MT588 E1  01
+13:40:40.500 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT589-13.xml
+13:40:40.850 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A2  01 is not repetitive in MT589 A2  01
+13:40:40.852 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B2  01 is not repetitive in MT589 B2  01
+13:40:40.867 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT590-07.xml
+13:40:40.940 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT591-07.xml
+13:40:41.053 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT592-21.xml
+13:40:41.093 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT593-07.xml
+13:40:41.144 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT595-07.xml
+13:40:41.210 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT596-20.xml
+13:40:41.273 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT598-07.xml
+13:40:41.294 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT599-07.xml
+13:40:41.318 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT600-26.xml
+13:40:41.901 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1  01 is not repetitive in MT600 D1  01
+13:40:41.901 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block D1a 01 is not repetitive in MT600 D1a 01
+13:40:41.920 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT601-26.xml
+13:40:42.470 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT601 B1  01
+13:40:42.470 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1a 01 is not repetitive in MT601 B1a 01
+13:40:42.492 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT604-17.xml
+13:40:42.734 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT604 B   01
+13:40:42.742 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT605-17.xml
+13:40:42.995 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT605 B   01
+13:40:43.005 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT606-14.xml
+13:40:43.208 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT607-14.xml
+13:40:43.421 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT608-12.xml
+13:40:43.681 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT609-19.xml
+13:40:43.818 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT609 A   02
+13:40:43.818 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   03 is not repetitive in MT609 A   03
+13:40:43.826 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT620-26.xml
+13:40:44.615 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT643-19.xml
+13:40:44.834 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT644-19.xml
+13:40:45.151 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT645-12.xml
+13:40:45.443 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT646-19.xml
+13:40:45.772 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT649-19.xml
+13:40:45.840 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT670-19.xml
+13:40:46.049 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT670 B   01
+13:40:46.050 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT670 B1  01
+13:40:46.061 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT671-19.xml
+13:40:46.245 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B   01 is not repetitive in MT671 B   01
+13:40:46.246 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block B1  01 is not repetitive in MT671 B1  01
+13:40:46.256 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT690-07.xml
+13:40:46.331 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT691-07.xml
+13:40:46.430 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT692-21.xml
+13:40:46.464 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT693-07.xml
+13:40:46.518 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT695-07.xml
+13:40:46.578 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT696-20.xml
+13:40:46.639 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT698-07.xml
+13:40:46.659 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT699-07.xml
+13:40:46.681 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT700-25.xml
+13:40:47.075 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT701-23.xml
+13:40:47.136 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT705-25.xml
+13:40:47.299 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT707-25.xml
+13:40:47.766 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT708-23.xml
+13:40:47.860 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT710-25.xml
+13:40:48.272 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT711-20.xml
+13:40:48.350 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT720-25.xml
+13:40:48.706 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT721-20.xml
+13:40:48.775 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT730-20.xml
+13:40:48.850 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT732-20.xml
+13:40:48.877 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT734-20.xml
+13:40:49.003 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT740-20.xml
+13:40:49.192 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT742-20.xml
+13:40:49.349 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT744-20.xml
+13:40:49.439 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT747-20.xml
+13:40:49.505 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT750-20.xml
+13:40:49.611 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT752-20.xml
+13:40:49.757 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT754-20.xml
+13:40:49.951 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT756-20.xml
+13:40:50.066 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT759-23.xml
+13:40:50.146 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT760-25.xml
+13:40:50.618 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT761-23.xml
+13:40:50.682 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT765-25.xml
+13:40:50.883 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT767-25.xml
+13:40:51.101 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT768-23.xml
+13:40:51.201 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT769-23.xml
+13:40:51.322 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT775-23.xml
+13:40:51.394 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT785-23.xml
+13:40:51.526 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT786-23.xml
+13:40:51.607 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT787-23.xml
+13:40:51.674 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT790-07.xml
+13:40:51.740 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT791-07.xml
+13:40:51.839 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT792-21.xml
+13:40:51.891 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT793-07.xml
+13:40:51.949 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT795-07.xml
+13:40:52.015 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT796-20.xml
+13:40:52.093 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT798-25.xml
+13:40:52.113 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT799-10.xml
+13:40:52.132 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT800-21.xml
+13:40:52.332 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   01 is not repetitive in MT800 A   01
+13:40:52.340 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT801-07.xml
+13:40:52.416 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A00102 is not repetitive in MT801 A00102
+13:40:52.416 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A00103 is not repetitive in MT801 A00103
+13:40:52.421 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT802-07.xml
+13:40:52.605 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT810-12.xml
+13:40:52.759 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT812-12.xml
+13:40:52.851 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT813-12.xml
+13:40:53.012 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT820-12.xml
+13:40:53.086 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT820 A   02
+13:40:53.092 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT821-12.xml
+13:40:53.183 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A006 is not repetitive in MT821 A006
+13:40:53.183 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A006-1 is not repetitive in MT821 A006-1
+13:40:53.189 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT822-12.xml
+13:40:53.237 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT822 A   02
+13:40:53.237 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   03 is not repetitive in MT822 A   03
+13:40:53.243 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT823-12.xml
+13:40:53.349 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT823 A   02
+13:40:53.349 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A  1-2 is not repetitive in MT823 A  1-2
+13:40:53.352 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT824-21.xml
+13:40:53.433 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT824 A   02
+13:40:53.434 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   03 is not repetitive in MT824 A   03
+13:40:53.438 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT890-07.xml
+13:40:53.515 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT891-07.xml
+13:40:53.622 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT892-21.xml
+13:40:53.660 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT893-07.xml
+13:40:53.710 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT895-07.xml
+13:40:53.776 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT896-20.xml
+13:40:53.846 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT898-07.xml
+13:40:53.869 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT899-07.xml
+13:40:53.900 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT900-18.xml
+13:40:54.005 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT910-18.xml
+13:40:54.155 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT920-07.xml
+13:40:54.186 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT935-07.xml
+13:40:54.225 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT935 A   02
+13:40:54.230 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT940-18.xml
+13:40:54.453 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT940 A   02
+13:40:54.462 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT941-18.xml
+13:40:54.654 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT942-18.xml
+13:40:54.800 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MT942 A   02
+13:40:54.804 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT950-07.xml
+13:40:54.994 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT960-11.xml
+13:40:55.012 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT961-11.xml
+13:40:55.028 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT962-11.xml
+13:40:55.044 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT963-11.xml
+13:40:55.060 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT964-11.xml
+13:40:55.080 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT965-11.xml
+13:40:55.100 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT966-11.xml
+13:40:55.116 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT967-11.xml
+13:40:55.138 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT970-07.xml
+13:40:55.331 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT971-07.xml
+13:40:55.355 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT972-07.xml
+13:40:55.541 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT973-07.xml
+13:40:55.557 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT985-07.xml
+13:40:55.627 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT986-07.xml
+13:40:55.654 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT990-07.xml
+13:40:55.745 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT991-07.xml
+13:40:55.869 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT992-21.xml
+13:40:55.911 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT993-07.xml
+13:40:55.982 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT995-07.xml
+13:40:56.053 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT996-20.xml
+13:40:56.112 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT998-07.xml
+13:40:56.133 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MT999-07.xml
+13:40:56.171 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTACK-07.xml
+13:40:56.185 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTALL-20.xml
+13:40:56.209 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTERR-07.xml
+13:40:56.218 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTFAST-07.xml
+13:40:56.230 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTFIE-07.xml
+13:40:56.627 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTNTX-07.xml
+13:40:56.635 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTTTX-07.xml
+13:40:56.645 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MTTXT-07.xml
+13:40:56.653 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX0101-16.xml
+13:40:56.667 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX0111-16.xml
+13:40:56.688 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX0121-16.xml
+13:40:56.736 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX0191-16.xml
+13:40:56.813 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1011-16.xml
+13:40:56.821 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1031-21.xml
+13:40:57.279 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1032-21.xml
+13:40:57.717 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1033-21.xml
+13:40:58.142 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1041-24.xml
+13:40:58.149 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1071-24.xml
+13:40:58.156 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1101-21.xml
+13:40:58.412 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1111-07.xml
+13:40:58.514 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1121-07.xml
+13:40:58.626 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1902-25.xml
+13:40:58.705 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1912-25.xml
+13:40:58.804 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1921-21.xml
+13:40:58.854 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1951-21.xml
+13:40:58.918 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1952-21.xml
+13:40:58.980 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1961-20.xml
+13:40:59.044 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1991-16.xml
+13:40:59.069 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1992-16.xml
+13:40:59.090 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1993-16.xml
+13:40:59.115 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX1994-16.xml
+13:40:59.136 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2021-21.xml
+13:40:59.534 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2022-21.xml
+13:40:59.935 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2023-21.xml
+13:41:00.377 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2041-21.xml
+13:41:00.542 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2101-21.xml
+13:41:00.669 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2901-20.xml
+13:41:00.836 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2902-25.xml
+13:41:00.965 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2912-25.xml
+13:41:01.113 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2921-21.xml
+13:41:01.150 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2922-21.xml
+13:41:01.192 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2961-20.xml
+13:41:01.261 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2981-20.xml
+13:41:01.282 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2982-20.xml
+13:41:01.303 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2983-20.xml
+13:41:01.327 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2984-20.xml
+13:41:01.352 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2985-20.xml
+13:41:01.375 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2986-20.xml
+13:41:01.398 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2991-21.xml
+13:41:01.421 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX2994-16.xml
+13:41:01.445 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5021-21.xml
+13:41:01.456 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5022-21.xml
+13:41:01.465 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5023-21.xml
+13:41:01.475 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5024-21.xml
+13:41:01.484 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5025-21.xml
+13:41:01.492 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5026-21.xml
+13:41:01.500 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5091-21.xml
+13:41:01.507 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5092-21.xml
+13:41:01.515 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5151-21.xml
+13:41:01.523 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5152-21.xml
+13:41:01.530 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5153-21.xml
+13:41:01.539 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5154-21.xml
+13:41:01.548 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5155-21.xml
+13:41:01.557 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5156-21.xml
+13:41:01.564 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX5157-21.xml
+13:41:01.571 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9001-18.xml
+13:41:01.675 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9101-18.xml
+13:41:01.831 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9201-21.xml
+13:41:01.875 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9401-18.xml
+13:41:02.122 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MX9401A   02
+13:41:02.148 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9411-18.xml
+13:41:02.335 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9421-18.xml
+13:41:02.485 [main] WARN  com.ing.gfme.model.TreeBuilder:368   Supposing the first block A   02 is not repetitive in MX9421A   02
+13:41:02.507 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9501-16.xml
+13:41:02.751 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9901-20.xml
+13:41:02.837 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9961-20.xml
+13:41:02.903 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MX9991-21.xml
+13:41:02.926 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXAD02-16.xml
+13:41:02.933 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXAD04-16.xml
+13:41:02.941 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXAD05-16.xml
+13:41:02.949 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXAD07-16.xml
+13:41:02.964 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXAD08-23.xml
+13:41:02.982 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXALL-22.xml
+13:41:03.001 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXC110-24.xml
+13:41:03.007 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXC111-24.xml
+13:41:03.019 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA03-16.xml
+13:41:03.025 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA04-16.xml
+13:41:03.031 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA05-16.xml
+13:41:03.039 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA06-16.xml
+13:41:03.046 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA07-16.xml
+13:41:03.054 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA08-16.xml
+13:41:03.067 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA11-16.xml
+13:41:03.075 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA21-16.xml
+13:41:03.083 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA25-16.xml
+13:41:03.091 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA27-16.xml
+13:41:03.099 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA46-16.xml
+13:41:03.106 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA47-16.xml
+13:41:03.114 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA48-16.xml
+13:41:03.121 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA50-16.xml
+13:41:03.128 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA55-24.xml
+13:41:03.136 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCA87-16.xml
+13:41:03.143 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCO03-16.xml
+13:41:03.150 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXCO16-16.xml
+13:41:03.157 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXITF-16.xml
+13:41:03.217 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXPA02-16.xml
+13:41:03.224 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSAA-16.xml
+13:41:03.300 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM01-16.xml
+13:41:03.307 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM02-16.xml
+13:41:03.315 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM03-23.xml
+13:41:03.324 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM06-23.xml
+13:41:03.333 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM17-16.xml
+13:41:03.341 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM18-16.xml
+13:41:03.349 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM20-16.xml
+13:41:03.356 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM21-16.xml
+13:41:03.364 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSM44-16.xml
+13:41:03.372 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS20-16.xml
+13:41:03.380 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS21-16.xml
+13:41:03.391 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS23-16.xml
+13:41:03.403 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS24-16.xml
+13:41:03.415 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS25-16.xml
+13:41:03.434 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS27-16.xml
+13:41:03.453 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS28-16.xml
+13:41:03.461 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS29-16.xml
+13:41:03.468 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS30-16.xml
+13:41:03.482 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS31-16.xml
+13:41:03.491 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS32-16.xml
+13:41:03.500 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS33-16.xml
+13:41:03.507 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS34-16.xml
+13:41:03.519 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS35-16.xml
+13:41:03.532 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSS36-16.xml
+13:41:03.539 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV01-16.xml
+13:41:03.547 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV02-16.xml
+13:41:03.555 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV03-16.xml
+13:41:03.564 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV04-16.xml
+13:41:03.572 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV05-16.xml
+13:41:03.580 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV06-16.xml
+13:41:03.588 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV07-16.xml
+13:41:03.596 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV08-16.xml
+13:41:03.605 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV11-23.xml
+13:41:03.613 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV31-16.xml
+13:41:03.621 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV32-16.xml
+13:41:03.629 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV33-16.xml
+13:41:03.637 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV34-16.xml
+13:41:03.648 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV35-16.xml
+13:41:03.662 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV36-16.xml
+13:41:03.670 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV37-16.xml
+13:41:03.678 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV38-16.xml
+13:41:03.685 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV39-16.xml
+13:41:03.696 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV40-16.xml
+13:41:03.704 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV41-16.xml
+13:41:03.716 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV42-16.xml
+13:41:03.724 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV44-16.xml
+13:41:03.730 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV45-16.xml
+13:41:03.737 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV46-16.xml
+13:41:03.745 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV47-16.xml
+13:41:03.752 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV48-16.xml
+13:41:03.759 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV49-16.xml
+13:41:03.766 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV50-16.xml
+13:41:03.774 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV51-16.xml
+13:41:03.781 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV52-16.xml
+13:41:03.789 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSV53-16.xml
+13:41:03.797 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSY02-16.xml
+13:41:03.805 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSY03-16.xml
+13:41:03.813 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSY12-16.xml
+13:41:03.821 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSY15-23.xml
+13:41:03.828 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXSY16-23.xml
+13:41:03.836 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXTR01-24.xml
+13:41:03.843 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/MXTR02-24.xml
+13:41:03.852 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/OPER01-04.xml
+13:41:04.962 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE201-20.xml
+13:41:05.060 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE202-20.xml
+13:41:05.126 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE203-20.xml
+13:41:05.191 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE292-20.xml
+13:41:05.239 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE298-20.xml
+13:41:05.284 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUE299-20.xml
+13:41:05.337 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU01-04.xml
+13:41:05.397 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU02-04.xml
+13:41:05.448 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU03-04.xml
+13:41:05.497 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU04-04.xml
+13:41:05.538 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU05-04.xml
+13:41:05.580 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU06-04.xml
+13:41:05.639 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU07-04.xml
+13:41:05.701 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU08-04.xml
+13:41:05.750 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU09-04.xml
+13:41:05.796 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU90-04.xml
+13:41:05.876 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU91-04.xml
+13:41:05.937 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU92-04.xml
+13:41:05.993 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU95-04.xml
+13:41:06.059 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU97-04.xml
+13:41:06.110 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU98-04.xml
+13:41:06.175 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/QUEU99-04.xml
+13:41:06.228 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SAGLOG-07.xml
+13:41:06.252 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE01-04.xml
+13:41:06.754 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE02-04.xml
+13:41:07.155 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE03-04.xml
+13:41:07.537 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE04-04.xml
+13:41:07.869 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE05-04.xml
+13:41:08.373 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE06-04.xml
+13:41:08.871 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE07-04.xml
+13:41:09.316 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE08-04.xml
+13:41:09.682 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE09-15.xml
+13:41:10.495 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELE10-15.xml
+13:41:11.052 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELF01-07.xml
+13:41:11.121 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELF02-07.xml
+13:41:11.295 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR01-04.xml
+13:41:11.668 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR02-04.xml
+13:41:11.939 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR03-04.xml
+13:41:12.267 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR04-04.xml
+13:41:12.584 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR05-04.xml
+13:41:13.029 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR06-04.xml
+13:41:13.462 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR07-04.xml
+13:41:13.934 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR08-04.xml
+13:41:14.391 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR09-15.xml
+13:41:15.128 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SELR10-15.xml
+13:41:15.658 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SFILE-08.xml
+13:41:15.704 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SIGITF-07.xml
+13:41:15.775 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SMGN-05.xml
+13:41:15.940 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SMGR-05.xml
+13:41:16.034 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SMSGFB-07.xml
+13:41:16.418 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SPFCEI-10.xml
+13:41:16.514 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SPFCEU-10.xml
+13:41:16.621 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/SSMG-06.xml
+13:41:17.719 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/USER01-04.xml
+13:41:18.608 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/WEBITF-07.xml
+13:41:19.043 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/XFEED-17.xml
+13:41:19.068 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/XIRM-16.xml
+13:41:19.099 [main] INFO  com.ing.gfme.model.TreeBuilder:176   building src/main/resources/dict/irmadm-05.xml
+Disconnected from the target VM, address: '127.0.0.1:57413', transport: 'socket'
+
+Process finished with exit code 0

@@ -1,0 +1,15 @@
+{
+    "brain": {
+        "drive":"esp1/drive",
+        "compass":"esp2/compass",
+        "alert": [{
+            "src":"esp1/sys",
+            "free_heap": {"lt":10000},
+            "temp":{"gt":50}
+        }]
+    },
+    "map":[
+        {"x":23.1,"y":44.2},
+        {"x":23.1,"y":44.2}
+    ]
+}

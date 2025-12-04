@@ -1,5 +1,5 @@
 {
-    "idf.pythonInstallPath": "/usr/bin/python",
+    "idf.pythonInstallPath": "/opt/homebrew/bin/python3",
     "idf.port": "/dev/ttyUSB1",
     "files.associations": {
         "*.cpp-old": "cpp",

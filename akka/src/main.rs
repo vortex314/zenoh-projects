@@ -9,7 +9,7 @@ mod broker;
 mod eventbus;
 mod limero;
 mod logger;
-mod multicast;
+// mod multicast;
 mod udp;
 mod value;
 mod zenoh_actor;
@@ -142,8 +142,8 @@ impl MyHandler for MyActor {
         handle_type::<i32, _>(event, |i| {
             info!("{} received i32 event: {}", self.name, i);
         });
-        handle_type::<MulticastInfo, _>(event, |mi| {
-            info!("{} received MulticastInfo event: {:?}", self.name, mi);
+        handle_type::<MulticastEvent, _>(event, |mi| {
+            info!("{} received MulticastEvent event: {:?}", self.name, mi);
         });
     }
 }
@@ -163,16 +163,16 @@ async fn main() {
     };
 
     event_bus.register_handler::<String>(Box::new(actor1));
-    event_bus.register_handler::<MulticastInfo>(Box::new(actor2));
+    event_bus.register_handler::<MulticastEvent>(Box::new(actor2));
 
     event_bus.emit(Box::new(42)).await;
     event_bus.emit(Box::new("Hello, world!".to_string())).await;
-    event_bus.emit(Box::new(MulticastInfo::default())).await; // Unknown type
+    event_bus.emit(Box::new(MulticastEvent::default())).await; // Unknown type
 
     tokio::spawn(async move {
         event_bus.run().await;
     });
-
+/* */
     let listener = Listener::new().start();
     let _mc_addr: Addr<McActor> = McActor::new(MULTICAST_IP, MULTICAST_PORT).start();
     let _brain = Brain::new().start();
