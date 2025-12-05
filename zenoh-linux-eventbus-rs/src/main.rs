@@ -6,148 +6,89 @@
 #![allow(unused_variables)]
 mod limero;
 mod logger;
+mod eventbus;
+mod zenoh_actor;
 
 use anyhow::Result;
-use basu::async_trait;
+use basu::{async_trait, event};
 use limero::*;
 use log::{debug, info};
-use std::{any::Any, collections::HashMap, hash::Hash, sync::Arc, time::Duration};
+use zenoh_linux_eventbus_rs::eventbus::on_message;
+use std::{any::Any, sync::Arc};
+use crate::eventbus::{ActorImpl, Bus, Eventbus, ActorStart, ActorStop, EventbusStop};
 
-#[async_trait]
-pub trait ActorImpl: Send {
-    fn emit(&self, msg: Arc<dyn Any + Send + Sync>);
-    async fn start(&mut self) -> Result<()>;
-    async fn stop(&mut self) -> Result<()>;
-    async fn handle(&mut self, msg: &Arc<dyn Any + Send + Sync>) -> Result<()>;
-}
+
 
 struct Actor1 {
     name: String,
-    sender: tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>>,
+    bus : Option<Bus>,
+    counter : usize,
+}
+
+impl Actor1 {
+    fn new(name: String, bus : Bus) -> Self {
+        Actor1 {
+            name,
+            bus : Some(bus),
+            counter : 0,
+        }
+    }
+    fn on_start(&mut self, msg: &ActorStart) {
+        self.bus = Some(msg.bus.clone());
+    }
+    fn on_stop(&mut self, _msg: &ActorStop) {
+        self.bus = None;
+    }
 }
 
 #[async_trait]
 impl ActorImpl for Actor1 {
-    fn emit(&self, msg: Arc<dyn Any + Send + Sync>) {
-        let _ = self.sender.send(msg);
-    }
 
-    async fn start(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    async fn stop(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    async fn handle(&mut self, _msg: &Arc<dyn Any + Send + Sync>) -> Result<()> {
+    async fn handle(&mut self, _msg: &Arc<dyn Any + Send + Sync>)  {
         // test for type and downcast
         info!("Actor {} handling message", self.name);
 
-        if _msg.is::<String>() {
-            info!("Actor {} received a String message", self.name);
-            let str_ref = _msg.downcast_ref::<String>().unwrap();
-            info!("Actor {} message content: {}", self.name, str_ref);
-        } 
-        else if _msg.is::<Ps4Event>() {
-            info!("Actor {} received a Ps4Event message", self.name);
-            let event_ref = _msg.downcast_ref::<Ps4Event>().unwrap();
-            info!("Actor {} message content: {:?}", self.name, event_ref);
-            self.sender.send(Arc::new("Response from Actor".to_string()));
-        }
-        else {
-            info!("Actor {} received an unknown message type", self.name);
-        }
+        on_message::<ActorStart,_>(_msg, |msg| {
+            self.counter += 1;
+            info!("Actor {} received ActorStart #{}", self.name, self.counter);
+            self.on_start(msg);
+        });
 
-        Ok(())
+        on_message::<ActorStop,_>(_msg, |msg| {
+            self.on_stop(msg);
+        });
+
+        on_message::<Ps4Event,_>(_msg, |msg| {
+            info!("Actor {} received Ps4Event: {:?}", self.name, msg);
+        });
+
+        on_message::<String,_>(_msg, |msg| {
+            info!("Actor {} received String message: {}", self.name, msg);
+        });
     }
 }
 
-struct Bus {
-    sender: tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>>,
-    receiver: tokio::sync::mpsc::UnboundedReceiver<Arc<dyn Any + Send + Sync>>,
-    actors: Vec<Box<dyn ActorImpl>>,
-}
-
-impl Bus {
-    fn new() -> Self {
-        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel::<Arc<dyn Any + Send + Sync>>();
-        Bus {
-            sender,
-            receiver,
-            actors: Vec::new(),
-        }
-    }
-
-    fn register_actor(&mut self, actor: Box<dyn ActorImpl>) {
-        self.actors.push(actor);
-    }
-
-    fn emit<M: 'static + Any + Send + Sync>(&self, msg: M) {
-        let _ = self.sender.send(Arc::new(msg));
-    }
-
-    async fn recv(&mut self) -> Option<Arc<dyn Any + Send + Sync>> {
-        self.receiver.recv().await
-    }
-
-    async fn start_all_actors(&mut self) -> Result<()> {
-        for actor in &mut self.actors {
-            actor.start().await?;
-        }
-        Ok(())
-    }
-
-    async fn stop_all_actors(&mut self) -> Result<()> {
-        for actor in &mut self.actors {
-            actor.stop().await?;
-        }
-        Ok(())
-    }
-
-    async fn handle_all_actors(&mut self, msg: Arc<dyn Any + Send + Sync>) -> Result<()> {
-        for actor in &mut self.actors {
-            actor.handle(&msg).await?;
-        }
-        Ok(())
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
     logger::init();
     info!("Starting Limero example...");
 
-    let mut bus = Bus::new();
-    let sender = bus.sender.clone();
+    let mut eventbus = Eventbus::new();
+    let  zenoh_actor = zenoh_actor::ZenohActor::new(eventbus.bus());
+    /*let actor = Actor1 ::new("actor1".to_string(), eventbus.bus());
 
-    let actor = Actor1 {
-        name: "Actor1".to_string(),
-        sender: sender.clone(),
-    };
-
-    let actor2 = Actor1 {
-        name: "Actor2".to_string(),
-        sender: sender.clone(),
-    };
-    bus.register_actor(Box::new(actor));
-    bus.register_actor(Box::new(actor2));
-    bus.emit("Hello, Limero!".to_string());
-    bus.emit(Ps4Event::default());
-    bus.start_all_actors().await?;
-
-    loop {
-        tokio::select! {
-            Some(msg) = bus.receiver.recv() => {
-                bus.handle_all_actors(msg).await?;
-            }
-            else => {
-                break;
-            }
-        }
-    }
-
-    bus.stop_all_actors().await?;
+    let actor2 = Actor1 ::new("actor2".to_string(), eventbus.bus());
+    eventbus.register_actor(Box::new(actor));
+    eventbus.register_actor(Box::new(actor2));
+    eventbus.emit("Hello, Limero!".to_string());*/
+    eventbus.emit(Ps4Event::default());
+    eventbus.register_actor(Box::new(zenoh_actor));
+    eventbus.emit(zenoh_actor::ZenohCmd::Publish {
+        topic: "src/ps4/Ps4Event".to_string(),
+        payload: serde_json::to_vec(&Ps4Event::default()).unwrap(),
+    });
+    eventbus.run().await?;
     info!("Limero example finished.");
 
     Ok(())

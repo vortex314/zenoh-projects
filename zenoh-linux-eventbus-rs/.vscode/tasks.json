@@ -24,6 +24,28 @@
             "presentation": {
                 "clear": true                        // <-- this line
             }
+        },
+        {
+            "label": "cargo test",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
+                }
+            },
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "test",
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true                        // <-- this line
+            }
         }
     ]
 }
