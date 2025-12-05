@@ -1,5 +1,5 @@
 {
-    "idf.pythonInstallPath": "/opt/homebrew/bin/python3",
+    "idf.pythonInstallPath": "/home/lieven/.espressif/python_env/idf5.3_py3.12_env/bin/python",
     "idf.port": "/dev/ttyUSB1",
     "files.associations": {
         "*.cpp-old": "cpp",
