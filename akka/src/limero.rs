@@ -645,19 +645,11 @@ impl Msg for CameraCmd {
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct LawnmowerManualEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub forward:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-    pub backward:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-    pub left:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-    pub right:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-    pub blade_on:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-    pub blade_off:Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
     pub speed:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub steering:Option<i32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub blade:Option<bool>,
         
 
 }
@@ -681,9 +673,9 @@ impl Msg for LawnmowerManualEvent {
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct LawnmowerManualCmd {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub speed:Option<i32>,
+    pub speed:Option<f32>,
         #[serde(skip_serializing_if = "Option::is_none")]
-    pub steering:Option<i32>,
+    pub steer:Option<f32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub blade:Option<bool>,
         

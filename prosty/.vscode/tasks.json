@@ -72,7 +72,7 @@
                 "run",
                 "--",
                 "--input", "proto/message.proto",
-                "--output", "../akka/src",
+                "--output", "../zenoh-linux-eventbus-rs/src",
                 "--lang", "rust",
                 "--format", "json"
             ],

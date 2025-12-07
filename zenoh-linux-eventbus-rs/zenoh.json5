@@ -1,19 +1,9 @@
 {
-
-plugins_loading: {
-    enabled: true,
-},
-  plugins: {
-     rest: {
-       __required__: true, // defaults to false
-       http_port: 8888,
-       work_thread_num: 3,
-       max_block_thread_num: 50,
-       __path__: [
-         "/home/lieven/workspace/zenoh/target/release/libzenoh_plugin_rest.so",
-       ],
-     },
+  mode: "router",
   
-    },
-
+  scouting: {
+    multicast: {
+      enabled: true,
+    }
+  }
 }
