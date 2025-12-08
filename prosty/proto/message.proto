@@ -243,6 +243,13 @@ message CameraCmd {
 
 // Lawnmower Manual Events
 
+enum LawnmowerMode {
+  MANUAL = 0;
+  AUTO = 1;
+  PAUSED = 2;
+  EMERGENCY_STOP = 3;
+}
+
 message LawnmowerManualEvent {
   int32 speed = 1;
   int32 steering = 2;
@@ -253,6 +260,11 @@ message LawnmowerManualCmd {
   float speed = 1;
   float steer = 2;
   bool blade = 3;
+  bool start_manual_control = 4;
+  bool stop_manual_control = 5;
+  bool emergency_stop = 6;
+  bool start_auto_mode = 7;
+  bool stop_auto_mode = 8;
 }
 
 message LawnmowerAutoEvent {

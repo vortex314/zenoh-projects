@@ -56,6 +56,14 @@ pub enum InTyp {
     AutoDetect,
 } 
 
+#[derive(Debug, Clone,Serialize,Deserialize)] 
+pub enum LawnmowerMode {
+    Manual,
+    Auto,
+    Paused,
+    EmergencyStop,
+} 
+
 
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
@@ -678,6 +686,16 @@ pub struct LawnmowerManualCmd {
     pub steer:Option<f32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub blade:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_manual_control:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_manual_control:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub emergency_stop:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_auto_mode:Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub stop_auto_mode:Option<bool>,
         
 
 }

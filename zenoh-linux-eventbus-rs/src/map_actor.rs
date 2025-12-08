@@ -1,21 +1,23 @@
 use basu::async_trait;
 use basu::event;
 // src/main.rs
-use hidapi::{DeviceInfo, HidApi, HidDevice};
+
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
-use zenoh_linux_eventbus_rs::eventbus::on_message;
-use crate::limero::LawnmowerManualCmd;
 
 use log::info;
 use log::warn;
 
 use crate::eventbus::ActorStart;
 use crate::eventbus::{ActorImpl, Bus};
+use crate::eventbus::as_message;
+use crate::eventbus::on_message;
+
 use crate::limero::Ps4Cmd;
 use crate::limero::Ps4Event;
+use crate::limero::LawnmowerManualCmd;
 
 // Moving average for float values
 struct MovingAverage {
@@ -86,7 +88,7 @@ impl Ps4EventHandler {
 
     fn blade_changed(&self, cmd: &LawnmowerManualCmd) -> bool {
         if let Some(cmd) = &self.last_cmd {
-            return self.last_cmd.as_ref().unwrap().blade != cmd.blade;  
+            return self.last_cmd.as_ref().unwrap().blade != cmd.blade;
         }
         false
     }
@@ -105,11 +107,10 @@ impl Ps4EventHandler {
             // Here you would implement the logic to convert Ps4Event to LawnmowerManualCmd
 
             if self.last_event_time.elapsed() > self.interval || self.blade_changed(&cmd) {
-                let smoothed_cmd = LawnmowerManualCmd {
-                    steer: Some(self.moving_average_steer.average()),
-                    speed: Some(self.moving_average_speed.average()),
-                    blade: cmd.blade,
-                };
+                let mut smoothed_cmd = LawnmowerManualCmd::default();
+                smoothed_cmd.steer = Some(self.moving_average_steer.average());
+                smoothed_cmd.speed = Some(self.moving_average_speed.average());
+                smoothed_cmd.blade = cmd.blade; // Keep the blade command as is
                 self.last_event_time = Instant::now();
                 self.last_cmd = Some(smoothed_cmd.clone());
                 Some(smoothed_cmd)
@@ -156,5 +157,11 @@ impl ActorImpl for MapActor {
                 self.bus.emit(cmd);
             }
         }
+        as_message::<Ps4Event>(msg)
+            .map(|ev| self.ps4_handler.handle_event(ev))
+            .map(|cmd| self.bus.emit(cmd));
+        as_message::<ActorStart>(msg).map(|_ev| {
+            let _ = self.on_start();
+        });
     }
 }

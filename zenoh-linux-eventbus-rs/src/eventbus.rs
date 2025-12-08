@@ -7,9 +7,6 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::UnboundedReceiver;
 use tokio::sync::mpsc::unbounded_channel;
 
-use crate::limero::LawnmowerManualCmd;
-use crate::limero::Ps4Event;
-
 #[async_trait]
 pub trait ActorImpl: Send {
     async fn handle(&mut self, msg: &Arc<dyn Any + Send + Sync>);
@@ -129,5 +126,22 @@ where
     if msg.is::<T>() {
         let t: &T = msg.downcast_ref().unwrap();
         f(t).await;
+    }
+}
+    
+pub fn just<T, F>(t: Option<T>, mut f: F)
+where
+    F: FnMut(T),
+{
+    if let Some(value) = t {
+        f(value);
+    }
+}
+
+pub fn as_message<T: 'static + Any + Send + Sync>(msg: &Arc<dyn Any + Send + Sync>) -> Option<&T> {
+    if msg.is::<T>() {
+        Some(msg.downcast_ref::<T>().unwrap())
+    } else {
+        None
     }
 }
