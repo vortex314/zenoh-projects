@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use log::*;
 
@@ -18,10 +18,10 @@ use zenoh::sample;
 use zenoh::sample::Sample;
 use zenoh::session;
 
+use crate::limero::LawnmowerManualCmd;
 use crate::limero::Ps4Cmd;
 use crate::limero::Ps4Event;
 use crate::limero::WifiEvent;
-use crate::limero::LawnmowerManualCmd;
 
 use crate::eventbus::{ActorImpl, ActorStart, ActorStop, ActorTick, Bus, Eventbus, on_message};
 
@@ -40,24 +40,36 @@ pub enum ZenohEvent {
     Publish { topic: String, payload: Vec<u8> },
 }
 
-pub fn zenoh_to_bus<T> (bus: &Bus, pattern:&str,topic: &str, payload: &[u8]) where T: Send + Sync + Debug +'static + serde::de::DeserializeOwned {
-    if topic.ends_with(pattern){
+pub fn zenoh_to_bus<T>(bus: &Bus, pattern: &str, topic: &str, payload: &[u8])
+where
+    T: Send + Sync + Debug + 'static + serde::de::DeserializeOwned,
+{
+    if topic.ends_with(pattern) {
         if let Ok(msg) = serde_json::from_slice::<T>(payload) {
             info!("ZenohActor zenoh_to_bus() topic {} msg {:?}", topic, msg);
             bus.emit(msg);
         } else {
-            error!("ZenohActor zenoh_to_bus() failed to deserialize topic {}", topic);
+            error!(
+                "ZenohActor zenoh_to_bus() failed to deserialize topic {}",
+                topic
+            );
         }
     } else {
-     //   info!("ZenohActor zenoh_to_bus() topic {} does not match pattern {}", topic, pattern);
+        //   info!("ZenohActor zenoh_to_bus() topic {} does not match pattern {}", topic, pattern);
     }
 }
 
- async fn bus_to_zenoh<T>(session: &Session, topic: &str, msg: &T) where T: Send + Sync + Debug + serde::Serialize {
+async fn bus_to_zenoh<T>(session: &Session, topic: &str, msg: &T)
+where
+    T: Send + Sync + Debug + serde::Serialize,
+{
     if let Ok(json) = serde_json::to_string(msg) {
         session.put(topic, json.as_bytes()).await;
     } else {
-        error!("ZenohActor bus_to_zenoh() failed to serialize msg {:?}", msg);
+        error!(
+            "ZenohActor bus_to_zenoh() failed to serialize msg {:?}",
+            msg
+        );
     }
 }
 
@@ -159,7 +171,12 @@ impl ZenohActor {
                             let topic = s.key_expr().to_string();
                             let payload = s.payload().to_bytes();
                             std::str::from_utf8(&payload).map(|json| {
-                                zenoh_to_bus::<WifiEvent>(&bus_clone, "WifiEvent", &topic, &payload);
+                                zenoh_to_bus::<WifiEvent>(
+                                    &bus_clone,
+                                    "WifiEvent",
+                                    &topic,
+                                    &payload,
+                                );
                                 zenoh_to_bus::<Ps4Cmd>(&bus_clone, "Ps4Cmd", &topic, &payload);
                             });
 
@@ -182,9 +199,6 @@ impl ZenohActor {
 #[async_trait]
 impl ActorImpl for ZenohActor {
     async fn handle(&mut self, msg: &Arc<dyn std::any::Any + Send + Sync>) {
-        if msg.is::<LawnmowerManualCmd>() {
-            info!("ZenohActor received LawnmowerManualCmd");
-        } 
         if msg.is::<ActorStart>() {
             info!("ZenohActor received ActorStart");
             let _ = self.open_zenoh().await;
@@ -199,17 +213,16 @@ impl ActorImpl for ZenohActor {
         } else if msg.is::<LawnmowerManualCmd>() {
             let cmd = msg.downcast_ref::<LawnmowerManualCmd>().unwrap();
             let topic = format!("src/{}/ps4/LawnmowerManualCmd", self.hostname);
-            info!("ZenohActor publishing LawnmowerManualCmd to topic {}", topic);
             if let Some(session) = &self.zenoh_session {
                 bus_to_zenoh(session, &topic, cmd).await;
             } else {
                 error!("ZenohActor: no zenoh session to publish LawnmowerManualCmd");
             }
-        }else if msg.is::<Ps4Event>() {
+        } else if msg.is::<Ps4Event>() {
             let event = msg.downcast_ref::<Ps4Event>().unwrap();
             let topic = format!("src/{}/ps4/Ps4Event", self.hostname);
             if let Some(session) = &self.zenoh_session {
-               // bus_to_zenoh(session, &topic, event).await;
+                // bus_to_zenoh(session, &topic, event).await;
             } else {
                 error!("ZenohActor: no zenoh session to publish Ps4Event");
             }

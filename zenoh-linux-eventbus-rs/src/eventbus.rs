@@ -3,6 +3,9 @@ use basu::async_trait;
 use log::info;
 use std::{any::Any, sync::Arc};
 use std::future::Future;
+use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::mpsc::unbounded_channel;
 
 use crate::limero::LawnmowerManualCmd;
 use crate::limero::Ps4Event;
@@ -14,18 +17,15 @@ pub trait ActorImpl: Send {
 
 #[derive(Clone)]
 pub struct Bus {
-    sender: tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>>,
+    sender: UnboundedSender<Arc<dyn Any + Send + Sync>>,
 }
 
 impl Bus {
-    pub fn new(sender: tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>>) -> Self {
+    pub fn new(sender: UnboundedSender<Arc<dyn Any + Send + Sync>>) -> Self {
         Bus { sender }
     }
     pub fn emit<M: 'static + Any + Send + Sync>(&self, msg: M) {
         let m: Arc<dyn Any + Send + Sync> = Arc::new(msg);
-        if m.is::<LawnmowerManualCmd>() {
-            info!("Bus emitting LawnmowerManualCmd message");
-        }
         self.sender
             .send(m)
             .map_err(|e| info!("Send error {}", e))
@@ -42,15 +42,15 @@ pub struct EventbusStop {}
 pub struct ActorTick {}
 
 pub struct Eventbus {
-    sender: tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>>,
-    receiver: tokio::sync::mpsc::UnboundedReceiver<Arc<dyn Any + Send + Sync>>,
+    sender: UnboundedSender<Arc<dyn Any + Send + Sync>>,
+    receiver: UnboundedReceiver<Arc<dyn Any + Send + Sync>>,
     actors: Vec<Box<dyn ActorImpl>>,
 }
 
 impl Eventbus {
     pub fn new() -> Self {
         let (sender, receiver) =
-            tokio::sync::mpsc::unbounded_channel::<Arc<dyn Any + Send + Sync>>();
+            unbounded_channel::<Arc<dyn Any + Send + Sync>>();
         Eventbus {
             sender,
             receiver,
@@ -66,7 +66,7 @@ impl Eventbus {
         let _ = self.sender.send(Arc::new(msg));
     }
 
-    pub fn sender(&self) -> tokio::sync::mpsc::UnboundedSender<Arc<dyn Any + Send + Sync>> {
+    pub fn sender(&self) -> UnboundedSender<Arc<dyn Any + Send + Sync>> {
         self.sender.clone()
     }
 
@@ -100,9 +100,6 @@ impl Eventbus {
 
     async fn handle_all_actors(&mut self, msg: &Arc<dyn Any + Send + Sync>) -> Result<()> {
         for actor in &mut self.actors {
-            if msg.is::<LawnmowerManualCmd>() {
-                info!("Eventbus LawnmowerManualCmd message received");
-            }
             actor.handle(msg).await;
         }
         Ok(())

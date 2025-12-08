@@ -1,4 +1,5 @@
 use basu::async_trait;
+use basu::event;
 // src/main.rs
 use hidapi::{DeviceInfo, HidApi, HidDevice};
 use serde::{Deserialize, Serialize};
@@ -6,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 use zenoh_linux_eventbus_rs::eventbus::on_message;
-use zenoh_linux_eventbus_rs::limero::LawnmowerManualCmd;
+use crate::limero::LawnmowerManualCmd;
 
 use log::info;
 use log::warn;
@@ -47,9 +48,10 @@ impl MovingAverage {
 }
 
 struct Ps4EventHandler {
-     first_event_received: bool,
+    first_event_received: bool,
     last_cmd: Option<LawnmowerManualCmd>,
     last_event_time: std::time::Instant,
+    last_event: Option<Ps4Event>,
     interval: Duration,
     moving_average_steer: MovingAverage,
     moving_average_speed: MovingAverage,
@@ -61,24 +63,17 @@ impl Ps4EventHandler {
             first_event_received: false,
             last_cmd: None,
             last_event_time: Instant::now(),
-            interval: Duration::from_millis(1000),
+            last_event: None,
+            interval: Duration::from_millis(100),
             moving_average_steer: MovingAverage::new(10),
             moving_average_speed: MovingAverage::new(10),
         }
     }
 
-    fn map_range(
-        &self,
-        value: i8,
-        in_min: i8,
-        in_max: i8,
-        out_min: f32,
-        out_max: f32,
-    ) -> f32 {
+    fn map_range(&self, value: i8, in_min: i8, in_max: i8, out_min: f32, out_max: f32) -> f32 {
         (value as f32 - in_min as f32) * (out_max - out_min) / (in_max as f32 - in_min as f32)
             + out_min
     }
-    
 
     fn event_to_cmd(&self, event: &Ps4Event) -> LawnmowerManualCmd {
         let mut cmd = LawnmowerManualCmd::default();
@@ -89,6 +84,12 @@ impl Ps4EventHandler {
         cmd
     }
 
+    fn blade_changed(&self, cmd: &LawnmowerManualCmd) -> bool {
+        if let Some(cmd) = &self.last_cmd {
+            return self.last_cmd.as_ref().unwrap().blade != cmd.blade;  
+        }
+        false
+    }
     fn handle_event(&mut self, event: &Ps4Event) -> Option<LawnmowerManualCmd> {
         if !self.first_event_received {
             self.first_event_received = true;
@@ -103,17 +104,18 @@ impl Ps4EventHandler {
                 .add_value(cmd.speed.unwrap_or(0.0));
             // Here you would implement the logic to convert Ps4Event to LawnmowerManualCmd
 
-            if self.last_event_time.elapsed() < self.interval {
-                return None;
+            if self.last_event_time.elapsed() > self.interval || self.blade_changed(&cmd) {
+                let smoothed_cmd = LawnmowerManualCmd {
+                    steer: Some(self.moving_average_steer.average()),
+                    speed: Some(self.moving_average_speed.average()),
+                    blade: cmd.blade,
+                };
+                self.last_event_time = Instant::now();
+                self.last_cmd = Some(smoothed_cmd.clone());
+                Some(smoothed_cmd)
+            } else {
+                None
             }
-            let smoothed_cmd = LawnmowerManualCmd {
-                steer: Some(self.moving_average_steer.average()),
-                speed: Some(self.moving_average_speed.average()),
-                blade: cmd.blade,
-            };
-            self.last_event_time = Instant::now();
-            self.last_cmd = Some(smoothed_cmd.clone());
-            Some(smoothed_cmd)
         }
     }
 }
@@ -142,14 +144,16 @@ impl MapActor {
 impl ActorImpl for MapActor {
     async fn handle(&mut self, msg: &Arc<dyn std::any::Any + Send + Sync>) {
         if msg.is::<ActorStart>() {
+            info!("MapActor received ActorStart");
+            let actor_start = msg.downcast_ref::<ActorStart>().unwrap();
+            self.bus = actor_start.bus.clone();
             let _ = self.on_start();
         }
         if msg.is::<Ps4Event>() {
             let ps4_event = msg.downcast_ref::<Ps4Event>().unwrap();
             if let Some(cmd) = self.ps4_handler.handle_event(ps4_event) {
-                info!("MapActor emitting LawnmowerManualCmd: {:?}", cmd);
+                info!("MapActor emit : {:?}", cmd);
                 self.bus.emit(cmd);
-                info!("MapActor emitted LawnmowerManualCmd");
             }
         }
     }
