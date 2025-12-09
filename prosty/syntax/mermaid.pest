@@ -1,0 +1,121 @@
+WHITESPACE = _{ " " | "\t" }
+comment = {
+    "%%" ~ (!NEWLINE ~ ANY)*
+}
+note = {
+    "note" ~ quoted_text
+}
+quoted_text = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+variable_identifier = @{
+    (ASCII_ALPHA | "_") ~
+    ((("_"|"-") ~ &ASCII_ALPHANUMERIC)
+        | ASCII_ALPHANUMERIC
+    )*
+}
+
+method_identifier = @{
+    ASCII_ALPHA
+    ~
+    ((("_"|"-") ~ &ASCII_ALPHANUMERIC)
+    | ASCII_ALPHANUMERIC
+    )*
+}
+
+class_identifier = @{
+    ASCII_ALPHA
+    ~
+    ((("_"|"-") ~ &ASCII_ALPHANUMERIC)
+    | ASCII_ALPHANUMERIC
+    )*
+}
+
+class = { "class" ~ class_identifier }
+
+class_label = {
+    class ~ "[\"" ~ (!"\"" ~ ANY)* ~ "\"]"
+}
+class_property = {
+    class_identifier ~ ":" ~ visibility? ~ (
+        class_identifier ~ variable_identifier
+      | variable_identifier
+    )
+}
+
+class_method = {
+    class_identifier
+    ~ ":"
+    ~ visibility?
+    ~ method_identifier
+    ~ method_parameter
+}
+
+parameter        = { class_identifier ~ variable_identifier
+                   | variable_identifier }
+
+parameter_list   = { parameter ~ ("," ~ parameter)* }
+method_parameter = { "(" ~ parameter_list? ~ ")" }
+
+
+diagram = {
+   SOI
+   ~ "classDiagram"
+   ~ NEWLINE+
+   ~ statement
+   ~ EOI
+}
+
+statement = _{((class | relation_stmt | member_stmt | comment) ~ NEWLINE*)*}
+
+
+relation_stmt = {
+    class_identifier ~ relation ~ class_identifier
+}
+
+relation = _{ aggregation | composition | inheritance | realization | association | dependency | link }
+
+aggregation   = { "o--" | "--o" }
+composition   = { "*--" | "--*" }
+inheritance   = { "<|--" | "--|>" }
+realization   = { "<|.." | "..|>" }
+association   = { "-->" | "<--" }
+dependency    = { "..>" | "<.." }
+link          = { "--" }
+
+member_stmt       = { class_identifier ~ ":" ~ member_decl }
+member_decl       = { class_method_decl | class_property_decl }
+class_method_decl = { visibility? ~ classifier? ~ method_identifier ~ method_parameter ~ (":" ~ class_identifier)? }
+class_property_decl = { visibility? ~ classifier? ~ (class_identifier ~ variable_identifier | variable_identifier) }
+
+
+visibility = @{ public | private | protected | package }
+public     = _{ "+" }
+private    = _{ "-" }
+protected  = _{ "#" }
+package    = _{ "~" }
+
+
+classifier = _{abstract | static}
+abstract = { "*" }
+static = { "$" }
+
+
+// Tests
+
+test_class_explicit = {
+    SOI ~ class ~ EOI
+}
+test_class_labels = {
+    SOI ~ class_label ~ EOI
+}
+test_class_property = {
+    SOI ~ class_property ~ EOI
+}
+test_class_method = {
+    SOI ~ class_method ~ EOI
+}
+test_comment = {
+    SOI ~ comment ~ EOI
+}
+test_note = {
+    SOI ~ note ~ EOI
+}

@@ -1,0 +1,95 @@
+stateDiagram = { SOI ~ (config_directive | state_declaration | transition | note | fork_join | concurrency)* ~ EOI }
+
+// Config directives
+config_directive = { "---" ~ "config" ~ ":"? ~ (key_value_pair ~ (","? ~ key_value_pair)*)? ~ "---" }
+key_value_pair = { identifier ~ ":" ~ value }
+value = { string_literal | boolean | number | identifier }
+
+// State declarations
+state_declaration = { 
+    state_id ~ state_type? ~ state_name? ~ state_description? ~ state_body?
+}
+
+state_id = @{ identifier }
+state_type = { "[" ~ state_type_name ~ "]" }
+state_type_name = { "choice" | "fork" | "join" | "note" | "divider" }
+state_name = { ":" ~ string_content }
+state_description = { ":" ~ string_content }
+
+state_body = { "{" ~ (state_declaration | transition | note | internal_transition)* ~ "}" }
+
+// Transitions
+transition = {
+    (state_reference | "[" ~ "*" ~ "]") 
+    ~ transition_operator 
+    ~ (state_reference | "[" ~ "*" ~ "]")
+    ~ transition_label?
+    ~ transition_props?
+}
+
+transition_operator = { "-->"
+                     | "-->" ~ arrow_style? 
+                     | "-." ~ arrow_style? ~ "->"
+                     | "==" ~ ">"? 
+                     | "-" ~ transition_length ~ ">" }
+
+arrow_style = { "|" ~ (identifier | number) ~ "|" }
+transition_length = { "".repeat(1..) }  // Two or more dashes
+
+state_reference = { 
+    (state_path | state_id) 
+    ~ state_suffix?
+}
+
+state_path = { identifier ~ ("." ~ identifier)* }
+state_suffix = { "#" ~ ("entry" | "exit" | "do") }
+
+transition_label = { ":" ~ string_content }
+transition_props = { ":" ~ prop_pair ~ ("," ~ prop_pair)* }
+prop_pair = { prop_name ~ ":" ~ prop_value }
+prop_name = { identifier }
+prop_value = { string_literal | number | identifier }
+
+// Internal transitions (within a state)
+internal_transition = { 
+    "on" ~ string_content ~ ":" ~ transition_destination ~ transition_props?
+}
+
+// Notes
+note = { 
+    "note" ~ note_position? ~ "of" ~ state_reference 
+    ~ ":" ~ string_content
+}
+
+note_position = { "right" | "left" | "top" | "bottom" }
+
+// Fork and Join
+fork_join = { (state_reference | "state") ~ "||" ~ (state_reference | "state") }
+
+// Concurrency
+concurrency = { 
+    "--" ~ "state" ~ state_id ~ "as" ~ string_content ~ "{" 
+    ~ (state_declaration | transition)* 
+    ~ "}" 
+}
+
+// Divider
+divider = { "--" }
+
+// Basic tokens
+string_content = { (string_literal | bare_string)+ }
+string_literal = ${ "\"" ~ (quoted_char)* ~ "\"" | "'" ~ (quoted_char)* ~ "'" }
+bare_string = @{ (!whitespace ~ !(newline | "\"" | "'" | ":" | "}" | "-->" | "-." | "==") ~ ANY)+ }
+
+quoted_char = {
+    !("\"" | "'" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "'" | "\\" | "n" | "r" | "t")
+}
+
+identifier = @{ ASCII_ALPHANUMERIC+ }
+number = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+boolean = { "true" | "false" | "yes" | "no" }
+
+whitespace = _{ " " | "\t" }
+newline = _{ "\n" | "\r\n" }
+comment = _{ "%%" ~ (!"\n" ~ ANY)* }

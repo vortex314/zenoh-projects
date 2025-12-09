@@ -1,0 +1,58 @@
+stateDiagram = { 
+    SOI ~ 
+    ("stateDiagram" ~ ("-v2")? ~ newline)? ~
+    (element ~ newline?)* ~ 
+    EOI 
+}
+
+element = { 
+    state_declaration 
+    | transition 
+    | note 
+    | comment 
+    | config
+}
+
+config = { 
+    "---" ~ (!"---" ~ ANY)* ~ "---" ~ newline
+}
+
+state_declaration = { 
+    "state" ~ whitespace+ ~ identifier ~ ("as" ~ whitespace+ ~ string)? ~ 
+    ("{" ~ newline? ~ (element ~ newline?)* ~ "}")?
+}
+
+transition = { 
+    from_state ~ whitespace* ~ arrow ~ whitespace* ~ to_state ~ (":" ~ string_content)?
+}
+
+from_state = { "[" ~ "*" ~ "]" | identifier }
+to_state = { "[" ~ "*" ~ "]" | identifier }
+arrow = { "-->" | "-.->" | "==>" }
+
+note = { 
+    "note" ~ whitespace+ ~ ("right" | "left" | "top" | "bottom")? ~ 
+    whitespace+ ~ "of" ~ whitespace+ ~ identifier ~ ":" ~ string_content 
+}
+
+comment = _{ "%%" ~ (!newline ~ ANY)* ~ newline }
+
+string_content = ${ string_literal | bare_string }
+string_literal = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+bare_string = @{ (!whitespace ~ !(newline | ":" | "{" | "}") ~ ANY)+ }
+
+identifier = @{ 
+    ASCII_ALPHANUMERIC+          // Start with alphanumeric
+    ~ ( "_" | "-" | ASCII_ALPHANUMERIC )*  // Then any number of these
+}
+whitespace = _{ " " | "\t" }
+newline = _{ "\n" | "\r\n" | "\r" }
+
+// ADDED: string rule definition
+string = ${ quoted_string | unquoted_string }
+
+// ADDED: quoted string definition
+quoted_string = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+
+// ADDED: unquoted string definition  
+unquoted_string = @{ (!whitespace ~ !(newline | ":" | "{" | "}") ~ ANY)+ }
