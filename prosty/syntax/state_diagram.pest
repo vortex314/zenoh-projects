@@ -1,4 +1,5 @@
-stateDiagram = { SOI ~ (config_directive | state_declaration | transition | note | fork_join | concurrency)* ~ EOI }
+
+stateDiagram = { SOI ~"```mermaid" ~ NEWLINE ~ "stateDiagram-v2" ~ NEWLINE ~ (config_directive | state_declaration | transition | note | fork_join | concurrency)* ~ EOI }
 
 // Config directives
 config_directive = { "---" ~ "config" ~ ":"? ~ (key_value_pair ~ (","? ~ key_value_pair)*)? ~ "---" }
@@ -34,7 +35,7 @@ transition_operator = { "-->"
                      | "-" ~ transition_length ~ ">" }
 
 arrow_style = { "|" ~ (identifier | number) ~ "|" }
-transition_length = { "".repeat(1..) }  // Two or more dashes
+transition_length = { "-"+ }  // Two or more dashes
 
 state_reference = { 
     (state_path | state_id) 
@@ -49,6 +50,8 @@ transition_props = { ":" ~ prop_pair ~ ("," ~ prop_pair)* }
 prop_pair = { prop_name ~ ":" ~ prop_value }
 prop_name = { identifier }
 prop_value = { string_literal | number | identifier }
+
+transition_destination = { identifier }
 
 // Internal transitions (within a state)
 internal_transition = { 

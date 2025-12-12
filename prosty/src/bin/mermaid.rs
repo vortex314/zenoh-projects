@@ -1,3 +1,5 @@
+// https://docs.mermaidchart.com/mermaid-oss/syntax/stateDiagram.html
+
 
 mod parser;
 mod types;
@@ -5,6 +7,7 @@ use crate::parser::MermaidStateDiagram;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input = r#"
+```mermaid
 stateDiagram-v2
     [*] --> Still
     Still --> [*]
@@ -21,6 +24,7 @@ stateDiagram-v2
     }
     
     note right of Moving : This state\nhas internal transitions
+```
     "#;
     
     let diagram = MermaidStateDiagram::parse(input)?;
