@@ -52,7 +52,7 @@ class ZenohActor : public Actor
   int _prop_counter = 0;
 
 public:
-  ZenohActor(const char *name);
+  ZenohActor(const char *name,const char * device_name);
   ~ZenohActor();
   void run();
   void on_message(const Envelope &env);

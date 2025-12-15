@@ -41,5 +41,7 @@ public:
   void on_message(const Envelope &);
   void on_start();
   static void tftp_ota_server_task(void *arg);
+  void start_task();
+  void stop_task();
 
 };

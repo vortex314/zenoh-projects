@@ -12,6 +12,7 @@
 #include <zenoh_actor.h>
 #include <ota_actor.h>
 #include <mdns_actor.h>
+#include <hoverboard_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
@@ -23,51 +24,27 @@
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
 #define SRC_DEVICE "src/" DEVICE_NAME "/"
 
-WifiActor wifi_actor("wifi");
-ZenohActor zenoh_actor("zenoh");
-SysActor sys_actor("sys");
-LedActor led_actor("led");
-OtaActor ota_actor("ota");
-MdnsActor mdns_actor("mdns",DEVICE_NAME);
 EventBus eventbus(20);
 Log logger;
-esp_err_t nvs_init();
-
-#ifdef ENABLE_HOVERBOARD
-#include <hoverboard_actor.h>
-HoverboardActor hoverboard_actor("hb");
-void register_component()
-{
-  eventbus.register_actor(&hoverboard_actor);
-}
-#elif defined(ENABLE_PS4_CONTROLLER)
-#include <ps4_actor.h>
-Ps4Actor ps4_actor("ps4");
-void register_component()
-{
-  eventbus.register_actor(&ps4_actor);
-}
-#endif
+esp_err_t nvs_ota_init();
 
 extern "C" void app_main()
 {
 
-  ESP_ERROR_CHECK(nvs_init());
+  ESP_ERROR_CHECK(nvs_ota_init());
 
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
-  // start ota server
 
-  zenoh_actor.prefix(DEVICE_NAME);
-
-  eventbus.register_actor(&wifi_actor); // manage wifi connection
-  eventbus.register_actor(&sys_actor);  // manage the system
-  eventbus.register_actor(&zenoh_actor); // bridge the eventbus
-  eventbus.register_actor(&led_actor);   // blink the led
-  eventbus.register_actor(&ota_actor);   // ota via tftp
-  eventbus.register_actor(&mdns_actor);   // mdns service
-  register_component();
-
+  eventbus.register_actor(new WifiActor("wifi"));                // manage wifi connection
+  eventbus.register_actor(new SysActor("sys"));                  // manage the system
+  eventbus.register_actor(new ZenohActor("zenoh", DEVICE_NAME)); // bridge the eventbus
+  eventbus.register_actor(new LedActor("led"));                  // blink the led
+  eventbus.register_actor(new OtaActor("ota"));                  // ota via tftp
+  eventbus.register_actor(new MdnsActor("mdns", DEVICE_NAME));   // mdns service
+#ifdef ENABLE_HOVERBOARD
+  eventbus.register_actor(new HoverboardActor("hb")); // hoverboard interface
+#endif
 
   eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
@@ -78,7 +55,7 @@ extern "C" void app_main()
   eventbus.loop();
 }
 
-esp_err_t nvs_init()
+esp_err_t nvs_ota_init()
 {
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||

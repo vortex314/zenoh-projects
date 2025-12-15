@@ -11,9 +11,10 @@
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor(const char *name)
+ZenohActor::ZenohActor(const char *name,const char * device_name)
     : Actor(name)
 {
+  prefix(device_name);
   _timer_publish = timer_repetitive(5000); // timer for publishing properties
   z_put_options_default(&put_options);
   z_owned_encoding_t encoding;

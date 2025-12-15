@@ -3,6 +3,7 @@
 OtaActor::OtaActor(const char *name)
     : Actor(name)
 {
+    _ota_task_handle = nullptr;
 }
 
 OtaActor::~OtaActor()
@@ -17,33 +18,40 @@ void OtaActor::on_start()
 void OtaActor::on_message(const Envelope &envelope)
 {
     const Msg &msg = *envelope.msg;
-
-    msg.handle<WifiConnected>([&](const auto &msg)
-                              { 
-                                INFO("Starting OTA TFTP server...");
-                                if ( _ota_task_handle == nullptr )
-                                {
-                          BaseType_t rc = xTaskCreate(
-                            &OtaActor::tftp_ota_server_task, 
-                            "tftp_ota_server_task", 
-                            8192, 
-                            NULL, 
-                            5, 
-                            &_ota_task_handle); 
-                                if ( rc != pdPASS )
-                                {
-                                  ERROR("Failed to create OTA TFTP server task: %d", rc);
-                                } } });
-
-    msg.handle<WifiDisconnected>([&](const auto &msg)
-                                 { 
-                                    INFO("WiFi disconnected, stopping OTA TFTP server...");
-                                   if ( _ota_task_handle != NULL )
-                                   {
-                                     vTaskDelete( _ota_task_handle );
-                                     _ota_task_handle = NULL;
-                                   } });
+    msg.handle<WifiConnected>([&](const auto &msg){ start_task();});
+    msg.handle<WifiDisconnected>([&](const auto &msg) { stop_task(); });
 }
+
+void OtaActor::start_task()
+{
+    INFO("Starting OTA TFTP server task...");
+    if ( _ota_task_handle == nullptr )
+    {
+        BaseType_t rc = xTaskCreate(
+            &OtaActor::tftp_ota_server_task, 
+            "tftp_ota_server_task", 
+            8192, 
+            NULL, 
+            5, 
+            &_ota_task_handle); 
+        if ( rc != pdPASS )
+        {
+            ERROR("Failed to create OTA TFTP server task: %d", rc);
+        } 
+    }
+}
+
+void OtaActor::stop_task()
+{
+    INFO("Stopping OTA TFTP server task...");
+    if ( _ota_task_handle != nullptr )
+    {
+        vTaskDelete( _ota_task_handle );
+        _ota_task_handle = nullptr;
+    }
+}
+
+
 
 static void tftp_send_ack(int sock,
                           struct sockaddr_in *client,
