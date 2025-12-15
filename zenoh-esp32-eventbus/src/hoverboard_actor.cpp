@@ -179,16 +179,16 @@ Result<Bytes> HoverboardActor::check_crc(const Bytes &input)
     return Result<Bytes>::Ok(Bytes(input.begin(), input.end() - 2));
 }
 
-Result<HoverboardInfo *> HoverboardActor::parse_info_msg(const Bytes &input)
+Result<HoverboardEvent *> HoverboardActor::parse_info_msg(const Bytes &input)
 {
     // print hex buffer for debugging
-    /* INFO("Parsing HoverboardInfo message (%d bytes):", input.size());
+    /* INFO("Parsing HoverboardEvent message (%d bytes):", input.size());
      for (size_t i = 0; i < input.size(); i++)
      {
          printf("%02X ", input[i]);
      }
      printf("\n");*/
-    return HoverboardInfo::cbor_deserialize(input);
+    return HoverboardEvent::cbor_deserialize(input);
 }
 
 HoverboardActor::~HoverboardActor()
@@ -226,7 +226,7 @@ void HoverboardActor::handle_uart_bytes(const Bytes &data)
             (void)cobs_decode(uart_read_buffer)
                 .and_then(check_crc)
                 .and_then(parse_info_msg)
-                .and_then([&](HoverboardInfo *info)
+                .and_then([&](HoverboardEvent *info)
                           {
                             emit(info);
                             return Result<bool>::Ok(true); })

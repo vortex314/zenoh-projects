@@ -22,7 +22,7 @@ private:
     int _timer_publish = -1;
     int _timer_hb_alive = -1;
     int _prop_counter = 0;
-    uint16_t _speed=200;
+    uint16_t _speed=0;
     uint16_t _steer=0;
 
 public:
@@ -43,7 +43,7 @@ public:
     void handle_uart_bytes(const Bytes &);
     static Result<Bytes> cobs_decode(const Bytes &input);
     static Result<Bytes> check_crc(const Bytes &input);
-    static Result<HoverboardInfo*> parse_info_msg(const Bytes &input);
+    static Result<HoverboardEvent*> parse_info_msg(const Bytes &input);
 };
 
 #endif

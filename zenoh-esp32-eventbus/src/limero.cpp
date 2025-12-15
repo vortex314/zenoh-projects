@@ -61,7 +61,7 @@ Result<Bytes> Sample::json_serialize(const Sample& msg)  {
     }
 
 
-Result<Bytes> ZenohInfo::json_serialize(const ZenohInfo& msg)  {
+Result<Bytes> ZenohEvent::json_serialize(const ZenohEvent& msg)  {
         JsonDocument doc;
         if (msg.zid)doc["zid"] = *msg.zid;
         if (msg.what_am_i)doc["what_am_i"] = *msg.what_am_i;
@@ -85,13 +85,13 @@ Result<Bytes> ZenohInfo::json_serialize(const ZenohInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<ZenohInfo*> ZenohInfo::json_deserialize(const Bytes& bytes) {
+    Result<ZenohEvent*> ZenohEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        ZenohInfo* msg = new ZenohInfo();
+        ZenohEvent* msg = new ZenohEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<ZenohInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<ZenohEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["zid"].is<std::string>() )  
                         msg->zid = doc["zid"].as<std::string>();
@@ -117,11 +117,11 @@ Result<Bytes> ZenohInfo::json_serialize(const ZenohInfo& msg)  {
                         msg->connect = doc["connect"].as<std::string>();
         if (doc["listen"].is<std::string>() )  
                         msg->listen = doc["listen"].as<std::string>();
-        return Result<ZenohInfo*>::Ok(msg);
+        return Result<ZenohEvent*>::Ok(msg);
     }
 
 
-Result<Bytes> LogInfo::json_serialize(const LogInfo& msg)  {
+Result<Bytes> LogEvent::json_serialize(const LogEvent& msg)  {
         JsonDocument doc;
         if (msg.level)doc["level"] = *msg.level;
         if (msg.message)doc["message"] = *msg.message;
@@ -134,13 +134,13 @@ Result<Bytes> LogInfo::json_serialize(const LogInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<LogInfo*> LogInfo::json_deserialize(const Bytes& bytes) {
+    Result<LogEvent*> LogEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        LogInfo* msg = new LogInfo();
+        LogEvent* msg = new LogEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<LogInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<LogEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["level"].is<LogLevel>() )  
                         msg->level = doc["level"].as<LogLevel>();
@@ -154,7 +154,7 @@ Result<Bytes> LogInfo::json_serialize(const LogInfo& msg)  {
                         msg->line = doc["line"].as<int32_t>();
         if (doc["timestamp"].is<uint64_t>() )  
                         msg->timestamp = doc["timestamp"].as<uint64_t>();
-        return Result<LogInfo*>::Ok(msg);
+        return Result<LogEvent*>::Ok(msg);
     }
 
 
@@ -189,7 +189,7 @@ Result<Bytes> SysCmd::json_serialize(const SysCmd& msg)  {
     }
 
 
-Result<Bytes> SysInfo::json_serialize(const SysInfo& msg)  {
+Result<Bytes> SysEvent::json_serialize(const SysEvent& msg)  {
         JsonDocument doc;
         if (msg.utc)doc["utc"] = *msg.utc;
         if (msg.uptime)doc["uptime"] = *msg.uptime;
@@ -202,13 +202,13 @@ Result<Bytes> SysInfo::json_serialize(const SysInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<SysInfo*> SysInfo::json_deserialize(const Bytes& bytes) {
+    Result<SysEvent*> SysEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        SysInfo* msg = new SysInfo();
+        SysEvent* msg = new SysEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<SysInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<SysEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["utc"].is<uint64_t>() )  
                         msg->utc = doc["utc"].as<uint64_t>();
@@ -222,11 +222,11 @@ Result<Bytes> SysInfo::json_serialize(const SysInfo& msg)  {
                         msg->cpu_board = doc["cpu_board"].as<std::string>();
         if (doc["build_date"].is<std::string>() )  
                         msg->build_date = doc["build_date"].as<std::string>();
-        return Result<SysInfo*>::Ok(msg);
+        return Result<SysEvent*>::Ok(msg);
     }
 
 
-Result<Bytes> WifiInfo::json_serialize(const WifiInfo& msg)  {
+Result<Bytes> WifiEvent::json_serialize(const WifiEvent& msg)  {
         JsonDocument doc;
         if (msg.ssid)doc["ssid"] = *msg.ssid;
         if (msg.bssid)doc["bssid"] = *msg.bssid;
@@ -241,13 +241,13 @@ Result<Bytes> WifiInfo::json_serialize(const WifiInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<WifiInfo*> WifiInfo::json_deserialize(const Bytes& bytes) {
+    Result<WifiEvent*> WifiEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        WifiInfo* msg = new WifiInfo();
+        WifiEvent* msg = new WifiEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<WifiInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<WifiEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["ssid"].is<std::string>() )  
                         msg->ssid = doc["ssid"].as<std::string>();
@@ -265,11 +265,11 @@ Result<Bytes> WifiInfo::json_serialize(const WifiInfo& msg)  {
                         msg->gateway = doc["gateway"].as<std::string>();
         if (doc["netmask"].is<std::string>() )  
                         msg->netmask = doc["netmask"].as<std::string>();
-        return Result<WifiInfo*>::Ok(msg);
+        return Result<WifiEvent*>::Ok(msg);
     }
 
 
-Result<Bytes> MulticastInfo::json_serialize(const MulticastInfo& msg)  {
+Result<Bytes> MulticastEvent::json_serialize(const MulticastEvent& msg)  {
         JsonDocument doc;
         if (msg.group)doc["group"] = *msg.group;
         if (msg.port)doc["port"] = *msg.port;
@@ -279,13 +279,13 @@ Result<Bytes> MulticastInfo::json_serialize(const MulticastInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<MulticastInfo*> MulticastInfo::json_deserialize(const Bytes& bytes) {
+    Result<MulticastEvent*> MulticastEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        MulticastInfo* msg = new MulticastInfo();
+        MulticastEvent* msg = new MulticastEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<MulticastInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<MulticastEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["group"].is<std::string>() )  
                         msg->group = doc["group"].as<std::string>();
@@ -293,11 +293,11 @@ Result<Bytes> MulticastInfo::json_serialize(const MulticastInfo& msg)  {
                         msg->port = doc["port"].as<int32_t>();
         if (doc["mtu"].is<uint32_t>() )  
                         msg->mtu = doc["mtu"].as<uint32_t>();
-        return Result<MulticastInfo*>::Ok(msg);
+        return Result<MulticastEvent*>::Ok(msg);
     }
 
 
-Result<Bytes> HoverboardInfo::json_serialize(const HoverboardInfo& msg)  {
+Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
         JsonDocument doc;
         if (msg.ctrl_mod)doc["ctrl_mod"] = *msg.ctrl_mod;
         if (msg.ctrl_typ)doc["ctrl_typ"] = *msg.ctrl_typ;
@@ -350,13 +350,13 @@ Result<Bytes> HoverboardInfo::json_serialize(const HoverboardInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<HoverboardInfo*> HoverboardInfo::json_deserialize(const Bytes& bytes) {
+    Result<HoverboardEvent*> HoverboardEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        HoverboardInfo* msg = new HoverboardInfo();
+        HoverboardEvent* msg = new HoverboardEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<HoverboardInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<HoverboardEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["ctrl_mod"].is<CtrlMod>() )  
                         msg->ctrl_mod = doc["ctrl_mod"].as<CtrlMod>();
@@ -450,7 +450,7 @@ Result<Bytes> HoverboardInfo::json_serialize(const HoverboardInfo& msg)  {
                         msg->batv = doc["batv"].as<int32_t>();
         if (doc["temp"].is<int32_t>() )  
                         msg->temp = doc["temp"].as<int32_t>();
-        return Result<HoverboardInfo*>::Ok(msg);
+        return Result<HoverboardEvent*>::Ok(msg);
     }
 
 
@@ -479,7 +479,38 @@ Result<Bytes> HoverboardCmd::json_serialize(const HoverboardCmd& msg)  {
     }
 
 
-Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
+Result<Bytes> TouchPoint::json_serialize(const TouchPoint& msg)  {
+        JsonDocument doc;
+        if (msg.active)doc["active"] = *msg.active;
+        if (msg.id)doc["id"] = *msg.id;
+        if (msg.x)doc["x"] = *msg.x;
+        if (msg.y)doc["y"] = *msg.y;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<TouchPoint*> TouchPoint::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        TouchPoint* msg = new TouchPoint();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<TouchPoint*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["active"].is<bool>() )  
+                        msg->active = doc["active"].as<bool>();
+        if (doc["id"].is<int32_t>() )  
+                        msg->id = doc["id"].as<int32_t>();
+        if (doc["x"].is<int32_t>() )  
+                        msg->x = doc["x"].as<int32_t>();
+        if (doc["y"].is<int32_t>() )  
+                        msg->y = doc["y"].as<int32_t>();
+        return Result<TouchPoint*>::Ok(msg);
+    }
+
+
+Result<Bytes> Ps4Event::json_serialize(const Ps4Event& msg)  {
         JsonDocument doc;
         if (msg.button_left)doc["button_left"] = *msg.button_left;
         if (msg.button_right)doc["button_right"] = *msg.button_right;
@@ -489,13 +520,16 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
         if (msg.button_cross)doc["button_cross"] = *msg.button_cross;
         if (msg.button_circle)doc["button_circle"] = *msg.button_circle;
         if (msg.button_triangle)doc["button_triangle"] = *msg.button_triangle;
-        if (msg.button_left_sholder)doc["button_left_sholder"] = *msg.button_left_sholder;
-        if (msg.button_right_sholder)doc["button_right_sholder"] = *msg.button_right_sholder;
+        if (msg.button_left_shoulder)doc["button_left_shoulder"] = *msg.button_left_shoulder;
+        if (msg.button_right_shoulder)doc["button_right_shoulder"] = *msg.button_right_shoulder;
         if (msg.button_left_trigger)doc["button_left_trigger"] = *msg.button_left_trigger;
         if (msg.button_right_trigger)doc["button_right_trigger"] = *msg.button_right_trigger;
         if (msg.button_left_joystick)doc["button_left_joystick"] = *msg.button_left_joystick;
         if (msg.button_right_joystick)doc["button_right_joystick"] = *msg.button_right_joystick;
         if (msg.button_share)doc["button_share"] = *msg.button_share;
+        if (msg.button_options)doc["button_options"] = *msg.button_options;
+        if (msg.button_touchpad)doc["button_touchpad"] = *msg.button_touchpad;
+        if (msg.button_ps)doc["button_ps"] = *msg.button_ps;
         if (msg.axis_lx)doc["axis_lx"] = *msg.axis_lx;
         if (msg.axis_ly)doc["axis_ly"] = *msg.axis_ly;
         if (msg.axis_rx)doc["axis_rx"] = *msg.axis_rx;
@@ -507,18 +541,22 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
         if (msg.accel_y)doc["accel_y"] = *msg.accel_y;
         if (msg.accel_z)doc["accel_z"] = *msg.accel_z;
         if (msg.connected)doc["connected"] = *msg.connected;
+        if (msg.battery_level)doc["battery_level"] = *msg.battery_level;
+        if (msg.bluetooth)doc["bluetooth"] = *msg.bluetooth;
+        if (msg.debug)doc["debug"] = *msg.debug;
+        if (msg.temp)doc["temp"] = *msg.temp;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<Ps4Info*> Ps4Info::json_deserialize(const Bytes& bytes) {
+    Result<Ps4Event*> Ps4Event::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        Ps4Info* msg = new Ps4Info();
+        Ps4Event* msg = new Ps4Event();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<Ps4Info*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<Ps4Event*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["button_left"].is<bool>() )  
                         msg->button_left = doc["button_left"].as<bool>();
@@ -536,10 +574,10 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
                         msg->button_circle = doc["button_circle"].as<bool>();
         if (doc["button_triangle"].is<bool>() )  
                         msg->button_triangle = doc["button_triangle"].as<bool>();
-        if (doc["button_left_sholder"].is<bool>() )  
-                        msg->button_left_sholder = doc["button_left_sholder"].as<bool>();
-        if (doc["button_right_sholder"].is<bool>() )  
-                        msg->button_right_sholder = doc["button_right_sholder"].as<bool>();
+        if (doc["button_left_shoulder"].is<bool>() )  
+                        msg->button_left_shoulder = doc["button_left_shoulder"].as<bool>();
+        if (doc["button_right_shoulder"].is<bool>() )  
+                        msg->button_right_shoulder = doc["button_right_shoulder"].as<bool>();
         if (doc["button_left_trigger"].is<bool>() )  
                         msg->button_left_trigger = doc["button_left_trigger"].as<bool>();
         if (doc["button_right_trigger"].is<bool>() )  
@@ -550,6 +588,12 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
                         msg->button_right_joystick = doc["button_right_joystick"].as<bool>();
         if (doc["button_share"].is<bool>() )  
                         msg->button_share = doc["button_share"].as<bool>();
+        if (doc["button_options"].is<bool>() )  
+                        msg->button_options = doc["button_options"].as<bool>();
+        if (doc["button_touchpad"].is<bool>() )  
+                        msg->button_touchpad = doc["button_touchpad"].as<bool>();
+        if (doc["button_ps"].is<bool>() )  
+                        msg->button_ps = doc["button_ps"].as<bool>();
         if (doc["axis_lx"].is<int32_t>() )  
                         msg->axis_lx = doc["axis_lx"].as<int32_t>();
         if (doc["axis_ly"].is<int32_t>() )  
@@ -572,14 +616,27 @@ Result<Bytes> Ps4Info::json_serialize(const Ps4Info& msg)  {
                         msg->accel_z = doc["accel_z"].as<int32_t>();
         if (doc["connected"].is<bool>() )  
                         msg->connected = doc["connected"].as<bool>();
-        return Result<Ps4Info*>::Ok(msg);
+        if (doc["battery_level"].is<int32_t>() )  
+                        msg->battery_level = doc["battery_level"].as<int32_t>();
+        if (doc["bluetooth"].is<bool>() )  
+                        msg->bluetooth = doc["bluetooth"].as<bool>();
+        if (doc["debug"].is<std::string>() )  
+                        msg->debug = doc["debug"].as<std::string>();
+        if (doc["temp"].is<int32_t>() )  
+                        msg->temp = doc["temp"].as<int32_t>();
+        return Result<Ps4Event*>::Ok(msg);
     }
 
 
 Result<Bytes> Ps4Cmd::json_serialize(const Ps4Cmd& msg)  {
         JsonDocument doc;
-        if (msg.rumble)doc["rumble"] = *msg.rumble;
-        if (msg.led_rgb)doc["led_rgb"] = *msg.led_rgb;
+        if (msg.rumble_small)doc["rumble_small"] = *msg.rumble_small;
+        if (msg.rumble_large)doc["rumble_large"] = *msg.rumble_large;
+        if (msg.led_red)doc["led_red"] = *msg.led_red;
+        if (msg.led_green)doc["led_green"] = *msg.led_green;
+        if (msg.led_blue)doc["led_blue"] = *msg.led_blue;
+        if (msg.led_flash_on)doc["led_flash_on"] = *msg.led_flash_on;
+        if (msg.led_flash_off)doc["led_flash_off"] = *msg.led_flash_off;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
@@ -593,15 +650,25 @@ Result<Bytes> Ps4Cmd::json_serialize(const Ps4Cmd& msg)  {
             delete msg;
             return Result<Ps4Cmd*>::Err(-1,"Cannot deserialize as object") ;
         };        
-        if (doc["rumble"].is<int32_t>() )  
-                        msg->rumble = doc["rumble"].as<int32_t>();
-        if (doc["led_rgb"].is<int32_t>() )  
-                        msg->led_rgb = doc["led_rgb"].as<int32_t>();
+        if (doc["rumble_small"].is<int32_t>() )  
+                        msg->rumble_small = doc["rumble_small"].as<int32_t>();
+        if (doc["rumble_large"].is<int32_t>() )  
+                        msg->rumble_large = doc["rumble_large"].as<int32_t>();
+        if (doc["led_red"].is<int32_t>() )  
+                        msg->led_red = doc["led_red"].as<int32_t>();
+        if (doc["led_green"].is<int32_t>() )  
+                        msg->led_green = doc["led_green"].as<int32_t>();
+        if (doc["led_blue"].is<int32_t>() )  
+                        msg->led_blue = doc["led_blue"].as<int32_t>();
+        if (doc["led_flash_on"].is<int32_t>() )  
+                        msg->led_flash_on = doc["led_flash_on"].as<int32_t>();
+        if (doc["led_flash_off"].is<int32_t>() )  
+                        msg->led_flash_off = doc["led_flash_off"].as<int32_t>();
         return Result<Ps4Cmd*>::Ok(msg);
     }
 
 
-Result<Bytes> CameraInfo::json_serialize(const CameraInfo& msg)  {
+Result<Bytes> CameraEvent::json_serialize(const CameraEvent& msg)  {
         JsonDocument doc;
         if (msg.width)doc["width"] = *msg.width;
         if (msg.height)doc["height"] = *msg.height;
@@ -615,13 +682,13 @@ Result<Bytes> CameraInfo::json_serialize(const CameraInfo& msg)  {
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
     }
 
-    Result<CameraInfo*> CameraInfo::json_deserialize(const Bytes& bytes) {
+    Result<CameraEvent*> CameraEvent::json_deserialize(const Bytes& bytes) {
         JsonDocument doc;
-        CameraInfo* msg = new CameraInfo();
+        CameraEvent* msg = new CameraEvent();
         auto err = deserializeJson(doc,bytes);
         if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
             delete msg;
-            return Result<CameraInfo*>::Err(-1,"Cannot deserialize as object") ;
+            return Result<CameraEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
         if (doc["width"].is<int32_t>() )  
                         msg->width = doc["width"].as<int32_t>();
@@ -635,7 +702,7 @@ Result<Bytes> CameraInfo::json_serialize(const CameraInfo& msg)  {
                         msg->led = doc["led"].as<bool>();
         if (doc["quality"].is<int32_t>() )  
                         msg->quality = doc["quality"].as<int32_t>();
-        return Result<CameraInfo*>::Ok(msg);
+        return Result<CameraEvent*>::Ok(msg);
     }
 
 
@@ -661,6 +728,219 @@ Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
         if (doc["quality"].is<int32_t>() )  
                         msg->quality = doc["quality"].as<int32_t>();
         return Result<CameraCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerManualEvent::json_serialize(const LawnmowerManualEvent& msg)  {
+        JsonDocument doc;
+        if (msg.speed)doc["speed"] = *msg.speed;
+        if (msg.steering)doc["steering"] = *msg.steering;
+        if (msg.blade)doc["blade"] = *msg.blade;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerManualEvent*> LawnmowerManualEvent::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerManualEvent* msg = new LawnmowerManualEvent();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerManualEvent*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["speed"].is<int32_t>() )  
+                        msg->speed = doc["speed"].as<int32_t>();
+        if (doc["steering"].is<int32_t>() )  
+                        msg->steering = doc["steering"].as<int32_t>();
+        if (doc["blade"].is<bool>() )  
+                        msg->blade = doc["blade"].as<bool>();
+        return Result<LawnmowerManualEvent*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerManualCmd::json_serialize(const LawnmowerManualCmd& msg)  {
+        JsonDocument doc;
+        if (msg.speed)doc["speed"] = *msg.speed;
+        if (msg.steer)doc["steer"] = *msg.steer;
+        if (msg.blade)doc["blade"] = *msg.blade;
+        if (msg.start_manual_control)doc["start_manual_control"] = *msg.start_manual_control;
+        if (msg.stop_manual_control)doc["stop_manual_control"] = *msg.stop_manual_control;
+        if (msg.emergency_stop)doc["emergency_stop"] = *msg.emergency_stop;
+        if (msg.start_auto_mode)doc["start_auto_mode"] = *msg.start_auto_mode;
+        if (msg.stop_auto_mode)doc["stop_auto_mode"] = *msg.stop_auto_mode;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerManualCmd*> LawnmowerManualCmd::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerManualCmd* msg = new LawnmowerManualCmd();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerManualCmd*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["speed"].is<float>() )  
+                        msg->speed = doc["speed"].as<float>();
+        if (doc["steer"].is<float>() )  
+                        msg->steer = doc["steer"].as<float>();
+        if (doc["blade"].is<bool>() )  
+                        msg->blade = doc["blade"].as<bool>();
+        if (doc["start_manual_control"].is<bool>() )  
+                        msg->start_manual_control = doc["start_manual_control"].as<bool>();
+        if (doc["stop_manual_control"].is<bool>() )  
+                        msg->stop_manual_control = doc["stop_manual_control"].as<bool>();
+        if (doc["emergency_stop"].is<bool>() )  
+                        msg->emergency_stop = doc["emergency_stop"].as<bool>();
+        if (doc["start_auto_mode"].is<bool>() )  
+                        msg->start_auto_mode = doc["start_auto_mode"].as<bool>();
+        if (doc["stop_auto_mode"].is<bool>() )  
+                        msg->stop_auto_mode = doc["stop_auto_mode"].as<bool>();
+        return Result<LawnmowerManualCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerAutoEvent::json_serialize(const LawnmowerAutoEvent& msg)  {
+        JsonDocument doc;
+        if (msg.started)doc["started"] = *msg.started;
+        if (msg.stopped)doc["stopped"] = *msg.stopped;
+        if (msg.paused)doc["paused"] = *msg.paused;
+        if (msg.resumed)doc["resumed"] = *msg.resumed;
+        if (msg.mode)doc["mode"] = *msg.mode;
+        if (msg.path)doc["path"] = *msg.path;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerAutoEvent*> LawnmowerAutoEvent::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerAutoEvent* msg = new LawnmowerAutoEvent();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerAutoEvent*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["started"].is<bool>() )  
+                        msg->started = doc["started"].as<bool>();
+        if (doc["stopped"].is<bool>() )  
+                        msg->stopped = doc["stopped"].as<bool>();
+        if (doc["paused"].is<bool>() )  
+                        msg->paused = doc["paused"].as<bool>();
+        if (doc["resumed"].is<bool>() )  
+                        msg->resumed = doc["resumed"].as<bool>();
+        if (doc["mode"].is<std::string>() )  
+                        msg->mode = doc["mode"].as<std::string>();
+        if (doc["path"].is<std::string>() )  
+                        msg->path = doc["path"].as<std::string>();
+        return Result<LawnmowerAutoEvent*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerAutoCmd::json_serialize(const LawnmowerAutoCmd& msg)  {
+        JsonDocument doc;
+        if (msg.start)doc["start"] = *msg.start;
+        if (msg.stop)doc["stop"] = *msg.stop;
+        if (msg.pause)doc["pause"] = *msg.pause;
+        if (msg.resume)doc["resume"] = *msg.resume;
+        if (msg.mode)doc["mode"] = *msg.mode;
+        if (msg.path)doc["path"] = *msg.path;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerAutoCmd*> LawnmowerAutoCmd::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerAutoCmd* msg = new LawnmowerAutoCmd();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerAutoCmd*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["start"].is<bool>() )  
+                        msg->start = doc["start"].as<bool>();
+        if (doc["stop"].is<bool>() )  
+                        msg->stop = doc["stop"].as<bool>();
+        if (doc["pause"].is<bool>() )  
+                        msg->pause = doc["pause"].as<bool>();
+        if (doc["resume"].is<bool>() )  
+                        msg->resume = doc["resume"].as<bool>();
+        if (doc["mode"].is<std::string>() )  
+                        msg->mode = doc["mode"].as<std::string>();
+        if (doc["path"].is<std::string>() )  
+                        msg->path = doc["path"].as<std::string>();
+        return Result<LawnmowerAutoCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerStatus::json_serialize(const LawnmowerStatus& msg)  {
+        JsonDocument doc;
+        if (msg.battery_level)doc["battery_level"] = *msg.battery_level;
+        if (msg.blade_status)doc["blade_status"] = *msg.blade_status;
+        if (msg.current_mode)doc["current_mode"] = *msg.current_mode;
+        if (msg.error_message)doc["error_message"] = *msg.error_message;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerStatus*> LawnmowerStatus::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerStatus* msg = new LawnmowerStatus();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerStatus*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["battery_level"].is<int32_t>() )  
+                        msg->battery_level = doc["battery_level"].as<int32_t>();
+        if (doc["blade_status"].is<bool>() )  
+                        msg->blade_status = doc["blade_status"].as<bool>();
+        if (doc["current_mode"].is<std::string>() )  
+                        msg->current_mode = doc["current_mode"].as<std::string>();
+        if (doc["error_message"].is<std::string>() )  
+                        msg->error_message = doc["error_message"].as<std::string>();
+        return Result<LawnmowerStatus*>::Ok(msg);
+    }
+
+
+Result<Bytes> MotorEvent::json_serialize(const MotorEvent& msg)  {
+        JsonDocument doc;
+        if (msg.motor_id)doc["motor_id"] = *msg.motor_id;
+        if (msg.temperature)doc["temperature"] = *msg.temperature;
+        if (msg.voltage)doc["voltage"] = *msg.voltage;
+        if (msg.current)doc["current"] = *msg.current;
+        if (msg.speed)doc["speed"] = *msg.speed;
+        if (msg.position)doc["position"] = *msg.position;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<MotorEvent*> MotorEvent::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        MotorEvent* msg = new MotorEvent();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<MotorEvent*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["motor_id"].is<int32_t>() )  
+                        msg->motor_id = doc["motor_id"].as<int32_t>();
+        if (doc["temperature"].is<float>() )  
+                        msg->temperature = doc["temperature"].as<float>();
+        if (doc["voltage"].is<float>() )  
+                        msg->voltage = doc["voltage"].as<float>();
+        if (doc["current"].is<float>() )  
+                        msg->current = doc["current"].as<float>();
+        if (doc["speed"].is<float>() )  
+                        msg->speed = doc["speed"].as<float>();
+        if (doc["position"].is<float>() )  
+                        msg->position = doc["position"].as<float>();
+        return Result<MotorEvent*>::Ok(msg);
     }
 
 
@@ -847,7 +1127,7 @@ Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
     return Result<Sample*>::Ok(msg);
 }
 
-Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
+Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -857,16 +1137,16 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.zid) {
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::ZID_INDEX);
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::ZID_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.zid.value().c_str());
             }
     if (msg.what_am_i) {
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::WHAT_AM_I_INDEX);
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::WHAT_AM_I_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.what_am_i.value().c_str());
             }
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::PEERS_INDEX );
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::PEERS_INDEX );
             cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.peers.size());
             for (const auto & item : msg.peers) {
                 cbor_encode_text_stringz(&arrayEncoder, item.c_str());
@@ -874,12 +1154,12 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
             cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
             }
     if (msg.prefix) {
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::PREFIX_INDEX);
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::PREFIX_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.prefix.value().c_str());
             }
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::ROUTERS_INDEX );
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::ROUTERS_INDEX );
             cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.routers.size());
             for (const auto & item : msg.routers) {
                 cbor_encode_text_stringz(&arrayEncoder, item.c_str());
@@ -887,11 +1167,11 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
             cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
             }
     if (msg.connect) {
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::CONNECT_INDEX);
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::CONNECT_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.connect.value().c_str());
             }
     if (msg.listen) {
-            cbor_encode_int(&mapEncoder, ZenohInfo::Field::LISTEN_INDEX);
+            cbor_encode_int(&mapEncoder, ZenohEvent::Field::LISTEN_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.listen.value().c_str());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -900,21 +1180,21 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<ZenohInfo*> ZenohInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<ZenohEvent*> ZenohEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    ZenohInfo* msg = new ZenohInfo();
+    ZenohEvent* msg = new ZenohEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<ZenohInfo*>::Err(-1,"CBOR parse error");
+        return Result<ZenohEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<ZenohInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<ZenohEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -922,7 +1202,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<ZenohInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<ZenohEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -935,11 +1215,11 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<ZenohInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<ZenohEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case ZenohInfo::Field::ZID_INDEX:{{
+            case ZenohEvent::Field::ZID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -952,7 +1232,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::WHAT_AM_I_INDEX:{{
+            case ZenohEvent::Field::WHAT_AM_I_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -965,7 +1245,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::PEERS_INDEX:{CborValue tmp;
+            case ZenohEvent::Field::PEERS_INDEX:{CborValue tmp;
                 cbor_value_enter_container(&mapIt,&tmp);
                 while (!cbor_value_at_end(&tmp)) {
                     std::string v;
@@ -985,7 +1265,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::PREFIX_INDEX:{{
+            case ZenohEvent::Field::PREFIX_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -998,7 +1278,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::ROUTERS_INDEX:{CborValue tmp;
+            case ZenohEvent::Field::ROUTERS_INDEX:{CborValue tmp;
                 cbor_value_enter_container(&mapIt,&tmp);
                 while (!cbor_value_at_end(&tmp)) {
                     std::string v;
@@ -1018,7 +1298,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::CONNECT_INDEX:{{
+            case ZenohEvent::Field::CONNECT_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1031,7 +1311,7 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
                 break;
             }
             
-            case ZenohInfo::Field::LISTEN_INDEX:{{
+            case ZenohEvent::Field::LISTEN_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1055,10 +1335,10 @@ Result<Bytes> ZenohInfo::cbor_serialize(const ZenohInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<ZenohInfo*>::Ok(msg);
+    return Result<ZenohEvent*>::Ok(msg);
 }
 
-Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
+Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -1068,27 +1348,27 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.level) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::LEVEL_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::LEVEL_INDEX);
             cbor_encode_int(&mapEncoder, msg.level.value());
             }
     if (msg.message) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::MESSAGE_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::MESSAGE_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
             }
     if (msg.error_code) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::ERROR_CODE_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::ERROR_CODE_INDEX);
             cbor_encode_int(&mapEncoder, msg.error_code.value());
             }
     if (msg.file) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::FILE_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::FILE_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.file.value().c_str());
             }
     if (msg.line) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::LINE_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::LINE_INDEX);
             cbor_encode_int(&mapEncoder, msg.line.value());
             }
     if (msg.timestamp) {
-            cbor_encode_int(&mapEncoder, LogInfo::Field::TIMESTAMP_INDEX);
+            cbor_encode_int(&mapEncoder, LogEvent::Field::TIMESTAMP_INDEX);
             cbor_encode_int(&mapEncoder, msg.timestamp.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -1097,21 +1377,21 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<LogInfo*> LogInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<LogEvent*> LogEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    LogInfo* msg = new LogInfo();
+    LogEvent* msg = new LogEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<LogInfo*>::Err(-1,"CBOR parse error");
+        return Result<LogEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<LogInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<LogEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -1119,7 +1399,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<LogInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<LogEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -1132,11 +1412,11 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<LogInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<LogEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case LogInfo::Field::LEVEL_INDEX:{{
+            case LogEvent::Field::LEVEL_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->level = static_cast<LogLevel>(v);
@@ -1146,7 +1426,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
                 break;
             }
             
-            case LogInfo::Field::MESSAGE_INDEX:{{
+            case LogEvent::Field::MESSAGE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1159,7 +1439,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
                 break;
             }
             
-            case LogInfo::Field::ERROR_CODE_INDEX:{int64_t v;
+            case LogEvent::Field::ERROR_CODE_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->error_code = v;
     cbor_value_advance(&mapIt);
@@ -1167,7 +1447,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
                 break;
             }
             
-            case LogInfo::Field::FILE_INDEX:{{
+            case LogEvent::Field::FILE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1180,7 +1460,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
                 break;
             }
             
-            case LogInfo::Field::LINE_INDEX:{int64_t v;
+            case LogEvent::Field::LINE_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->line = v;
     cbor_value_advance(&mapIt);
@@ -1188,7 +1468,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
                 break;
             }
             
-            case LogInfo::Field::TIMESTAMP_INDEX:{uint64_t v;
+            case LogEvent::Field::TIMESTAMP_INDEX:{uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
     msg->timestamp = v;  // Assigning the value to target
     cbor_value_advance(&mapIt);
@@ -1207,7 +1487,7 @@ Result<Bytes> LogInfo::cbor_serialize(const LogInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<LogInfo*>::Ok(msg);
+    return Result<LogEvent*>::Ok(msg);
 }
 
 Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
@@ -1335,7 +1615,7 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
     return Result<SysCmd*>::Ok(msg);
 }
 
-Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
+Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -1345,27 +1625,27 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.utc) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::UTC_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::UTC_INDEX);
             cbor_encode_int(&mapEncoder, msg.utc.value());
             }
     if (msg.uptime) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::UPTIME_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::UPTIME_INDEX);
             cbor_encode_int(&mapEncoder, msg.uptime.value());
             }
     if (msg.free_heap) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::FREE_HEAP_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::FREE_HEAP_INDEX);
             cbor_encode_int(&mapEncoder, msg.free_heap.value());
             }
     if (msg.flash) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::FLASH_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::FLASH_INDEX);
             cbor_encode_int(&mapEncoder, msg.flash.value());
             }
     if (msg.cpu_board) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::CPU_BOARD_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::CPU_BOARD_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.cpu_board.value().c_str());
             }
     if (msg.build_date) {
-            cbor_encode_int(&mapEncoder, SysInfo::Field::BUILD_DATE_INDEX);
+            cbor_encode_int(&mapEncoder, SysEvent::Field::BUILD_DATE_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.build_date.value().c_str());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -1374,21 +1654,21 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<SysInfo*> SysInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<SysEvent*> SysEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    SysInfo* msg = new SysInfo();
+    SysEvent* msg = new SysEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<SysInfo*>::Err(-1,"CBOR parse error");
+        return Result<SysEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<SysInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<SysEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -1396,7 +1676,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<SysInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<SysEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -1409,11 +1689,11 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<SysInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<SysEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case SysInfo::Field::UTC_INDEX:{uint64_t v;
+            case SysEvent::Field::UTC_INDEX:{uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
     msg->utc = v;  // Assigning the value to target
     cbor_value_advance(&mapIt);
@@ -1421,7 +1701,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
                 break;
             }
             
-            case SysInfo::Field::UPTIME_INDEX:{uint64_t v;
+            case SysEvent::Field::UPTIME_INDEX:{uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
     msg->uptime = v;  // Assigning the value to target
     cbor_value_advance(&mapIt);
@@ -1429,7 +1709,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
                 break;
             }
             
-            case SysInfo::Field::FREE_HEAP_INDEX:{uint64_t v;
+            case SysEvent::Field::FREE_HEAP_INDEX:{uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
     msg->free_heap = v;  // Assigning the value to target
     cbor_value_advance(&mapIt);
@@ -1437,7 +1717,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
                 break;
             }
             
-            case SysInfo::Field::FLASH_INDEX:{uint64_t v;
+            case SysEvent::Field::FLASH_INDEX:{uint64_t v;
     cbor_value_get_uint64(&mapIt, &v);
     msg->flash = v;  // Assigning the value to target
     cbor_value_advance(&mapIt);
@@ -1445,7 +1725,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
                 break;
             }
             
-            case SysInfo::Field::CPU_BOARD_INDEX:{{
+            case SysEvent::Field::CPU_BOARD_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1458,7 +1738,7 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
                 break;
             }
             
-            case SysInfo::Field::BUILD_DATE_INDEX:{{
+            case SysEvent::Field::BUILD_DATE_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1482,10 +1762,10 @@ Result<Bytes> SysInfo::cbor_serialize(const SysInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<SysInfo*>::Ok(msg);
+    return Result<SysEvent*>::Ok(msg);
 }
 
-Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
+Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -1495,35 +1775,35 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.ssid) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::SSID_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::SSID_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.ssid.value().c_str());
             }
     if (msg.bssid) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::BSSID_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::BSSID_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.bssid.value().c_str());
             }
     if (msg.rssi) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::RSSI_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::RSSI_INDEX);
             cbor_encode_int(&mapEncoder, msg.rssi.value());
             }
     if (msg.ip) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::IP_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::IP_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.ip.value().c_str());
             }
     if (msg.mac) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::MAC_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::MAC_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.mac.value().c_str());
             }
     if (msg.channel) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::CHANNEL_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::CHANNEL_INDEX);
             cbor_encode_int(&mapEncoder, msg.channel.value());
             }
     if (msg.gateway) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::GATEWAY_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::GATEWAY_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.gateway.value().c_str());
             }
     if (msg.netmask) {
-            cbor_encode_int(&mapEncoder, WifiInfo::Field::NETMASK_INDEX);
+            cbor_encode_int(&mapEncoder, WifiEvent::Field::NETMASK_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.netmask.value().c_str());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -1532,21 +1812,21 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<WifiInfo*> WifiInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<WifiEvent*> WifiEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    WifiInfo* msg = new WifiInfo();
+    WifiEvent* msg = new WifiEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<WifiInfo*>::Err(-1,"CBOR parse error");
+        return Result<WifiEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<WifiInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<WifiEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -1554,7 +1834,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<WifiInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<WifiEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -1567,11 +1847,11 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<WifiInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<WifiEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case WifiInfo::Field::SSID_INDEX:{{
+            case WifiEvent::Field::SSID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1584,7 +1864,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::BSSID_INDEX:{{
+            case WifiEvent::Field::BSSID_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1597,7 +1877,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::RSSI_INDEX:{int64_t v;
+            case WifiEvent::Field::RSSI_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->rssi = v;
     cbor_value_advance(&mapIt);
@@ -1605,7 +1885,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::IP_INDEX:{{
+            case WifiEvent::Field::IP_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1618,7 +1898,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::MAC_INDEX:{{
+            case WifiEvent::Field::MAC_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1631,7 +1911,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::CHANNEL_INDEX:{int64_t v;
+            case WifiEvent::Field::CHANNEL_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->channel = v;
     cbor_value_advance(&mapIt);
@@ -1639,7 +1919,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::GATEWAY_INDEX:{{
+            case WifiEvent::Field::GATEWAY_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1652,7 +1932,7 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
                 break;
             }
             
-            case WifiInfo::Field::NETMASK_INDEX:{{
+            case WifiEvent::Field::NETMASK_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1676,10 +1956,10 @@ Result<Bytes> WifiInfo::cbor_serialize(const WifiInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<WifiInfo*>::Ok(msg);
+    return Result<WifiEvent*>::Ok(msg);
 }
 
-Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
+Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -1689,15 +1969,15 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.group) {
-            cbor_encode_int(&mapEncoder, MulticastInfo::Field::GROUP_INDEX);
+            cbor_encode_int(&mapEncoder, MulticastEvent::Field::GROUP_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.group.value().c_str());
             }
     if (msg.port) {
-            cbor_encode_int(&mapEncoder, MulticastInfo::Field::PORT_INDEX);
+            cbor_encode_int(&mapEncoder, MulticastEvent::Field::PORT_INDEX);
             cbor_encode_int(&mapEncoder, msg.port.value());
             }
     if (msg.mtu) {
-            cbor_encode_int(&mapEncoder, MulticastInfo::Field::MTU_INDEX);
+            cbor_encode_int(&mapEncoder, MulticastEvent::Field::MTU_INDEX);
             cbor_encode_int(&mapEncoder, msg.mtu.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -1706,21 +1986,21 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<MulticastInfo*> MulticastInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<MulticastEvent*> MulticastEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    MulticastInfo* msg = new MulticastInfo();
+    MulticastEvent* msg = new MulticastEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<MulticastInfo*>::Err(-1,"CBOR parse error");
+        return Result<MulticastEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<MulticastInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<MulticastEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -1728,7 +2008,7 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<MulticastInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<MulticastEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -1741,11 +2021,11 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<MulticastInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<MulticastEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case MulticastInfo::Field::GROUP_INDEX:{{
+            case MulticastEvent::Field::GROUP_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -1758,7 +2038,7 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
                 break;
             }
             
-            case MulticastInfo::Field::PORT_INDEX:{int64_t v;
+            case MulticastEvent::Field::PORT_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->port = v;
     cbor_value_advance(&mapIt);
@@ -1766,7 +2046,7 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
                 break;
             }
             
-            case MulticastInfo::Field::MTU_INDEX:{{
+            case MulticastEvent::Field::MTU_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &(v));
     msg->mtu = v;
@@ -1787,10 +2067,10 @@ Result<Bytes> MulticastInfo::cbor_serialize(const MulticastInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<MulticastInfo*>::Ok(msg);
+    return Result<MulticastEvent*>::Ok(msg);
 }
 
-Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
+Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -1800,187 +2080,187 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.ctrl_mod) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::CTRL_MOD_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_MOD_INDEX);
             cbor_encode_int(&mapEncoder, msg.ctrl_mod.value());
             }
     if (msg.ctrl_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::CTRL_TYP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_TYP_INDEX);
             cbor_encode_int(&mapEncoder, msg.ctrl_typ.value());
             }
     if (msg.cur_mot_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::CUR_MOT_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CUR_MOT_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.cur_mot_max.value());
             }
     if (msg.rpm_mot_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::RPM_MOT_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RPM_MOT_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.rpm_mot_max.value());
             }
     if (msg.fi_weak_ena) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::FI_WEAK_ENA_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_ENA_INDEX);
             cbor_encode_int(&mapEncoder, msg.fi_weak_ena.value());
             }
     if (msg.fi_weak_hi) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::FI_WEAK_HI_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_HI_INDEX);
             cbor_encode_int(&mapEncoder, msg.fi_weak_hi.value());
             }
     if (msg.fi_weak_lo) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::FI_WEAK_LO_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_LO_INDEX);
             cbor_encode_int(&mapEncoder, msg.fi_weak_lo.value());
             }
     if (msg.fi_weak_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::FI_WEAK_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.fi_weak_max.value());
             }
     if (msg.phase_adv_max_deg) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::PHASE_ADV_MAX_DEG_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::PHASE_ADV_MAX_DEG_INDEX);
             cbor_encode_int(&mapEncoder, msg.phase_adv_max_deg.value());
             }
     if (msg.input1_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_RAW_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_RAW_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_raw.value());
             }
     if (msg.input1_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_TYP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_TYP_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_typ.value());
             }
     if (msg.input1_min) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_MIN_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MIN_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_min.value());
             }
     if (msg.input1_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_MID_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MID_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_mid.value());
             }
     if (msg.input1_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_max.value());
             }
     if (msg.input1_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT1_CMD_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_CMD_INDEX);
             cbor_encode_int(&mapEncoder, msg.input1_cmd.value());
             }
     if (msg.input2_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_RAW_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_RAW_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_raw.value());
             }
     if (msg.input2_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_TYP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_TYP_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_typ.value());
             }
     if (msg.input2_min) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_MIN_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MIN_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_min.value());
             }
     if (msg.input2_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_MID_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MID_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_mid.value());
             }
     if (msg.input2_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_max.value());
             }
     if (msg.input2_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::INPUT2_CMD_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_CMD_INDEX);
             cbor_encode_int(&mapEncoder, msg.input2_cmd.value());
             }
     if (msg.aux_input1_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_RAW_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_RAW_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_raw.value());
             }
     if (msg.aux_input1_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_TYP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_typ.value());
             }
     if (msg.aux_input1_min) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_MIN_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MIN_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_min.value());
             }
     if (msg.aux_input1_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_MID_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MID_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_mid.value());
             }
     if (msg.aux_input1_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_max.value());
             }
     if (msg.aux_input1_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT1_CMD_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_CMD_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input1_cmd.value());
             }
     if (msg.aux_input2_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_RAW_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_RAW_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_raw.value());
             }
     if (msg.aux_input2_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_TYP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_typ.value());
             }
     if (msg.aux_input2_min) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_MIN_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MIN_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_min.value());
             }
     if (msg.aux_input2_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_MID_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MID_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_mid.value());
             }
     if (msg.aux_input2_max) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_MAX_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MAX_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_max.value());
             }
     if (msg.aux_input2_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::AUX_INPUT2_CMD_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_CMD_INDEX);
             cbor_encode_int(&mapEncoder, msg.aux_input2_cmd.value());
             }
     if (msg.dc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::DC_CURR_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::DC_CURR_INDEX);
             cbor_encode_int(&mapEncoder, msg.dc_curr.value());
             }
     if (msg.rdc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::RDC_CURR_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RDC_CURR_INDEX);
             cbor_encode_int(&mapEncoder, msg.rdc_curr.value());
             }
     if (msg.ldc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::LDC_CURR_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::LDC_CURR_INDEX);
             cbor_encode_int(&mapEncoder, msg.ldc_curr.value());
             }
     if (msg.cmdl) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::CMDL_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDL_INDEX);
             cbor_encode_int(&mapEncoder, msg.cmdl.value());
             }
     if (msg.cmdr) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::CMDR_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDR_INDEX);
             cbor_encode_int(&mapEncoder, msg.cmdr.value());
             }
     if (msg.spd_avg) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::SPD_AVG_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_AVG_INDEX);
             cbor_encode_int(&mapEncoder, msg.spd_avg.value());
             }
     if (msg.spdl) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::SPDL_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDL_INDEX);
             cbor_encode_int(&mapEncoder, msg.spdl.value());
             }
     if (msg.spdr) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::SPDR_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDR_INDEX);
             cbor_encode_int(&mapEncoder, msg.spdr.value());
             }
     if (msg.filter_rate) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::FILTER_RATE_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FILTER_RATE_INDEX);
             cbor_encode_int(&mapEncoder, msg.filter_rate.value());
             }
     if (msg.spd_coef) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::SPD_COEF_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_COEF_INDEX);
             cbor_encode_int(&mapEncoder, msg.spd_coef.value());
             }
     if (msg.str_coef) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::STR_COEF_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::STR_COEF_INDEX);
             cbor_encode_int(&mapEncoder, msg.str_coef.value());
             }
     if (msg.batv) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::BATV_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::BATV_INDEX);
             cbor_encode_int(&mapEncoder, msg.batv.value());
             }
     if (msg.temp) {
-            cbor_encode_int(&mapEncoder, HoverboardInfo::Field::TEMP_INDEX);
+            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::TEMP_INDEX);
             cbor_encode_int(&mapEncoder, msg.temp.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -1989,21 +2269,21 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<HoverboardInfo*> HoverboardInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<HoverboardEvent*> HoverboardEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    HoverboardInfo* msg = new HoverboardInfo();
+    HoverboardEvent* msg = new HoverboardEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<HoverboardInfo*>::Err(-1,"CBOR parse error");
+        return Result<HoverboardEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<HoverboardInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<HoverboardEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -2011,7 +2291,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<HoverboardInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<HoverboardEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -2024,11 +2304,11 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<HoverboardInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<HoverboardEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case HoverboardInfo::Field::CTRL_MOD_INDEX:{{
+            case HoverboardEvent::Field::CTRL_MOD_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->ctrl_mod = static_cast<CtrlMod>(v);
@@ -2038,7 +2318,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::CTRL_TYP_INDEX:{{
+            case HoverboardEvent::Field::CTRL_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->ctrl_typ = static_cast<CtrlTyp>(v);
@@ -2048,7 +2328,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::CUR_MOT_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::CUR_MOT_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->cur_mot_max = v;
     cbor_value_advance(&mapIt);
@@ -2056,7 +2336,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::RPM_MOT_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::RPM_MOT_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->rpm_mot_max = v;
     cbor_value_advance(&mapIt);
@@ -2064,7 +2344,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::FI_WEAK_ENA_INDEX:{int64_t v;
+            case HoverboardEvent::Field::FI_WEAK_ENA_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->fi_weak_ena = v;
     cbor_value_advance(&mapIt);
@@ -2072,7 +2352,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::FI_WEAK_HI_INDEX:{int64_t v;
+            case HoverboardEvent::Field::FI_WEAK_HI_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->fi_weak_hi = v;
     cbor_value_advance(&mapIt);
@@ -2080,7 +2360,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::FI_WEAK_LO_INDEX:{int64_t v;
+            case HoverboardEvent::Field::FI_WEAK_LO_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->fi_weak_lo = v;
     cbor_value_advance(&mapIt);
@@ -2088,7 +2368,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::FI_WEAK_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::FI_WEAK_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->fi_weak_max = v;
     cbor_value_advance(&mapIt);
@@ -2096,7 +2376,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::PHASE_ADV_MAX_DEG_INDEX:{int64_t v;
+            case HoverboardEvent::Field::PHASE_ADV_MAX_DEG_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->phase_adv_max_deg = v;
     cbor_value_advance(&mapIt);
@@ -2104,7 +2384,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_RAW_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT1_RAW_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input1_raw = v;
     cbor_value_advance(&mapIt);
@@ -2112,7 +2392,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_TYP_INDEX:{{
+            case HoverboardEvent::Field::INPUT1_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->input1_typ = static_cast<InTyp>(v);
@@ -2122,7 +2402,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_MIN_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT1_MIN_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input1_min = v;
     cbor_value_advance(&mapIt);
@@ -2130,7 +2410,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_MID_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT1_MID_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input1_mid = v;
     cbor_value_advance(&mapIt);
@@ -2138,7 +2418,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT1_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input1_max = v;
     cbor_value_advance(&mapIt);
@@ -2146,7 +2426,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT1_CMD_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT1_CMD_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input1_cmd = v;
     cbor_value_advance(&mapIt);
@@ -2154,7 +2434,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_RAW_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT2_RAW_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input2_raw = v;
     cbor_value_advance(&mapIt);
@@ -2162,7 +2442,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_TYP_INDEX:{{
+            case HoverboardEvent::Field::INPUT2_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->input2_typ = static_cast<InTyp>(v);
@@ -2172,7 +2452,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_MIN_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT2_MIN_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input2_min = v;
     cbor_value_advance(&mapIt);
@@ -2180,7 +2460,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_MID_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT2_MID_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input2_mid = v;
     cbor_value_advance(&mapIt);
@@ -2188,7 +2468,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT2_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input2_max = v;
     cbor_value_advance(&mapIt);
@@ -2196,7 +2476,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::INPUT2_CMD_INDEX:{int64_t v;
+            case HoverboardEvent::Field::INPUT2_CMD_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->input2_cmd = v;
     cbor_value_advance(&mapIt);
@@ -2204,7 +2484,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_RAW_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT1_RAW_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input1_raw = v;
     cbor_value_advance(&mapIt);
@@ -2212,7 +2492,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_TYP_INDEX:{{
+            case HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->aux_input1_typ = static_cast<InTyp>(v);
@@ -2222,7 +2502,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_MIN_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT1_MIN_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input1_min = v;
     cbor_value_advance(&mapIt);
@@ -2230,7 +2510,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_MID_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT1_MID_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input1_mid = v;
     cbor_value_advance(&mapIt);
@@ -2238,7 +2518,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT1_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input1_max = v;
     cbor_value_advance(&mapIt);
@@ -2246,7 +2526,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT1_CMD_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT1_CMD_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input1_cmd = v;
     cbor_value_advance(&mapIt);
@@ -2254,7 +2534,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_RAW_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT2_RAW_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input2_raw = v;
     cbor_value_advance(&mapIt);
@@ -2262,7 +2542,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_TYP_INDEX:{{
+            case HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX:{{
     long long v;
     cbor_value_get_int64(&mapIt, &(v));
     msg->aux_input2_typ = static_cast<InTyp>(v);
@@ -2272,7 +2552,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_MIN_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT2_MIN_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input2_min = v;
     cbor_value_advance(&mapIt);
@@ -2280,7 +2560,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_MID_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT2_MID_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input2_mid = v;
     cbor_value_advance(&mapIt);
@@ -2288,7 +2568,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_MAX_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT2_MAX_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input2_max = v;
     cbor_value_advance(&mapIt);
@@ -2296,7 +2576,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::AUX_INPUT2_CMD_INDEX:{int64_t v;
+            case HoverboardEvent::Field::AUX_INPUT2_CMD_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->aux_input2_cmd = v;
     cbor_value_advance(&mapIt);
@@ -2304,7 +2584,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::DC_CURR_INDEX:{int64_t v;
+            case HoverboardEvent::Field::DC_CURR_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->dc_curr = v;
     cbor_value_advance(&mapIt);
@@ -2312,7 +2592,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::RDC_CURR_INDEX:{int64_t v;
+            case HoverboardEvent::Field::RDC_CURR_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->rdc_curr = v;
     cbor_value_advance(&mapIt);
@@ -2320,7 +2600,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::LDC_CURR_INDEX:{int64_t v;
+            case HoverboardEvent::Field::LDC_CURR_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->ldc_curr = v;
     cbor_value_advance(&mapIt);
@@ -2328,7 +2608,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::CMDL_INDEX:{int64_t v;
+            case HoverboardEvent::Field::CMDL_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->cmdl = v;
     cbor_value_advance(&mapIt);
@@ -2336,7 +2616,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::CMDR_INDEX:{int64_t v;
+            case HoverboardEvent::Field::CMDR_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->cmdr = v;
     cbor_value_advance(&mapIt);
@@ -2344,7 +2624,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::SPD_AVG_INDEX:{int64_t v;
+            case HoverboardEvent::Field::SPD_AVG_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->spd_avg = v;
     cbor_value_advance(&mapIt);
@@ -2352,7 +2632,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::SPDL_INDEX:{int64_t v;
+            case HoverboardEvent::Field::SPDL_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->spdl = v;
     cbor_value_advance(&mapIt);
@@ -2360,7 +2640,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::SPDR_INDEX:{int64_t v;
+            case HoverboardEvent::Field::SPDR_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->spdr = v;
     cbor_value_advance(&mapIt);
@@ -2368,7 +2648,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::FILTER_RATE_INDEX:{int64_t v;
+            case HoverboardEvent::Field::FILTER_RATE_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->filter_rate = v;
     cbor_value_advance(&mapIt);
@@ -2376,7 +2656,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::SPD_COEF_INDEX:{int64_t v;
+            case HoverboardEvent::Field::SPD_COEF_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->spd_coef = v;
     cbor_value_advance(&mapIt);
@@ -2384,7 +2664,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::STR_COEF_INDEX:{int64_t v;
+            case HoverboardEvent::Field::STR_COEF_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->str_coef = v;
     cbor_value_advance(&mapIt);
@@ -2392,7 +2672,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::BATV_INDEX:{int64_t v;
+            case HoverboardEvent::Field::BATV_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->batv = v;
     cbor_value_advance(&mapIt);
@@ -2400,7 +2680,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
                 break;
             }
             
-            case HoverboardInfo::Field::TEMP_INDEX:{int64_t v;
+            case HoverboardEvent::Field::TEMP_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->temp = v;
     cbor_value_advance(&mapIt);
@@ -2419,7 +2699,7 @@ Result<Bytes> HoverboardInfo::cbor_serialize(const HoverboardInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<HoverboardInfo*>::Ok(msg);
+    return Result<HoverboardEvent*>::Ok(msg);
 }
 
 Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
@@ -2514,7 +2794,7 @@ Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
     return Result<HoverboardCmd*>::Ok(msg);
 }
 
-Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
+Result<Bytes> TouchPoint::cbor_serialize(const TouchPoint& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -2523,109 +2803,21 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
     // Start top-level map
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-    if (msg.button_left) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_LEFT_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left.value());
+    if (msg.active) {
+            cbor_encode_int(&mapEncoder, TouchPoint::Field::ACTIVE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.active.value());
             }
-    if (msg.button_right) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_RIGHT_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right.value());
+    if (msg.id) {
+            cbor_encode_int(&mapEncoder, TouchPoint::Field::ID_INDEX);
+            cbor_encode_int(&mapEncoder, msg.id.value());
             }
-    if (msg.button_up) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_UP_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_up.value());
+    if (msg.x) {
+            cbor_encode_int(&mapEncoder, TouchPoint::Field::X_INDEX);
+            cbor_encode_int(&mapEncoder, msg.x.value());
             }
-    if (msg.button_down) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_DOWN_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_down.value());
-            }
-    if (msg.button_square) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_SQUARE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_square.value());
-            }
-    if (msg.button_cross) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_CROSS_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_cross.value());
-            }
-    if (msg.button_circle) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_CIRCLE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_circle.value());
-            }
-    if (msg.button_triangle) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_TRIANGLE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_triangle.value());
-            }
-    if (msg.button_left_sholder) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_LEFT_SHOLDER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_sholder.value());
-            }
-    if (msg.button_right_sholder) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_RIGHT_SHOLDER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_sholder.value());
-            }
-    if (msg.button_left_trigger) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_LEFT_TRIGGER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_trigger.value());
-            }
-    if (msg.button_right_trigger) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_RIGHT_TRIGGER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_trigger.value());
-            }
-    if (msg.button_left_joystick) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_LEFT_JOYSTICK_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_joystick.value());
-            }
-    if (msg.button_right_joystick) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_RIGHT_JOYSTICK_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_joystick.value());
-            }
-    if (msg.button_share) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::BUTTON_SHARE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_share.value());
-            }
-    if (msg.axis_lx) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::AXIS_LX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_lx.value());
-            }
-    if (msg.axis_ly) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::AXIS_LY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_ly.value());
-            }
-    if (msg.axis_rx) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::AXIS_RX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_rx.value());
-            }
-    if (msg.axis_ry) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::AXIS_RY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_ry.value());
-            }
-    if (msg.gyro_x) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::GYRO_X_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_x.value());
-            }
-    if (msg.gyro_y) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::GYRO_Y_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_y.value());
-            }
-    if (msg.gyro_z) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::GYRO_Z_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_z.value());
-            }
-    if (msg.accel_x) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::ACCEL_X_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_x.value());
-            }
-    if (msg.accel_y) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::ACCEL_Y_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_y.value());
-            }
-    if (msg.accel_z) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::ACCEL_Z_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_z.value());
-            }
-    if (msg.connected) {
-            cbor_encode_int(&mapEncoder, Ps4Info::Field::CONNECTED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.connected.value());
+    if (msg.y) {
+            cbor_encode_int(&mapEncoder, TouchPoint::Field::Y_INDEX);
+            cbor_encode_int(&mapEncoder, msg.y.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
     // get used size
@@ -2633,21 +2825,21 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<Ps4Info*> Ps4Info::cbor_deserialize(const Bytes& bytes) {
+ Result<TouchPoint*> TouchPoint::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    Ps4Info* msg = new Ps4Info();
+    TouchPoint* msg = new TouchPoint();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<Ps4Info*>::Err(-1,"CBOR parse error");
+        return Result<TouchPoint*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<Ps4Info*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<TouchPoint*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -2655,7 +2847,7 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<Ps4Info*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<TouchPoint*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -2668,213 +2860,37 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<Ps4Info*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<TouchPoint*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case Ps4Info::Field::BUTTON_LEFT_INDEX:{bool b;
+            case TouchPoint::Field::ACTIVE_INDEX:{bool b;
     cbor_value_get_boolean(&mapIt, &b);
-    msg->button_left = b;
+    msg->active = b;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case Ps4Info::Field::BUTTON_RIGHT_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_right = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_UP_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_up = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_DOWN_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_down = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_SQUARE_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_square = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_CROSS_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_cross = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_CIRCLE_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_circle = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_TRIANGLE_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_triangle = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_LEFT_SHOLDER_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_left_sholder = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_RIGHT_SHOLDER_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_right_sholder = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_LEFT_TRIGGER_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_left_trigger = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_RIGHT_TRIGGER_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_right_trigger = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_LEFT_JOYSTICK_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_left_joystick = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_RIGHT_JOYSTICK_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_right_joystick = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::BUTTON_SHARE_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->button_share = b;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::AXIS_LX_INDEX:{int64_t v;
+            case TouchPoint::Field::ID_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->axis_lx = v;
+    msg->id = v;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case Ps4Info::Field::AXIS_LY_INDEX:{int64_t v;
+            case TouchPoint::Field::X_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->axis_ly = v;
+    msg->x = v;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case Ps4Info::Field::AXIS_RX_INDEX:{int64_t v;
+            case TouchPoint::Field::Y_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->axis_rx = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::AXIS_RY_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->axis_ry = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::GYRO_X_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->gyro_x = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::GYRO_Y_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->gyro_y = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::GYRO_Z_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->gyro_z = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::ACCEL_X_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->accel_x = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::ACCEL_Y_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->accel_y = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::ACCEL_Z_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->accel_z = v;
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Ps4Info::Field::CONNECTED_INDEX:{bool b;
-    cbor_value_get_boolean(&mapIt, &b);
-    msg->connected = b;
+    msg->y = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -2891,7 +2907,476 @@ Result<Bytes> Ps4Info::cbor_serialize(const Ps4Info& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<Ps4Info*>::Ok(msg);
+    return Result<TouchPoint*>::Ok(msg);
+}
+
+Result<Bytes> Ps4Event::cbor_serialize(const Ps4Event& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.button_left) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_left.value());
+            }
+    if (msg.button_right) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_right.value());
+            }
+    if (msg.button_up) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_UP_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_up.value());
+            }
+    if (msg.button_down) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_DOWN_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_down.value());
+            }
+    if (msg.button_square) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SQUARE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_square.value());
+            }
+    if (msg.button_cross) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CROSS_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_cross.value());
+            }
+    if (msg.button_circle) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CIRCLE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_circle.value());
+            }
+    if (msg.button_triangle) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TRIANGLE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_triangle.value());
+            }
+    if (msg.button_left_shoulder) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_SHOULDER_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_left_shoulder.value());
+            }
+    if (msg.button_right_shoulder) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_SHOULDER_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_right_shoulder.value());
+            }
+    if (msg.button_left_trigger) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_TRIGGER_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_left_trigger.value());
+            }
+    if (msg.button_right_trigger) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_TRIGGER_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_right_trigger.value());
+            }
+    if (msg.button_left_joystick) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_JOYSTICK_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_left_joystick.value());
+            }
+    if (msg.button_right_joystick) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_JOYSTICK_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_right_joystick.value());
+            }
+    if (msg.button_share) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SHARE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_share.value());
+            }
+    if (msg.button_options) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_OPTIONS_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_options.value());
+            }
+    if (msg.button_touchpad) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TOUCHPAD_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_touchpad.value());
+            }
+    if (msg.button_ps) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_PS_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.button_ps.value());
+            }
+    if (msg.axis_lx) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LX_INDEX);
+            cbor_encode_int(&mapEncoder, msg.axis_lx.value());
+            }
+    if (msg.axis_ly) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LY_INDEX);
+            cbor_encode_int(&mapEncoder, msg.axis_ly.value());
+            }
+    if (msg.axis_rx) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RX_INDEX);
+            cbor_encode_int(&mapEncoder, msg.axis_rx.value());
+            }
+    if (msg.axis_ry) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RY_INDEX);
+            cbor_encode_int(&mapEncoder, msg.axis_ry.value());
+            }
+    if (msg.gyro_x) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_X_INDEX);
+            cbor_encode_int(&mapEncoder, msg.gyro_x.value());
+            }
+    if (msg.gyro_y) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Y_INDEX);
+            cbor_encode_int(&mapEncoder, msg.gyro_y.value());
+            }
+    if (msg.gyro_z) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Z_INDEX);
+            cbor_encode_int(&mapEncoder, msg.gyro_z.value());
+            }
+    if (msg.accel_x) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_X_INDEX);
+            cbor_encode_int(&mapEncoder, msg.accel_x.value());
+            }
+    if (msg.accel_y) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Y_INDEX);
+            cbor_encode_int(&mapEncoder, msg.accel_y.value());
+            }
+    if (msg.accel_z) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Z_INDEX);
+            cbor_encode_int(&mapEncoder, msg.accel_z.value());
+            }
+    if (msg.connected) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::CONNECTED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.connected.value());
+            }
+    if (msg.battery_level) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BATTERY_LEVEL_INDEX);
+            cbor_encode_int(&mapEncoder, msg.battery_level.value());
+            }
+    if (msg.bluetooth) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::BLUETOOTH_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.bluetooth.value());
+            }
+    if (msg.debug) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::DEBUG_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.debug.value().c_str());
+            }
+    if (msg.temp) {
+            cbor_encode_int(&mapEncoder, Ps4Event::Field::TEMP_INDEX);
+            cbor_encode_int(&mapEncoder, msg.temp.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Ps4Event*> Ps4Event::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Ps4Event* msg = new Ps4Event();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Ps4Event*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Ps4Event*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Ps4Event*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Ps4Event*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Ps4Event::Field::BUTTON_LEFT_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_left = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_RIGHT_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_right = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_UP_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_up = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_DOWN_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_down = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_SQUARE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_square = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_CROSS_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_cross = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_CIRCLE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_circle = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_TRIANGLE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_triangle = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_LEFT_SHOULDER_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_left_shoulder = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_RIGHT_SHOULDER_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_right_shoulder = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_LEFT_TRIGGER_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_left_trigger = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_RIGHT_TRIGGER_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_right_trigger = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_LEFT_JOYSTICK_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_left_joystick = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_RIGHT_JOYSTICK_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_right_joystick = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_SHARE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_share = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_OPTIONS_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_options = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_TOUCHPAD_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_touchpad = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BUTTON_PS_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->button_ps = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::AXIS_LX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->axis_lx = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::AXIS_LY_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->axis_ly = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::AXIS_RX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->axis_rx = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::AXIS_RY_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->axis_ry = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::GYRO_X_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->gyro_x = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::GYRO_Y_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->gyro_y = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::GYRO_Z_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->gyro_z = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::ACCEL_X_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->accel_x = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::ACCEL_Y_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->accel_y = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::ACCEL_Z_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->accel_z = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::CONNECTED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->connected = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BATTERY_LEVEL_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->battery_level = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::BLUETOOTH_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->bluetooth = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::DEBUG_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->debug = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Event::Field::TEMP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->temp = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Ps4Event*>::Ok(msg);
 }
 
 Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
@@ -2903,13 +3388,33 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
     // Start top-level map
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
-    if (msg.rumble) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rumble.value());
+    if (msg.rumble_small) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_SMALL_INDEX);
+            cbor_encode_int(&mapEncoder, msg.rumble_small.value());
             }
-    if (msg.led_rgb) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_RGB_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_rgb.value());
+    if (msg.rumble_large) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_LARGE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.rumble_large.value());
+            }
+    if (msg.led_red) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_RED_INDEX);
+            cbor_encode_int(&mapEncoder, msg.led_red.value());
+            }
+    if (msg.led_green) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_GREEN_INDEX);
+            cbor_encode_int(&mapEncoder, msg.led_green.value());
+            }
+    if (msg.led_blue) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_BLUE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.led_blue.value());
+            }
+    if (msg.led_flash_on) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_ON_INDEX);
+            cbor_encode_int(&mapEncoder, msg.led_flash_on.value());
+            }
+    if (msg.led_flash_off) {
+            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_OFF_INDEX);
+            cbor_encode_int(&mapEncoder, msg.led_flash_off.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
     // get used size
@@ -2956,17 +3461,57 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
         }
         switch (key) {
             
-            case Ps4Cmd::Field::RUMBLE_INDEX:{int64_t v;
+            case Ps4Cmd::Field::RUMBLE_SMALL_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->rumble = v;
+    msg->rumble_small = v;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case Ps4Cmd::Field::LED_RGB_INDEX:{int64_t v;
+            case Ps4Cmd::Field::RUMBLE_LARGE_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
-    msg->led_rgb = v;
+    msg->rumble_large = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Cmd::Field::LED_RED_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->led_red = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Cmd::Field::LED_GREEN_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->led_green = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Cmd::Field::LED_BLUE_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->led_blue = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Cmd::Field::LED_FLASH_ON_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->led_flash_on = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Ps4Cmd::Field::LED_FLASH_OFF_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->led_flash_off = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -2986,7 +3531,7 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
     return Result<Ps4Cmd*>::Ok(msg);
 }
 
-Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
+Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
@@ -2996,27 +3541,27 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
     cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
 
     if (msg.width) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::WIDTH_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::WIDTH_INDEX);
             cbor_encode_int(&mapEncoder, msg.width.value());
             }
     if (msg.height) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::HEIGHT_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::HEIGHT_INDEX);
             cbor_encode_int(&mapEncoder, msg.height.value());
             }
     if (msg.format) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::FORMAT_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::FORMAT_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.format.value().c_str());
             }
     if (msg.data) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::DATA_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::DATA_INDEX);
             cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size());
             }
     if (msg.led) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::LED_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::LED_INDEX);
             cbor_encode_boolean(&mapEncoder, msg.led.value());
             }
     if (msg.quality) {
-            cbor_encode_int(&mapEncoder, CameraInfo::Field::QUALITY_INDEX);
+            cbor_encode_int(&mapEncoder, CameraEvent::Field::QUALITY_INDEX);
             cbor_encode_int(&mapEncoder, msg.quality.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
@@ -3025,21 +3570,21 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
     return Bytes(buffer.begin(), buffer.begin() + used);
 }
 
- Result<CameraInfo*> CameraInfo::cbor_deserialize(const Bytes& bytes) {
+ Result<CameraEvent*> CameraEvent::cbor_deserialize(const Bytes& bytes) {
     CborParser parser;
     CborValue it, mapIt;
-    CameraInfo* msg = new CameraInfo();
+    CameraEvent* msg = new CameraEvent();
 
     CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
     if (err != CborNoError) {
         delete msg;
-        return Result<CameraInfo*>::Err(-1,"CBOR parse error");
+        return Result<CameraEvent*>::Err(-1,"CBOR parse error");
     }
 
     if (!cbor_value_is_map(&it)) {
         delete msg;
         INFO("CBOR deserialization error: not a map");
-        return Result<CameraInfo*>::Err(-2,"CBOR deserialization error: not a map");
+        return Result<CameraEvent*>::Err(-2,"CBOR deserialization error: not a map");
     }
 
     // enter map
@@ -3047,7 +3592,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
     if (err != CborNoError) {
         delete msg;
         INFO("CBOR deserialization error: failed to enter container");
-        return Result<CameraInfo*>::Err(-3,"CBOR deserialization error: failed to enter container");
+        return Result<CameraEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
     }
 
     // iterate key/value pairs
@@ -3060,11 +3605,11 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
             // invalid key type
             INFO("CBOR deserialization error: invalid key type");
             delete msg;
-            return Result<CameraInfo*>::Err(-4,"CBOR deserialization error: invalid key type");
+            return Result<CameraEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
         }
         switch (key) {
             
-            case CameraInfo::Field::WIDTH_INDEX:{int64_t v;
+            case CameraEvent::Field::WIDTH_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->width = v;
     cbor_value_advance(&mapIt);
@@ -3072,7 +3617,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
                 break;
             }
             
-            case CameraInfo::Field::HEIGHT_INDEX:{int64_t v;
+            case CameraEvent::Field::HEIGHT_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->height = v;
     cbor_value_advance(&mapIt);
@@ -3080,7 +3625,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
                 break;
             }
             
-            case CameraInfo::Field::FORMAT_INDEX:{{
+            case CameraEvent::Field::FORMAT_INDEX:{{
     char valbuf[256];
     size_t vallen = sizeof(valbuf);
     if (cbor_value_is_text_string(&mapIt)) {
@@ -3093,7 +3638,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
                 break;
             }
             
-            case CameraInfo::Field::DATA_INDEX:{{
+            case CameraEvent::Field::DATA_INDEX:{{
     uint8_t tmpbuf[512];
     size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
@@ -3106,7 +3651,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
                 break;
             }
             
-            case CameraInfo::Field::LED_INDEX:{bool b;
+            case CameraEvent::Field::LED_INDEX:{bool b;
     cbor_value_get_boolean(&mapIt, &b);
     msg->led = b;
     cbor_value_advance(&mapIt);
@@ -3114,7 +3659,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
                 break;
             }
             
-            case CameraInfo::Field::QUALITY_INDEX:{int64_t v;
+            case CameraEvent::Field::QUALITY_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->quality = v;
     cbor_value_advance(&mapIt);
@@ -3133,7 +3678,7 @@ Result<Bytes> CameraInfo::cbor_serialize(const CameraInfo& msg)  {
     // leave container
     cbor_value_leave_container(&it, &mapIt);
 
-    return Result<CameraInfo*>::Ok(msg);
+    return Result<CameraEvent*>::Ok(msg);
 }
 
 Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
@@ -3226,5 +3771,839 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<CameraCmd*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerManualEvent::cbor_serialize(const LawnmowerManualEvent& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.speed) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::SPEED_INDEX);
+            cbor_encode_int(&mapEncoder, msg.speed.value());
+            }
+    if (msg.steering) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::STEERING_INDEX);
+            cbor_encode_int(&mapEncoder, msg.steering.value());
+            }
+    if (msg.blade) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::BLADE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.blade.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerManualEvent*> LawnmowerManualEvent::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerManualEvent* msg = new LawnmowerManualEvent();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerManualEvent*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerManualEvent*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerManualEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerManualEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerManualEvent::Field::SPEED_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->speed = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualEvent::Field::STEERING_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->steering = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualEvent::Field::BLADE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->blade = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerManualEvent*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerManualCmd::cbor_serialize(const LawnmowerManualCmd& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.speed) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::SPEED_INDEX);
+            cbor_encode_float(&mapEncoder, msg.speed.value());
+            }
+    if (msg.steer) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STEER_INDEX);
+            cbor_encode_float(&mapEncoder, msg.steer.value());
+            }
+    if (msg.blade) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::BLADE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.blade.value());
+            }
+    if (msg.start_manual_control) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_MANUAL_CONTROL_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.start_manual_control.value());
+            }
+    if (msg.stop_manual_control) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_MANUAL_CONTROL_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.stop_manual_control.value());
+            }
+    if (msg.emergency_stop) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::EMERGENCY_STOP_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.emergency_stop.value());
+            }
+    if (msg.start_auto_mode) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_AUTO_MODE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.start_auto_mode.value());
+            }
+    if (msg.stop_auto_mode) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_AUTO_MODE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.stop_auto_mode.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerManualCmd*> LawnmowerManualCmd::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerManualCmd* msg = new LawnmowerManualCmd();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerManualCmd*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerManualCmd*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerManualCmd*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerManualCmd*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerManualCmd::Field::SPEED_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->speed = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::STEER_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->steer = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::BLADE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->blade = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::START_MANUAL_CONTROL_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->start_manual_control = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::STOP_MANUAL_CONTROL_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->stop_manual_control = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::EMERGENCY_STOP_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->emergency_stop = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::START_AUTO_MODE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->start_auto_mode = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualCmd::Field::STOP_AUTO_MODE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->stop_auto_mode = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerManualCmd*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.started) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STARTED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.started.value());
+            }
+    if (msg.stopped) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STOPPED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.stopped.value());
+            }
+    if (msg.paused) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PAUSED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.paused.value());
+            }
+    if (msg.resumed) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::RESUMED_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.resumed.value());
+            }
+    if (msg.mode) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::MODE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str());
+            }
+    if (msg.path) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PATH_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerAutoEvent*> LawnmowerAutoEvent::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerAutoEvent* msg = new LawnmowerAutoEvent();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerAutoEvent*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerAutoEvent*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerAutoEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerAutoEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerAutoEvent::Field::STARTED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->started = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoEvent::Field::STOPPED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->stopped = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoEvent::Field::PAUSED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->paused = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoEvent::Field::RESUMED_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->resumed = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoEvent::Field::MODE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->mode = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoEvent::Field::PATH_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->path = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerAutoEvent*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.start) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::START_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.start.value());
+            }
+    if (msg.stop) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::STOP_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.stop.value());
+            }
+    if (msg.pause) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PAUSE_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.pause.value());
+            }
+    if (msg.resume) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::RESUME_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.resume.value());
+            }
+    if (msg.mode) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::MODE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str());
+            }
+    if (msg.path) {
+            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PATH_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerAutoCmd*> LawnmowerAutoCmd::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerAutoCmd* msg = new LawnmowerAutoCmd();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerAutoCmd*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerAutoCmd*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerAutoCmd*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerAutoCmd*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerAutoCmd::Field::START_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->start = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoCmd::Field::STOP_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->stop = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoCmd::Field::PAUSE_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->pause = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoCmd::Field::RESUME_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->resume = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoCmd::Field::MODE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->mode = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerAutoCmd::Field::PATH_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->path = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerAutoCmd*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.battery_level) {
+            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BATTERY_LEVEL_INDEX);
+            cbor_encode_int(&mapEncoder, msg.battery_level.value());
+            }
+    if (msg.blade_status) {
+            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BLADE_STATUS_INDEX);
+            cbor_encode_boolean(&mapEncoder, msg.blade_status.value());
+            }
+    if (msg.current_mode) {
+            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::CURRENT_MODE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.current_mode.value().c_str());
+            }
+    if (msg.error_message) {
+            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::ERROR_MESSAGE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.error_message.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerStatus*> LawnmowerStatus::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerStatus* msg = new LawnmowerStatus();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerStatus*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerStatus*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerStatus*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerStatus*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerStatus::Field::BATTERY_LEVEL_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->battery_level = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerStatus::Field::BLADE_STATUS_INDEX:{bool b;
+    cbor_value_get_boolean(&mapIt, &b);
+    msg->blade_status = b;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerStatus::Field::CURRENT_MODE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->current_mode = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerStatus::Field::ERROR_MESSAGE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->error_message = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerStatus*>::Ok(msg);
+}
+
+Result<Bytes> MotorEvent::cbor_serialize(const MotorEvent& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.motor_id) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::MOTOR_ID_INDEX);
+            cbor_encode_int(&mapEncoder, msg.motor_id.value());
+            }
+    if (msg.temperature) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::TEMPERATURE_INDEX);
+            cbor_encode_float(&mapEncoder, msg.temperature.value());
+            }
+    if (msg.voltage) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::VOLTAGE_INDEX);
+            cbor_encode_float(&mapEncoder, msg.voltage.value());
+            }
+    if (msg.current) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::CURRENT_INDEX);
+            cbor_encode_float(&mapEncoder, msg.current.value());
+            }
+    if (msg.speed) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::SPEED_INDEX);
+            cbor_encode_float(&mapEncoder, msg.speed.value());
+            }
+    if (msg.position) {
+            cbor_encode_int(&mapEncoder, MotorEvent::Field::POSITION_INDEX);
+            cbor_encode_float(&mapEncoder, msg.position.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<MotorEvent*> MotorEvent::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    MotorEvent* msg = new MotorEvent();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<MotorEvent*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<MotorEvent*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<MotorEvent*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<MotorEvent*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case MotorEvent::Field::MOTOR_ID_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->motor_id = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case MotorEvent::Field::TEMPERATURE_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->temperature = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case MotorEvent::Field::VOLTAGE_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->voltage = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case MotorEvent::Field::CURRENT_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->current = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case MotorEvent::Field::SPEED_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->speed = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case MotorEvent::Field::POSITION_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->position = f;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<MotorEvent*>::Ok(msg);
 }
 

@@ -438,7 +438,7 @@ Res WifiActor::connect()
 
 void WifiActor::publish_info(esp_netif_t *esp_netif)
 {
-  WifiInfo *wifi_info = new WifiInfo();
+  WifiEvent *wifi_info = new WifiEvent();
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)

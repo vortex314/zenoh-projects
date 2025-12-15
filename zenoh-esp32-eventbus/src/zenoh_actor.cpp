@@ -52,17 +52,17 @@ void ZenohActor::on_message(const Envelope &env)
 {
   const Msg &msg = *env.msg;
 
-  msg.handle<SysInfo>([&](const auto &msg)
-                      { SysInfo::json_serialize(msg).just([&](const auto &s)
+  msg.handle<SysEvent>([&](const auto &msg)
+                      { SysEvent::json_serialize(msg).just([&](const auto &s)
                                                           { send_msg(env.src->name(), msg.type_name(), s); }); });
-  msg.handle<WifiInfo>([&](const auto &msg)
-                       { WifiInfo::json_serialize(msg).just([&](const auto &serialized_msg)
+  msg.handle<WifiEvent>([&](const auto &msg)
+                       { WifiEvent::json_serialize(msg).just([&](const auto &serialized_msg)
                                                             { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
-  msg.handle<ZenohInfo>([&](const auto &msg)
-                        { ZenohInfo::json_serialize(msg).just([&](const auto &serialized_msg)
+  msg.handle<ZenohEvent>([&](const auto &msg)
+                        { ZenohEvent::json_serialize(msg).just([&](const auto &serialized_msg)
                                                               { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
-  msg.handle<HoverboardInfo>([&](const auto &msg)
-                             { HoverboardInfo::json_serialize(msg).just([&](const auto &serialized_msg)
+  msg.handle<HoverboardEvent>([&](const auto &msg)
+                             { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
                                                                         { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
@@ -439,7 +439,7 @@ Res ZenohActor::publish_info()
   {
     return Res::Err(ENOTCONN, "Not connected to Zenoh");
   }
-  ZenohInfo *zenoh_info = new ZenohInfo();
+  ZenohEvent *zenoh_info = new ZenohEvent();
   zenoh_info->zid = zid;
   zenoh_info->what_am_i = MODE;
   zenoh_info->peers = _peers;

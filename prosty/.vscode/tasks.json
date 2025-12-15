@@ -13,7 +13,7 @@
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true   
+ //               "isDefault": true   
             }
         },
         {
@@ -30,7 +30,7 @@
             "args": [
                 "run",
                 "--",
-                "--input", "proto/message.proto",
+                "--input", "syntax/message.proto",
                 "--output", "../zenoh-esp32-eventbus/src",
                 "--lang", "cpp",
                 "--format", "json"
@@ -57,7 +57,7 @@
             "args": [
                 "run",
                 "--",
-                "--input", "proto/message.proto",
+                "--input", "syntax/message.proto",
                 "--output", "../../bluepad32/examples/esp32/main",
                 "--lang", "cpp",
                 "--format", "json"
@@ -84,7 +84,7 @@
             "args": [
                 "run",
                 "--",
-                "--input", "proto/message.proto",
+                "--input", "syntax/message.proto",
                 "--output", "../zenoh-linux-eventbus-rs/src",
                 "--lang", "rust",
                 "--format", "json"
@@ -111,7 +111,7 @@
             "args": [
                 "run",
                 "--",
-                "--input", "proto/message.proto",
+                "--input", "syntax/message.proto",
                 "--output", "../zenoh-ps4-linux/src",
                 "--lang", "rust",
                 "--format", "json"

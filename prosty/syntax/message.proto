@@ -211,7 +211,7 @@ message Ps4Event {
 
   bool connected = 27;
   int32 battery_level = 28;
-  repeated TouchPoint touch_points = 29;
+  // repeated TouchPoint touch_points = 29;
   bool bluetooth = 30;
   string debug = 31;
   int32 temp = 32;
