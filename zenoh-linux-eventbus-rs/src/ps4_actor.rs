@@ -193,6 +193,7 @@ fn stringify(x: Box<dyn std::error::Error + Send + Sync>) -> String {
 
 fn find_ps4_controller(api: &HidApi) -> anyhow::Result<DeviceIdentifier> {
     for info in api.device_list() {
+        info!("Found device: VID={:04X}, PID={:04X}, Product={:?}", info.vendor_id(), info.product_id(), info.product_string());    
         if info.vendor_id() == VID && (info.product_id() == PID_V1 || info.product_id() == PID_V2) {
             return Ok(DeviceIdentifier {
                 vendor_id: info.vendor_id(),

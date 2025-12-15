@@ -10,11 +10,14 @@
 #include <sys_actor.h>
 #include <led_actor.h>
 #include <zenoh_actor.h>
+#include <ota_actor.h>
+#include <mdns_actor.h>
 #include <log.h>
 
 #include <esp_wifi.h>
 #include <esp_coexist.h>
 #include <esp_event.h>
+#include <esp_ota_ops.h>
 
 #define DEVICE_PREFIX DEVICE_NAME "/"
 #define DST_DEVICE "dst/" DEVICE_NAME "/"
@@ -24,6 +27,8 @@ WifiActor wifi_actor("wifi");
 ZenohActor zenoh_actor("zenoh");
 SysActor sys_actor("sys");
 LedActor led_actor("led");
+OtaActor ota_actor("ota");
+MdnsActor mdns_actor("mdns",DEVICE_NAME);
 EventBus eventbus(20);
 Log logger;
 esp_err_t nvs_init();
@@ -51,15 +56,19 @@ extern "C" void app_main()
 
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
+  // start ota server
 
   zenoh_actor.prefix(DEVICE_NAME);
 
   eventbus.register_actor(&wifi_actor); // manage wifi connection
   eventbus.register_actor(&sys_actor);  // manage the system
-  //  eventbus.register_actor(&mc_actor);
   eventbus.register_actor(&zenoh_actor); // bridge the eventbus
   eventbus.register_actor(&led_actor);   // blink the led
+  eventbus.register_actor(&ota_actor);   // ota via tftp
+  eventbus.register_actor(&mdns_actor);   // mdns service
   register_component();
+
+
   eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
                               const char *src = env.src ? env.src->name() : "";
@@ -77,6 +86,18 @@ esp_err_t nvs_init()
   {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
+  }
+
+  // 2. Report Current Partition
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  INFO("Running from partition: %s", running->label);
+  if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK)
+  {
+    INFO("Current app marked as valid, rollback cancelled");
+  }
+  else
+  {
+    WARN("Failed to mark current app as valid");
   }
   return ret;
 }

@@ -26,9 +26,7 @@
 
 #define ESP_MAXIMUM_RETRY 5
 
-
 static int s_retry_count = 0;
-
 
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
@@ -39,6 +37,7 @@ WifiActor::WifiActor(const char *name) : Actor(name)
   wifi_password = STRINGIZE(WIFI_PASS);
   esp_wifi_set_ps(WIFI_PS_NONE); // no power save
                                  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
+//  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 }
 
 void WifiActor::on_start()
@@ -56,7 +55,7 @@ void WifiActor::on_start()
       INFO("Scanned SSID: %s", wifi_ssid.c_str());
       break;
     }
-    if ( r.is_err())
+    if (r.is_err())
     {
       INFO("Failed to scan: %s", r.err()->msg);
       vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -83,7 +82,7 @@ void WifiActor::on_start()
 void WifiActor::on_message(const Envelope &env)
 {
   env.msg->handle<TimerMsg>([&](const TimerMsg &msg)
-                           { handle_timer(msg.timer_id); });
+                            { handle_timer(msg.timer_id); });
 }
 
 void WifiActor::handle_timer(int timer_id)
@@ -188,8 +187,6 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   return ResOk;
 }*/
 
-
-
 static PropInfo wifi_prop_info[] = {
     {"mac", "S", "MAC address of primary net interface", "R", nullptr, nullptr},
     {"ip", "S", "IO V4 address", "R", nullptr, nullptr},
@@ -198,7 +195,6 @@ static PropInfo wifi_prop_info[] = {
 };
 
 static constexpr int info_size = sizeof(wifi_prop_info) / sizeof(PropInfo);
-
 
 /*const InfoProp *WifiMsg::info(int idx)
 {
@@ -442,12 +438,12 @@ Res WifiActor::connect()
 
 void WifiActor::publish_info(esp_netif_t *esp_netif)
 {
-  WifiInfo* wifi_info = new WifiInfo();
+  WifiInfo *wifi_info = new WifiInfo();
   // get IP address and publish
   esp_netif_ip_info_t ip_info;
   if (esp_netif_get_ip_info(esp_netif, &ip_info) != ESP_OK)
   {
-    ERROR("Failed to get IP info")  ;
+    ERROR("Failed to get IP info");
     return;
   }
   wifi_info->ip = ip4addr_to_str(&ip_info.ip);

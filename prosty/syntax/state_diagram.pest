@@ -1,5 +1,17 @@
 
-stateDiagram = { SOI ~"```mermaid" ~ NEWLINE ~ "stateDiagram-v2" ~ NEWLINE ~ (config_directive | state_declaration | transition | note | fork_join | concurrency)* ~ EOI }
+stateDiagram = { SOI 
+    ~ "```mermaid"  ~ NEWLINE 
+    ~ "stateDiagram-v2" ~ NEWLINE
+    ~ (statement)* ~ EOI }
+
+// A statement is any construct, optionally separated by newlines or comments
+statement = _{ ( 
+    state_declaration | 
+    transition | 
+    note | 
+    fork_join | 
+    concurrency ) 
+    ~ (NEWLINE+ | COMMENT)* }
 
 // Config directives
 config_directive = { "---" ~ "config" ~ ":"? ~ (key_value_pair ~ (","? ~ key_value_pair)*)? ~ "---" }
@@ -82,7 +94,7 @@ divider = { "--" }
 // Basic tokens
 string_content = { (string_literal | bare_string)+ }
 string_literal = ${ "\"" ~ (quoted_char)* ~ "\"" | "'" ~ (quoted_char)* ~ "'" }
-bare_string = @{ (!whitespace ~ !(newline | "\"" | "'" | ":" | "}" | "-->" | "-." | "==") ~ ANY)+ }
+bare_string = @{ (!WHITESPACE ~ !(NEWLINE | "\"" | "'" | ":" | "}" | "-->" | "-." | "==") ~ ANY)+ }
 
 quoted_char = {
     !("\"" | "'" | "\\") ~ ANY
@@ -93,6 +105,6 @@ identifier = @{ ASCII_ALPHANUMERIC+ }
 number = @{ ("+" | "-")? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 boolean = { "true" | "false" | "yes" | "no" }
 
-whitespace = _{ " " | "\t" }
-newline = _{ "\n" | "\r\n" }
-comment = _{ "%%" ~ (!"\n" ~ ANY)* }
+WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\n" | "\r\n" }
+COMMENT = _{ "%%" ~ (!"\n" ~ ANY)* }

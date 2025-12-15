@@ -1,13 +1,14 @@
 // https://docs.mermaidchart.com/mermaid-oss/syntax/stateDiagram.html
-
-
+mod logger;
+use logger::init;
 mod parser;
 mod types;
 use crate::parser::MermaidStateDiagram;
+use log::info;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let input = r#"
-```mermaid
+    init();
+    let input = r#"```mermaid
 stateDiagram-v2
     [*] --> Still
     Still --> [*]
@@ -29,8 +30,8 @@ stateDiagram-v2
     
     let diagram = MermaidStateDiagram::parse(input)?;
     
-    println!("Parsed {} states", diagram.states.len());
-    println!("Parsed {} transitions", diagram.transitions.len());
+    info!("Parsed {} states", diagram.states.len());
+    info!("Parsed {} transitions", diagram.transitions.len());
     
     Ok(())
 }
