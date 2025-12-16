@@ -1,30 +1,32 @@
 #include <zenoh_actor.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
-#if CLIENT_OR_PEER == 0
+#define MODE_CLIENT 1
+// #define MODE_PEER 1
+#ifdef MODE_CLIENT
 #define MODE "client"
 #define CONNECT "" // If empty, it will scout
-#elif CLIENT_OR_PEER == 1
+#elif defined(MODE_PEER)
 #define MODE "peer"
 #define CONNECT "udp/224.0.0.123:7447#iface=lo"
 #else
 #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
-ZenohActor::ZenohActor(const char *name,const char * device_name)
+ZenohActor::ZenohActor(const char *name, const char *device_name)
     : Actor(name)
 {
   prefix(device_name);
   _timer_publish = timer_repetitive(5000); // timer for publishing properties
-  z_put_options_default(&put_options);
+  z_put_options_default(&_put_options);
+  /*
   z_owned_encoding_t encoding;
   z_result_t r = z_encoding_from_str(&encoding, "application/cbor"); // ZP_ENCODING_APPLICATION_CBOR;
   if (r != Z_OK)
   {
     INFO("Failed to get encoding for application/cbor ");
   }
-  // put_options.encoding = z_move(encoding); // commenting this line out makes it work fine
-  put_options.congestion_control = Z_CONGESTION_CONTROL_DROP;
+  // put_options.encoding = z_move(encoding); // commenting this line out makes it work fine*/
+  _put_options.congestion_control = Z_CONGESTION_CONTROL_DROP;
 }
 
 void ZenohActor::handle_timer(int id)
@@ -41,11 +43,9 @@ void ZenohActor::send_msg(const char *src, const char *msg_type, const Bytes &by
 {
   char topic[100];
   sprintf(topic, "%s/%s/%s", _src_device.c_str(), src, msg_type);
-  auto r = zenoh_publish(topic, bytes);
-  if (r.is_err())
-  {
-    INFO("Failed to send message to topic %s: %s", topic, r.err()->msg);
-  }
+  zenoh_publish(topic, bytes)
+      .just_err([&](Error e)
+                { INFO("Failed to send message to topic %s: %s", topic, e.msg); });
 }
 
 void ZenohActor::on_message(const Envelope &env)
@@ -53,17 +53,17 @@ void ZenohActor::on_message(const Envelope &env)
   const Msg &msg = *env.msg;
 
   msg.handle<SysEvent>([&](const auto &msg)
-                      { SysEvent::json_serialize(msg).just([&](const auto &s)
-                                                          { send_msg(env.src->name(), msg.type_name(), s); }); });
+                       { SysEvent::json_serialize(msg).just([&](const auto &s)
+                                                            { send_msg(env.src->name(), msg.type_name(), s); }); });
   msg.handle<WifiEvent>([&](const auto &msg)
-                       { WifiEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                            { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
-  msg.handle<ZenohEvent>([&](const auto &msg)
-                        { ZenohEvent::json_serialize(msg).just([&](const auto &serialized_msg)
+                        { WifiEvent::json_serialize(msg).just([&](const auto &serialized_msg)
                                                               { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
+  msg.handle<ZenohEvent>([&](const auto &msg)
+                         { ZenohEvent::json_serialize(msg).just([&](const auto &serialized_msg)
+                                                                { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<HoverboardEvent>([&](const auto &msg)
-                             { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                        { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
+                              { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
+                                                                          { send_msg(env.src->name(), msg.type_name(), serialized_msg); }); });
   msg.handle<TimerMsg>([&](const TimerMsg &msg)
                        { handle_timer(msg.timer_id); });
   msg.handle<ZenohPublish>([&](const ZenohPublish &pub)
@@ -129,29 +129,28 @@ Res ZenohActor::connect(void)
   z_owned_config_t config;
   z_config_default(&config);
   CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_MODE_KEY, MODE));
-  if (strcmp(CONNECT, "") != 0)
-  {
-    //        zp_config_insert(z_loan_mut(config), Z_CONFIG_CONNECT_KEY,
-    //        CONNECT);
-    CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT));
-  }
+#ifdef MODE_PEER
+  CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT));
+#endif
+
   // Open Zenoh session
   CHECK(z_open(&_zenoh_session, z_move(config), NULL));
 
   // Start the receive and the session lease loop for zenoh-pico
   zp_task_lease_options_t lease_options;
   zp_task_lease_options_default(&lease_options);
-//  lease_options.task_attributes->stack_depth = 16384;
+  //  lease_options.task_attributes->stack_depth = 16384;
 
   zp_task_read_options_t read_options;
   zp_task_read_options_default(&read_options);
-//  read_options.task_attributes->stack_depth = 16384;
+  //  read_options.task_attributes->stack_depth = 16384;
 
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), &read_options));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), &lease_options));
   auto r = collect_info();
   INFO("Zenoh session opened with ZID %s", zid.c_str());
   _connected = true;
+  emit(new ZenohConnected());
   return Res::Ok(true);
 }
 
@@ -398,7 +397,7 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   {
     return Res::Err(-1, "Payload is empty");
   }
-  CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &put_options));
+  CHECK(z_put(z_loan(_zenoh_session), z_loan(keyexpr), z_move(payload), &_put_options));
   z_drop(z_move(payload));
   emit(new LedPulse(10));
 

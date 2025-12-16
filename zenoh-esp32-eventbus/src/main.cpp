@@ -1,10 +1,15 @@
 // #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 // #pragma GCC diagnostic ignored "-Wunused-variable"
 
-#include <nvs_flash.h>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <esp_wifi.h>
+#include <esp_coexist.h>
+#include <esp_event.h>
+#include <nvs_flash.h>
+
 #include <actor.h>
 #include <wifi_actor.h>
 #include <sys_actor.h>
@@ -15,14 +20,9 @@
 #include <hoverboard_actor.h>
 #include <log.h>
 
-#include <esp_wifi.h>
-#include <esp_coexist.h>
-#include <esp_event.h>
-#include <esp_ota_ops.h>
-
-#define DEVICE_PREFIX DEVICE_NAME "/"
-#define DST_DEVICE "dst/" DEVICE_NAME "/"
-#define SRC_DEVICE "src/" DEVICE_NAME "/"
+#ifndef DEVICE_NAME
+#error "DEVICE_NAME not defined"
+#endif
 
 EventBus eventbus(20);
 Log logger;
@@ -50,11 +50,16 @@ extern "C" void app_main()
                             {
                               const char *src = env.src ? env.src->name() : "";
                               const char *dst = env.dst ? env.dst->name() : "";
-                              INFO(" %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
+                              INFO(" heap : %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
                             });
   eventbus.loop();
 }
-
+/*
+Initializes the non-volatile storage (NVS) and, 
+if necessary, erases and re-initializes it when specific errors are detected. 
+Additionally, it reports the currently running OTA partition and attempts to mark the current application as valid, 
+canceling any pending rollback if successful.
+*/
 esp_err_t nvs_ota_init()
 {
   esp_err_t ret = nvs_flash_init();

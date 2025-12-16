@@ -31,6 +31,8 @@ DEFINE_MSG(ZenohUnsubscribe,
 DEFINE_MSG(ZenohReceived, std::string topic;
            Bytes payload;
            ZenohReceived(const std::string &topic, const Bytes &payload) : topic(topic), payload(payload){};);
+DEFINE_MSG(ZenohConnected);
+DEFINE_MSG(ZenohDisconnected);
 DEFINE_MSG(ZenohConnect);
 DEFINE_MSG(ZenohDisconnect);
 
@@ -109,7 +111,7 @@ private:
   z_owned_session_t _zenoh_session;
   bool _connected = false;
   z_owned_config_t config;
-  z_put_options_t put_options;
+  z_put_options_t _put_options;
   std::string zid;
   std::vector<std::string> _routers;
   std::vector<std::string> _peers;
