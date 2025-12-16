@@ -88,7 +88,8 @@ Result<bool> HoverboardActor::init_uart()
     ESP_ERROR_RET(uart_driver_install(UART_PORT, UART_BUF_SIZE * 2, UART_BUF_SIZE, 10, &uart_queue, 0));
 
     INFO("UART%d initialized at %d baud", UART_PORT, UART_BAUD_RATE);
-    auto rc = xTaskCreate(uart_event_task, "uart_event_task", 5120, this, 12, &uart_task_handle);
+    // Lower task priority to avoid starving system/Zenoh tasks and WDT timeouts
+    auto rc = xTaskCreate(uart_event_task, "uart_event_task", 5120, this, 5, &uart_task_handle);
     if (rc != pdPASS)
     {
         return Result<bool>::Err(-1, "Failed to create UART event task");
@@ -217,12 +218,12 @@ void HoverboardActor::on_message(const Envelope &env)
 
 void HoverboardActor::handle_uart_bytes(const Bytes &data)
 {
-    INFO("Processing UART RX data (%d bytes)", data.size());
+    DEBUG("Processing UART RX data (%d bytes)", data.size());
     for (auto b : data)
     {
         if (b == COBS_SEPARATOR)
         {
-            INFO("COBS frame received (%d bytes)", uart_read_buffer.size());
+            DEBUG("COBS frame received (%d bytes)", uart_read_buffer.size());
             (void)cobs_decode(uart_read_buffer)
                 .and_then(check_crc)
                 .and_then(parse_info_msg)

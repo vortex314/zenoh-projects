@@ -139,11 +139,20 @@ Res ZenohActor::connect(void)
   // Start the receive and the session lease loop for zenoh-pico
   zp_task_lease_options_t lease_options;
   zp_task_lease_options_default(&lease_options);
-  //  lease_options.task_attributes->stack_depth = 16384;
+  // Increase stack and lower priority; pin to CPU0 to avoid contention
+  if (lease_options.task_attributes) {
+    lease_options.task_attributes->stack_depth = 8192;
+    lease_options.task_attributes->priority = 4; // below typical app tasks
+  //  lease_options.task_attributes->core_id = 0;  // run on CPU0
+  }
 
   zp_task_read_options_t read_options;
   zp_task_read_options_default(&read_options);
-  //  read_options.task_attributes->stack_depth = 16384;
+  if (read_options.task_attributes) {
+    read_options.task_attributes->stack_depth = 8192;
+    read_options.task_attributes->priority = 4; // below typical app tasks
+//    read_options.task_attributes->core_id = 0;  // run on CPU0
+  }
 
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), &read_options));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), &lease_options));
