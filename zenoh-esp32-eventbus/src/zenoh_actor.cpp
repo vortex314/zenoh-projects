@@ -88,6 +88,7 @@ void ZenohActor::on_message(const Envelope &env)
 
 void ZenohActor::connect_and_subscribe()
 {
+  INFO("Connecting to Zenoh...");
   Res res = connect();
   if (res.is_err())
   {
@@ -132,27 +133,27 @@ Res ZenohActor::connect(void)
 #ifdef MODE_PEER
   CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT));
 #endif
-
+/* not yet in the releqsed version
 z_open_options_t open_options;
   z_open_options_default(&open_options);
   open_options.auto_start_lease_task = false; // we will start it manually later
   open_options.auto_start_read_task = false;  // we will start it manually later
-
+*/
   // Open Zenoh session
-  CHECK(z_open(&_zenoh_session, z_move(config), &open_options));
+  CHECK(z_open(&_zenoh_session, z_move(config), NULL));
 
   // Start the receive and the session lease loop for zenoh-pico
   zp_task_lease_options_t lease_options;
   zp_task_lease_options_default(&lease_options);
   // Increase stack and lower priority; pin to CPU0 to avoid contention
   lease_options.task_attributes->stack_depth = 8192;
-  lease_options.task_attributes->priority = 4; // below typical app tasks
+  lease_options.task_attributes->priority = 3; // below typical app tasks
   lease_options.task_attributes->name = "zenoh_lease_task";
 
   zp_task_read_options_t read_options;
   zp_task_read_options_default(&read_options);
   read_options.task_attributes->stack_depth = 8192;
-  read_options.task_attributes->priority = 3; // below typical app tasks
+  read_options.task_attributes->priority = 4; // below typical app tasks
   // below read task , to enable read task to stop cleanly before lease task ??
   read_options.task_attributes->name = "zenoh_read_task";
 
@@ -398,7 +399,11 @@ Res ZenohActor::zenoh_publish(const char *topic, const Bytes &value)
   {
     return Res::Err(-1, "Zenoh session is not connected or closed");
   }
-  // INFO("Publishing message on topic '%s' (%d bytes)", topic, value.size());
+  // Log payload size to diagnose MTU-related send drops
+  if (value.size() > 1400)
+  {
+    WARN("Payload for '%s' is large: %d bytes (risk of UDP drop)", topic, (int)value.size());
+  }
   z_view_keyexpr_t keyexpr;
   z_owned_bytes_t payload;
   z_view_keyexpr_from_str(&keyexpr, topic);

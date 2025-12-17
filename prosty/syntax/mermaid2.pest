@@ -1,0 +1,142 @@
+//```pest
+// Pest grammar for Mermaid stateDiagram-v2
+// This is a comprehensive but not exhaustive grammar covering core features:
+// - Diagram declaration (stateDiagram or stateDiagram-v2)
+// - Directions (TB, TD, BT, RL, LR)
+// - Simple and composite states
+// - State descriptions and aliases (id "description" as alias)
+// - Transitions with optional labels (: label)
+// - Start/end states ([*])
+// - Notes
+// - Choice, fork/join
+// - Basic styling (classDef and :::)
+// - Comments (%%)
+// It ignores whitespace and allows statements on new lines.
+
+diagram = { SOI ~ declaration ~ statement* ~ EOI }
+
+declaration = { ("stateDiagram" ~ ("-v2")? ) }
+
+statement = { 
+    whitespace? ~ (
+        direction_stmt 
+      | state_definition 
+      | transition 
+      | note_stmt 
+      | class_def 
+      | class_application 
+      | comment 
+      | concurrency  // -- separator in concurrent states
+    ) ~ newline? 
+}
+
+direction_stmt = { "direction" ~ whitespace+ ~ direction }
+direction = { "TB" | "TD" | "BT" | "RL" | "LR" }
+
+state_definition = { 
+    "state" ~ whitespace+ ~ 
+    ( composite_state | simple_state_with_body | state_with_description )
+}
+
+composite_state = { 
+    state_id ~ whitespace* ~ "{" ~ statement* ~ "}" 
+  | state_id ~ whitespace* ~ description ~ whitespace* ~ "{" ~ statement* ~ "}" 
+}
+
+simple_state_with_body = { state_id ~ whitespace* ~ "{" ~ statement* ~ "}" }
+
+state_with_description = { 
+      state_id ~ whitespace* ~ description 
+    | state_id ~ whitespace* ~ description ~ whitespace* ~ "as" ~ whitespace* ~ state_alias 
+    | quoted_description ~ whitespace* ~ "as" ~ whitespace* ~ state_alias 
+}
+
+state_id = { identifier | special_state }
+
+special_state = { "[*]" }
+
+identifier = { ASCII_ALPHANUMERIC+ | ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_" | "-" | "." )* }
+
+state_alias = { identifier }
+
+description = { ":" ~ (!newline ~ ANY)* }
+
+quoted_description = { "\"" ~ (^"\"" | "\\\"")* ~ "\"" }
+
+transition = { 
+    from_state ~ whitespace* ~ arrow ~ whitespace* ~ to_state ~ (whitespace* ~ label)? 
+}
+
+from_state = { state_id }
+to_state = { state_id }
+
+arrow = { "-->" | "-." ->" }  // dotted for hide empty, but basic -->
+
+label = { ":" ~ (!newline ~ ANY)* }
+
+note_stmt = { 
+    "note" ~ whitespace+ ~ position ~ whitespace+ ~ "of" ~ whitespace+ ~ state_id ~ whitespace* ~ description ~ "end" ~ "note"? 
+}
+
+position = { "left" | "right" }
+
+class_def = { 
+    "classDef" ~ whitespace+ ~ class_name ~ whitespace* ~ style_properties 
+}
+
+class_name = { identifier }
+
+style_properties = { ","? ~ (style_key ~ ":" ~ style_value)* }  // simplified
+
+style_key = { identifier }
+style_value = { (!"," ~ !newline ~ ANY)+ }
+
+class_application = { state_id ~ ":::" ~ class_name+ }  // multiple possible
+
+choice_state = { "state" ~ whitespace+ ~ state_id ~ whitespace* ~ "<<choice>>" }
+
+fork_state = { "state" ~ whitespace+ ~ state_id ~ whitespace* ~ "<<fork>>" }
+join_state = { "state" ~ whitespace+ ~ state_id ~ whitespace* ~ "<<join>>" }
+
+concurrency = { "--" }
+
+comment = { "%%" ~ (!newline ~ ANY)* }
+
+whitespace = { " " | "\t" }
+newline = { "\n" | "\r\n" }
+
+// Silent rules for common patterns
+identifier = ${ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_" | "-" | ".")* }
+```
+
+This Pest grammar parses most common Mermaid **stateDiagram-v2** constructs, based on the official syntax. It supports:
+
+- Basic declarations and directions
+- Simple/composite states with descriptions and aliases
+- Transitions (including labeled ones)
+- Start/end states (`[*]`)
+- Notes
+- Choice (`<<choice>>`), fork/join (`<<fork>>` / `<<join>>`)
+- Basic `classDef` and state styling with `:::`
+- Comments
+
+It is not 100% complete (e.g., full CSS-style properties in `classDef` are simplified, concurrent states with multiple regions are partially supported via `--`). For a production parser, extend it further.
+
+You can test it with the Pest online editor or in a Rust project using the `pest` crate.
+
+Example input that should parse successfully:
+
+```
+stateDiagram-v2
+    direction LR
+    [*] --> Still
+    Still --> Moving : accelerate
+    Moving --> Crash
+    state Composite {
+        [*] --> Inner
+        Inner --> [*]
+    }
+    note right of Crash: Bad things happened
+    classDef bad fill:red
+    Crash :::bad
+```

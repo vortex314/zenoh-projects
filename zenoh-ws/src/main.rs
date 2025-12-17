@@ -5,8 +5,10 @@ use actix_web::test;
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use futures::StreamExt;
+use log::debug;
 use log::info;
 use serde::Deserialize;
+use serde_json::json;
 use std::result::Result;
 use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc};
@@ -103,7 +105,7 @@ impl actix::Handler<BroadcastMsg> for WsActor {
     fn handle(&mut self, msg: BroadcastMsg, ctx: &mut Self::Context) {
         let str = String::from_utf8(msg.0.value.clone()).unwrap_or_default();
         let js: serde_json::Value = serde_json::from_str(&str).unwrap_or_default();
-        info!("Broadcasting Zenoh message to WebSocket client {:?}", msg.0.key);
+        debug!("Broadcasting Zenoh message to WebSocket client {:?}", msg.0.key);
 
         let json = serde_json::json!({
             "type": "Publish",
@@ -203,7 +205,8 @@ async fn zenoh_worker(
     tx_broadcast: broadcast::Sender<ZenohSample>,
     mut rx_publish: mpsc::Receiver<PublishRequest>,
 ) {
-    let config = zenoh::Config::default();
+    let mut config = zenoh::Config::default();
+    config.insert_json5("mode", &json!("router").to_string()).unwrap();
     let session = zenoh::open(config).await.unwrap();
     info!("✅ Connected to Zenoh");
 
@@ -216,7 +219,7 @@ async fn zenoh_worker(
     tokio::spawn(async move {
         let mut stream = sub.stream();
         while let Some(sample) = stream.next().await {
-            info!("Received Zenoh sample on key {}:{}", sample.key_expr(),sample.payload().try_to_string().unwrap());
+            debug!("Received Zenoh sample on key {}:{}", sample.key_expr(),sample.payload().try_to_string().unwrap());
             let data = ZenohSample {
                 key: sample.key_expr().to_string(),
                 value: sample.payload().to_bytes().to_vec(),

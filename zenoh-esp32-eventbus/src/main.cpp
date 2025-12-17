@@ -15,6 +15,7 @@
 #include <sys_actor.h>
 #include <led_actor.h>
 #include <zenoh_actor.h>
+#include <mc_actor.h>
 #include <ota_actor.h>
 #include <mdns_actor.h>
 #include <hoverboard_actor.h>
@@ -38,7 +39,8 @@ extern "C" void app_main()
 
   eventbus.register_actor(new WifiActor("wifi"));                // manage wifi connection, will block on start until connected
   eventbus.register_actor(new SysActor("sys"));                  // manage the system
-  eventbus.register_actor(new ZenohActor("zenoh", DEVICE_NAME)); // bridge the eventbus
+ // eventbus.register_actor(new ZenohActor("zenoh", DEVICE_NAME)); // bridge the eventbus
+  eventbus.register_actor(new McActor("mc", DEVICE_NAME));       // multicast actor
   eventbus.register_actor(new LedActor("led"));                  // blink the led
   eventbus.register_actor(new OtaActor("ota"));                  // ota via tftp
   eventbus.register_actor(new MdnsActor("mdns", DEVICE_NAME));   // mdns service
@@ -50,7 +52,7 @@ extern "C" void app_main()
                             {
                               const char *src = env.src ? env.src->name() : "";
                               const char *dst = env.dst ? env.dst->name() : "";
-                              INFO(" heap : %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
+                   //           INFO(" heap : %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
                             });
   eventbus.loop();
 }
