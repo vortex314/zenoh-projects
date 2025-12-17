@@ -133,26 +133,28 @@ Res ZenohActor::connect(void)
   CHECK(zp_config_insert(z_loan_mut(config), Z_CONFIG_LISTEN_KEY, CONNECT));
 #endif
 
+z_open_options_t open_options;
+  z_open_options_default(&open_options);
+  open_options.auto_start_lease_task = false; // we will start it manually later
+  open_options.auto_start_read_task = false;  // we will start it manually later
+
   // Open Zenoh session
-  CHECK(z_open(&_zenoh_session, z_move(config), NULL));
+  CHECK(z_open(&_zenoh_session, z_move(config), &open_options));
 
   // Start the receive and the session lease loop for zenoh-pico
   zp_task_lease_options_t lease_options;
   zp_task_lease_options_default(&lease_options);
   // Increase stack and lower priority; pin to CPU0 to avoid contention
-  if (lease_options.task_attributes) {
-    lease_options.task_attributes->stack_depth = 8192;
-    lease_options.task_attributes->priority = 4; // below typical app tasks
-  //  lease_options.task_attributes->core_id = 0;  // run on CPU0
-  }
+  lease_options.task_attributes->stack_depth = 8192;
+  lease_options.task_attributes->priority = 4; // below typical app tasks
+  lease_options.task_attributes->name = "zenoh_lease_task";
 
   zp_task_read_options_t read_options;
   zp_task_read_options_default(&read_options);
-  if (read_options.task_attributes) {
-    read_options.task_attributes->stack_depth = 8192;
-    read_options.task_attributes->priority = 4; // below typical app tasks
-//    read_options.task_attributes->core_id = 0;  // run on CPU0
-  }
+  read_options.task_attributes->stack_depth = 8192;
+  read_options.task_attributes->priority = 3; // below typical app tasks
+  // below read task , to enable read task to stop cleanly before lease task ??
+  read_options.task_attributes->name = "zenoh_read_task";
 
   CHECK(zp_start_read_task(z_loan_mut(_zenoh_session), &read_options));
   CHECK(zp_start_lease_task(z_loan_mut(_zenoh_session), &lease_options));

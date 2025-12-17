@@ -163,6 +163,11 @@ message HoverboardCmd {
   int32 steer = 1;
 }
 
+message HoverboardReply {
+  int32 error_code = 0;
+  string message = 1;
+}
+
 // PS4 Controller Message
 
 message TouchPoint {
@@ -238,7 +243,14 @@ message CameraEvent {
 
 message CameraCmd {
   bool led = 1;
+  string capture_tcp_destination = 2;
   int32 quality = 4;
+}
+
+message CameraReply {
+  int32 error_code = 1;
+  string message = 2;
+  bytes data = 3;
 }
 
 // Lawnmower Manual Events
@@ -265,6 +277,11 @@ message LawnmowerManualCmd {
   bool emergency_stop = 6;
   bool start_auto_mode = 7;
   bool stop_auto_mode = 8;
+}
+
+message LawnmowerManualReply {
+  int32 error_code = 1;
+  string message = 2;
 }
 
 message LawnmowerAutoEvent {

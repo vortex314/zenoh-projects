@@ -47,6 +47,7 @@ public:
     const Msg *msg;
     Envelope(Msg *msg) : msg(msg) {}
     Envelope(ActorRef src, const Msg *msg) : src(src), msg(msg) {}
+    Envelope(ActorRef src, ActorRef dst, const Msg *msg) : src(src), dst(dst), msg(msg) {}
     ~Envelope() { delete msg; }
 };
 

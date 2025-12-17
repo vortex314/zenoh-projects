@@ -150,7 +150,6 @@ void WifiActor::event_handler(void *arg, esp_event_base_t event_base,
   {
     INFO("WiFi STA got IP address in %s", actor->ref().name());
     actor->emit(new WifiConnected());
-    actor->emit(new ZenohConnected());
     actor->_wifi_connected = true;
     s_retry_count = 0;
   }

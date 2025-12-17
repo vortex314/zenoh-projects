@@ -1,0 +1,68 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "lwip/api.h"
+#include "lwip/inet.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include <string.h>
+#include <stdio.h>
+
+#define MULTICAST_ADDR "239.255.0.1"
+#define MULTICAST_PORT 50001
+#define LISTEN_PORT    50002
+
+void udp_multicast_publisher_task(void *pvParameters) {
+    struct netconn *conn = netconn_new(NETCONN_UDP);
+    ip_addr_t mcast_addr;
+    IP4_ADDR(&mcast_addr, 239, 255, 0, 1);
+
+    int count = 0;
+    while (1) {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Event #%d", count++);
+        struct netbuf *buf = netbuf_new();
+        void *data = netbuf_alloc(buf, strlen(msg));
+        memcpy(data, msg, strlen(msg));
+        netconn_sendto(conn, buf, &mcast_addr, MULTICAST_PORT);
+        printf("Published: %s\n", msg);
+        netbuf_delete(buf);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+    // netconn_delete(conn); // Not reached
+}
+
+void udp_command_listener_task(void *pvParameters) {
+    struct netconn *conn = netconn_new(NETCONN_UDP);
+    netconn_bind(conn, IP_ADDR_ANY, LISTEN_PORT);
+
+    while (1) {
+        struct netbuf *buf;
+        err_t err = netconn_recv(conn, &buf);
+        if (err == ERR_OK) {
+            char *data;
+            u16_t len;
+            netbuf_data(buf, (void**)&data, &len);
+            char cmd[128] = {0};
+            memcpy(cmd, data, len < sizeof(cmd) ? len : sizeof(cmd) - 1);
+            printf("Received command: %s\n", cmd);
+
+            // Reply to sender
+            char reply[128];
+            snprintf(reply, sizeof(reply), "ACK: %s", cmd);
+            struct ip_addr *addr = netbuf_fromaddr(buf);
+            u16_t port = netbuf_fromport(buf);
+            struct netbuf *reply_buf = netbuf_new();
+            void *reply_data = netbuf_alloc(reply_buf, strlen(reply));
+            memcpy(reply_data, reply, strlen(reply));
+            netconn_sendto(conn, reply_buf, addr, port);
+            netbuf_delete(reply_buf);
+        }
+        netbuf_delete(buf);
+    }
+    // netconn_delete(conn); // Not reached
+}
+
+extern "C" void app_main() {
+    xTaskCreate(&udp_multicast_publisher_task, "udp_multicast_pub", 4096, NULL, 5, NULL);
+    xTaskCreate(&udp_command_listener_task, "udp_cmd_listener", 4096, NULL, 5, NULL);
+}

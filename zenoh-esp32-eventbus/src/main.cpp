@@ -36,7 +36,7 @@ extern "C" void app_main()
   INFO("Free heap size: %ld ", esp_get_free_heap_size());
   INFO("Stack high water mark: %ld \n", uxTaskGetStackHighWaterMark(NULL));
 
-  eventbus.register_actor(new WifiActor("wifi"));                // manage wifi connection
+  eventbus.register_actor(new WifiActor("wifi"));                // manage wifi connection, will block on start until connected
   eventbus.register_actor(new SysActor("sys"));                  // manage the system
   eventbus.register_actor(new ZenohActor("zenoh", DEVICE_NAME)); // bridge the eventbus
   eventbus.register_actor(new LedActor("led"));                  // blink the led
