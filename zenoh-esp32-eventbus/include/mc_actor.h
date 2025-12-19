@@ -39,6 +39,10 @@ public:
   ~McActor();
   void on_message(const Envelope &);
   void on_start();
-  void init();
+  void init_event();
+  void stop_event();
+  void start_listener();
+  void stop_listener();
   void send_msg(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  static void udp_listener_task(void *param);
 };

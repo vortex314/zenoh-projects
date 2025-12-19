@@ -18,10 +18,13 @@ McActor::~McActor()
 void McActor::on_start()
 {
     INFO("OTA Actor started");
+    init();
+    start_listener();
 }
 
-void McActor::init()
+void McActor::init_event()
 {
+    // create multicast socket
     _event_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (_event_socket < 0)
     {
@@ -33,14 +36,21 @@ void McActor::init()
     timeout.tv_sec = 0;
     timeout.tv_usec = 1000; // 1ms timeout
     setsockopt(_event_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-        fcntl(_event_socket, F_SETFL, O_NONBLOCK);
-
-
+  //  setsockopt(_event_socket, IPPROTO_IP, IP_MULTICAST_IF, &local.sin_addr, sizeof(local.sin_addr));
+    fcntl(_event_socket, F_SETFL, O_NONBLOCK);
     memset(&_event_addr, 0, sizeof(_event_addr));
     _event_addr.sin_family = AF_INET;
     _event_addr.sin_port = htons(MULTICAST_PORT);
     _event_addr.sin_addr.s_addr = inet_addr(MULTICAST_GROUP);
+}
+
+void McActor::stop_event()
+{
+    if (_event_socket >= 0)
+    {
+        close(_event_socket);
+        _event_socket = -1;
+    }
 }
 
 void McActor::send_msg(const char *dst, const char *src, const char *type, const Bytes &payload)
@@ -86,9 +96,11 @@ void McActor::on_message(const Envelope &envelope)
     const Msg &msg = *envelope.msg;
 
     msg.handle<WifiConnected>([&](const auto &msg)
-                              { init(); });
+                              { init_event();start_listener(); });
 
-    msg.handle<WifiDisconnected>([&](const auto &msg) {});
+    msg.handle<WifiDisconnected>([&](const auto &msg) {
+        stop_listener();
+    });
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { INFO("MC Actor Timer Msg id: %d", msg.timer_id); });
     msg.handle<SysEvent>([&](const auto &msg)
@@ -100,4 +112,47 @@ void McActor::on_message(const Envelope &envelope)
     msg.handle<HoverboardEvent>([&](const auto &msg)
                                 { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
                                                                             { send_msg(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
+}
+
+void McActor::start_listener()
+{
+    xTaskCreatePinnedToCore(udp_listener_task, "udp_listener_task", 8192, this, 5, NULL, 1);
+}
+
+void McActor::udp_command_listener(void *pvParameters) {
+    McActor *actor = static_cast<McActor *>(pvParameters);
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        perror("socket");
+        return;
+    }
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(LISTEN_PORT);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(sock, (sockaddr*)&addr, sizeof(addr)) < 0) {
+        perror("bind");
+        close(sock);
+        return;
+    }
+
+    char buf[BUF_SIZE];
+    while (running) {
+        sockaddr_in sender{};
+        socklen_t sender_len = sizeof(sender);
+        int len = recvfrom(sock, buf, BUF_SIZE - 1, 0, (sockaddr*)&sender, &sender_len);
+        if (len < 0) {
+            perror("recvfrom");
+            continue;
+        }
+        buf[len] = '\0';
+        std::string cmd(buf);
+        std::cout << "Received command: " << cmd << " from " << inet_ntoa(sender.sin_addr) << ":" << ntohs(sender.sin_port) << std::endl;
+        // Reply to sender
+        std::string reply = "ACK: " + cmd;
+        sendto(sock, reply.c_str(), reply.size(), 0, (sockaddr*)&sender, sender_len);
+    }
+    close(sock);
 }
