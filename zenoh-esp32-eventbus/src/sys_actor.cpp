@@ -7,7 +7,7 @@
 
 SysActor::SysActor(const char *name) : Actor(name)
 {
-    _timer_publish = timer_repetitive(100);
+    _timer_publish = timer_repetitive(1000);
 }
 
 void SysActor::on_start()

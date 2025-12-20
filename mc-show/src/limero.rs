@@ -107,7 +107,7 @@ pub struct UdpMessage {
         #[serde(skip_serializing_if = "Option::is_none")]
     pub src:Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-    pub type:Option<String>,
+    pub msg_type:Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub payload:Option<Vec<u8>>,
         
@@ -137,7 +137,7 @@ pub struct UdpMessageCbor {
         #[serde(skip_serializing_if = "Option::is_none")]
     pub src:Option<u32>,
         #[serde(skip_serializing_if = "Option::is_none")]
-    pub type:Option<u32>,
+    pub msg_type:Option<u32>,
         #[serde(skip_serializing_if = "Option::is_none")]
     pub payload:Option<Vec<u8>>,
         

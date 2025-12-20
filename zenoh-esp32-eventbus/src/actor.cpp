@@ -9,6 +9,18 @@ void Actor::set_eventbus(EventBus *eventbus)
     this->_eventbus = eventbus;
 }
 
+void Actor::emit(const Envelope *env)
+{
+    if (_eventbus)
+    {
+        _eventbus->push(env);
+    }
+    else
+    {
+        ERROR("EventBus not set for actor %s", name());
+    }
+}
+
 void Actor::emit(const Msg *msg)
 {
     if (_eventbus)

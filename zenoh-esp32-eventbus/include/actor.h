@@ -236,6 +236,7 @@ public:
     EventBus *eventbus() const { return _eventbus; }
 
     void emit(const Msg *msg);
+    void emit(const Envelope *env);
     void set_eventbus(EventBus *eventbus);
 
     void handle_expired_timers()

@@ -31,8 +31,12 @@ class McActor : public Actor
 private:
   std::string _hostname;
   int _event_socket;
-  sockaddr_in _event_addr;
   int _req_reply_socket;
+  sockaddr_in _event_addr;
+  sockaddr_in _req_reply_addr;
+  bool _running = true;
+  int _timer_publish;
+  uint32_t _ping_counter = 0;
 
 public:
   McActor(const char *name, const char *hostname);
@@ -43,6 +47,11 @@ public:
   void stop_event();
   void start_listener();
   void stop_listener();
-  void send_msg(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  void send_event(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  void send_request_reply(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  void on_request(const Bytes &request, const sockaddr_in &sender_addr);
+  void on_message(const char *type,Bytes& payload);
+  void on_timer();
+  Bytes encode_message(const char *dst, const char *src, const char *type, const Bytes &payload);
   static void udp_listener_task(void *param);
 };

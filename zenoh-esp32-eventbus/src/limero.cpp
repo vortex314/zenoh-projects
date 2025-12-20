@@ -61,6 +61,70 @@ Result<Bytes> Sample::json_serialize(const Sample& msg)  {
     }
 
 
+Result<Bytes> UdpMessage::json_serialize(const UdpMessage& msg)  {
+        JsonDocument doc;
+        if (msg.dst)doc["dst"] = *msg.dst;
+        if (msg.src)doc["src"] = *msg.src;
+        if (msg.type)doc["type"] = *msg.type;
+        if (msg.payload)
+                        doc["payload"] = base64_encode(*msg.payload);
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<UdpMessage*> UdpMessage::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        UdpMessage* msg = new UdpMessage();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<UdpMessage*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["dst"].is<std::string>() )  
+                        msg->dst = doc["dst"].as<std::string>();
+        if (doc["src"].is<std::string>() )  
+                        msg->src = doc["src"].as<std::string>();
+        if (doc["type"].is<std::string>() )  
+                        msg->type = doc["type"].as<std::string>();
+        if (doc["payload"].is<std::string>() )  
+                        msg->payload = base64_decode(doc["payload"].as<std::string>());
+        return Result<UdpMessage*>::Ok(msg);
+    }
+
+
+Result<Bytes> UdpMessageCbor::json_serialize(const UdpMessageCbor& msg)  {
+        JsonDocument doc;
+        if (msg.dst)doc["dst"] = *msg.dst;
+        if (msg.src)doc["src"] = *msg.src;
+        if (msg.type)doc["type"] = *msg.type;
+        if (msg.payload)
+                        doc["payload"] = base64_encode(*msg.payload);
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<UdpMessageCbor*> UdpMessageCbor::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        UdpMessageCbor* msg = new UdpMessageCbor();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<UdpMessageCbor*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["dst"].is<uint32_t>() )  
+                        msg->dst = doc["dst"].as<uint32_t>();
+        if (doc["src"].is<uint32_t>() )  
+                        msg->src = doc["src"].as<uint32_t>();
+        if (doc["type"].is<uint32_t>() )  
+                        msg->type = doc["type"].as<uint32_t>();
+        if (doc["payload"].is<std::string>() )  
+                        msg->payload = base64_decode(doc["payload"].as<std::string>());
+        return Result<UdpMessageCbor*>::Ok(msg);
+    }
+
+
 Result<Bytes> ZenohEvent::json_serialize(const ZenohEvent& msg)  {
         JsonDocument doc;
         if (msg.zid)doc["zid"] = *msg.zid;
@@ -297,6 +361,50 @@ Result<Bytes> MulticastEvent::json_serialize(const MulticastEvent& msg)  {
     }
 
 
+Result<Bytes> Ping::json_serialize(const Ping& msg)  {
+        JsonDocument doc;
+        if (msg.number)doc["number"] = *msg.number;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<Ping*> Ping::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        Ping* msg = new Ping();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<Ping*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["number"].is<uint32_t>() )  
+                        msg->number = doc["number"].as<uint32_t>();
+        return Result<Ping*>::Ok(msg);
+    }
+
+
+Result<Bytes> Pong::json_serialize(const Pong& msg)  {
+        JsonDocument doc;
+        if (msg.number)doc["number"] = *msg.number;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<Pong*> Pong::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        Pong* msg = new Pong();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<Pong*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["number"].is<uint32_t>() )  
+                        msg->number = doc["number"].as<uint32_t>();
+        return Result<Pong*>::Ok(msg);
+    }
+
+
 Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
         JsonDocument doc;
         if (msg.ctrl_mod)doc["ctrl_mod"] = *msg.ctrl_mod;
@@ -476,6 +584,31 @@ Result<Bytes> HoverboardCmd::json_serialize(const HoverboardCmd& msg)  {
         if (doc["steer"].is<int32_t>() )  
                         msg->steer = doc["steer"].as<int32_t>();
         return Result<HoverboardCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> HoverboardReply::json_serialize(const HoverboardReply& msg)  {
+        JsonDocument doc;
+        if (msg.error_code)doc["error_code"] = *msg.error_code;
+        if (msg.message)doc["message"] = *msg.message;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<HoverboardReply*> HoverboardReply::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        HoverboardReply* msg = new HoverboardReply();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<HoverboardReply*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["error_code"].is<int32_t>() )  
+                        msg->error_code = doc["error_code"].as<int32_t>();
+        if (doc["message"].is<std::string>() )  
+                        msg->message = doc["message"].as<std::string>();
+        return Result<HoverboardReply*>::Ok(msg);
     }
 
 
@@ -709,6 +842,7 @@ Result<Bytes> CameraEvent::json_serialize(const CameraEvent& msg)  {
 Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
         JsonDocument doc;
         if (msg.led)doc["led"] = *msg.led;
+        if (msg.capture_tcp_destination)doc["capture_tcp_destination"] = *msg.capture_tcp_destination;
         if (msg.quality)doc["quality"] = *msg.quality;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
@@ -725,9 +859,40 @@ Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
         };        
         if (doc["led"].is<bool>() )  
                         msg->led = doc["led"].as<bool>();
+        if (doc["capture_tcp_destination"].is<std::string>() )  
+                        msg->capture_tcp_destination = doc["capture_tcp_destination"].as<std::string>();
         if (doc["quality"].is<int32_t>() )  
                         msg->quality = doc["quality"].as<int32_t>();
         return Result<CameraCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> CameraReply::json_serialize(const CameraReply& msg)  {
+        JsonDocument doc;
+        if (msg.error_code)doc["error_code"] = *msg.error_code;
+        if (msg.message)doc["message"] = *msg.message;
+        if (msg.data)
+                        doc["data"] = base64_encode(*msg.data);
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<CameraReply*> CameraReply::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        CameraReply* msg = new CameraReply();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<CameraReply*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["error_code"].is<int32_t>() )  
+                        msg->error_code = doc["error_code"].as<int32_t>();
+        if (doc["message"].is<std::string>() )  
+                        msg->message = doc["message"].as<std::string>();
+        if (doc["data"].is<std::string>() )  
+                        msg->data = base64_decode(doc["data"].as<std::string>());
+        return Result<CameraReply*>::Ok(msg);
     }
 
 
@@ -799,6 +964,31 @@ Result<Bytes> LawnmowerManualCmd::json_serialize(const LawnmowerManualCmd& msg) 
         if (doc["stop_auto_mode"].is<bool>() )  
                         msg->stop_auto_mode = doc["stop_auto_mode"].as<bool>();
         return Result<LawnmowerManualCmd*>::Ok(msg);
+    }
+
+
+Result<Bytes> LawnmowerManualReply::json_serialize(const LawnmowerManualReply& msg)  {
+        JsonDocument doc;
+        if (msg.error_code)doc["error_code"] = *msg.error_code;
+        if (msg.message)doc["message"] = *msg.message;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<LawnmowerManualReply*> LawnmowerManualReply::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        LawnmowerManualReply* msg = new LawnmowerManualReply();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<LawnmowerManualReply*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["error_code"].is<int32_t>() )  
+                        msg->error_code = doc["error_code"].as<int32_t>();
+        if (doc["message"].is<std::string>() )  
+                        msg->message = doc["message"].as<std::string>();
+        return Result<LawnmowerManualReply*>::Ok(msg);
     }
 
 
@@ -1125,6 +1315,269 @@ Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<Sample*>::Ok(msg);
+}
+
+Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.dst) {
+            cbor_encode_int(&mapEncoder, UdpMessage::Field::DST_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.dst.value().c_str());
+            }
+    if (msg.src) {
+            cbor_encode_int(&mapEncoder, UdpMessage::Field::SRC_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.src.value().c_str());
+            }
+    if (msg.type) {
+            cbor_encode_int(&mapEncoder, UdpMessage::Field::TYPE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.type.value().c_str());
+            }
+    if (msg.payload) {
+            cbor_encode_int(&mapEncoder, UdpMessage::Field::PAYLOAD_INDEX);
+            cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<UdpMessage*> UdpMessage::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    UdpMessage* msg = new UdpMessage();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<UdpMessage*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<UdpMessage*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<UdpMessage*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<UdpMessage*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case UdpMessage::Field::DST_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->dst = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessage::Field::SRC_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->src = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessage::Field::TYPE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->type = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessage::Field::PAYLOAD_INDEX:{{
+    uint8_t tmpbuf[512];
+    size_t tmplen = sizeof(tmpbuf);
+    if (cbor_value_is_byte_string(&mapIt)) {
+        cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
+        msg->payload = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<UdpMessage*>::Ok(msg);
+}
+
+Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.dst) {
+            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::DST_INDEX);
+            cbor_encode_int(&mapEncoder, msg.dst.value());
+            }
+    if (msg.src) {
+            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::SRC_INDEX);
+            cbor_encode_int(&mapEncoder, msg.src.value());
+            }
+    if (msg.type) {
+            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::TYPE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.type.value());
+            }
+    if (msg.payload) {
+            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::PAYLOAD_INDEX);
+            cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<UdpMessageCbor*> UdpMessageCbor::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    UdpMessageCbor* msg = new UdpMessageCbor();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<UdpMessageCbor*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<UdpMessageCbor*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<UdpMessageCbor*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<UdpMessageCbor*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case UdpMessageCbor::Field::DST_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &(v));
+    msg->dst = v;
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessageCbor::Field::SRC_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &(v));
+    msg->src = v;
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessageCbor::Field::TYPE_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &(v));
+    msg->type = v;
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case UdpMessageCbor::Field::PAYLOAD_INDEX:{{
+    uint8_t tmpbuf[512];
+    size_t tmplen = sizeof(tmpbuf);
+    if (cbor_value_is_byte_string(&mapIt)) {
+        cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
+        msg->payload = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<UdpMessageCbor*>::Ok(msg);
 }
 
 Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
@@ -2070,6 +2523,170 @@ Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
     return Result<MulticastEvent*>::Ok(msg);
 }
 
+Result<Bytes> Ping::cbor_serialize(const Ping& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.number) {
+            cbor_encode_int(&mapEncoder, Ping::Field::NUMBER_INDEX);
+            cbor_encode_int(&mapEncoder, msg.number.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Ping*> Ping::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Ping* msg = new Ping();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Ping*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Ping*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Ping*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Ping*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Ping::Field::NUMBER_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &(v));
+    msg->number = v;
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Ping*>::Ok(msg);
+}
+
+Result<Bytes> Pong::cbor_serialize(const Pong& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.number) {
+            cbor_encode_int(&mapEncoder, Pong::Field::NUMBER_INDEX);
+            cbor_encode_int(&mapEncoder, msg.number.value());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Pong*> Pong::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Pong* msg = new Pong();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Pong*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Pong*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Pong*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Pong*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Pong::Field::NUMBER_INDEX:{{
+    uint64_t v;
+    cbor_value_get_uint64(&mapIt, &(v));
+    msg->number = v;
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Pong*>::Ok(msg);
+}
+
 Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
@@ -2792,6 +3409,103 @@ Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<HoverboardCmd*>::Ok(msg);
+}
+
+Result<Bytes> HoverboardReply::cbor_serialize(const HoverboardReply& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.error_code) {
+            cbor_encode_int(&mapEncoder, HoverboardReply::Field::ERROR_CODE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            }
+    if (msg.message) {
+            cbor_encode_int(&mapEncoder, HoverboardReply::Field::MESSAGE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<HoverboardReply*> HoverboardReply::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    HoverboardReply* msg = new HoverboardReply();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<HoverboardReply*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<HoverboardReply*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<HoverboardReply*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<HoverboardReply*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case HoverboardReply::Field::ERROR_CODE_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->error_code = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardReply::Field::MESSAGE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->message = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<HoverboardReply*>::Ok(msg);
 }
 
 Result<Bytes> TouchPoint::cbor_serialize(const TouchPoint& msg)  {
@@ -3694,6 +4408,10 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
             cbor_encode_int(&mapEncoder, CameraCmd::Field::LED_INDEX);
             cbor_encode_boolean(&mapEncoder, msg.led.value());
             }
+    if (msg.capture_tcp_destination) {
+            cbor_encode_int(&mapEncoder, CameraCmd::Field::CAPTURE_TCP_DESTINATION_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.capture_tcp_destination.value().c_str());
+            }
     if (msg.quality) {
             cbor_encode_int(&mapEncoder, CameraCmd::Field::QUALITY_INDEX);
             cbor_encode_int(&mapEncoder, msg.quality.value());
@@ -3751,6 +4469,19 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
                 break;
             }
             
+            case CameraCmd::Field::CAPTURE_TCP_DESTINATION_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->capture_tcp_destination = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
             case CameraCmd::Field::QUALITY_INDEX:{int64_t v;
     cbor_value_get_int64(&mapIt, &v);
     msg->quality = v;
@@ -3771,6 +4502,120 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<CameraCmd*>::Ok(msg);
+}
+
+Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.error_code) {
+            cbor_encode_int(&mapEncoder, CameraReply::Field::ERROR_CODE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            }
+    if (msg.message) {
+            cbor_encode_int(&mapEncoder, CameraReply::Field::MESSAGE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            }
+    if (msg.data) {
+            cbor_encode_int(&mapEncoder, CameraReply::Field::DATA_INDEX);
+            cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<CameraReply*> CameraReply::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    CameraReply* msg = new CameraReply();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<CameraReply*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<CameraReply*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<CameraReply*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<CameraReply*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case CameraReply::Field::ERROR_CODE_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->error_code = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraReply::Field::MESSAGE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->message = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case CameraReply::Field::DATA_INDEX:{{
+    uint8_t tmpbuf[512];
+    size_t tmplen = sizeof(tmpbuf);
+    if (cbor_value_is_byte_string(&mapIt)) {
+        cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
+        msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<CameraReply*>::Ok(msg);
 }
 
 Result<Bytes> LawnmowerManualEvent::cbor_serialize(const LawnmowerManualEvent& msg)  {
@@ -4039,6 +4884,103 @@ Result<Bytes> LawnmowerManualCmd::cbor_serialize(const LawnmowerManualCmd& msg) 
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<LawnmowerManualCmd*>::Ok(msg);
+}
+
+Result<Bytes> LawnmowerManualReply::cbor_serialize(const LawnmowerManualReply& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.error_code) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::ERROR_CODE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            }
+    if (msg.message) {
+            cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::MESSAGE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<LawnmowerManualReply*> LawnmowerManualReply::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    LawnmowerManualReply* msg = new LawnmowerManualReply();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<LawnmowerManualReply*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<LawnmowerManualReply*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<LawnmowerManualReply*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<LawnmowerManualReply*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case LawnmowerManualReply::Field::ERROR_CODE_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->error_code = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case LawnmowerManualReply::Field::MESSAGE_INDEX:{{
+    char valbuf[256];
+    size_t vallen = sizeof(valbuf);
+    if (cbor_value_is_text_string(&mapIt)) {
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->message = std::string(valbuf, vallen - 1);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<LawnmowerManualReply*>::Ok(msg);
 }
 
 Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg)  {

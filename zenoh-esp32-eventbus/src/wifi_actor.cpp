@@ -31,7 +31,7 @@ static int s_retry_count = 0;
 WifiActor::WifiActor(const char *name) : Actor(name)
 {
   INFO("Creating WiFi actor %s ", name);
-  _timer_publish = timer_repetitive(100);
+  _timer_publish = timer_repetitive(1000);
   //  _timer_publish_props = timer_repetitive(5000);
   wifi_ssid = "";
   wifi_password = STRINGIZE(WIFI_PASS);

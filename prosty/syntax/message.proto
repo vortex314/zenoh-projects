@@ -17,14 +17,14 @@ message Sample {
 message UdpMessage {
   string dst = 1;
   string src = 2;
-  string type = 3;
+  string msg_type = 3;
   bytes payload = 4;
 }
 
 message UdpMessageCbor {
   uint32 dst = 1;
   uint32 src = 2;
-  uint32 type = 3;
+  uint32 msg_type = 3;
   bytes payload = 4;
 }
 
@@ -120,6 +120,15 @@ enum InTyp {
   MIDDLE_RESTING_POT = 2;
   AUTO_DETECT = 3;
 }
+
+message Ping {
+  uint32 number = 1;
+}
+
+message Pong {
+  uint32 number = 1;
+}
+
 
 // Hoverboard Message
 

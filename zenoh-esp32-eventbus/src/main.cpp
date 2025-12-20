@@ -48,12 +48,12 @@ extern "C" void app_main()
   eventbus.register_actor(new HoverboardActor("hb")); // hoverboard interface
 #endif
 
-  eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
+  /*eventbus.register_handler([](const Envelope &env) // just log eventbus traffic
                             {
                               const char *src = env.src ? env.src->name() : "";
                               const char *dst = env.dst ? env.dst->name() : "";
-                   //           INFO(" heap : %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
-                            });
+                              INFO(" heap : %ld Event '%s' => '%s' : %s", esp_get_free_heap_size(), src, dst, env.msg->type_name()); // comment for beauty
+                            });*/
   eventbus.loop();
 }
 /*

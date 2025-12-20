@@ -1,105 +1,62 @@
-use core::error;
-use serde_derive::{Deserialize, Serialize};
-use serde_json::Value;
-use std::net::{Ipv4Addr, UdpSocket};
-use std::str;
+use std::sync::Arc;
 use std::time::Duration;
+use udp_cbor_async::UdpCborClient;
+mod udp_cbor_async;
+use log::info;
+use tokio;
 
-use anyhow::Result;
-use log::{error, info};
 mod logger;
+mod limero;
 
-const MULTICAST_GROUP: Ipv4Addr = Ipv4Addr::new(224, 0, 0, 1);
-const MULTICAST_PORT: u16 = 50002;
-const LISTEN_PORT: u16 = 50001;
-const BUFFER_SIZE: usize = 1024;
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-struct UdpMessage {
-    dst: Option<String>,
-    src: Option<String>,
-    payload: Vec<u8>,
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
     logger::init();
-    // Create socket for receiving multicast messages
-    let socket = UdpSocket::bind(format!("0.0.0.0:{}", LISTEN_PORT))?;
-    socket.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let mut client = UdpCborClient::bind(
+        "0.0.0.0:50001",   //unicast
+        "224.0.0.1:50000", // multicast (valid IPv4 multicast address)
+        "node-a".to_string(),
+    )
+    .await?;
 
-    // Join multicast group
-    socket.join_multicast_v4(&MULTICAST_GROUP, &Ipv4Addr::UNSPECIFIED)?;
-
-    info!(
-        "Listening for multicast events on {}:{}",
-        MULTICAST_GROUP, LISTEN_PORT
-    );
-    info!("Messages will be sent from port: {}", MULTICAST_PORT);
-    info!("Press Ctrl+C to exit\n");
-
-    let mut buffer = [0u8; BUFFER_SIZE];
-
-    loop {
-        match socket.recv_from(&mut buffer) {
-            Ok((size, _src_addr)) => {
-                // Try to parse as CBOR
-                match parse_cbor_message(&buffer[..size]) {
-                    Ok(parsed) => {
-                        // payload as utf8
-                        let payload_str = match str::from_utf8(&parsed.payload) {
-                            Ok(s) => s.to_string(),
-                            Err(_) => format!("{:2X?}", parsed.payload),
-                        };
-                        //
-                        let s = format!(
-                            "{:^20}| {:20}| {}",
-                            parsed.dst.unwrap_or("-".to_string()),
-                            parsed.src.unwrap_or("-".to_string()),
-                            payload_str
-                        );
-                        println!("{}", s);
-                    }
-                    Err(e) => {
-                        // If not CBOR, try to display as text
-                        error!("Failed to parse CBOR: {}", e);
-                    }
+    let f = Arc::new(|msg:Vec<u8>, adr| {
+        let udp_cbor = minicbor::decode::<udp_cbor_async::CborMessage>(&msg);
+        match udp_cbor {
+            Ok(cbor_msg) => {
+                info!("Callback from {:?} {:?}", adr, cbor_msg.message_type);
+                if cbor_msg.message_type == "Ping" {
+                    // process status message
+                    serde_json::from_slice(cbor_msg.payload.as_ref().unwrap()).map::<(), _>(|ping_msg: limero::Ping| {
+                        info!(" {:?} => {:?}", adr, ping_msg);
+                        ()
+                    }).unwrap_or(());
                 }
             }
             Err(e) => {
-                if e.kind() == std::io::ErrorKind::WouldBlock {
-                    // Timeout occurred, continue listening
-                    continue;
-                }
-                error!("Error receiving data: {}", e);
+                info!("CBOR decode error from {:?} {:?} ", adr, e);
             }
         }
-    }
-}
+        info!("Callback from {:?} [{}]", adr, msg.len());
+    });
 
-fn parse_cbor_message(data: &[u8]) -> Result<UdpMessage> {
-    // info!("Received CBOR data: {:2X?}", data);
-    let value = serde_cbor::from_slice::<serde_cbor::Value>(data)?;
-    let mut udp_message = UdpMessage::default();
-    if let serde_cbor::Value::Array(array) = value {
-        if array.len() == 3 {
-            if let serde_cbor::Value::Text(dst) = &array[0] {
-                udp_message.dst = Some(dst.clone());
-            }
-            if let serde_cbor::Value::Text(src) = &array[1] {
-                udp_message.src = Some(src.clone());
-            }
-            if let serde_cbor::Value::Bytes(payload) = &array[2] {
-                udp_message.payload = payload.clone();
-            }
-        } else {
-            return Err(anyhow::anyhow!(
-                "Unexpected CBOR array length: {}",
-                array.len()
-            ));
+    client.set_callback(f);
+
+
+    client.register_message_type("command");
+    client.register_message_type("status");
+    client.announce_task(Duration::from_secs(5)).await;
+    let mut client_1 = Arc::new(client);
+    let client_2 = client_1.clone();
+
+
+    tokio::spawn({
+        async move {
+            client_2
+                .announce_task(Duration::from_secs(5))
+                .await;
         }
-    } else {
-        return Err(anyhow::anyhow!("Expected CBOR array"));
-    }
+    });
 
-    Ok(udp_message)
+    loop {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+    }
 }

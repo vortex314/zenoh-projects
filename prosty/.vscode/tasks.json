@@ -71,6 +71,33 @@
             }
         },
         {
+            "label": "Rust MC SHow",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "RUST_BACKTRACE": "full",
+                    "ZENOH_PLUGINS_PATH": "/home/lieven/workspace/zenoh/target/release/",
+                }
+            },
+            "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+            "args": [
+                "run",
+                "--",
+                "--input", "syntax/message.proto",
+                "--output", "../mc-show/src",
+                "--lang", "rust",
+                "--format", "json"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "clear": true                        // <-- this line
+            }
+        },
+        {
             "label": "Rust Eventbus",
             "type": "shell",
             "options": {

@@ -90,6 +90,48 @@ class Sample : public Msg {
     static Result<Sample*> cbor_deserialize(const Bytes&);
 };
 
+class UdpMessage : public Msg {
+    MSG(UdpMessage);
+    public:
+    std::optional<std::string> dst;
+    std::optional<std::string> src;
+    std::optional<std::string> type;
+    std::optional<Bytes> payload;
+    
+    // Field indexes
+        typedef enum {
+        DST_INDEX = 1,
+        SRC_INDEX = 2,
+        TYPE_INDEX = 3,
+        PAYLOAD_INDEX = 4,
+    } Field;
+    static Result<Bytes> json_serialize(const UdpMessage&);
+    static Result<UdpMessage*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const UdpMessage&);
+    static Result<UdpMessage*> cbor_deserialize(const Bytes&);
+};
+
+class UdpMessageCbor : public Msg {
+    MSG(UdpMessageCbor);
+    public:
+    std::optional<uint32_t> dst;
+    std::optional<uint32_t> src;
+    std::optional<uint32_t> type;
+    std::optional<Bytes> payload;
+    
+    // Field indexes
+        typedef enum {
+        DST_INDEX = 1,
+        SRC_INDEX = 2,
+        TYPE_INDEX = 3,
+        PAYLOAD_INDEX = 4,
+    } Field;
+    static Result<Bytes> json_serialize(const UdpMessageCbor&);
+    static Result<UdpMessageCbor*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const UdpMessageCbor&);
+    static Result<UdpMessageCbor*> cbor_deserialize(const Bytes&);
+};
+
 class ZenohEvent : public Msg {
     MSG(ZenohEvent);
     public:
@@ -236,6 +278,36 @@ class MulticastEvent : public Msg {
     static Result<MulticastEvent*> cbor_deserialize(const Bytes&);
 };
 
+class Ping : public Msg {
+    MSG(Ping);
+    public:
+    std::optional<uint32_t> number;
+    
+    // Field indexes
+        typedef enum {
+        NUMBER_INDEX = 1,
+    } Field;
+    static Result<Bytes> json_serialize(const Ping&);
+    static Result<Ping*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Ping&);
+    static Result<Ping*> cbor_deserialize(const Bytes&);
+};
+
+class Pong : public Msg {
+    MSG(Pong);
+    public:
+    std::optional<uint32_t> number;
+    
+    // Field indexes
+        typedef enum {
+        NUMBER_INDEX = 1,
+    } Field;
+    static Result<Bytes> json_serialize(const Pong&);
+    static Result<Pong*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Pong&);
+    static Result<Pong*> cbor_deserialize(const Bytes&);
+};
+
 class HoverboardEvent : public Msg {
     MSG(HoverboardEvent);
     public:
@@ -356,6 +428,23 @@ class HoverboardCmd : public Msg {
     static Result<HoverboardCmd*> json_deserialize(const Bytes&);
     static Result<Bytes> cbor_serialize(const HoverboardCmd&);
     static Result<HoverboardCmd*> cbor_deserialize(const Bytes&);
+};
+
+class HoverboardReply : public Msg {
+    MSG(HoverboardReply);
+    public:
+    std::optional<int32_t> error_code;
+    std::optional<std::string> message;
+    
+    // Field indexes
+        typedef enum {
+        ERROR_CODE_INDEX = 0,
+        MESSAGE_INDEX = 1,
+    } Field;
+    static Result<Bytes> json_serialize(const HoverboardReply&);
+    static Result<HoverboardReply*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const HoverboardReply&);
+    static Result<HoverboardReply*> cbor_deserialize(const Bytes&);
 };
 
 class TouchPoint : public Msg {
@@ -514,17 +603,38 @@ class CameraCmd : public Msg {
     MSG(CameraCmd);
     public:
     std::optional<bool> led;
+    std::optional<std::string> capture_tcp_destination;
     std::optional<int32_t> quality;
     
     // Field indexes
         typedef enum {
         LED_INDEX = 1,
+        CAPTURE_TCP_DESTINATION_INDEX = 2,
         QUALITY_INDEX = 4,
     } Field;
     static Result<Bytes> json_serialize(const CameraCmd&);
     static Result<CameraCmd*> json_deserialize(const Bytes&);
     static Result<Bytes> cbor_serialize(const CameraCmd&);
     static Result<CameraCmd*> cbor_deserialize(const Bytes&);
+};
+
+class CameraReply : public Msg {
+    MSG(CameraReply);
+    public:
+    std::optional<int32_t> error_code;
+    std::optional<std::string> message;
+    std::optional<Bytes> data;
+    
+    // Field indexes
+        typedef enum {
+        ERROR_CODE_INDEX = 1,
+        MESSAGE_INDEX = 2,
+        DATA_INDEX = 3,
+    } Field;
+    static Result<Bytes> json_serialize(const CameraReply&);
+    static Result<CameraReply*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const CameraReply&);
+    static Result<CameraReply*> cbor_deserialize(const Bytes&);
 };
 
 class LawnmowerManualEvent : public Msg {
@@ -573,6 +683,23 @@ class LawnmowerManualCmd : public Msg {
     static Result<LawnmowerManualCmd*> json_deserialize(const Bytes&);
     static Result<Bytes> cbor_serialize(const LawnmowerManualCmd&);
     static Result<LawnmowerManualCmd*> cbor_deserialize(const Bytes&);
+};
+
+class LawnmowerManualReply : public Msg {
+    MSG(LawnmowerManualReply);
+    public:
+    std::optional<int32_t> error_code;
+    std::optional<std::string> message;
+    
+    // Field indexes
+        typedef enum {
+        ERROR_CODE_INDEX = 1,
+        MESSAGE_INDEX = 2,
+    } Field;
+    static Result<Bytes> json_serialize(const LawnmowerManualReply&);
+    static Result<LawnmowerManualReply*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const LawnmowerManualReply&);
+    static Result<LawnmowerManualReply*> cbor_deserialize(const Bytes&);
 };
 
 class LawnmowerAutoEvent : public Msg {
