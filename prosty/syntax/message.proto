@@ -3,6 +3,27 @@
 syntax = "proto3";
 package limero;
 
+
+message Announce {
+  repeated string message_types = 1;
+}
+
+message Subscribe {
+  string src_pattern = 1;
+  string msg_type_pattern = 2;
+}
+
+message Unsubscribe {
+  string src_pattern = 1;
+  string msg_type_pattern = 2;
+}
+
+message BrokerPublish {
+  string dst = 1;
+  string msg_type = 2;
+  bytes payload = 3;
+}
+
 message Sample {
   bool flag = 1;
   int32 identifier = 2;

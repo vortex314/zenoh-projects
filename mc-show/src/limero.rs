@@ -67,6 +67,108 @@ pub enum LawnmowerMode {
 
 
 #[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct Announce {
+    pub message_types:Vec<String>,
+
+}
+impl Msg for Announce {
+     const ID: u32 = 35119;
+     const NAME: &'static str = "Announce";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:Announce = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct Subscribe {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub src_pattern:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub msg_type_pattern:Option<String>,
+        
+
+}
+impl Msg for Subscribe {
+     const ID: u32 = 59220;
+     const NAME: &'static str = "Subscribe";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:Subscribe = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct Unsubscribe {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub src_pattern:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub msg_type_pattern:Option<String>,
+        
+
+}
+impl Msg for Unsubscribe {
+     const ID: u32 = 3663;
+     const NAME: &'static str = "Unsubscribe";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:Unsubscribe = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
+pub struct BrokerPublish {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dst:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub msg_type:Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload:Option<Vec<u8>>,
+        
+
+}
+impl Msg for BrokerPublish {
+     const ID: u32 = 2150;
+     const NAME: &'static str = "BrokerPublish";
+
+    fn serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:BrokerPublish = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+        }
+}
+
+    
+
+#[derive(Debug, Clone,Serialize,Deserialize,Default)]
 pub struct Sample {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flag:Option<bool>,

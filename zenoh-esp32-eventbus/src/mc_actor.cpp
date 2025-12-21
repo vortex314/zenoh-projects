@@ -10,7 +10,7 @@ McActor::McActor(const char *name, const char *hostname)
     : Actor(name)
 {
     _hostname = std::string(hostname);
-    _timer_publish = timer_repetitive(5);
+    _timer_publish = timer_repetitive(10000);
 }
 
 McActor::~McActor()
@@ -191,14 +191,13 @@ void McActor::udp_listener_task(void *pvParameters)
             socklen_t sender_len = sizeof(sender);
             int len = recvfrom(actor->_req_reply_socket, buf, BUF_SIZE - 1, 0, (sockaddr *)&sender, &sender_len);
             actor->on_request(Bytes(buf, buf + len), sender);
-            if (validate_rc(len, "recvfrom"))
+/*            if (validate_rc(len, "recvfrom"))
                 continue;
             buf[len] = '\0';
             std::string cmd(buf);
             std::cout << "Received command: " << cmd << " from " << inet_ntoa(sender.sin_addr) << ":" << ntohs(sender.sin_port) << std::endl;
             // Reply to sender
-            std::string reply = "ACK: " + cmd;
-            sendto(actor->_req_reply_socket, reply.c_str(), reply.size(), 0, (sockaddr *)&sender, sender_len);
+            std::string reply = "ACK: " + cmd;*/
         }
     }
 }
@@ -266,6 +265,7 @@ void McActor::on_request(const Bytes &request, const sockaddr_in &sender_addr)
     }
     cbor_value_leave_container(&decoder, &arrayDecoder);
     INFO("%s => %s : %s %s", src, dst, type, std::string(payload.begin(), payload.end()).c_str());
+    on_timer();
     // Process the request and prepare a reply
     // Send the reply back to the sender
     //   sendto(_req_reply_socket, reply_str.c_str(), reply_str.size(), 0, (sockaddr *)&sender_addr, sizeof(sender_addr));

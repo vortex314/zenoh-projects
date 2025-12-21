@@ -1,4 +1,3 @@
-use anyhow::Result;
 use log::info;
 use minicbor::{Decode, Encode};
 use std::collections::{HashMap, HashSet};
@@ -7,19 +6,29 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::Mutex;
 use tokio::time::interval;
+
+use crate::limero::{Announce, Msg, UdpMessage};
 
 #[derive(Debug, Encode, Decode)]
 #[cbor(array)]
 pub struct CborMessage {
-    #[n(0)]  // can be null
-    pub source: Option<String>,
-    #[n(1)]
+    #[n(0)] // can be null
     pub destination: Option<String>,
+    #[n(1)]
+    pub source: Option<String>,
     #[n(2)]
     pub message_type: String,
-    #[cbor(n(3),with = "minicbor::bytes")]
+    #[cbor(n(3), with = "minicbor::bytes")]
     pub payload: Option<Vec<u8>>,
+}
+
+
+pub enum SendMessage {
+    Unicast(SocketAddr, CborMessage),
+    Multicast(CborMessage),
 }
 
 type RxCallback = Arc<dyn Fn(Vec<u8>, SocketAddr) + Send + Sync>;
@@ -27,14 +36,20 @@ type RxCallback = Arc<dyn Fn(Vec<u8>, SocketAddr) + Send + Sync>;
 struct UdpReceiver {
     unicast_recv_socket: Arc<UdpSocket>,
     multicast_recv_socket: Arc<UdpSocket>,
+    source_map: Arc<Mutex<HashMap<String, SocketAddr>>>,
     callback: Option<RxCallback>,
 }
 
 impl UdpReceiver {
-    pub fn new(unicast_recv_socket: Arc<UdpSocket>, multicast_recv_socket: Arc<UdpSocket>) -> Self {
+    pub fn new(
+        unicast_recv_socket: Arc<UdpSocket>,
+        multicast_recv_socket: Arc<UdpSocket>,
+        source_map: Arc<Mutex<HashMap<String, SocketAddr>>>,
+    ) -> Self {
         Self {
             unicast_recv_socket,
             multicast_recv_socket,
+            source_map,
             callback: None,
         }
     }
@@ -46,6 +61,7 @@ impl UdpReceiver {
     pub fn start(&self) {
         let uc_socket = self.unicast_recv_socket.clone();
         let mc_socket = self.multicast_recv_socket.clone();
+        let source_map = self.source_map.clone();
         let callback = self.callback.clone();
 
         tokio::spawn(async move {
@@ -54,21 +70,42 @@ impl UdpReceiver {
 
             loop {
                 tokio::select! {
-                    result = uc_socket.recv_from(&mut uc_buf) => {
-                        let (len, addr) = result.unwrap();
-                        info!("RXD unicast   [{} bytes] [{}] [{}]", len, addr, minicbor::display(&uc_buf[..len]));
-                        if let Some(cb) = &callback {
-                            cb(uc_buf[..len].to_vec(), addr);
-                        }
-                    }
-                    result = mc_socket.recv_from(&mut mc_buf) => {
-                        let (len, addr) = result.unwrap();
-                         info!("RXD multicast   [{} bytes] [{}] [{}]", len, addr, minicbor::display(&mc_buf[..len]));
-                        if let Some(cb) = &callback {
-                            cb(mc_buf[..len].to_vec(), addr);
-                        }
-                    }
-                }
+                     result = uc_socket.recv_from(&mut uc_buf) => {
+                         let (len, addr) = result.unwrap();
+                         if let Ok(msg) = minicbor::decode::<CborMessage>(&uc_buf[..len]) {
+                      /*       info!("RXD unicast [{}] [{}] {:?} {:?} {:?}",
+                            len,
+                            addr,
+                            &msg.destination,
+                            &msg.source,
+                            &msg.message_type);*/
+                             if let Some(src) = msg.source.as_ref() {
+                                 if !source_map.lock().await.contains_key(src) {
+                                     // already known
+                                 source_map.lock().await.insert(src.clone(), addr);
+                                 info!("Learned source '{}' at {} (unicast)", src, addr);                                }
+                             }
+                         }
+                         if let Some(cb) = &callback {
+                             cb(uc_buf[..len].to_vec(), addr);
+                         }
+                     }
+                     result = mc_socket.recv_from(&mut mc_buf) => {
+                         let (len, addr) = result.unwrap();
+                //          info!("RXD multicast   [{} bytes] [{}] [{}]", len, addr, minicbor::display(&mc_buf[..len]));
+                         if let Ok(msg) = minicbor::decode::<CborMessage>(&mc_buf[..len]) {
+                             if let Some(src) = msg.source.as_ref() {
+                                 if !source_map.lock().await.contains_key(src) {
+                                     // already known
+                                 source_map.lock().await.insert(src.clone(), addr);
+                                 info!("Learned source '{}' at {} (multicast)", src, addr);                                }
+                             }
+                         }
+                         if let Some(cb) = &callback {
+                             cb(mc_buf[..len].to_vec(), addr);
+                         }
+                     }
+                 }
             }
         });
     }
@@ -82,14 +119,16 @@ pub struct UdpCborClient {
     multicast_addr: SocketAddr,
 
     /// Logical source name -> socket address
-    source_map: HashMap<String, SocketAddr>,
+    source_map: Arc<Mutex<HashMap<String, SocketAddr>>>,
 
     /// Supported outbound message types
     supported_types: HashSet<String>,
 
     /// This node's logical name
     local_source: String,
-    receiver: Option<UdpReceiver>,
+    udp_receiver: Option<UdpReceiver>,
+    sender: Sender<SendMessage>,
+    receiver: Option<Receiver<SendMessage>>, 
 }
 
 impl UdpCborClient {
@@ -131,20 +170,13 @@ impl UdpCborClient {
             ));
         }
 
-        info!(
-            "Multicast IP: {}, Port: {}",
-            multicast_ip_str, multicast_port_str
-        );
-
         let multicast_addr = SocketAddr::new(IpAddr::V4(multicast_ip), multicast_port);
-        info!("Joining multicast group at {}", multicast_addr);
 
         let multicast_socket = UdpSocket::bind(SocketAddr::new(
             IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             multicast_port,
         ))
         .await?;
-        info!("Multicast socket bound to port {}", multicast_port);
         multicast_socket.join_multicast_v4(multicast_ip, Ipv4Addr::UNSPECIFIED)?;
 
         info!("Joined multicast group at {}", multicast_addr);
@@ -154,7 +186,9 @@ impl UdpCborClient {
         let uc_socket = Arc::new(unicast_socket);
         let mc_socket = Arc::new(multicast_socket);
 
-        let receiver = UdpReceiver::new(uc_socket.clone(), mc_socket.clone());
+        let source_map = Arc::new(Mutex::new(HashMap::new()));
+        let udp_receiver = UdpReceiver::new(uc_socket.clone(), mc_socket.clone(), source_map.clone());
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
         Ok(Self {
             unicast_send_socket: uc_socket.clone(),
@@ -162,23 +196,51 @@ impl UdpCborClient {
             multicast_send_socket: mc_socket.clone(),
             multicast_recv_socket: mc_socket,
             multicast_addr,
-            source_map: HashMap::new(),
+            source_map,
             supported_types: HashSet::new(),
             local_source,
+            udp_receiver: Some(udp_receiver),
+            sender,
             receiver: Some(receiver),
         })
     }
 
     pub fn set_callback(&mut self, callback: RxCallback) {
-        if let Some(receiver) = &mut self.receiver {
+        if let Some(receiver) = &mut self.udp_receiver {
             receiver.set_callback(callback);
             receiver.start();
+        }
+        if let Some(rx) = self.receiver.take() {
+            let unicast = self.unicast_send_socket.clone();
+            let multicast = self.multicast_send_socket.clone();
+            let maddr = self.multicast_addr;
+            tokio::spawn(async move {
+                let mut rx = rx;
+                while let Some(msg) = rx.recv().await {
+                    match msg {
+                        SendMessage::Unicast(addr, cbor_msg) => {
+                            if let Ok(encoded) = minicbor::to_vec(&cbor_msg) {
+                                let _ = unicast.send_to(&encoded, addr).await;
+                            }
+                        }
+                        SendMessage::Multicast(cbor_msg) => {
+                            if let Ok(encoded) = minicbor::to_vec(&cbor_msg) {
+                                let _ = multicast.send_to(&encoded, maddr).await;
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 
     /// Register a supported outbound message type
     pub fn register_message_type(&mut self, message_type: &str) {
         self.supported_types.insert(message_type.to_string());
+    }
+
+    pub fn sender(&self) -> Sender<SendMessage> {
+        self.sender.clone()
     }
 
     pub async fn send_unicast(&self, addr: SocketAddr, data: &[u8]) -> io::Result<usize> {
@@ -198,7 +260,8 @@ impl UdpCborClient {
         message_type: &str,
         payload: &Vec<u8>,
     ) -> io::Result<()> {
-        let addr = self.source_map.get(destination).ok_or_else(|| {
+        let guard = self.source_map.lock().await;
+        let addr = guard.get(destination).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::NotFound,
                 format!("Unknown destination: {}", destination),
@@ -207,7 +270,11 @@ impl UdpCborClient {
 
         let msg = CborMessage {
             source: Some(self.local_source.clone()),
-            destination: if destination.len() > 0 { Some(destination.to_string()) } else { None },
+            destination: if destination.len() > 0 {
+                Some(destination.to_string())
+            } else {
+                None
+            },
             message_type: message_type.to_string(),
             payload: Some(payload.clone()),
         };
@@ -219,19 +286,7 @@ impl UdpCborClient {
         Ok(())
     }
 
-    fn decode_and_learn(
-        map: &mut HashMap<String, SocketAddr>,
-        data: &[u8],
-        addr: SocketAddr,
-    ) -> io::Result<CborMessage> {
-        let msg: CborMessage =
-            minicbor::decode(data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        if let Some(source) = &msg.source {
-            map.insert(source.clone(), addr);
-        }
-        Ok(msg)
-    }
+    // Decoding and learning now happens inside UdpReceiver
 
     /// Periodically announce presence and supported message types via multicast
     pub async fn announce_task(self: &Self, period: Duration) {
@@ -240,18 +295,15 @@ impl UdpCborClient {
         loop {
             ticker.tick().await;
 
-            let payload = self
-                .supported_types
-                .iter()
-                .cloned()
-                .collect::<Vec<_>>()
-                .join(",");
+            let message_types = self.supported_types.iter().cloned().collect::<Vec<_>>();
+
+            let announce = Announce { message_types };
 
             let msg = CborMessage {
                 source: Some(self.local_source.clone()),
                 destination: Some("multicast".to_string()),
-                message_type: "announce".to_string(),
-                payload: Some(payload.into_bytes()),
+                message_type: Announce::NAME.to_string(),
+                payload: Some(serde_json::to_vec(&announce).unwrap()),
             };
 
             if let Ok(encoded) = minicbor::to_vec(&msg) {
@@ -264,7 +316,8 @@ impl UdpCborClient {
     }
 
     /// Resolve logical source name to socket address
-    pub fn resolve(&self, source: &str) -> Option<SocketAddr> {
-        self.source_map.get(source).copied()
+    pub async fn resolve(&self, source: &str) -> Option<SocketAddr> {
+        let guard = self.source_map.lock().await;
+        guard.get(source).copied()
     }
 }
