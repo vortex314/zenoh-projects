@@ -33,7 +33,7 @@
                 "--input", "syntax/message.proto",
                 "--output", "../zenoh-esp32-eventbus/src",
                 "--lang", "cpp",
-                "--format", "json"
+                "--format", "mix"
             ],
             "group": {
                 "kind": "build",
@@ -87,7 +87,7 @@
                 "--input", "syntax/message.proto",
                 "--output", "../mc-show/src",
                 "--lang", "rust",
-                "--format", "json"
+                "--format", "mix"
             ],
             "group": {
                 "kind": "build",

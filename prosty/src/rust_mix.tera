@@ -1,0 +1,71 @@
+use serde::{Serialize, Deserialize};
+use anyhow::Result;
+use minicbor::{Encode, Decode};
+
+pub trait Msg {
+    const ID: u32;
+    const NAME: &'static str;
+    fn cbor_serialize(&self) -> Result<Vec<u8>>;
+    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized;
+    fn json_serialize(&self) -> Result<Vec<u8>>;
+    fn json_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized;
+}
+
+{% for en in enums %}
+#[derive(Debug, Clone, Serialize, Deserialize,Encode, Decode)]
+pub enum {{ en.name }} {
+    {%- for value in en.values %}
+    #[n({{ value.1 }})]
+    {{ value.0 }},
+    {%- endfor %}
+}
+{% endfor %}
+
+{% for msg in messages %}
+#[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
+#[cbor(map)]
+pub struct {{ msg.name }} {
+    {%- for field in msg.fields %}
+        {% if field.source_type=="Bytes" %}
+            #[cbor(n({{ field.index }}), with = "minicbor::bytes")]
+        {% else %}
+            #[n({{ field.index }})]
+        {% endif %}
+        {%- if field.repeated %}
+    pub {{ field.name }}: Vec<{{ field.target_type }}>,
+        {%- elif field.optional %}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{ field.name }}: Option<{{ field.target_type }}>,
+        {%- else %}
+    pub {{ field.name }}: {{ field.target_type }},
+        {%- endif %}
+    {%- endfor %}
+}
+
+impl Msg for {{ msg.name }} {
+    const ID: u32 = {{ msg.msg_id }};
+    const NAME: &'static str = "{{ msg.name }}";
+
+    fn cbor_serialize(&self) -> Result<Vec<u8>> {
+        // Use serde_cbor to produce CBOR bytes
+        let s = minicbor::to_vec(self)?;
+        Ok(s)
+    }
+
+    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {
+        let m: {{ msg.name }} = minicbor::decode::<Self>(v.as_slice())?;
+        Ok(m)
+    }
+
+    fn json_serialize(&self) -> Result<Vec<u8>> {
+        let s = serde_json::to_vec(self) ?;
+        Ok(s)
+    }
+     
+    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
+        let m:{{msg.name}} = serde_json::from_slice(v.as_slice()) ?;
+        Ok(m)
+    }
+}
+    
+{% endfor %}

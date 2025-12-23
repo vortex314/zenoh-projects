@@ -63,6 +63,74 @@ typedef enum {
 
 
 
+class Announce : public Msg {
+    MSG(Announce);
+    public:
+    std::vector<std::string> message_types;
+    
+    // Field indexes
+        typedef enum {
+        MESSAGE_TYPES_INDEX = 1,
+    } Field;
+    static Result<Bytes> json_serialize(const Announce&);
+    static Result<Announce*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Announce&);
+    static Result<Announce*> cbor_deserialize(const Bytes&);
+};
+
+class Subscribe : public Msg {
+    MSG(Subscribe);
+    public:
+    std::optional<std::string> src_pattern;
+    std::optional<std::string> msg_type_pattern;
+    
+    // Field indexes
+        typedef enum {
+        SRC_PATTERN_INDEX = 1,
+        MSG_TYPE_PATTERN_INDEX = 2,
+    } Field;
+    static Result<Bytes> json_serialize(const Subscribe&);
+    static Result<Subscribe*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Subscribe&);
+    static Result<Subscribe*> cbor_deserialize(const Bytes&);
+};
+
+class Unsubscribe : public Msg {
+    MSG(Unsubscribe);
+    public:
+    std::optional<std::string> src_pattern;
+    std::optional<std::string> msg_type_pattern;
+    
+    // Field indexes
+        typedef enum {
+        SRC_PATTERN_INDEX = 1,
+        MSG_TYPE_PATTERN_INDEX = 2,
+    } Field;
+    static Result<Bytes> json_serialize(const Unsubscribe&);
+    static Result<Unsubscribe*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Unsubscribe&);
+    static Result<Unsubscribe*> cbor_deserialize(const Bytes&);
+};
+
+class BrokerPublish : public Msg {
+    MSG(BrokerPublish);
+    public:
+    std::optional<std::string> dst;
+    std::optional<std::string> msg_type;
+    std::optional<Bytes> payload;
+    
+    // Field indexes
+        typedef enum {
+        DST_INDEX = 1,
+        MSG_TYPE_INDEX = 2,
+        PAYLOAD_INDEX = 3,
+    } Field;
+    static Result<Bytes> json_serialize(const BrokerPublish&);
+    static Result<BrokerPublish*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const BrokerPublish&);
+    static Result<BrokerPublish*> cbor_deserialize(const Bytes&);
+};
+
 class Sample : public Msg {
     MSG(Sample);
     public:
@@ -95,14 +163,14 @@ class UdpMessage : public Msg {
     public:
     std::optional<std::string> dst;
     std::optional<std::string> src;
-    std::optional<std::string> type;
+    std::optional<std::string> msg_type;
     std::optional<Bytes> payload;
     
     // Field indexes
         typedef enum {
         DST_INDEX = 1,
         SRC_INDEX = 2,
-        TYPE_INDEX = 3,
+        MSG_TYPE_INDEX = 3,
         PAYLOAD_INDEX = 4,
     } Field;
     static Result<Bytes> json_serialize(const UdpMessage&);
@@ -116,14 +184,14 @@ class UdpMessageCbor : public Msg {
     public:
     std::optional<uint32_t> dst;
     std::optional<uint32_t> src;
-    std::optional<uint32_t> type;
+    std::optional<uint32_t> msg_type;
     std::optional<Bytes> payload;
     
     // Field indexes
         typedef enum {
         DST_INDEX = 1,
         SRC_INDEX = 2,
-        TYPE_INDEX = 3,
+        MSG_TYPE_INDEX = 3,
         PAYLOAD_INDEX = 4,
     } Field;
     static Result<Bytes> json_serialize(const UdpMessageCbor&);

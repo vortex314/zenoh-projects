@@ -64,8 +64,8 @@ void McActor::init_event()
 
     int rc = bind(_req_reply_socket, (sockaddr *)&local, sizeof(local));
     validate_rc(rc, "req_reply bind");
- //   rc = bind(_event_socket, (sockaddr *)&local, sizeof(local));
- //   validate_rc(rc, "event bind");
+    //   rc = bind(_event_socket, (sockaddr *)&local, sizeof(local));
+    //   validate_rc(rc, "event bind");
 }
 
 void McActor::stop_event()
@@ -79,32 +79,18 @@ void McActor::stop_event()
 
 Bytes McActor::encode_message(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
-    std::vector<uint8_t> buffer(1024);
-    CborEncoder encoder, arrayEncoder;
-    CborError err;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
-    err = cbor_encoder_create_array(&encoder, &arrayEncoder, CborIndefiniteLength);
+    UdpMessage msg;
     if (dst)
-        err = cbor_encode_text_stringz(&arrayEncoder, dst);
-    else
-        err = cbor_encode_null(&arrayEncoder);
-    char src_full[64];
+        msg.dst = std::string(dst);
     if (src)
     {
+        char src_full[64];
         snprintf(src_full, sizeof(src_full), "%s/%s", _hostname.c_str(), src);
-        err = cbor_encode_text_stringz(&arrayEncoder, src_full);
+        msg.src = std::string(src_full);
     }
-    else
-    {
-        err = cbor_encode_null(&arrayEncoder);
-    }
-    err = cbor_encode_text_stringz(&arrayEncoder, type);
-    err = cbor_encode_byte_string(&arrayEncoder, payload.data(), payload.size());
-    err = cbor_encoder_close_container(&encoder, &arrayEncoder);
-    (void)err;
-    // get used size
-    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.data(), buffer.data() + used);
+    msg.msg_type = std::string(type);
+    msg.payload = payload;
+    return UdpMessage::cbor_serialize(msg).unwrap();
 }
 
 void McActor::send_event(const char *dst, const char *src, const char *type, const Bytes &payload)
@@ -134,16 +120,18 @@ void McActor::on_message(const Envelope &envelope)
 {
     const Msg &msg = *envelope.msg;
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
-                         { on_timer(); });
+                         { send_ping(); });
 
     msg.handle<Ping>([&](const auto &msg)
                      { INFO("MC Actor received Ping"); });
 
     msg.handle<WifiConnected>([&](const auto &msg)
-                              { init_event();start_listener(); });
+                              { _connected = true; init_event();start_listener(); });
 
     msg.handle<WifiDisconnected>([&](const auto &msg) { /*stop_listener(); */ });
 
+    if (!_connected) // ignore other messages if not connected
+        return;
     msg.handle<SysEvent>([&](const auto &msg)
                          { SysEvent::json_serialize(msg).just([&](const auto &s)
                                                               { send_event(NULL, envelope.src->name(), msg.type_name(), s); }); });
@@ -191,81 +179,43 @@ void McActor::udp_listener_task(void *pvParameters)
             socklen_t sender_len = sizeof(sender);
             int len = recvfrom(actor->_req_reply_socket, buf, BUF_SIZE - 1, 0, (sockaddr *)&sender, &sender_len);
             actor->on_request(Bytes(buf, buf + len), sender);
-/*            if (validate_rc(len, "recvfrom"))
-                continue;
-            buf[len] = '\0';
-            std::string cmd(buf);
-            std::cout << "Received command: " << cmd << " from " << inet_ntoa(sender.sin_addr) << ":" << ntohs(sender.sin_port) << std::endl;
-            // Reply to sender
-            std::string reply = "ACK: " + cmd;*/
+            /*            if (validate_rc(len, "recvfrom"))
+                            continue;
+                        buf[len] = '\0';
+                        std::string cmd(buf);
+                        std::cout << "Received command: " << cmd << " from " << inet_ntoa(sender.sin_addr) << ":" << ntohs(sender.sin_port) << std::endl;
+                        // Reply to sender
+                        std::string reply = "ACK: " + cmd;*/
         }
     }
 }
 
 void McActor::on_request(const Bytes &request, const sockaddr_in &sender_addr)
 {
-    CborParser parser;
-    CborValue decoder, arrayDecoder;
-    cbor_parser_init(request.data(), request.size(), 0, &parser, &decoder);
-    cbor_value_enter_container(&decoder, &arrayDecoder);
-    char dst[64];
-    char src[64];
-    char type[64];
-    Bytes payload;
-    // Decode dst
-    if (cbor_value_is_text_string(&arrayDecoder))
+    // INFO("MC Actor received request (%lu bytes)", request.size());
+    auto r = UdpMessage::cbor_deserialize(request);
+    if (r.is_err())
     {
-        size_t dst_len;
-        cbor_value_calculate_string_length(&arrayDecoder, &dst_len);
-        cbor_value_copy_text_string(&arrayDecoder, dst, &dst_len, &arrayDecoder);
-        dst[dst_len] = '\0';
+        ERROR("Failed to deserialize UdpMessage");
+        return;
     }
-    else
+    UdpMessage *msg = r.unwrap();
+    /*INFO("Received UdpMessage from %s to %s of type %s",
+          msg->src.has_value() ? msg->src->c_str() : "unknown",
+          msg->dst.has_value() ? msg->dst->c_str() : "unknown",
+          msg->msg_type.has_value() ? msg->msg_type->c_str() : "unknown");*/
+    // Process UdpMessage
+    if (msg->msg_type.has_value() && msg->payload.has_value())
     {
-        cbor_value_advance(&arrayDecoder);
-        dst[0] = '\0';
+        on_message(msg->msg_type->c_str(), *(msg->payload));
     }
-    // Decode src
-    if (cbor_value_is_text_string(&arrayDecoder))
+
+    //    INFO("%s => %s : %s %s", src, dst, type, std::string(payload.begin(), payload.end()).c_str());
+    if (msg->msg_type.has_value() && strcmp(msg->msg_type->c_str(), "Pong") == 0)
     {
-        size_t src_len;
-        cbor_value_calculate_string_length(&arrayDecoder, &src_len);
-        cbor_value_copy_text_string(&arrayDecoder, src, &src_len, &arrayDecoder);
-        src[src_len] = '\0';
+        send_ping();
     }
-    else
-    {
-        cbor_value_advance(&arrayDecoder);
-        src[0] = '\0';
-    }
-    // Decode type
-    if (cbor_value_is_text_string(&arrayDecoder))
-    {
-        size_t type_len;
-        cbor_value_calculate_string_length(&arrayDecoder, &type_len);
-        cbor_value_copy_text_string(&arrayDecoder, type, &type_len, &arrayDecoder);
-        type[type_len] = '\0';
-    }
-    else
-    {
-        cbor_value_advance(&arrayDecoder);
-        type[0] = '\0';
-    }
-    // Decode payload
-    if (cbor_value_is_byte_string(&arrayDecoder))
-    {
-        size_t payload_len;
-        cbor_value_calculate_string_length(&arrayDecoder, &payload_len);
-        payload.resize(payload_len);
-        cbor_value_copy_byte_string(&arrayDecoder, payload.data(), &payload_len, &arrayDecoder);
-    }
-    else
-    {
-        cbor_value_advance(&arrayDecoder);
-    }
-    cbor_value_leave_container(&decoder, &arrayDecoder);
-    INFO("%s => %s : %s %s", src, dst, type, std::string(payload.begin(), payload.end()).c_str());
-    on_timer();
+    delete msg;
     // Process the request and prepare a reply
     // Send the reply back to the sender
     //   sendto(_req_reply_socket, reply_str.c_str(), reply_str.size(), 0, (sockaddr *)&sender_addr, sizeof(sender_addr));
@@ -273,9 +223,9 @@ void McActor::on_request(const Bytes &request, const sockaddr_in &sender_addr)
 
 void McActor::on_message(const char *type, Bytes &payload)
 {
-    INFO("MC Actor received message of type %s with payload: %s",
+    /*INFO("MC Actor received message of type %s with payload: %s",
          type,
-         std::string(payload.begin(), payload.end()).c_str());
+         std::string(payload.begin(), payload.end()).c_str());*/
     if (strcmp(type, "Ping") == 0)
     {
         INFO("MC Actor received Ping message");
@@ -300,9 +250,16 @@ void McActor::send_request_reply(const char *dst, const char *src, const char *t
     }
 }
 
-void McActor::on_timer()
+void McActor::send_ping()
 {
+    static int64_t start_time = esp_timer_get_time();
     Ping ping;
     ping.number = _ping_counter++;
     send_event(NULL, ref().name(), ping.type_name(), Ping::json_serialize(ping).unwrap());
+    if (_ping_counter % 1000 == 0)
+    {
+        int64_t now = esp_timer_get_time();
+        INFO("ping %f msg/sec", 1000000000.0 / (now - start_time));
+        start_time = now;
+    }
 }

@@ -134,6 +134,7 @@ struct Field {
     target_type: String,
     repeated: bool,
     optional: bool,
+    source_type: String,
 }
 
 #[derive(Serialize)]
@@ -223,6 +224,7 @@ fn convert_rust_types(fd: &FileDescriptor) -> Vec<Message> {
                         protobuf_parser::Rule::Optional => true,
                         _ => false,
                     },
+                    source_type: format!("{:?}", f.typ),
                 })
                 .collect();
 
@@ -254,6 +256,7 @@ fn convert_cpp_types(fd: &FileDescriptor) -> Vec<Message> {
                         protobuf_parser::Rule::Optional => true,
                         _ => false,
                     },
+                    source_type: format!("{:?}", f.typ),
                 })
                 .collect();
 

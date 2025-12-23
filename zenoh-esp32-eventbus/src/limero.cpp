@@ -1,13 +1,115 @@
-#include <string>
-#include <vector>
-#include <cstdint>
-#include <optional>
-#include <ArduinoJson.h>
-#include <cbor.h>
-#include <msg.h>
-#include <serdes.h>
-
 #include "limero.h"
+
+
+Result<Bytes> Announce::json_serialize(const Announce& msg)  {
+        JsonDocument doc;
+        if (msg.message_types.size()) {
+                    JsonArray arr = doc["message_types"].to<JsonArray>();
+                    for (const auto& item : msg.message_types) {
+                        arr.add(item);
+                    }
+                }
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<Announce*> Announce::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        Announce* msg = new Announce();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<Announce*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["message_types"].is<JsonArray>()) {
+                    JsonArray arr = doc["message_types"].as<JsonArray>();
+                    msg->message_types.clear();
+                    for (JsonVariant v : arr) {
+                        msg->message_types.push_back(v.as<std::string>());
+                    }
+                }
+        return Result<Announce*>::Ok(msg);
+    }
+
+
+Result<Bytes> Subscribe::json_serialize(const Subscribe& msg)  {
+        JsonDocument doc;
+        if (msg.src_pattern)doc["src_pattern"] = *msg.src_pattern;
+        if (msg.msg_type_pattern)doc["msg_type_pattern"] = *msg.msg_type_pattern;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<Subscribe*> Subscribe::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        Subscribe* msg = new Subscribe();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<Subscribe*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["src_pattern"].is<std::string>() )  
+                        msg->src_pattern = doc["src_pattern"].as<std::string>();
+        if (doc["msg_type_pattern"].is<std::string>() )  
+                        msg->msg_type_pattern = doc["msg_type_pattern"].as<std::string>();
+        return Result<Subscribe*>::Ok(msg);
+    }
+
+
+Result<Bytes> Unsubscribe::json_serialize(const Unsubscribe& msg)  {
+        JsonDocument doc;
+        if (msg.src_pattern)doc["src_pattern"] = *msg.src_pattern;
+        if (msg.msg_type_pattern)doc["msg_type_pattern"] = *msg.msg_type_pattern;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<Unsubscribe*> Unsubscribe::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        Unsubscribe* msg = new Unsubscribe();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<Unsubscribe*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["src_pattern"].is<std::string>() )  
+                        msg->src_pattern = doc["src_pattern"].as<std::string>();
+        if (doc["msg_type_pattern"].is<std::string>() )  
+                        msg->msg_type_pattern = doc["msg_type_pattern"].as<std::string>();
+        return Result<Unsubscribe*>::Ok(msg);
+    }
+
+
+Result<Bytes> BrokerPublish::json_serialize(const BrokerPublish& msg)  {
+        JsonDocument doc;
+        if (msg.dst)doc["dst"] = *msg.dst;
+        if (msg.msg_type)doc["msg_type"] = *msg.msg_type;
+        if (msg.payload)
+                        doc["payload"] = base64_encode(*msg.payload);
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<BrokerPublish*> BrokerPublish::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        BrokerPublish* msg = new BrokerPublish();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<BrokerPublish*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["dst"].is<std::string>() )  
+                        msg->dst = doc["dst"].as<std::string>();
+        if (doc["msg_type"].is<std::string>() )  
+                        msg->msg_type = doc["msg_type"].as<std::string>();
+        if (doc["payload"].is<std::string>() )  
+                        msg->payload = base64_decode(doc["payload"].as<std::string>());
+        return Result<BrokerPublish*>::Ok(msg);
+    }
 
 
 Result<Bytes> Sample::json_serialize(const Sample& msg)  {
@@ -65,7 +167,7 @@ Result<Bytes> UdpMessage::json_serialize(const UdpMessage& msg)  {
         JsonDocument doc;
         if (msg.dst)doc["dst"] = *msg.dst;
         if (msg.src)doc["src"] = *msg.src;
-        if (msg.type)doc["type"] = *msg.type;
+        if (msg.msg_type)doc["msg_type"] = *msg.msg_type;
         if (msg.payload)
                         doc["payload"] = base64_encode(*msg.payload);
         std::string str;
@@ -85,8 +187,8 @@ Result<Bytes> UdpMessage::json_serialize(const UdpMessage& msg)  {
                         msg->dst = doc["dst"].as<std::string>();
         if (doc["src"].is<std::string>() )  
                         msg->src = doc["src"].as<std::string>();
-        if (doc["type"].is<std::string>() )  
-                        msg->type = doc["type"].as<std::string>();
+        if (doc["msg_type"].is<std::string>() )  
+                        msg->msg_type = doc["msg_type"].as<std::string>();
         if (doc["payload"].is<std::string>() )  
                         msg->payload = base64_decode(doc["payload"].as<std::string>());
         return Result<UdpMessage*>::Ok(msg);
@@ -97,7 +199,7 @@ Result<Bytes> UdpMessageCbor::json_serialize(const UdpMessageCbor& msg)  {
         JsonDocument doc;
         if (msg.dst)doc["dst"] = *msg.dst;
         if (msg.src)doc["src"] = *msg.src;
-        if (msg.type)doc["type"] = *msg.type;
+        if (msg.msg_type)doc["msg_type"] = *msg.msg_type;
         if (msg.payload)
                         doc["payload"] = base64_encode(*msg.payload);
         std::string str;
@@ -117,8 +219,8 @@ Result<Bytes> UdpMessageCbor::json_serialize(const UdpMessageCbor& msg)  {
                         msg->dst = doc["dst"].as<uint32_t>();
         if (doc["src"].is<uint32_t>() )  
                         msg->src = doc["src"].as<uint32_t>();
-        if (doc["type"].is<uint32_t>() )  
-                        msg->type = doc["type"].as<uint32_t>();
+        if (doc["msg_type"].is<uint32_t>() )  
+                        msg->msg_type = doc["msg_type"].as<uint32_t>();
         if (doc["payload"].is<std::string>() )  
                         msg->payload = base64_decode(doc["payload"].as<std::string>());
         return Result<UdpMessageCbor*>::Ok(msg);
@@ -1143,6 +1245,441 @@ Result<Bytes> MotorEvent::json_serialize(const MotorEvent& msg)  {
 // CBOR Serialization/Deserialization
 
 
+Result<Bytes> Announce::cbor_serialize(const Announce& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    {
+            CborEncoder arrayEncoder;
+            cbor_encode_int(&mapEncoder, Announce::Field::MESSAGE_TYPES_INDEX );
+            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.message_types.size());
+            for (const auto & item : msg.message_types) {
+                cbor_encode_text_stringz(&arrayEncoder, item.c_str());
+            }
+            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Announce*> Announce::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Announce* msg = new Announce();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Announce*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Announce*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Announce*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Announce*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Announce::Field::MESSAGE_TYPES_INDEX:{CborValue tmp;
+                cbor_value_enter_container(&mapIt,&tmp);
+                while (!cbor_value_at_end(&tmp)) {
+                    std::string v;
+                    {
+
+    if (cbor_value_is_text_string(&tmp)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&tmp, &vallen);        
+        cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
+        v = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&tmp);
+
+                    msg->message_types.push_back(v);
+                };
+                cbor_value_leave_container(&mapIt,&tmp);
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Announce*>::Ok(msg);
+}
+
+Result<Bytes> Subscribe::cbor_serialize(const Subscribe& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.src_pattern) {
+            cbor_encode_int(&mapEncoder, Subscribe::Field::SRC_PATTERN_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.src_pattern.value().c_str());
+            }
+    if (msg.msg_type_pattern) {
+            cbor_encode_int(&mapEncoder, Subscribe::Field::MSG_TYPE_PATTERN_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.msg_type_pattern.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Subscribe*> Subscribe::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Subscribe* msg = new Subscribe();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Subscribe*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Subscribe*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Subscribe*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Subscribe*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Subscribe::Field::SRC_PATTERN_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->src_pattern = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Subscribe::Field::MSG_TYPE_PATTERN_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->msg_type_pattern = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Subscribe*>::Ok(msg);
+}
+
+Result<Bytes> Unsubscribe::cbor_serialize(const Unsubscribe& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.src_pattern) {
+            cbor_encode_int(&mapEncoder, Unsubscribe::Field::SRC_PATTERN_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.src_pattern.value().c_str());
+            }
+    if (msg.msg_type_pattern) {
+            cbor_encode_int(&mapEncoder, Unsubscribe::Field::MSG_TYPE_PATTERN_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.msg_type_pattern.value().c_str());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<Unsubscribe*> Unsubscribe::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    Unsubscribe* msg = new Unsubscribe();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<Unsubscribe*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<Unsubscribe*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<Unsubscribe*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<Unsubscribe*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case Unsubscribe::Field::SRC_PATTERN_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->src_pattern = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case Unsubscribe::Field::MSG_TYPE_PATTERN_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->msg_type_pattern = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<Unsubscribe*>::Ok(msg);
+}
+
+Result<Bytes> BrokerPublish::cbor_serialize(const BrokerPublish& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(512);
+    CborEncoder encoder, mapEncoder;
+    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+
+    if (msg.dst) {
+            cbor_encode_int(&mapEncoder, BrokerPublish::Field::DST_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.dst.value().c_str());
+            }
+    if (msg.msg_type) {
+            cbor_encode_int(&mapEncoder, BrokerPublish::Field::MSG_TYPE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.msg_type.value().c_str());
+            }
+    if (msg.payload) {
+            cbor_encode_int(&mapEncoder, BrokerPublish::Field::PAYLOAD_INDEX);
+            cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size());
+            }
+    cbor_encoder_close_container(&encoder, &mapEncoder);
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Bytes(buffer.begin(), buffer.begin() + used);
+}
+
+ Result<BrokerPublish*> BrokerPublish::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    BrokerPublish* msg = new BrokerPublish();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<BrokerPublish*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<BrokerPublish*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<BrokerPublish*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<BrokerPublish*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case BrokerPublish::Field::DST_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->dst = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case BrokerPublish::Field::MSG_TYPE_INDEX:{{
+
+    if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
+        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
+        msg->msg_type = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case BrokerPublish::Field::PAYLOAD_INDEX:{{
+    if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
+        cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
+        msg->payload = Bytes(tmpbuf, tmpbuf + tmplen);
+    }
+};
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<BrokerPublish*>::Ok(msg);
+}
+
 Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
@@ -1247,11 +1784,13 @@ Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
             }
             
             case Sample::Field::NAME_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->name = std::string(valbuf, vallen - 1);
+        msg->name = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1291,9 +1830,10 @@ Result<Bytes> Sample::cbor_serialize(const Sample& msg)  {
             }
             
             case Sample::Field::DATA_INDEX:{{
-    uint8_t tmpbuf[512];
-    size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
         msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
     }
@@ -1334,9 +1874,9 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
             cbor_encode_int(&mapEncoder, UdpMessage::Field::SRC_INDEX);
             cbor_encode_text_stringz(&mapEncoder, msg.src.value().c_str());
             }
-    if (msg.type) {
-            cbor_encode_int(&mapEncoder, UdpMessage::Field::TYPE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.type.value().c_str());
+    if (msg.msg_type) {
+            cbor_encode_int(&mapEncoder, UdpMessage::Field::MSG_TYPE_INDEX);
+            cbor_encode_text_stringz(&mapEncoder, msg.msg_type.value().c_str());
             }
     if (msg.payload) {
             cbor_encode_int(&mapEncoder, UdpMessage::Field::PAYLOAD_INDEX);
@@ -1388,11 +1928,13 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
         switch (key) {
             
             case UdpMessage::Field::DST_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->dst = std::string(valbuf, vallen - 1);
+        msg->dst = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1401,11 +1943,13 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
             }
             
             case UdpMessage::Field::SRC_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->src = std::string(valbuf, vallen - 1);
+        msg->src = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1413,12 +1957,14 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
                 break;
             }
             
-            case UdpMessage::Field::TYPE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+            case UdpMessage::Field::MSG_TYPE_INDEX:{{
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->type = std::string(valbuf, vallen - 1);
+        msg->msg_type = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1427,9 +1973,10 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
             }
             
             case UdpMessage::Field::PAYLOAD_INDEX:{{
-    uint8_t tmpbuf[512];
-    size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
         msg->payload = Bytes(tmpbuf, tmpbuf + tmplen);
     }
@@ -1470,9 +2017,9 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
             cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::SRC_INDEX);
             cbor_encode_int(&mapEncoder, msg.src.value());
             }
-    if (msg.type) {
-            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::TYPE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.type.value());
+    if (msg.msg_type) {
+            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::MSG_TYPE_INDEX);
+            cbor_encode_int(&mapEncoder, msg.msg_type.value());
             }
     if (msg.payload) {
             cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::PAYLOAD_INDEX);
@@ -1543,10 +2090,10 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
                 break;
             }
             
-            case UdpMessageCbor::Field::TYPE_INDEX:{{
+            case UdpMessageCbor::Field::MSG_TYPE_INDEX:{{
     uint64_t v;
     cbor_value_get_uint64(&mapIt, &(v));
-    msg->type = v;
+    msg->msg_type = v;
 };
     cbor_value_advance(&mapIt);
 
@@ -1554,9 +2101,10 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
             }
             
             case UdpMessageCbor::Field::PAYLOAD_INDEX:{{
-    uint8_t tmpbuf[512];
-    size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
         msg->payload = Bytes(tmpbuf, tmpbuf + tmplen);
     }
@@ -1673,11 +2221,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
         switch (key) {
             
             case ZenohEvent::Field::ZID_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->zid = std::string(valbuf, vallen - 1);
+        msg->zid = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1686,11 +2236,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
             }
             
             case ZenohEvent::Field::WHAT_AM_I_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->what_am_i = std::string(valbuf, vallen - 1);
+        msg->what_am_i = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1703,11 +2255,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
                 while (!cbor_value_at_end(&tmp)) {
                     std::string v;
                     {
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&tmp)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&tmp, &vallen);        
         cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
-        v = std::string(valbuf, vallen - 1);
+        v = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&tmp);
@@ -1719,11 +2273,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
             }
             
             case ZenohEvent::Field::PREFIX_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->prefix = std::string(valbuf, vallen - 1);
+        msg->prefix = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1736,11 +2292,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
                 while (!cbor_value_at_end(&tmp)) {
                     std::string v;
                     {
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&tmp)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&tmp, &vallen);        
         cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
-        v = std::string(valbuf, vallen - 1);
+        v = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&tmp);
@@ -1752,11 +2310,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
             }
             
             case ZenohEvent::Field::CONNECT_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->connect = std::string(valbuf, vallen - 1);
+        msg->connect = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1765,11 +2325,13 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
             }
             
             case ZenohEvent::Field::LISTEN_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->listen = std::string(valbuf, vallen - 1);
+        msg->listen = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1880,11 +2442,13 @@ Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
             }
             
             case LogEvent::Field::MESSAGE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->message = std::string(valbuf, vallen - 1);
+        msg->message = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -1901,11 +2465,13 @@ Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
             }
             
             case LogEvent::Field::FILE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->file = std::string(valbuf, vallen - 1);
+        msg->file = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2013,11 +2579,13 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
         switch (key) {
             
             case SysCmd::Field::SRC_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->src = std::string(valbuf, vallen - 1);
+        msg->src = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2042,11 +2610,13 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
             }
             
             case SysCmd::Field::CONSOLE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->console = std::string(valbuf, vallen - 1);
+        msg->console = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2179,11 +2749,13 @@ Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
             }
             
             case SysEvent::Field::CPU_BOARD_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->cpu_board = std::string(valbuf, vallen - 1);
+        msg->cpu_board = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2192,11 +2764,13 @@ Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
             }
             
             case SysEvent::Field::BUILD_DATE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->build_date = std::string(valbuf, vallen - 1);
+        msg->build_date = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2305,11 +2879,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
         switch (key) {
             
             case WifiEvent::Field::SSID_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->ssid = std::string(valbuf, vallen - 1);
+        msg->ssid = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2318,11 +2894,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
             }
             
             case WifiEvent::Field::BSSID_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->bssid = std::string(valbuf, vallen - 1);
+        msg->bssid = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2339,11 +2917,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
             }
             
             case WifiEvent::Field::IP_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->ip = std::string(valbuf, vallen - 1);
+        msg->ip = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2352,11 +2932,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
             }
             
             case WifiEvent::Field::MAC_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->mac = std::string(valbuf, vallen - 1);
+        msg->mac = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2373,11 +2955,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
             }
             
             case WifiEvent::Field::GATEWAY_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->gateway = std::string(valbuf, vallen - 1);
+        msg->gateway = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2386,11 +2970,13 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
             }
             
             case WifiEvent::Field::NETMASK_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->netmask = std::string(valbuf, vallen - 1);
+        msg->netmask = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -2479,11 +3065,13 @@ Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
         switch (key) {
             
             case MulticastEvent::Field::GROUP_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->group = std::string(valbuf, vallen - 1);
+        msg->group = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -3482,11 +4070,13 @@ Result<Bytes> HoverboardReply::cbor_serialize(const HoverboardReply& msg)  {
             }
             
             case HoverboardReply::Field::MESSAGE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->message = std::string(valbuf, vallen - 1);
+        msg->message = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -4059,11 +4649,13 @@ Result<Bytes> Ps4Event::cbor_serialize(const Ps4Event& msg)  {
             }
             
             case Ps4Event::Field::DEBUG_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->debug = std::string(valbuf, vallen - 1);
+        msg->debug = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -4340,11 +4932,13 @@ Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
             }
             
             case CameraEvent::Field::FORMAT_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->format = std::string(valbuf, vallen - 1);
+        msg->format = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -4353,9 +4947,10 @@ Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
             }
             
             case CameraEvent::Field::DATA_INDEX:{{
-    uint8_t tmpbuf[512];
-    size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
         msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
     }
@@ -4470,11 +5065,13 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
             }
             
             case CameraCmd::Field::CAPTURE_TCP_DESTINATION_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->capture_tcp_destination = std::string(valbuf, vallen - 1);
+        msg->capture_tcp_destination = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -4579,11 +5176,13 @@ Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
             }
             
             case CameraReply::Field::MESSAGE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->message = std::string(valbuf, vallen - 1);
+        msg->message = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -4592,9 +5191,10 @@ Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
             }
             
             case CameraReply::Field::DATA_INDEX:{{
-    uint8_t tmpbuf[512];
-    size_t tmplen = sizeof(tmpbuf);
     if (cbor_value_is_byte_string(&mapIt)) {
+        uint8_t tmpbuf[512];
+        size_t tmplen ;
+        cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
         msg->data = Bytes(tmpbuf, tmpbuf + tmplen);
     }
@@ -4957,11 +5557,13 @@ Result<Bytes> LawnmowerManualReply::cbor_serialize(const LawnmowerManualReply& m
             }
             
             case LawnmowerManualReply::Field::MESSAGE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->message = std::string(valbuf, vallen - 1);
+        msg->message = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5094,11 +5696,13 @@ Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg) 
             }
             
             case LawnmowerAutoEvent::Field::MODE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->mode = std::string(valbuf, vallen - 1);
+        msg->mode = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5107,11 +5711,13 @@ Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg) 
             }
             
             case LawnmowerAutoEvent::Field::PATH_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->path = std::string(valbuf, vallen - 1);
+        msg->path = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5244,11 +5850,13 @@ Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
             }
             
             case LawnmowerAutoCmd::Field::MODE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->mode = std::string(valbuf, vallen - 1);
+        msg->mode = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5257,11 +5865,13 @@ Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
             }
             
             case LawnmowerAutoCmd::Field::PATH_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->path = std::string(valbuf, vallen - 1);
+        msg->path = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5370,11 +5980,13 @@ Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
             }
             
             case LawnmowerStatus::Field::CURRENT_MODE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->current_mode = std::string(valbuf, vallen - 1);
+        msg->current_mode = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);
@@ -5383,11 +5995,13 @@ Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
             }
             
             case LawnmowerStatus::Field::ERROR_MESSAGE_INDEX:{{
-    char valbuf[256];
-    size_t vallen = sizeof(valbuf);
+
     if (cbor_value_is_text_string(&mapIt)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&mapIt, &vallen);        
         cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->error_message = std::string(valbuf, vallen - 1);
+        msg->error_message = std::string(valbuf, vallen);
     }
 };
     cbor_value_advance(&mapIt);

@@ -8,7 +8,7 @@ mod udp_cbor_async;
 use log::info;
 use tokio;
 
-use crate::{limero::{Announce, Msg, SysCmd}, udp_cbor_async::SendMessage};
+use crate::{limero::{Announce, Msg, SysCmd, UdpMessage}, udp_cbor_async::SendMessage};
 
 mod limero;
 mod logger;
@@ -44,33 +44,31 @@ async fn main() -> std::io::Result<()> {
     let sender_cb = sender.clone();
 
     let f = Arc::new( move |msg: Vec<u8>, adr: std::net::SocketAddr| {
-        let udp_cbor = minicbor::decode::<udp_cbor_async::CborMessage>(&msg);
+        let udp_cbor = UdpMessage::cbor_deserialize(&msg);
         match udp_cbor {
             Ok(cbor_msg) => {
-                let msg_type = cbor_msg.message_type.clone();
+                let msg_type = cbor_msg.msg_type.unwrap().clone();
                 let payload = cbor_msg.payload.as_ref().unwrap().clone();
                 // Pre-clone sender so the outer callback remains Fn (not FnOnce)
                 let sender_for_ping = sender_cb.clone();
                 handle::<limero::Ping>(&msg_type, &payload, move |ping_msg| {
-                    info!("Received Ping from {:?} ", adr);
                     let pong = limero::Pong {
                         number: ping_msg.number,
                     };
-                    let udp_msg = udp_cbor_async::CborMessage {
-                        destination: Some(adr.to_string()),
-                        source: Some("node-a".to_string()),
-                        message_type: limero::Pong::NAME.to_string(),
+                    let udp_msg = UdpMessage {
+                        dst: Some(adr.to_string()),
+                        src: Some("node-a".to_string()),
+                        msg_type: Some(limero::Pong::NAME.to_string()),
                         payload: Some(serde_json::to_vec(&pong).unwrap()),
                     };
                     let msg = SendMessage::Unicast(adr, udp_msg);
-                    info!("Sending Pong to {:?} ", adr);
                     let _ = sender_for_ping.try_send(msg);
                 });
                 handle::<limero::SysEvent>(&msg_type, &payload, move |sys_event| {
-                    info!("Received SysEvent from {:?} ", adr);
+                    info!("Received SysEvent from {:?} {:?}", adr, sys_event);
                 });
                 handle::<limero::WifiEvent>(&msg_type, &payload, move |wifi_event| {
-                    info!("Received WifiEvent from {:?} ", adr);
+                    info!("Received WifiEvent from {:?} {:?}", adr, wifi_event);
                 });
                 /*
                 if cbor_msg.message_type == "Ping" {
@@ -96,7 +94,8 @@ async fn main() -> std::io::Result<()> {
                 }*/
             }
             Err(e) => {
-                info!("CBOR decode error from {:?} {:?} ", adr, e);
+                info!("CBOR decode error from {:?} {:?} ", adr, e.to_string());
+                info!("  Raw data: {}", minicbor::display(&msg));
             }
         }
     });

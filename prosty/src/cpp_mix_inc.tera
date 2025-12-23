@@ -1,0 +1,47 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <cstdint>
+#include <optional>
+#include <ArduinoJson.h>
+#include <cbor.h>
+#include <msg.h>
+#include <serdes.h>
+
+
+
+typedef std::vector<uint8_t> Bytes;
+
+{% for en in enums %}
+typedef enum {
+    {%- for value in en.values %}
+    {{ value.0 }} = {{ value.1 }},
+    {%- endfor %}
+} {{ en.name }};
+{% endfor %}
+
+{% for msg in messages %}
+class {{ msg.name }} : public Msg {
+    MSG({{ msg.name }});
+    public:
+    {% for field in msg.fields %}
+        {%- if field.repeated -%}
+        std::vector<{{ field.target_type }}>
+        {%- elif field.optional -%}
+        std::optional<{{ field.target_type }}> 
+        {%- else -%}
+        {{ field.target_type }} 
+        {%- endif %} {{ field.name }};
+    {% endfor %}
+    // Field indexes
+        typedef enum {
+    {%- for field in msg.fields %}
+        {{ field.name | upper }}_INDEX = {{ field.index }},
+    {%- endfor %}
+    } Field;
+    static Result<Bytes> json_serialize(const {{msg.name}}&);
+    static Result<{{msg.name}}*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const {{msg.name}}&);
+    static Result<{{msg.name}}*> cbor_deserialize(const Bytes&);
+};
+{% endfor %}

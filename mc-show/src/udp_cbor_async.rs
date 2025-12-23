@@ -13,7 +13,7 @@ use tokio::time::interval;
 use crate::limero::{Announce, Msg, UdpMessage};
 
 #[derive(Debug, Encode, Decode)]
-#[cbor(array)]
+#[cbor(map)]
 pub struct CborMessage {
     #[n(0)] // can be null
     pub destination: Option<String>,
@@ -27,8 +27,8 @@ pub struct CborMessage {
 
 
 pub enum SendMessage {
-    Unicast(SocketAddr, CborMessage),
-    Multicast(CborMessage),
+    Unicast(SocketAddr, UdpMessage),
+    Multicast(UdpMessage),
 }
 
 type RxCallback = Arc<dyn Fn(Vec<u8>, SocketAddr) + Send + Sync>;
@@ -220,6 +220,7 @@ impl UdpCborClient {
                     match msg {
                         SendMessage::Unicast(addr, cbor_msg) => {
                             if let Ok(encoded) = minicbor::to_vec(&cbor_msg) {
+//                                info!("Sending unicast {}", minicbor::display(&encoded));
                                 let _ = unicast.send_to(&encoded, addr).await;
                             }
                         }
@@ -299,10 +300,10 @@ impl UdpCborClient {
 
             let announce = Announce { message_types };
 
-            let msg = CborMessage {
-                source: Some(self.local_source.clone()),
-                destination: Some("multicast".to_string()),
-                message_type: Announce::NAME.to_string(),
+            let msg = UdpMessage {
+                dst: Some(self.local_source.clone()),
+                src: Some("multicast".to_string()),
+                msg_type: Some(Announce::NAME.to_string()),
                 payload: Some(serde_json::to_vec(&announce).unwrap()),
             };
 

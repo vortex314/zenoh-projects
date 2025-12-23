@@ -26,6 +26,7 @@ uint64_t current_time();
 class ActorRef
 {
     const char *_actor_name="";
+    bool _local = false;
 
 public:
     ActorRef() = delete;
@@ -35,6 +36,8 @@ public:
     void operator=(ActorRef other) { _actor_name = other._actor_name; }
     bool match_name(ActorRef &other) { return strcmp(_actor_name, other._actor_name) == 0; };
     inline const char *name() const { return _actor_name; };
+    bool is_local() const { return _local; }
+    void set_local(bool local) { _local = local; }
 };
 
 extern ActorRef NULL_ACTOR;
@@ -219,7 +222,7 @@ private:
     EventBus *_eventbus = nullptr;
 
 public:
-    Actor(const char *name) : _self(name) {};
+    Actor(const char *name) : _self(name) { _self.set_local(true); };
     ~Actor() { INFO("Destroying actor %s", name()); }
 
     virtual void on_start() { INFO("actor %s default started.", _self.name()); }
@@ -314,12 +317,7 @@ DEFINE_MSG(PublishTxd,
 DEFINE_MSG(PublishRxd,
            JsonDocument doc;
            PublishRxd(const JsonDocument &doc) : doc(doc){});
-DEFINE_MSG(Subscribe,
-           std::string pattern;
-           Subscribe(const std::string &pattern) : pattern(pattern){});
-DEFINE_MSG(Unsubscribe,
-           std::string pattern;
-           Unsubscribe(const std::string &pattern) : pattern(pattern){});
+
 
 template <typename T>
 void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)

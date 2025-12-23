@@ -37,6 +37,7 @@ private:
   bool _running = true;
   int _timer_publish;
   uint32_t _ping_counter = 0;
+  bool _connected = false;
 
 public:
   McActor(const char *name, const char *hostname);
@@ -51,7 +52,7 @@ public:
   void send_request_reply(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
   void on_request(const Bytes &request, const sockaddr_in &sender_addr);
   void on_message(const char *type,Bytes& payload);
-  void on_timer();
+  void send_ping();
   Bytes encode_message(const char *dst, const char *src, const char *type, const Bytes &payload);
   static void udp_listener_task(void *param);
 };
