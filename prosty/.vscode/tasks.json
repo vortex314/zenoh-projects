@@ -71,7 +71,7 @@
             }
         },
         {
-            "label": "Rust MC SHow",
+            "label": "Rust MC Limeros",
             "type": "shell",
             "options": {
                 "cwd": "${workspaceFolder}",
@@ -85,7 +85,7 @@
                 "run",
                 "--",
                 "--input", "syntax/message.proto",
-                "--output", "../mc-show/src",
+                "--output", "../limeross/src",
                 "--lang", "rust",
                 "--format", "mix"
             ],

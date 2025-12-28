@@ -1,10 +1,15 @@
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 use anyhow::Result;
 use minicbor::{Encode, Decode};
 
-pub trait Msg {
+pub trait TypedMessage : DeserializeOwned + Send + Sync +'static{
     const ID: u32;
-    const NAME: &'static str;
+    const MSG_TYPE: &'static str;
+}
+pub trait Msg  : Send + Sync {
+    fn type_name(&self) -> &'static str ;
+    fn type_id(&self) -> u32 ;
     fn cbor_serialize(&self) -> Result<Vec<u8>>;
     fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized;
     fn json_serialize(&self) -> Result<Vec<u8>>;
@@ -25,47 +30,36 @@ pub enum {{ en.name }} {
 #[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
 #[cbor(map)]
 pub struct {{ msg.name }} {
-    {%- for field in msg.fields %}
-        {% if field.source_type=="Bytes" %}
-            #[cbor(n({{ field.index }}), with = "minicbor::bytes")]
-        {% else %}
-            #[n({{ field.index }})]
-        {% endif %}
-        {%- if field.repeated %}
-    pub {{ field.name }}: Vec<{{ field.target_type }}>,
-        {%- elif field.optional %}
+{%- for field in msg.fields -%}
+    {% if field.source_type=="Bytes" %}
+    #[cbor(n({{ field.index }}), with = "minicbor::bytes")]
+    {% else %}
+    #[n({{ field.index }})]
+    {% endif -%}
+    {%- if field.repeated -%}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{ field.name }}: Option<Vec<{{ field.target_type }}>>,
+    {%- elif field.optional -%}
     #[serde(skip_serializing_if = "Option::is_none")]
     pub {{ field.name }}: Option<{{ field.target_type }}>,
-        {%- else %}
+    {%- else %}
     pub {{ field.name }}: {{ field.target_type }},
-        {%- endif %}
-    {%- endfor %}
+    {%- endif %}
+{%- endfor %}
+}
+
+impl TypedMessage for {{ msg.name }} {
+    const ID: u32 = {{ msg.msg_id }};
+    const MSG_TYPE: &'static str = "{{ msg.name }}";
 }
 
 impl Msg for {{ msg.name }} {
-    const ID: u32 = {{ msg.msg_id }};
-    const NAME: &'static str = "{{ msg.name }}";
-
-    fn cbor_serialize(&self) -> Result<Vec<u8>> {
-        // Use serde_cbor to produce CBOR bytes
-        let s = minicbor::to_vec(self)?;
-        Ok(s)
-    }
-
-    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {
-        let m: {{ msg.name }} = minicbor::decode::<Self>(v.as_slice())?;
-        Ok(m)
-    }
-
-    fn json_serialize(&self) -> Result<Vec<u8>> {
-        let s = serde_json::to_vec(self) ?;
-        Ok(s)
-    }
-     
-    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {
-        let m:{{msg.name}} = serde_json::from_slice(v.as_slice()) ?;
-        Ok(m)
-    }
+    fn type_name(&self) -> &'static str {<Self as TypedMessage>::MSG_TYPE}
+    fn type_id(&self) -> u32 {<Self as TypedMessage>::ID}
+    fn cbor_serialize(&self) -> Result<Vec<u8>> {Ok(minicbor::to_vec(self)?)}
+    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {Ok(minicbor::decode::<Self>(v.as_slice())?)}
+    fn json_serialize(&self) -> Result<Vec<u8>> {Ok(serde_json::to_vec(self) ?)}
+    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {Ok(serde_json::from_slice(v.as_slice()) ?)}
 }
     
 {% endfor %}

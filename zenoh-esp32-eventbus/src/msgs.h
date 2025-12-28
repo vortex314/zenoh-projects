@@ -63,19 +63,27 @@ typedef enum {
 
 
 
-class Announce : public Msg {
-    MSG(Announce);
+class Alive : public Msg {
+    MSG(Alive);
     public:
     std::vector<std::string> message_types;
+    std::vector<std::string> endpoints;
+    std::optional<std::string> ip;
+    std::optional<uint32_t> port;
+    std::optional<uint32_t> timeout;
     
     // Field indexes
         typedef enum {
         MESSAGE_TYPES_INDEX = 1,
+        ENDPOINTS_INDEX = 2,
+        IP_INDEX = 6,
+        PORT_INDEX = 7,
+        TIMEOUT_INDEX = 8,
     } Field;
-    static Result<Bytes> json_serialize(const Announce&);
-    static Result<Announce*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Announce&);
-    static Result<Announce*> cbor_deserialize(const Bytes&);
+    static Result<Bytes> json_serialize(const Alive&);
+    static Result<Alive*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const Alive&);
+    static Result<Alive*> cbor_deserialize(const Bytes&);
 };
 
 class Subscribe : public Msg {
@@ -110,52 +118,6 @@ class Unsubscribe : public Msg {
     static Result<Unsubscribe*> json_deserialize(const Bytes&);
     static Result<Bytes> cbor_serialize(const Unsubscribe&);
     static Result<Unsubscribe*> cbor_deserialize(const Bytes&);
-};
-
-class BrokerPublish : public Msg {
-    MSG(BrokerPublish);
-    public:
-    std::optional<std::string> dst;
-    std::optional<std::string> msg_type;
-    std::optional<Bytes> payload;
-    
-    // Field indexes
-        typedef enum {
-        DST_INDEX = 1,
-        MSG_TYPE_INDEX = 2,
-        PAYLOAD_INDEX = 3,
-    } Field;
-    static Result<Bytes> json_serialize(const BrokerPublish&);
-    static Result<BrokerPublish*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const BrokerPublish&);
-    static Result<BrokerPublish*> cbor_deserialize(const Bytes&);
-};
-
-class Sample : public Msg {
-    MSG(Sample);
-    public:
-    std::optional<bool> flag;
-    std::optional<int32_t> identifier;
-    std::optional<std::string> name;
-    std::vector<float> values;
-    std::optional<float> f;
-    std::optional<double> d;
-    std::optional<Bytes> data;
-    
-    // Field indexes
-        typedef enum {
-        FLAG_INDEX = 1,
-        IDENTIFIER_INDEX = 2,
-        NAME_INDEX = 3,
-        VALUES_INDEX = 4,
-        F_INDEX = 5,
-        D_INDEX = 6,
-        DATA_INDEX = 7,
-    } Field;
-    static Result<Bytes> json_serialize(const Sample&);
-    static Result<Sample*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Sample&);
-    static Result<Sample*> cbor_deserialize(const Bytes&);
 };
 
 class UdpMessage : public Msg {
@@ -346,8 +308,8 @@ class MulticastEvent : public Msg {
     static Result<MulticastEvent*> cbor_deserialize(const Bytes&);
 };
 
-class Ping : public Msg {
-    MSG(Ping);
+class PingReq : public Msg {
+    MSG(PingReq);
     public:
     std::optional<uint32_t> number;
     
@@ -355,14 +317,14 @@ class Ping : public Msg {
         typedef enum {
         NUMBER_INDEX = 1,
     } Field;
-    static Result<Bytes> json_serialize(const Ping&);
-    static Result<Ping*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Ping&);
-    static Result<Ping*> cbor_deserialize(const Bytes&);
+    static Result<Bytes> json_serialize(const PingReq&);
+    static Result<PingReq*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const PingReq&);
+    static Result<PingReq*> cbor_deserialize(const Bytes&);
 };
 
-class Pong : public Msg {
-    MSG(Pong);
+class PingRep : public Msg {
+    MSG(PingRep);
     public:
     std::optional<uint32_t> number;
     
@@ -370,10 +332,10 @@ class Pong : public Msg {
         typedef enum {
         NUMBER_INDEX = 1,
     } Field;
-    static Result<Bytes> json_serialize(const Pong&);
-    static Result<Pong*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Pong&);
-    static Result<Pong*> cbor_deserialize(const Bytes&);
+    static Result<Bytes> json_serialize(const PingRep&);
+    static Result<PingRep*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const PingRep&);
+    static Result<PingRep*> cbor_deserialize(const Bytes&);
 };
 
 class HoverboardEvent : public Msg {

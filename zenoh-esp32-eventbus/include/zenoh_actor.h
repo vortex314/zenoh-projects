@@ -17,7 +17,7 @@
 #include <zenoh-pico.h>
 #include <sys_actor.h>
 #include <wifi_actor.h>
-#include <limero.h>
+#include <msgs.h>
 #include <led_actor.h>
 
 DEFINE_MSG(ZenohPublish, std::string topic;

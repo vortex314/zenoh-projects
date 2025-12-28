@@ -25,19 +25,24 @@
 #include <string.h>
 #include <lwip/def.h>
 #include <lwip/inet.h>
+#include <msgs.h>
 
 class McActor : public Actor
 {
 private:
   std::string _hostname;
-  int _event_socket;
-  int _req_reply_socket;
-  sockaddr_in _event_addr;
-  sockaddr_in _req_reply_addr;
+  int _unicast_socket;
+  int _multicast_socket;
+  sockaddr_in _unicast_src_addr;
+  sockaddr_in _multicast_addr;
   bool _running = true;
   int _timer_publish;
   uint32_t _ping_counter = 0;
   bool _connected = false;
+  std::unordered_map<std::string, std::pair<sockaddr_in,uint64_t>> _source_map;
+  std::optional<sockaddr_in> _broker_addr = std::nullopt;
+  std::optional<std::string> _broker_name = std::nullopt;
+  uint32_t _last_ping_number = 1;
 
 public:
   McActor(const char *name, const char *hostname);
@@ -46,13 +51,16 @@ public:
   void on_start();
   void init_event();
   void stop_event();
-  void start_listener();
+  void start_unicast_listener();
+  void start_multicast_listener();
   void stop_listener();
-  void send_event(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
-  void send_request_reply(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
-  void on_request(const Bytes &request, const sockaddr_in &sender_addr);
-  void on_message(const char *type,Bytes& payload);
-  void send_ping();
+  void send_unicast(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  void send_multicast(const char *dst, const char *src, const char *msg_type, const Bytes &bytes);
+  void on_udp(const Bytes &request, const sockaddr_in &sender_addr);
+  void on_udp_message(UdpMessage& udp_message,const sockaddr_in &sender_addr);
+  void send_ping_req(const char* dst,uint32_t number);
+  void send_ping_rep(const char* dst,uint32_t number);
   Bytes encode_message(const char *dst, const char *src, const char *type, const Bytes &payload);
-  static void udp_listener_task(void *param);
+  static void unicast_listener_task(void *param);
+  static void multicast_listener_task(void *param);
 };

@@ -1,16 +1,27 @@
 #include "mc_actor.h"
 
 constexpr int MULTICAST_PORT = 50000;
-constexpr const char *MULTICAST_GROUP = "224.0.0.1";
+constexpr const char *MULTICAST_GROUP = "239.0.0.1";
 constexpr int UNICAST_PORT = 50001;
 constexpr int BUF_SIZE = 1024;
 constexpr const char *BROKER_IP = "192.168.0.148";
+
+std::string socketAddrToString(struct sockaddr_in *addr)
+{
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+
+    // ntohs converts "Network To Host Short" (fixes byte order)
+    int port = ntohs(addr->sin_port);
+
+    return std::string(ip_str) + ":" + std::to_string(port);
+}
 
 McActor::McActor(const char *name, const char *hostname)
     : Actor(name)
 {
     _hostname = std::string(hostname);
-    _timer_publish = timer_repetitive(10000);
+    _timer_publish = timer_repetitive(1000);
 }
 
 McActor::~McActor()
@@ -35,45 +46,72 @@ int validate_rc(int rc, const char *msg)
 void McActor::init_event()
 {
     // create multicast socket
-    _event_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (validate_rc(_event_socket, "event socket"))
+    _unicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (validate_rc(_unicast_socket, "unicast socket"))
         return;
-    _req_reply_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (validate_rc(_req_reply_socket, "req_reply socket"))
+    _multicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (validate_rc(_multicast_socket, "multicast socket"))
         return;
 
     struct timeval timeout;
     timeout.tv_sec = 0;
     timeout.tv_usec = 1000; // 1ms timeout
-    setsockopt(_event_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-    //  setsockopt(_event_socket, IPPROTO_IP, IP_MULTICAST_IF, &local.sin_addr, sizeof(local.sin_addr));
-    fcntl(_event_socket, F_SETFL, O_NONBLOCK);
-    memset(&_event_addr, 0, sizeof(_event_addr));
-    _event_addr.sin_family = AF_INET;
-    _event_addr.sin_port = htons(UNICAST_PORT);
-    _event_addr.sin_addr.s_addr = inet_addr(BROKER_IP);
-    memset(&_req_reply_addr, 0, sizeof(_req_reply_addr));
-    _req_reply_addr.sin_family = AF_INET;
-    _req_reply_addr.sin_port = htons(MULTICAST_PORT);
-    _req_reply_addr.sin_addr.s_addr = inet_addr(MULTICAST_GROUP);
+    setsockopt(_unicast_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    //  fcntl(_unicast_socket, F_SETFL, O_NONBLOCK);
+
+    memset(&_unicast_src_addr, 0, sizeof(_unicast_src_addr));
+    _unicast_src_addr.sin_family = AF_INET;
+    _unicast_src_addr.sin_port = htons(UNICAST_PORT);
+    _unicast_src_addr.sin_addr.s_addr = inet_addr(BROKER_IP);
+
+    memset(&_multicast_addr, 0, sizeof(_multicast_addr));
+    _multicast_addr.sin_family = AF_INET;
+    _multicast_addr.sin_port = htons(MULTICAST_PORT);
+    _multicast_addr.sin_addr.s_addr = inet_addr(MULTICAST_GROUP);
+    setsockopt(_multicast_socket, IPPROTO_IP, IP_MULTICAST_IF, &_multicast_addr.sin_addr, sizeof(_multicast_addr.sin_addr));
 
     sockaddr_in local{};
     local.sin_family = AF_INET;
     local.sin_addr.s_addr = INADDR_ANY;
     local.sin_port = htons(UNICAST_PORT);
 
-    int rc = bind(_req_reply_socket, (sockaddr *)&local, sizeof(local));
-    validate_rc(rc, "req_reply bind");
+    int rc = bind(_unicast_socket, (sockaddr *)&local, sizeof(local));
+    validate_rc(rc, "unicast bind");
     //   rc = bind(_event_socket, (sockaddr *)&local, sizeof(local));
     //   validate_rc(rc, "event bind");
+    // Bind multicast socket to receive on multicast port and join group
+    sockaddr_in mcast_bind{};
+    mcast_bind.sin_family = AF_INET;
+    mcast_bind.sin_addr.s_addr = INADDR_ANY;
+    mcast_bind.sin_port = htons(MULTICAST_PORT);
+
+    int reuse = 1;
+    setsockopt(_multicast_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    rc = bind(_multicast_socket, (sockaddr *)&mcast_bind, sizeof(mcast_bind));
+    validate_rc(rc, "multicast bind");
+
+    struct ip_mreq imreq;
+    imreq.imr_multiaddr.s_addr = inet_addr(MULTICAST_GROUP);
+    imreq.imr_interface.s_addr = htonl(INADDR_ANY); // default interface
+    rc = setsockopt(_multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &imreq, sizeof(imreq));
+    validate_rc(rc, "join multicast group");
+
+    unsigned char loop = 0;
+    setsockopt(_multicast_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+    sockaddr_in broker;
+    broker.sin_family = AF_INET;
+    broker.sin_port = htons(UNICAST_PORT);
+    broker.sin_addr.s_addr = inet_addr(BROKER_IP);
+    _broker_addr = broker;
+    _broker_name = std::string("pclenovo/broker");
 }
 
 void McActor::stop_event()
 {
-    if (_req_reply_socket >= 0)
+    if (_multicast_socket >= 0)
     {
-        close(_req_reply_socket);
-        _req_reply_socket = -1;
+        close(_multicast_socket);
+        _multicast_socket = -1;
     }
 }
 
@@ -93,17 +131,23 @@ Bytes McActor::encode_message(const char *dst, const char *src, const char *type
     return UdpMessage::cbor_serialize(msg).unwrap();
 }
 
-void McActor::send_event(const char *dst, const char *src, const char *type, const Bytes &payload)
+void McActor::send_unicast(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
+    dst = dst ? dst : (_broker_name.has_value() ? _broker_name->c_str() : NULL);
+    auto dst_addr = (dst && _source_map.find(dst) != _source_map.end()) ? _source_map[dst].first : (_broker_addr.has_value() ? *_broker_addr : sockaddr_in{});
+    if (dst && dst_addr.sin_family == 0)
+    {
+        ERROR("Unknown destination address for %s", dst);
+        return;
+    }
 
     Bytes buffer = encode_message(dst, src, type, payload);
-    size_t used = buffer.size();
 
     // send bytes
-    int sent = sendto(_req_reply_socket, buffer.data(), used, 0, (sockaddr *)&_event_addr, sizeof(_event_addr));
+    int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&dst_addr, sizeof(dst_addr));
     if (sent < 0)
     {
-        ERROR("Failed to send multicast message: %s [%lu]", strerror(errno), used);
+        ERROR("Failed to send unicast message: %s [%lu]", strerror(errno), buffer.size());
     }
     else
     {
@@ -120,13 +164,23 @@ void McActor::on_message(const Envelope &envelope)
 {
     const Msg &msg = *envelope.msg;
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
-                         { send_ping(); });
+                         { Alive alive;
+                            alive.endpoints.push_back(DEVICE_NAME "/wifi");
+                            alive.endpoints.push_back(DEVICE_NAME "/hoverboard");
+                            alive.endpoints.push_back(DEVICE_NAME "/sys");
 
-    msg.handle<Ping>([&](const auto &msg)
-                     { INFO("MC Actor received Ping"); });
+                            auto bytes = Alive::json_serialize(alive).unwrap();
+                            send_multicast(NULL,"sys",Alive::name_value,bytes);
+                            send_ping_req(NULL,0); });
+
+    msg.handle<PingReq>([&](const auto &msg)
+                        { INFO("MC Actor received Ping"); });
 
     msg.handle<WifiConnected>([&](const auto &msg)
-                              { _connected = true; init_event();start_listener(); });
+                              { _connected = true; 
+                                init_event();
+                                start_unicast_listener();
+                                start_multicast_listener(); });
 
     msg.handle<WifiDisconnected>([&](const auto &msg) { /*stop_listener(); */ });
 
@@ -134,132 +188,170 @@ void McActor::on_message(const Envelope &envelope)
         return;
     msg.handle<SysEvent>([&](const auto &msg)
                          { SysEvent::json_serialize(msg).just([&](const auto &s)
-                                                              { send_event(NULL, envelope.src->name(), msg.type_name(), s); }); });
+                                                              { send_unicast(NULL, envelope.src->name(), msg.type_name(), s); }); });
     msg.handle<WifiEvent>([&](const auto &msg)
                           { WifiEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                { send_event(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
+                                                                { send_unicast(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
     msg.handle<HoverboardEvent>([&](const auto &msg)
                                 { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                            { send_event(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
+                                                                            { send_unicast(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
 }
 
-void McActor::start_listener()
+void McActor::start_unicast_listener()
 {
-    xTaskCreatePinnedToCore(udp_listener_task, "udp_listener_task", 8192, this, 5, NULL, 1);
+    xTaskCreatePinnedToCore(unicast_listener_task, "udp_listener_task", 8192, this, 5, NULL, 1);
 }
 
-void McActor::udp_listener_task(void *pvParameters)
+void McActor::unicast_listener_task(void *pvParameters)
 {
     McActor *actor = static_cast<McActor *>(pvParameters);
     while (true)
     {
-        /*int sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (validate_rc(sock, "socket"))
-        {
-            vTaskDelay(100 / portTICK_PERIOD_MS);
-            continue;
-        }
-
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(UNICAST_PORT);
-        addr.sin_addr.s_addr = INADDR_ANY;
-
-        int rc = bind(sock, (sockaddr *)&addr, sizeof(addr));
-        if (validate_rc(rc, "bind"))
-        {
-            close(sock);
-            continue;
-        }*/
-
         char buf[BUF_SIZE];
         while (actor->_running)
         {
             sockaddr_in sender{};
             socklen_t sender_len = sizeof(sender);
-            int len = recvfrom(actor->_req_reply_socket, buf, BUF_SIZE - 1, 0, (sockaddr *)&sender, &sender_len);
-            actor->on_request(Bytes(buf, buf + len), sender);
-            /*            if (validate_rc(len, "recvfrom"))
-                            continue;
-                        buf[len] = '\0';
-                        std::string cmd(buf);
-                        std::cout << "Received command: " << cmd << " from " << inet_ntoa(sender.sin_addr) << ":" << ntohs(sender.sin_port) << std::endl;
-                        // Reply to sender
-                        std::string reply = "ACK: " + cmd;*/
+            int len = recvfrom(actor->_unicast_socket, buf, BUF_SIZE - 1, 0, (sockaddr *)&sender, &sender_len);
+            if (len < 0)
+            {
+                ERROR("recvfrom failed: %s", strerror(errno));
+
+                if (errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    vTaskDelay(10 / portTICK_PERIOD_MS);
+                    continue;
+                }
+                ERROR("recvfrom failed: %s", strerror(errno));
+                continue;
+            }
+            actor->on_udp(Bytes(buf, buf + len), sender);
         }
     }
 }
 
-void McActor::on_request(const Bytes &request, const sockaddr_in &sender_addr)
+void McActor::start_multicast_listener()
 {
-    // INFO("MC Actor received request (%lu bytes)", request.size());
+    xTaskCreatePinnedToCore(multicast_listener_task, "udp_listener_task", 8192, this, 5, NULL, 1);
+}
+
+void McActor::multicast_listener_task(void *pvParameters)
+{
+    McActor *actor = static_cast<McActor *>(pvParameters);
+    while (true)
+    {
+        char buf[BUF_SIZE];
+        while (actor->_running)
+        {
+            sockaddr_in sender{};
+            socklen_t sender_len = sizeof(sender);
+            int len = recvfrom(actor->_multicast_socket, buf, BUF_SIZE - 1, 0, (sockaddr *)&sender, &sender_len);
+            if (len < 0)
+            {
+                ERROR("recvfrom failed: %s", strerror(errno));
+
+                if (errno == EWOULDBLOCK || errno == EAGAIN)
+                {
+                    vTaskDelay(10 / portTICK_PERIOD_MS);
+                    continue;
+                }
+                ERROR("recvfrom failed: %s", strerror(errno));
+                continue;
+            }
+            INFO("MC Actor received multicast message (%d bytes)", len);
+            actor->on_udp(Bytes(buf, buf + len), sender);
+        }
+    }
+}
+
+void McActor::on_udp(const Bytes &request, const sockaddr_in &sender_addr)
+{
     auto r = UdpMessage::cbor_deserialize(request);
     if (r.is_err())
     {
         ERROR("Failed to deserialize UdpMessage");
         return;
     }
-    UdpMessage *msg = r.unwrap();
-    /*INFO("Received UdpMessage from %s to %s of type %s",
-          msg->src.has_value() ? msg->src->c_str() : "unknown",
-          msg->dst.has_value() ? msg->dst->c_str() : "unknown",
-          msg->msg_type.has_value() ? msg->msg_type->c_str() : "unknown");*/
-    // Process UdpMessage
-    if (msg->msg_type.has_value() && msg->payload.has_value())
-    {
-        on_message(msg->msg_type->c_str(), *(msg->payload));
-    }
-
-    //    INFO("%s => %s : %s %s", src, dst, type, std::string(payload.begin(), payload.end()).c_str());
-    if (msg->msg_type.has_value() && strcmp(msg->msg_type->c_str(), "Pong") == 0)
-    {
-        send_ping();
-    }
-    delete msg;
-    // Process the request and prepare a reply
-    // Send the reply back to the sender
-    //   sendto(_req_reply_socket, reply_str.c_str(), reply_str.size(), 0, (sockaddr *)&sender_addr, sizeof(sender_addr));
+    UdpMessage *udp_msg = r.unwrap();
+    on_udp_message(*udp_msg, sender_addr);
+    delete udp_msg;
 }
 
-void McActor::on_message(const char *type, Bytes &payload)
+void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr)
 {
-    /*INFO("MC Actor received message of type %s with payload: %s",
-         type,
-         std::string(payload.begin(), payload.end()).c_str());*/
-    if (strcmp(type, "Ping") == 0)
+    if (!udp_msg.msg_type.has_value() || !udp_msg.payload.has_value())
+    {
+        ERROR("UdpMessage missing msg_type");
+        return;
+    }
+
+    Bytes &payload = *(udp_msg.payload);
+    const char *msg_type = udp_msg.msg_type->c_str();
+
+    if (strcmp(msg_type, PingReq::name_value) == 0)
     {
         INFO("MC Actor received Ping message");
-        Ping::json_deserialize(payload).just([&](const Ping *msg)
-                                             {  auto pong = new Pong();
+        PingReq::json_deserialize(payload).just([&](const PingReq *msg)
+                                                {  auto pong = new PingRep();
                                                 pong->number = msg->number;
                                                 emit(pong); });
     }
-}
-
-void McActor::send_request_reply(const char *dst, const char *src, const char *type, const Bytes &payload)
-{
-    Bytes buffer = encode_message(dst, src, type, payload);
-    int sent = sendto(_req_reply_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&_req_reply_addr, sizeof(_req_reply_addr));
-    if (sent < 0)
+    else if (strcmp(msg_type, PingRep::name_value) == 0)
     {
-        ERROR("Failed to send request-reply message: %s [%lu]", strerror(errno), buffer.size());
+        send_ping_req(udp_msg.src->c_str(), ++_last_ping_number);
+    }
+    else if (strcmp(msg_type, Alive::name_value) == 0)
+    {
+        INFO("MC Actor received Alive message");
+        Alive::json_deserialize(payload).just([&](const Alive *Alive)
+                                              {
+            for (const auto &etp : Alive->endpoints)
+            {
+                INFO("  Endpoint: %s @ %s ", etp.c_str(), socketAddrToString((sockaddr_in*)&sender_addr).c_str());
+                _source_map[etp] = std::pair<sockaddr_in,uint64_t>(sender_addr,esp_timer_get_time());
+            } });
     }
     else
     {
-        INFO("Sent request-reply message to %s:%d (%d bytes)", MULTICAST_GROUP, MULTICAST_PORT, sent);
+        INFO("MC Actor received unknown message type: %s", udp_msg.msg_type->c_str());
     }
 }
 
-void McActor::send_ping()
+void McActor::send_multicast(const char *dst, const char *src, const char *type, const Bytes &payload)
+{
+    Bytes buffer = encode_message(dst, src, type, payload);
+    int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&_multicast_addr, sizeof(_multicast_addr));
+    if (sent < 0)
+    {
+        ERROR("Multicast failed: %s [%lu]", strerror(errno), buffer.size());
+    }
+    else
+    {
+        INFO("Multicast send %s:%d (%d bytes)", MULTICAST_GROUP, MULTICAST_PORT, sent);
+    }
+}
+
+void McActor::send_ping_req(const char *dst, uint32_t number)
 {
     static int64_t start_time = esp_timer_get_time();
-    Ping ping;
-    ping.number = _ping_counter++;
-    send_event(NULL, ref().name(), ping.type_name(), Ping::json_serialize(ping).unwrap());
-    if (_ping_counter % 1000 == 0)
+    static uint32_t counter = 0;
+    PingReq ping;
+    ping.number = number;
+    INFO("MC Actor sending Ping %d to %s", number, dst ? dst : "broker");
+    send_unicast(dst, ref().name(), ping.type_name(), PingReq::json_serialize(ping).unwrap());
+    counter++;
+    if (counter % 1000 == 0)
     {
         int64_t now = esp_timer_get_time();
-        INFO("ping %f msg/sec", 1000000000.0 / (now - start_time));
+        INFO("ping %f msg/sec", (counter * 10000000.0) / (now - start_time));
         start_time = now;
+        counter = 0;
     }
+}
+
+void McActor::send_ping_rep(const char *dst, uint32_t number)
+{
+    PingRep pong;
+    pong.number = number;
+    send_unicast(dst, ref().name(), pong.type_name(), PingRep::json_serialize(pong).unwrap());
 }
