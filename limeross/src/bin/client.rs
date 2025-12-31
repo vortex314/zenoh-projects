@@ -1,25 +1,22 @@
 use clap::Parser;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::sleep;
 use udp_broker_lib::{
-    UdpNode, logger, msgs::{Alive, SysEvent, TypedMessage}
+    UdpNode, logger, msgs::{Alive, Msg, SysEvent, TypedMessage, UdpMessage}
 };
-use log::info;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(short = 'a', long, default_value_t = ("224.0.0.1".to_string()))]
+    #[arg(short = 'm', long, default_value_t = ("239.0.0.1:50000".to_string()))]
     multicast_addr: String,
-
-    #[arg(short = 'p', long, default_value_t = 50000)]
-    multicast_port: u16,
 
     #[arg(short = 'u', long, default_value_t = 50001)]
     unicast_port: u16,
 
-    #[arg(short = 'n', long, default_value_t = ("node-a".to_string()))]
+    #[arg(short = 'n', long, default_value_t = ("client".to_string()))]
     node_name: String,
 
     #[arg(short = 'f', long, default_value_t = 1)]
@@ -33,53 +30,21 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     logger::init();
-    let client_id = args.node_name.clone();
-    info!("[{}] Starting CLIENT...", client_id);
-    let (node, _) = UdpNode::new(&client_id, args.unicast_port).await?;
-    node.add_endpoint("client");
-    node.add_subscription(Alive::MSG_TYPE);
+    info!("Starting CLIENT...");
+    let node = UdpNode::new(args.multicast_addr.clone().as_str()).await?;
+    node.add_endpoint("client").await;
+    node.add_subscription(Alive::MSG_TYPE).await;
 
-    node.on::<Alive, _, _>(move |source, msg| async move {
-        info!("[{}] EVENT: {:?} from {}", "ME", msg.subscriptions, source);
-    });
-
-    let client_id_clone = client_id.clone();
-    node.on::<udp_broker_lib::msgs::Alive, _, _>(move |source, msg| {
-        let client_id_clone = client_id_clone.clone();
-        async move {
-            info!(
-                "[{}] Detected alive from {}: {:?}",
-                client_id_clone, source, msg
-            );
-        }
-    });
-    let client_id_clone = client_id.clone();
-    node.on::<udp_broker_lib::msgs::Alive, _, _>(move |source, msg| {
-        let client_id_clone = client_id_clone.clone();
-        async move {
-            info!(
-                "[{}] Detected alive from {}: {:?}",
-                client_id_clone, source, msg
-            );
-        }
-    });
-
-    info!("[{}] Waiting for Broker...", client_id);
-    loop {
-        if node.peers.contains_key("BROKER_01") {
-            break;
-        }
-        sleep(Duration::from_secs(1)).await;
-    }
-    info!("[{}] Found Broker!", client_id);
 
     loop {
-        if node.peers.contains_key("BROKER_01") {
-            // info!("Sending data...");
-
-            let sys_event = SysEvent::default();
-            let _ = node.send_typed("BROKER_01", sys_event).await;
-        }
+        let mut sys_event : SysEvent = SysEvent::default();
+        sys_event.cpu_board = Some("linux-x86".to_string());
+        node.sender().send(UdpMessage{
+            src: Some("client".to_string()),
+            dst: Some("broker".to_string()),
+            msg_type: Some(SysEvent::MSG_TYPE.to_string()),
+            payload: Some(sys_event.json_serialize().unwrap()),
+        }).await?;
         sleep(Duration::from_secs(2)).await;
     }
 }
