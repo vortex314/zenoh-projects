@@ -104,12 +104,9 @@ pub enum LawnmowerMode {
 #[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
 #[cbor(map)]
 pub struct Alive {
-    #[n(2)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub endpoints: Option<Vec<String>>,
     #[n(3)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subscriptions: Option<Vec<String>>,
+    pub subscribe: Option<Vec<String>>,
 }
 
 impl TypedMessage for Alive {
@@ -118,58 +115,6 @@ impl TypedMessage for Alive {
 }
 
 impl Msg for Alive {
-    fn type_name(&self) -> &'static str {<Self as TypedMessage>::MSG_TYPE}
-    fn type_id(&self) -> u32 {<Self as TypedMessage>::ID}
-    fn cbor_serialize(&self) -> Result<Vec<u8>> {Ok(minicbor::to_vec(self)?)}
-    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {Ok(minicbor::decode::<Self>(v.as_slice())?)}
-    fn json_serialize(&self) -> Result<Vec<u8>> {Ok(serde_json::to_vec(self) ?)}
-    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {Ok(serde_json::from_slice(v.as_slice()) ?)}
-}
-    
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
-#[cbor(map)]
-pub struct Subscribe {
-    #[n(1)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub src_pattern: Option<String>,
-    #[n(2)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub msg_type_pattern: Option<String>,
-}
-
-impl TypedMessage for Subscribe {
-    const ID: u32 = 59220;
-    const MSG_TYPE: &'static str = "Subscribe";
-}
-
-impl Msg for Subscribe {
-    fn type_name(&self) -> &'static str {<Self as TypedMessage>::MSG_TYPE}
-    fn type_id(&self) -> u32 {<Self as TypedMessage>::ID}
-    fn cbor_serialize(&self) -> Result<Vec<u8>> {Ok(minicbor::to_vec(self)?)}
-    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {Ok(minicbor::decode::<Self>(v.as_slice())?)}
-    fn json_serialize(&self) -> Result<Vec<u8>> {Ok(serde_json::to_vec(self) ?)}
-    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {Ok(serde_json::from_slice(v.as_slice()) ?)}
-}
-    
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
-#[cbor(map)]
-pub struct Unsubscribe {
-    #[n(1)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub src_pattern: Option<String>,
-    #[n(2)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub msg_type_pattern: Option<String>,
-}
-
-impl TypedMessage for Unsubscribe {
-    const ID: u32 = 3663;
-    const MSG_TYPE: &'static str = "Unsubscribe";
-}
-
-impl Msg for Unsubscribe {
     fn type_name(&self) -> &'static str {<Self as TypedMessage>::MSG_TYPE}
     fn type_id(&self) -> u32 {<Self as TypedMessage>::ID}
     fn cbor_serialize(&self) -> Result<Vec<u8>> {Ok(minicbor::to_vec(self)?)}

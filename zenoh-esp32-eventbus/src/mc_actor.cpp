@@ -73,7 +73,7 @@ void McActor::init_event()
     sockaddr_in local{};
     local.sin_family = AF_INET;
     local.sin_addr.s_addr = INADDR_ANY;
-    local.sin_port = htons(UNICAST_PORT);
+    local.sin_port = 0; // any port
 
     int rc = bind(_unicast_socket, (sockaddr *)&local, sizeof(local));
     validate_rc(rc, "unicast bind");
@@ -118,14 +118,8 @@ void McActor::stop_event()
 Bytes McActor::encode_message(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
     UdpMessage msg;
-    if (dst)
-        msg.dst = std::string(dst);
-    if (src)
-    {
-        char src_full[64];
-        snprintf(src_full, sizeof(src_full), "%s/%s", _hostname.c_str(), src);
-        msg.src = std::string(src_full);
-    }
+    if (dst) msg.dst = std::string(dst);
+    if (src) msg.src = std::string(src);
     msg.msg_type = std::string(type);
     msg.payload = payload;
     return UdpMessage::cbor_serialize(msg).unwrap();
@@ -134,6 +128,7 @@ Bytes McActor::encode_message(const char *dst, const char *src, const char *type
 void McActor::send_unicast(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
     dst = dst ? dst : (_broker_name.has_value() ? _broker_name->c_str() : NULL);
+    DEBUG("send_unicast %s <= %s : %s = %s ", dst ? dst : "broker", src ? src : "unknown", type, std::string(payload.begin(), payload.end()).c_str());
     auto dst_addr = (dst && _source_map.find(dst) != _source_map.end()) ? _source_map[dst].first : (_broker_addr.has_value() ? *_broker_addr : sockaddr_in{});
     if (dst && dst_addr.sin_family == 0)
     {
@@ -165,12 +160,8 @@ void McActor::on_message(const Envelope &envelope)
     const Msg &msg = *envelope.msg;
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { Alive alive;
-                            alive.endpoints.push_back(DEVICE_NAME "/wifi");
-                            alive.endpoints.push_back(DEVICE_NAME "/hoverboard");
-                            alive.endpoints.push_back(DEVICE_NAME "/sys");
-
                             auto bytes = Alive::json_serialize(alive).unwrap();
-                            send_multicast(NULL,"sys",Alive::name_value,bytes);
+                            send_multicast(NULL,DEVICE_NAME,Alive::name_value,bytes);
                             send_ping_req(NULL,0); });
 
     msg.handle<PingReq>([&](const auto &msg)
@@ -188,13 +179,13 @@ void McActor::on_message(const Envelope &envelope)
         return;
     msg.handle<SysEvent>([&](const auto &msg)
                          { SysEvent::json_serialize(msg).just([&](const auto &s)
-                                                              { send_unicast(NULL, envelope.src->name(), msg.type_name(), s); }); });
+                                                              { send_unicast(NULL, DEVICE_NAME, msg.type_name(), s); }); });
     msg.handle<WifiEvent>([&](const auto &msg)
                           { WifiEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                { send_unicast(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
+                                                                { send_unicast(NULL, DEVICE_NAME, msg.type_name(), serialized_msg); }); });
     msg.handle<HoverboardEvent>([&](const auto &msg)
                                 { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                            { send_unicast(NULL, envelope.src->name(), msg.type_name(), serialized_msg); }); });
+                                                                            { send_unicast(NULL, DEVICE_NAME, msg.type_name(), serialized_msg); }); });
 }
 
 void McActor::start_unicast_listener()
@@ -305,11 +296,20 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
         INFO("MC Actor received Alive message");
         Alive::json_deserialize(payload).just([&](const Alive *Alive)
                                               {
-            for (const auto &etp : Alive->endpoints)
-            {
+                if (!udp_msg.src.has_value()) {
+                    ERROR("Alive message missing src");
+                    return;
+                }
+                std::string etp = *(udp_msg.src);
+
                 INFO("  Endpoint: %s @ %s ", etp.c_str(), socketAddrToString((sockaddr_in*)&sender_addr).c_str());
                 _source_map[etp] = std::pair<sockaddr_in,uint64_t>(sender_addr,esp_timer_get_time());
-            } });
+                if ( etp == "broker" )
+                {
+                    INFO("  Setting broker address to %s", socketAddrToString((sockaddr_in*)&sender_addr).c_str());
+                    _broker_addr = sender_addr;
+                    _broker_name = etp;
+                } });
     }
     else
     {
@@ -319,15 +319,12 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
 
 void McActor::send_multicast(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
+ //   INFO("send_multicast %s <= %s : %s = %s ", dst ? dst : "-", src ? src : "-", type, std::string(payload.begin(), payload.end()).c_str());
     Bytes buffer = encode_message(dst, src, type, payload);
     int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&_multicast_addr, sizeof(_multicast_addr));
     if (sent < 0)
     {
         ERROR("Multicast failed: %s [%lu]", strerror(errno), buffer.size());
-    }
-    else
-    {
-        INFO("Multicast send %s:%d (%d bytes)", MULTICAST_GROUP, MULTICAST_PORT, sent);
     }
 }
 
@@ -337,8 +334,8 @@ void McActor::send_ping_req(const char *dst, uint32_t number)
     static uint32_t counter = 0;
     PingReq ping;
     ping.number = number;
-    INFO("MC Actor sending Ping %d to %s", number, dst ? dst : "broker");
-    send_unicast(dst, ref().name(), ping.type_name(), PingReq::json_serialize(ping).unwrap());
+//    INFO("MC Actor sending Ping %d to %s", number, dst ? dst : "broker");
+    send_unicast(dst, DEVICE_NAME, ping.type_name(), PingReq::json_serialize(ping).unwrap());
     counter++;
     if (counter % 1000 == 0)
     {
@@ -353,5 +350,5 @@ void McActor::send_ping_rep(const char *dst, uint32_t number)
 {
     PingRep pong;
     pong.number = number;
-    send_unicast(dst, ref().name(), pong.type_name(), PingRep::json_serialize(pong).unwrap());
+    send_unicast(dst, DEVICE_NAME, pong.type_name(), PingRep::json_serialize(pong).unwrap());
 }

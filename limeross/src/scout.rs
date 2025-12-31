@@ -22,7 +22,6 @@ pub const PEER_TIMEOUT: u64 = 6;
 
 #[derive(Clone, Debug)]
 pub struct Subscription {
-    msg_type: String,
     destination: String,
     last_seen: Instant,
 }
@@ -32,7 +31,7 @@ pub struct MulticastScout {
     multicast_addr: SocketAddr,
     multicast_socket: Arc<UdpSocket>,
     pub endpoints: DashMap<String, (SocketAddr, Instant)>,
-    pub subscriptions: DashMap<String, Subscription>,
+    pub subscriptions: DashMap<String, Vec<Subscription>>,
 }
 
 impl MulticastScout {
@@ -83,7 +82,7 @@ impl MulticastScout {
                             udp_message.msg_type, udp_message.src
                         );
                         if Some("Alive") == udp_message.msg_type.as_deref() {
-                            let src= udp_message.src.clone().unwrap_or("unknown".to_string());
+                            let src = udp_message.src.clone().unwrap_or("unknown".to_string());
                             if let Ok(_alive) =
                                 Alive::json_deserialize(&udp_message.payload.clone().unwrap())
                             {
@@ -92,26 +91,33 @@ impl MulticastScout {
                                     _addr,
                                     udp_message.src.unwrap()
                                 );
-                                if let Some(endpoints) = _alive.endpoints.as_ref() {
-                                    for ep in endpoints {
-                                        if !discovery_node.endpoints.contains_key(ep) {
-                                            info!(" Discovered peer '{}' @ {:?}", ep, _addr);
-                                        }
-                                        discovery_node
-                                            .endpoints
-                                            .insert(ep.clone(), (_addr, Instant::now()));
-                                    }
-                                }
-                                if let Some(subs) = _alive.subscriptions.as_ref() {
+                                // Update endpoint
+                                discovery_node.endpoints.insert(
+                                    src.clone(),
+                                    (_addr, Instant::now()),
+                                );
+                                // Update subscriptions
+
+                                if let Some(subs) = _alive.subscribe.as_ref() {
                                     for sub in subs {
                                         let subscription = Subscription {
-                                            msg_type: sub.clone(),
                                             destination: src.clone(),
                                             last_seen: Instant::now(),
                                         };
-                                        discovery_node
+
+                                        let mut entry = discovery_node
                                             .subscriptions
-                                            .insert(sub.clone(), subscription);
+                                            .entry(sub.clone())
+                                            .or_insert_with(|| vec![]);
+                                        // Update existing or add new
+                                        if let Some(existing) =
+                                            entry.iter_mut().find(|s| s.destination == src.clone())
+                                        {
+                                            existing.last_seen = Instant::now();
+                                        } else {
+                                            entry.push(subscription);
+                                        }
+                                        debug!("Updated subscription for {} to {}", sub, src);
                                     }
                                 }
                             } else {
@@ -131,8 +137,6 @@ impl MulticastScout {
         })
     }
 
-   
-
     fn prune(scout: Arc<Self>) -> JoinHandle<()> {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(HEARTBEAT_INTERVAL));
@@ -143,6 +147,12 @@ impl MulticastScout {
                     let (_addr, last_seen) = &mut *entry.value_mut();
                     if last_seen.elapsed().as_secs() >= PEER_TIMEOUT {
                         info!("Endpoint {} timed out", entry.key());
+                        // remove subscriptions where destination matches
+                        scout.subscriptions.iter_mut().for_each(|mut sub_entry| {
+                            sub_entry.value_mut().retain(|s| s.destination != *entry.key());
+                        });
+                        // if no more subscriptions for a key, remove the key
+                        scout.subscriptions.retain(|_k, v| !v.is_empty());  
                     }
                 });
                 scout
@@ -165,7 +175,7 @@ impl MulticastScout {
                     scout
                         .subscriptions
                         .iter()
-                        .map(|r| (r.key().clone(), r.value().destination.clone()))
+                        .map(|r| (r.key().clone(), format!("{:?}", r.value())))
                         .collect::<Vec<(String, String)>>()
                 );
             }
@@ -188,6 +198,4 @@ impl MulticastScout {
             None
         }
     }
-
-
 }

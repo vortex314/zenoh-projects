@@ -124,7 +124,7 @@ pub struct UdpNode {
     multicast_addr: SocketAddr,
     multicast_scout: Arc<MulticastScout>,
     unicast_socket: Arc<UdpSocket>,
-    my_endpoints: Arc<Mutex<Vec<String>>>,
+    my_id: Arc<Mutex<String>>,
     my_subscriptions: Arc<Mutex<Vec<String>>>,
     handlers: Arc<DashMap<String, Box<dyn MessageHandler>>>,
     /// Maps Peer ID -> (Data Address, Last Seen)
@@ -136,7 +136,7 @@ pub struct UdpNode {
 }
 
 impl UdpNode {
-    pub async fn new(multicast_addr: &str) -> Result<Arc<Self>> {
+    pub async fn new(id:&str,multicast_addr: &str) -> Result<Arc<Self>> {
         let multicast_addr = multicast_addr
             .parse::<SocketAddr>()
             .map_err(|e| anyhow::anyhow!("Invalid multicast address: {}", e))?;
@@ -149,7 +149,7 @@ impl UdpNode {
             multicast_addr,
             multicast_scout,
             unicast_socket: unicast_socket.clone(),
-            my_endpoints: Arc::new(Mutex::new(vec![])),
+            my_id: Arc::new(Mutex::new(id.to_string())),
             my_subscriptions: Arc::new(Mutex::new(vec![])),
 
             handlers: Arc::new(DashMap::new()),
@@ -179,7 +179,7 @@ impl UdpNode {
     */
     fn start_multicast_sender(node: Arc<Self>) -> JoinHandle<()> {
         // To be implemented if needed
-        let my_endpoints = node.my_endpoints.clone();
+        let my_id = node.my_id.clone();
         let my_subscriptions = node.my_subscriptions.clone();
         let unicast_socket = node.unicast_socket.clone();
         let multicast_addr = node.multicast_addr.clone();
@@ -192,14 +192,13 @@ impl UdpNode {
 
                 // 1. Send Heartbeat
                 let mut alive = Alive::default();
-                let my_endpoints = my_endpoints.lock().await;
+                let my_id = my_id.lock().await;
                 let my_subscriptions = my_subscriptions.lock().await;
-                alive.endpoints = Some(my_endpoints.clone());
-                alive.subscriptions = Some(my_subscriptions.clone());
+                alive.subscribe = Some(my_subscriptions.clone());
 
                 if let Ok(payload) = alive.json_serialize() {
                     let packet = UdpMessage {
-                        src: None,
+                        src: Some(my_id.clone()),
                         dst: None,
                         msg_type: Some(Alive::MSG_TYPE.to_string()),
                         payload: Some(payload),
@@ -341,13 +340,6 @@ impl UdpNode {
     pub async fn get_subscriptions(&self) -> Vec<String> {
         let subs = self.my_subscriptions.lock().await;
         subs.clone()
-    }
-
-    pub async fn add_endpoint(&self, endpoint: &str) {
-        let mut my_endpoints = self.my_endpoints.lock().await;
-        if !my_endpoints.contains(&endpoint.to_string()) {
-            my_endpoints.push(endpoint.to_string());
-        }
     }
 
     pub async fn add_subscription(&self, subscription: &str) {

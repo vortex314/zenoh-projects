@@ -6,24 +6,13 @@ package msgs;
 
 message Alive {
   // repeated string message_types = 1;
-  repeated string endpoints = 2;
-  repeated string subscriptions = 3;
+ // repeated string endpoints = 2;
+  repeated string subscribe = 3;
   //  string src = 4;
   //  string ip = 6;
   //  uint32 port = 7;
   // uint32 timeout = 8;
 }
-
-message Subscribe {
-  string src_pattern = 1;
-  string msg_type_pattern = 2;
-}
-
-message Unsubscribe {
-  string src_pattern = 1;
-  string msg_type_pattern = 2;
-}
-
 
 message UdpMessage {
   string dst = 1;

@@ -31,9 +31,8 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     logger::init();
     info!("Starting CLIENT...");
-    let node = UdpNode::new(args.multicast_addr.clone().as_str()).await?;
-    node.add_endpoint("client").await;
-    node.add_subscription(Alive::MSG_TYPE).await;
+    let node = UdpNode::new("client",args.multicast_addr.clone().as_str()).await?;
+    node.add_subscription(SysEvent::MSG_TYPE).await;
 
 
     loop {

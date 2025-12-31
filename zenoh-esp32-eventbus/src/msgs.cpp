@@ -3,21 +3,13 @@
 
 Result<Bytes> Alive::json_serialize(const Alive& msg)  {
         JsonDocument doc;
-        if (msg.message_types.size()) {
-                    JsonArray arr = doc["message_types"].to<JsonArray>();
-                    for (const auto& item : msg.message_types) {
+        doc.to<JsonObject>();
+        if (msg.subscribe.size()) {
+                    JsonArray arr = doc["subscribe"].to<JsonArray>();
+                    for (const auto& item : msg.subscribe) {
                         arr.add(item);
                     }
                 }
-        if (msg.endpoints.size()) {
-                    JsonArray arr = doc["endpoints"].to<JsonArray>();
-                    for (const auto& item : msg.endpoints) {
-                        arr.add(item);
-                    }
-                }
-        if (msg.ip)doc["ip"] = *msg.ip;
-        if (msg.port)doc["port"] = *msg.port;
-        if (msg.timeout)doc["timeout"] = *msg.timeout;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
@@ -31,77 +23,14 @@ Result<Bytes> Alive::json_serialize(const Alive& msg)  {
             delete msg;
             return Result<Alive*>::Err(-1,"Cannot deserialize as object") ;
         };        
-        if (doc["message_types"].is<JsonArray>()) {
-                    JsonArray arr = doc["message_types"].as<JsonArray>();
-                    msg->message_types.clear();
+        if (doc["subscribe"].is<JsonArray>()) {
+                    JsonArray arr = doc["subscribe"].as<JsonArray>();
+                    msg->subscribe.clear();
                     for (JsonVariant v : arr) {
-                        msg->message_types.push_back(v.as<std::string>());
+                        msg->subscribe.push_back(v.as<std::string>());
                     }
                 }
-        if (doc["endpoints"].is<JsonArray>()) {
-                    JsonArray arr = doc["endpoints"].as<JsonArray>();
-                    msg->endpoints.clear();
-                    for (JsonVariant v : arr) {
-                        msg->endpoints.push_back(v.as<std::string>());
-                    }
-                }
-        if (doc["ip"].is<std::string>() )  
-                        msg->ip = doc["ip"].as<std::string>();
-        if (doc["port"].is<uint32_t>() )  
-                        msg->port = doc["port"].as<uint32_t>();
-        if (doc["timeout"].is<uint32_t>() )  
-                        msg->timeout = doc["timeout"].as<uint32_t>();
         return Result<Alive*>::Ok(msg);
-    }
-
-
-Result<Bytes> Subscribe::json_serialize(const Subscribe& msg)  {
-        JsonDocument doc;
-        if (msg.src_pattern)doc["src_pattern"] = *msg.src_pattern;
-        if (msg.msg_type_pattern)doc["msg_type_pattern"] = *msg.msg_type_pattern;
-        std::string str;
-        ArduinoJson::serializeJson(doc,str);
-        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
-    }
-
-    Result<Subscribe*> Subscribe::json_deserialize(const Bytes& bytes) {
-        JsonDocument doc;
-        Subscribe* msg = new Subscribe();
-        auto err = deserializeJson(doc,bytes);
-        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
-            delete msg;
-            return Result<Subscribe*>::Err(-1,"Cannot deserialize as object") ;
-        };        
-        if (doc["src_pattern"].is<std::string>() )  
-                        msg->src_pattern = doc["src_pattern"].as<std::string>();
-        if (doc["msg_type_pattern"].is<std::string>() )  
-                        msg->msg_type_pattern = doc["msg_type_pattern"].as<std::string>();
-        return Result<Subscribe*>::Ok(msg);
-    }
-
-
-Result<Bytes> Unsubscribe::json_serialize(const Unsubscribe& msg)  {
-        JsonDocument doc;
-        if (msg.src_pattern)doc["src_pattern"] = *msg.src_pattern;
-        if (msg.msg_type_pattern)doc["msg_type_pattern"] = *msg.msg_type_pattern;
-        std::string str;
-        ArduinoJson::serializeJson(doc,str);
-        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
-    }
-
-    Result<Unsubscribe*> Unsubscribe::json_deserialize(const Bytes& bytes) {
-        JsonDocument doc;
-        Unsubscribe* msg = new Unsubscribe();
-        auto err = deserializeJson(doc,bytes);
-        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
-            delete msg;
-            return Result<Unsubscribe*>::Err(-1,"Cannot deserialize as object") ;
-        };        
-        if (doc["src_pattern"].is<std::string>() )  
-                        msg->src_pattern = doc["src_pattern"].as<std::string>();
-        if (doc["msg_type_pattern"].is<std::string>() )  
-                        msg->msg_type_pattern = doc["msg_type_pattern"].as<std::string>();
-        return Result<Unsubscribe*>::Ok(msg);
     }
 
 
@@ -1198,33 +1127,12 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
 
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, Alive::Field::MESSAGE_TYPES_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.message_types.size());
-            for (const auto & item : msg.message_types) {
+            cbor_encode_int(&mapEncoder, Alive::Field::SUBSCRIBE_INDEX );
+            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.subscribe.size());
+            for (const auto & item : msg.subscribe) {
                 cbor_encode_text_stringz(&arrayEncoder, item.c_str());
             }
             cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
-            }
-    {
-            CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, Alive::Field::ENDPOINTS_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.endpoints.size());
-            for (const auto & item : msg.endpoints) {
-                cbor_encode_text_stringz(&arrayEncoder, item.c_str());
-            }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
-            }
-    if (msg.ip) {
-            cbor_encode_int(&mapEncoder, Alive::Field::IP_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.ip.value().c_str());
-            }
-    if (msg.port) {
-            cbor_encode_int(&mapEncoder, Alive::Field::PORT_INDEX);
-            cbor_encode_int(&mapEncoder, msg.port.value());
-            }
-    if (msg.timeout) {
-            cbor_encode_int(&mapEncoder, Alive::Field::TIMEOUT_INDEX);
-            cbor_encode_int(&mapEncoder, msg.timeout.value());
             }
     cbor_encoder_close_container(&encoder, &mapEncoder);
     // get used size
@@ -1271,7 +1179,7 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
         }
         switch (key) {
             
-            case Alive::Field::MESSAGE_TYPES_INDEX:{CborValue tmp;
+            case Alive::Field::SUBSCRIBE_INDEX:{CborValue tmp;
                 cbor_value_enter_container(&mapIt,&tmp);
                 while (!cbor_value_at_end(&tmp)) {
                     std::string v;
@@ -1287,66 +1195,9 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
 };
     cbor_value_advance(&tmp);
 
-                    msg->message_types.push_back(v);
+                    msg->subscribe.push_back(v);
                 };
                 cbor_value_leave_container(&mapIt,&tmp);
-                break;
-            }
-            
-            case Alive::Field::ENDPOINTS_INDEX:{CborValue tmp;
-                cbor_value_enter_container(&mapIt,&tmp);
-                while (!cbor_value_at_end(&tmp)) {
-                    std::string v;
-                    {
-
-    if (cbor_value_is_text_string(&tmp)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&tmp, &vallen);        
-        cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
-        v = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&tmp);
-
-                    msg->endpoints.push_back(v);
-                };
-                cbor_value_leave_container(&mapIt,&tmp);
-                break;
-            }
-            
-            case Alive::Field::IP_INDEX:{{
-
-    if (cbor_value_is_text_string(&mapIt)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&mapIt, &vallen);        
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->ip = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Alive::Field::PORT_INDEX:{{
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &(v));
-    msg->port = v;
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Alive::Field::TIMEOUT_INDEX:{{
-    uint64_t v;
-    cbor_value_get_uint64(&mapIt, &(v));
-    msg->timeout = v;
-};
-    cbor_value_advance(&mapIt);
-
                 break;
             }
             
@@ -1362,218 +1213,6 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
     cbor_value_leave_container(&it, &mapIt);
 
     return Result<Alive*>::Ok(msg);
-}
-
-Result<Bytes> Subscribe::cbor_serialize(const Subscribe& msg)  {
-    // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
-    CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
-
-    // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
-
-    if (msg.src_pattern) {
-            cbor_encode_int(&mapEncoder, Subscribe::Field::SRC_PATTERN_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.src_pattern.value().c_str());
-            }
-    if (msg.msg_type_pattern) {
-            cbor_encode_int(&mapEncoder, Subscribe::Field::MSG_TYPE_PATTERN_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.msg_type_pattern.value().c_str());
-            }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
-    // get used size
-    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
-}
-
- Result<Subscribe*> Subscribe::cbor_deserialize(const Bytes& bytes) {
-    CborParser parser;
-    CborValue it, mapIt;
-    Subscribe* msg = new Subscribe();
-
-    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
-    if (err != CborNoError) {
-        delete msg;
-        return Result<Subscribe*>::Err(-1,"CBOR parse error");
-    }
-
-    if (!cbor_value_is_map(&it)) {
-        delete msg;
-        INFO("CBOR deserialization error: not a map");
-        return Result<Subscribe*>::Err(-2,"CBOR deserialization error: not a map");
-    }
-
-    // enter map
-    err = cbor_value_enter_container(&it, &mapIt);
-    if (err != CborNoError) {
-        delete msg;
-        INFO("CBOR deserialization error: failed to enter container");
-        return Result<Subscribe*>::Err(-3,"CBOR deserialization error: failed to enter container");
-    }
-
-    // iterate key/value pairs
-    while (!cbor_value_at_end(&mapIt)) {
-        uint64_t key = 0;
-        if (cbor_value_is_unsigned_integer(&mapIt)) {
-            cbor_value_get_uint64(&mapIt, &key);
-            cbor_value_advance(&mapIt);
-        } else {
-            // invalid key type
-            INFO("CBOR deserialization error: invalid key type");
-            delete msg;
-            return Result<Subscribe*>::Err(-4,"CBOR deserialization error: invalid key type");
-        }
-        switch (key) {
-            
-            case Subscribe::Field::SRC_PATTERN_INDEX:{{
-
-    if (cbor_value_is_text_string(&mapIt)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&mapIt, &vallen);        
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->src_pattern = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Subscribe::Field::MSG_TYPE_PATTERN_INDEX:{{
-
-    if (cbor_value_is_text_string(&mapIt)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&mapIt, &vallen);        
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->msg_type_pattern = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            default:
-                // skip unknown key
-                cbor_value_advance(&mapIt);
-                break;
-        }
-
-    }
-
-    // leave container
-    cbor_value_leave_container(&it, &mapIt);
-
-    return Result<Subscribe*>::Ok(msg);
-}
-
-Result<Bytes> Unsubscribe::cbor_serialize(const Unsubscribe& msg)  {
-    // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
-    CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
-
-    // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
-
-    if (msg.src_pattern) {
-            cbor_encode_int(&mapEncoder, Unsubscribe::Field::SRC_PATTERN_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.src_pattern.value().c_str());
-            }
-    if (msg.msg_type_pattern) {
-            cbor_encode_int(&mapEncoder, Unsubscribe::Field::MSG_TYPE_PATTERN_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.msg_type_pattern.value().c_str());
-            }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
-    // get used size
-    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
-}
-
- Result<Unsubscribe*> Unsubscribe::cbor_deserialize(const Bytes& bytes) {
-    CborParser parser;
-    CborValue it, mapIt;
-    Unsubscribe* msg = new Unsubscribe();
-
-    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
-    if (err != CborNoError) {
-        delete msg;
-        return Result<Unsubscribe*>::Err(-1,"CBOR parse error");
-    }
-
-    if (!cbor_value_is_map(&it)) {
-        delete msg;
-        INFO("CBOR deserialization error: not a map");
-        return Result<Unsubscribe*>::Err(-2,"CBOR deserialization error: not a map");
-    }
-
-    // enter map
-    err = cbor_value_enter_container(&it, &mapIt);
-    if (err != CborNoError) {
-        delete msg;
-        INFO("CBOR deserialization error: failed to enter container");
-        return Result<Unsubscribe*>::Err(-3,"CBOR deserialization error: failed to enter container");
-    }
-
-    // iterate key/value pairs
-    while (!cbor_value_at_end(&mapIt)) {
-        uint64_t key = 0;
-        if (cbor_value_is_unsigned_integer(&mapIt)) {
-            cbor_value_get_uint64(&mapIt, &key);
-            cbor_value_advance(&mapIt);
-        } else {
-            // invalid key type
-            INFO("CBOR deserialization error: invalid key type");
-            delete msg;
-            return Result<Unsubscribe*>::Err(-4,"CBOR deserialization error: invalid key type");
-        }
-        switch (key) {
-            
-            case Unsubscribe::Field::SRC_PATTERN_INDEX:{{
-
-    if (cbor_value_is_text_string(&mapIt)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&mapIt, &vallen);        
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->src_pattern = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            case Unsubscribe::Field::MSG_TYPE_PATTERN_INDEX:{{
-
-    if (cbor_value_is_text_string(&mapIt)) {
-        char valbuf[256];
-        size_t vallen ;
-        cbor_value_calculate_string_length(&mapIt, &vallen);        
-        cbor_value_copy_text_string(&mapIt, valbuf, &vallen, NULL);
-        msg->msg_type_pattern = std::string(valbuf, vallen);
-    }
-};
-    cbor_value_advance(&mapIt);
-
-                break;
-            }
-            
-            default:
-                // skip unknown key
-                cbor_value_advance(&mapIt);
-                break;
-        }
-
-    }
-
-    // leave container
-    cbor_value_leave_container(&it, &mapIt);
-
-    return Result<Unsubscribe*>::Ok(msg);
 }
 
 Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {

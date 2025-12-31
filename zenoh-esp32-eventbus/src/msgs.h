@@ -66,58 +66,16 @@ typedef enum {
 class Alive : public Msg {
     MSG(Alive);
     public:
-    std::vector<std::string> message_types;
-    std::vector<std::string> endpoints;
-    std::optional<std::string> ip;
-    std::optional<uint32_t> port;
-    std::optional<uint32_t> timeout;
+    std::vector<std::string> subscribe;
     
     // Field indexes
         typedef enum {
-        MESSAGE_TYPES_INDEX = 1,
-        ENDPOINTS_INDEX = 2,
-        IP_INDEX = 6,
-        PORT_INDEX = 7,
-        TIMEOUT_INDEX = 8,
+        SUBSCRIBE_INDEX = 3,
     } Field;
     static Result<Bytes> json_serialize(const Alive&);
     static Result<Alive*> json_deserialize(const Bytes&);
     static Result<Bytes> cbor_serialize(const Alive&);
     static Result<Alive*> cbor_deserialize(const Bytes&);
-};
-
-class Subscribe : public Msg {
-    MSG(Subscribe);
-    public:
-    std::optional<std::string> src_pattern;
-    std::optional<std::string> msg_type_pattern;
-    
-    // Field indexes
-        typedef enum {
-        SRC_PATTERN_INDEX = 1,
-        MSG_TYPE_PATTERN_INDEX = 2,
-    } Field;
-    static Result<Bytes> json_serialize(const Subscribe&);
-    static Result<Subscribe*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Subscribe&);
-    static Result<Subscribe*> cbor_deserialize(const Bytes&);
-};
-
-class Unsubscribe : public Msg {
-    MSG(Unsubscribe);
-    public:
-    std::optional<std::string> src_pattern;
-    std::optional<std::string> msg_type_pattern;
-    
-    // Field indexes
-        typedef enum {
-        SRC_PATTERN_INDEX = 1,
-        MSG_TYPE_PATTERN_INDEX = 2,
-    } Field;
-    static Result<Bytes> json_serialize(const Unsubscribe&);
-    static Result<Unsubscribe*> json_deserialize(const Bytes&);
-    static Result<Bytes> cbor_serialize(const Unsubscribe&);
-    static Result<Unsubscribe*> cbor_deserialize(const Bytes&);
 };
 
 class UdpMessage : public Msg {
