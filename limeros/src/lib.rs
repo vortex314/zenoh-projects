@@ -2,6 +2,7 @@ use anyhow::Result;
 use dashmap::DashMap;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
+use socket2::Type;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::ops::Mul;
 use std::sync::Arc;
@@ -14,10 +15,35 @@ pub mod logger;
 pub mod msgs;
 use msgs::TypedMessage;
 
-use crate::msgs::{Alive, Msg, UdpMessage};
+pub use crate::msgs::{Alive, Msg, UdpMessage};
 
-mod scout;
-pub use scout::MulticastScout;
+pub mod scout;
+pub use scout::Scout;
+pub use scout::Endpoint;
+
+
+#[derive(Debug, Clone)]
+pub struct TypedUdpMessage<T> where T: TypedMessage {
+    pub src: Option<String>,
+    pub dst: Option<String>,
+    pub msg_type: Option<String>,
+    pub payload: Option<T>,
+}
+
+impl<T> TypedUdpMessage<T> where T: TypedMessage+Msg {
+    pub fn from_generic(udp_message: UdpMessage) -> Result<Self> {
+        if T::MSG_TYPE != udp_message.msg_type.as_deref().unwrap_or("") {
+            return Err(anyhow::anyhow!("Message type mismatch"));
+        }
+        Ok(
+        TypedUdpMessage {
+            src: udp_message.src,
+            dst: udp_message.dst,
+            msg_type: udp_message.msg_type,
+            payload: udp_message.payload.map(|p| T::json_deserialize(&p).ok()).flatten(),
+        })  
+    }
+}
 
 #[async_trait::async_trait]
 pub trait MessageHandler: Send + Sync {
@@ -82,47 +108,9 @@ where
     }
 }
 
-struct UdpMessageFilter {
-    message_types: Vec<String>,
-    sources: Vec<String>,
-    destination: String,
-}
-
-impl UdpMessageFilter {
-    fn new(destination: String) -> Self {
-        Self {
-            message_types: vec![],
-            sources: vec![],
-            destination,
-        }
-    }
-
-    fn matches(&self, udp_message: &UdpMessage) -> Option<String> {
-        info!("Filter checking message: {:?}", udp_message);
-        if !self.sources.is_empty() {
-            if let Some(ref msg_src) = udp_message.src {
-                if !self.sources.contains(msg_src) {
-                    return None;
-                }
-            } else {
-                return None;
-            }
-        }
-        if !self.message_types.is_empty() {
-            if let Some(ref msg_type) = udp_message.msg_type {
-                if !self.message_types.contains(msg_type) {
-                    return None;
-                }
-            } else {
-                return None;
-            }
-        }
-        Some(self.destination.clone())
-    }
-}
 pub struct UdpNode {
     multicast_addr: SocketAddr,
-    multicast_scout: Arc<MulticastScout>,
+    multicast_scout: Arc<Scout>,
     unicast_socket: Arc<UdpSocket>,
     my_id: Arc<Mutex<String>>,
     my_subscriptions: Arc<Mutex<Vec<String>>>,
@@ -130,17 +118,16 @@ pub struct UdpNode {
     /// Maps Peer ID -> (Data Address, Last Seen)
     tx_queue_sender: mpsc::Sender<UdpMessage>,
     tx_queue_receiver: Arc<Mutex<mpsc::Receiver<UdpMessage>>>,
-    broker_addr: Option<SocketAddr>,
     generic_handlers: Arc<Mutex<Vec<Box<dyn UdpMessageHandler>>>>,
     tasks: Mutex<Vec<JoinHandle<()>>>,
 }
 
 impl UdpNode {
-    pub async fn new(id:&str,multicast_addr: &str) -> Result<Arc<Self>> {
+    pub async fn new(id: &str, multicast_addr: &str) -> Result<Arc<Self>> {
         let multicast_addr = multicast_addr
             .parse::<SocketAddr>()
             .map_err(|e| anyhow::anyhow!("Invalid multicast address: {}", e))?;
-        let multicast_scout = MulticastScout::new(multicast_addr.to_string()).await?;
+        let multicast_scout = Scout::new(multicast_addr.to_string()).await?;
         let unicast_socket = Arc::new(UdpSocket::bind("0.0.0.0:0").await?); // give random port
         info!("Unicast socket bound to {}", unicast_socket.local_addr()?);
         let (tx_queue_sender, tx_queue_receiver) = mpsc::channel::<UdpMessage>(100);
@@ -155,7 +142,6 @@ impl UdpNode {
             handlers: Arc::new(DashMap::new()),
             tx_queue_sender,
             tx_queue_receiver: Arc::new(Mutex::new(tx_queue_receiver)),
-            broker_addr: None,
             generic_handlers: Arc::new(Mutex::new(Vec::new())),
             tasks: Mutex::new(Vec::new()),
         });
@@ -169,7 +155,7 @@ impl UdpNode {
         vec![
             UdpNode::start_unicast_sender(node.clone()),
             UdpNode::start_unicast_receiver(node.clone()),
-            MulticastScout::start(node.multicast_scout.clone()),
+            Scout::start(node.multicast_scout.clone()),
             UdpNode::start_multicast_sender(node.clone()),
         ]
     }
@@ -182,9 +168,8 @@ impl UdpNode {
         let my_id = node.my_id.clone();
         let my_subscriptions = node.my_subscriptions.clone();
         let unicast_socket = node.unicast_socket.clone();
-        let multicast_addr = node.multicast_addr.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            let mut interval = tokio::time::interval(Duration::from_secs(1));
             // Target address for multicast
 
             loop {
@@ -219,6 +204,11 @@ impl UdpNode {
             while let Some(udp_message) = tx_queue_receiver.lock().await.recv().await {
                 let target = if let Some(dst_endpoint) = &udp_message.dst {
                     if let Some(addr) = node.multicast_scout.endpoint_to_addr(dst_endpoint) {
+                        debug!(
+                            "UC Send {:?} to {:?} @ {:?}",
+                            udp_message.msg_type, dst_endpoint, addr
+                        );
+
                         addr
                     } else {
                         info!("Unknown endpoint: {}", dst_endpoint);
@@ -228,7 +218,6 @@ impl UdpNode {
                     info!("No destination endpoint specified");
                     continue;
                 };
-                info!("UC Send {:?} to {:?}", udp_message.msg_type, target);
                 if let Ok(data) = udp_message.cbor_serialize() {
                     if let Err(e) = send_socket.send_to(&data, target).await {
                         error!("Send error: {}", e);
@@ -265,10 +254,6 @@ impl UdpNode {
                         drop(handlers_guard);
                         // Data packet handling
                         if let Some(handler) = handlers.get(&packet.msg_type.unwrap()) {
-                            // We spawn here so we don't block the receive loop
-                            let handler_clone = node.clone(); // Usually handler logic needs state
-                                                              // Note: We can't easily clone the trait object, so we execute inline or need Arc structure
-                                                              // For simplicity, we execute strictly serially here, or rely on the handler to spawn
                             if let Err(e) = handler
                                 .handle(&packet.src.unwrap(), &packet.payload.unwrap())
                                 .await
@@ -282,6 +267,32 @@ impl UdpNode {
                 }
             }
         })
+    }
+
+    pub async fn send_event<T>(&self, event: T)
+    where
+        T: TypedMessage + Msg + Serialize,
+    {
+        let udp_message = UdpMessage {
+            src: Some(self.my_id.lock().await.clone()),
+            dst: Some("broker".to_string()),
+            msg_type: Some(T::MSG_TYPE.to_string()),
+            payload: Some(event.json_serialize().unwrap()),
+        };
+        self.tx_queue_sender.send(udp_message).await.unwrap()
+    }
+
+    pub async fn send_msg_to<T>(&self, dst: &str, msg: T)
+    where
+        T: TypedMessage + Msg + Serialize,
+    {
+        let udp_message = UdpMessage {
+            src: Some(self.my_id.lock().await.clone()),
+            dst: Some(dst.to_string()),
+            msg_type: Some(T::MSG_TYPE.to_string()),
+            payload: Some(msg.json_serialize().unwrap()),
+        };
+        self.tx_queue_sender.send(udp_message).await.unwrap()
     }
 
     pub fn add_handler<H>(&self, msg_type: &str, handler: H)
@@ -337,9 +348,12 @@ impl UdpNode {
         self.generic_handlers.lock().await.push(Box::new(handler));
     }
 
-    pub async fn get_subscriptions(&self) -> Vec<String> {
-        let subs = self.my_subscriptions.lock().await;
-        subs.clone()
+    pub async fn get_subscriptions(&self) -> Arc<DashMap<String, Vec<scout::Subscription>>> {
+        self.multicast_scout.subscriptions.clone()
+    }
+
+    pub async fn get_endpoints(&self) -> Arc<DashMap<String, Endpoint>> {
+        self.multicast_scout.endpoints.clone()
     }
 
     pub async fn add_subscription(&self, subscription: &str) {
@@ -348,4 +362,13 @@ impl UdpNode {
             my_subscriptions.push(subscription.to_string());
         }
     }
+
+    pub async fn display_subscriptions(&self) {
+        let subs = self.multicast_scout.subscriptions.clone();
+        for entry in subs.iter() {
+            debug!("Subscription: {} -> {:?}", entry.key(), entry.value());
+        }
+    }
 }
+
+

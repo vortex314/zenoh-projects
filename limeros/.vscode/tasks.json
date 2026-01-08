@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "cargo",
+            "label": "egui",
             "type": "shell",
             "options": {
                 "cwd": "${workspaceFolder}",
@@ -15,7 +15,7 @@
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
             "args": [
-                "run","--bin", "broker"
+                "run","--bin", "egui"
             ],
             "group": {
                 "kind": "build",

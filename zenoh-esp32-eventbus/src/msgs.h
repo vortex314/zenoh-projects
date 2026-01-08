@@ -67,10 +67,14 @@ class Alive : public Msg {
     MSG(Alive);
     public:
     std::vector<std::string> subscribe;
+    std::vector<std::string> publish;
+    std::vector<std::string> services;
     
     // Field indexes
         typedef enum {
         SUBSCRIBE_INDEX = 3,
+        PUBLISH_INDEX = 4,
+        SERVICES_INDEX = 5,
     } Field;
     static Result<Bytes> json_serialize(const Alive&);
     static Result<Alive*> json_deserialize(const Bytes&);

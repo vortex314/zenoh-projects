@@ -107,6 +107,12 @@ pub struct Alive {
     #[n(3)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subscribe: Option<Vec<String>>,
+    #[n(4)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub publish: Option<Vec<String>>,
+    #[n(5)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub services: Option<Vec<String>>,
 }
 
 impl TypedMessage for Alive {

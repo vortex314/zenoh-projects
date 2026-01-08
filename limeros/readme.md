@@ -29,9 +29,6 @@
 {
     "src":"esp1",
     "Alive": {
-        "req":["HoverboardReq"],
-        "reply":["HoverboardReply"],
-        "publish":["HoverboardEvent","SysEvent","WifiEvent"],
         "subscribe":[]
     }
 }

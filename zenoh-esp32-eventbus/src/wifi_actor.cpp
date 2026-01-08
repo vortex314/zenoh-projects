@@ -37,7 +37,7 @@ WifiActor::WifiActor(const char *name) : Actor(name)
   wifi_password = STRINGIZE(WIFI_PASS);
   esp_wifi_set_ps(WIFI_PS_NONE); // no power save
                                  // esp_coex_preference_set(ESP_COEX_PREFER_BALANCE);
-//  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+  //  esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 }
 
 void WifiActor::on_start()
@@ -445,9 +445,20 @@ void WifiActor::publish_info(esp_netif_t *esp_netif)
     ERROR("Failed to get IP info");
     return;
   }
+  uint8_t primary;
+  wifi_second_chan_t second;
+
+  if ( esp_wifi_get_channel(&primary, &second) != ESP_OK)
+  {
+    ERROR("Failed to get WiFi channel");
+    return;
+  }
+  channel = primary;
   wifi_info->ip = ip4addr_to_str(&ip_info.ip);
   wifi_info->gateway = ip4addr_to_str(&ip_info.gw);
   wifi_info->netmask = ip4addr_to_str(&ip_info.netmask);
+  wifi_info->ssid = wifi_ssid;
+  wifi_info->channel = channel;
   // get MAC address
   uint8_t mac[6];
   esp_read_mac(mac, ESP_MAC_WIFI_STA);

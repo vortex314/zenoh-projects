@@ -25,7 +25,7 @@
 #error "DEVICE_NAME not defined"
 #endif
 
-EventBus eventbus(20);
+EventBus eventbus(200);
 Log logger;
 esp_err_t nvs_ota_init();
 

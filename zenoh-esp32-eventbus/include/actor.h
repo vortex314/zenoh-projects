@@ -25,7 +25,7 @@ uint64_t current_time();
 
 class ActorRef
 {
-    const char *_actor_name="";
+    std::string _actor_name;
     bool _local = false;
 
 public:
@@ -34,10 +34,11 @@ public:
     ActorRef(const ActorRef &other) : _actor_name(other._actor_name) {};
     bool operator==(ActorRef &other) { return _actor_name == other._actor_name; }; // matches same id
     void operator=(ActorRef other) { _actor_name = other._actor_name; }
-    bool match_name(ActorRef &other) { return strcmp(_actor_name, other._actor_name) == 0; };
-    inline const char *name() const { return _actor_name; };
+    bool match_name(ActorRef &other) { return strcmp(_actor_name.c_str(), other._actor_name.c_str()) == 0; };
+    inline const char *name() const { return _actor_name.c_str(); };
     bool is_local() const { return _local; }
     void set_local(bool local) { _local = local; }
+    ~ActorRef()= default;
 };
 
 extern ActorRef NULL_ACTOR;
@@ -55,10 +56,8 @@ public:
 };
 
 DEFINE_MSG(TimerMsg,
-    int timer_id;
-    TimerMsg(int id) : timer_id(id) {}
-);
-
+           int timer_id;
+           TimerMsg(int id) : timer_id(id){});
 
 /*template <typename T>
 void handle(const Msg &message, std::function<void(const T &)> f)
@@ -87,12 +86,12 @@ public:
     int getDepth() const { return _depth; }
     int getSize() const { return uxQueueMessagesWaiting(queue); }
 
-    bool send(T qt, TickType_t timeout = portMAX_DELAY)
+    bool send(T qt, TickType_t timeout = 100 / portTICK_PERIOD_MS)
     {
         return xQueueSend(queue, &qt, timeout) == pdTRUE ? true : false;
     }
 
-    bool sendFromIsr(T qt, TickType_t timeout = portMAX_DELAY)
+    bool sendFromIsr(T qt, TickType_t timeout = 100 / portTICK_PERIOD_MS)
     {
         return xQueueSendFromISR(queue, &qt, nullptr) == pdTRUE;
     }
@@ -317,7 +316,6 @@ DEFINE_MSG(PublishTxd,
 DEFINE_MSG(PublishRxd,
            JsonDocument doc;
            PublishRxd(const JsonDocument &doc) : doc(doc){});
-
 
 template <typename T>
 void handle(JsonDocument &doc, const char *key, std::function<void(const T &)> f)

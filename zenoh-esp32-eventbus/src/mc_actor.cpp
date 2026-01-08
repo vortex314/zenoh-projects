@@ -115,14 +115,16 @@ void McActor::stop_event()
     }
 }
 
-Bytes McActor::encode_message(const char *dst, const char *src, const char *type, const Bytes &payload)
+Result<Bytes> McActor::encode_message(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
     UdpMessage msg;
-    if (dst) msg.dst = std::string(dst);
-    if (src) msg.src = std::string(src);
+    if (dst)
+        msg.dst = std::string(dst);
+    if (src)
+        msg.src = std::string(src);
     msg.msg_type = std::string(type);
     msg.payload = payload;
-    return UdpMessage::cbor_serialize(msg).unwrap();
+    return UdpMessage::cbor_serialize(msg);
 }
 
 void McActor::send_unicast(const char *dst, const char *src, const char *type, const Bytes &payload)
@@ -136,10 +138,9 @@ void McActor::send_unicast(const char *dst, const char *src, const char *type, c
         return;
     }
 
-    Bytes buffer = encode_message(dst, src, type, payload);
-
-    // send bytes
-    int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&dst_addr, sizeof(dst_addr));
+    encode_message(dst, src, type, payload).just([&](const Bytes &buffer)
+                                                 {  
+ int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&dst_addr, sizeof(dst_addr));
     if (sent < 0)
     {
         ERROR("Failed to send unicast message: %s [%lu]", strerror(errno), buffer.size());
@@ -147,7 +148,9 @@ void McActor::send_unicast(const char *dst, const char *src, const char *type, c
     else
     {
         DEBUG("Sent message to %s:%d (%d bytes)", BROKER_IP, UNICAST_PORT, sent);
-    }
+    } });
+
+    // send bytes
 }
 
 void McActor::stop_listener()
@@ -160,12 +163,21 @@ void McActor::on_message(const Envelope &envelope)
     const Msg &msg = *envelope.msg;
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { Alive alive;
+                            alive.publish.push_back(SysEvent::name_value);
+                            alive.publish.push_back(WifiEvent::name_value);
+                            alive.publish.push_back(HoverboardEvent::name_value);
+                            alive.services.push_back(HoverboardCmd::name_value);
                             auto bytes = Alive::json_serialize(alive).unwrap();
                             send_multicast(NULL,DEVICE_NAME,Alive::name_value,bytes);
                             send_ping_req(NULL,0); });
 
-    msg.handle<PingReq>([&](const auto &msg)
-                        { INFO("MC Actor received Ping"); });
+    msg.handle<PingReq>([&](const auto &m)
+                        { /*INFO("Received PingReq from '%s' number %d", 
+                            envelope.src.has_value() ? envelope.src->name() : "-",
+                            m.number.has_value() ? *(m.number) : -1 );*/
+                          if (m.number.has_value()) {
+                                send_ping_rep(envelope.src->name(), *(m.number));
+                          } });
 
     msg.handle<WifiConnected>([&](const auto &msg)
                               { _connected = true; 
@@ -216,7 +228,7 @@ void McActor::unicast_listener_task(void *pvParameters)
                 ERROR("recvfrom failed: %s", strerror(errno));
                 continue;
             }
-            actor->on_udp(Bytes(buf, buf + len), sender);
+            actor->on_udp_raw(Bytes(buf, buf + len), sender);
         }
     }
 }
@@ -249,13 +261,13 @@ void McActor::multicast_listener_task(void *pvParameters)
                 ERROR("recvfrom failed: %s", strerror(errno));
                 continue;
             }
-            INFO("MC Actor received multicast message (%d bytes)", len);
-            actor->on_udp(Bytes(buf, buf + len), sender);
+            DEBUG("MC Actor received multicast message (%d bytes)", len);
+            actor->on_udp_raw(Bytes(buf, buf + len), sender);
         }
     }
 }
 
-void McActor::on_udp(const Bytes &request, const sockaddr_in &sender_addr)
+void McActor::on_udp_raw(const Bytes &request, const sockaddr_in &sender_addr)
 {
     auto r = UdpMessage::cbor_deserialize(request);
     if (r.is_err())
@@ -281,20 +293,31 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
 
     if (strcmp(msg_type, PingReq::name_value) == 0)
     {
-        INFO("MC Actor received Ping message");
         PingReq::json_deserialize(payload).just([&](const PingReq *msg)
-                                                {  auto pong = new PingRep();
-                                                pong->number = msg->number;
-                                                emit(pong); });
+                                                { 
+                                                    /*INFO(" src '%s' dst '%s' number %d", 
+                                                        udp_msg.src.has_value() ? udp_msg.src->c_str() : "-",
+                                                        udp_msg.dst.has_value() ? udp_msg.dst->c_str() : "-",
+                                                        msg->number.has_value() ? *(msg->number) : -1   );*/
+                                                    PingReq* req = new PingReq;
+                                                    req->number = msg->number;
+                                                    Envelope* env = new Envelope(
+                                                    udp_msg.src.has_value() ? ActorRef(udp_msg.src->c_str()) : NULL_ACTOR,
+                                                    udp_msg.dst.has_value() ? ActorRef(udp_msg.dst->c_str()) : NULL_ACTOR,
+                                                    req
+                                                );
+                                                emit(env); 
+                                            delete msg;});
     }
+
     else if (strcmp(msg_type, PingRep::name_value) == 0)
     {
         send_ping_req(udp_msg.src->c_str(), ++_last_ping_number);
     }
     else if (strcmp(msg_type, Alive::name_value) == 0)
     {
-        INFO("MC Actor received Alive message");
-        Alive::json_deserialize(payload).just([&](const Alive *Alive)
+        DEBUG("MC Actor received Alive message");
+        Alive::json_deserialize(payload).just([&](const Alive *alive)
                                               {
                 if (!udp_msg.src.has_value()) {
                     ERROR("Alive message missing src");
@@ -309,7 +332,8 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
                     INFO("  Setting broker address to %s", socketAddrToString((sockaddr_in*)&sender_addr).c_str());
                     _broker_addr = sender_addr;
                     _broker_name = etp;
-                } });
+                } ;
+                            delete alive; });
     }
     else
     {
@@ -319,13 +343,14 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
 
 void McActor::send_multicast(const char *dst, const char *src, const char *type, const Bytes &payload)
 {
- //   INFO("send_multicast %s <= %s : %s = %s ", dst ? dst : "-", src ? src : "-", type, std::string(payload.begin(), payload.end()).c_str());
-    Bytes buffer = encode_message(dst, src, type, payload);
+    //   INFO("send_multicast %s <= %s : %s = %s ", dst ? dst : "-", src ? src : "-", type, std::string(payload.begin(), payload.end()).c_str());
+    encode_message(dst, src, type, payload).just([&](const Bytes &buffer)
+                                                 {  
     int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&_multicast_addr, sizeof(_multicast_addr));
     if (sent < 0)
     {
         ERROR("Multicast failed: %s [%lu]", strerror(errno), buffer.size());
-    }
+    } });
 }
 
 void McActor::send_ping_req(const char *dst, uint32_t number)
@@ -334,7 +359,7 @@ void McActor::send_ping_req(const char *dst, uint32_t number)
     static uint32_t counter = 0;
     PingReq ping;
     ping.number = number;
-//    INFO("MC Actor sending Ping %d to %s", number, dst ? dst : "broker");
+    //    INFO("MC Actor sending Ping %d to %s", number, dst ? dst : "broker");
     send_unicast(dst, DEVICE_NAME, ping.type_name(), PingReq::json_serialize(ping).unwrap());
     counter++;
     if (counter % 1000 == 0)
@@ -350,5 +375,7 @@ void McActor::send_ping_rep(const char *dst, uint32_t number)
 {
     PingRep pong;
     pong.number = number;
+    auto b = PingRep::json_serialize(pong);
+    //  INFO("Msg Ping resp %d to %s", b.is_ok() ? b.unwrap().size() : -1, dst ? dst : "broker");
     send_unicast(dst, DEVICE_NAME, pong.type_name(), PingRep::json_serialize(pong).unwrap());
 }

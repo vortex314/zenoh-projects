@@ -326,7 +326,11 @@ EventBus::EventBus(size_t size) : Queue<const Envelope *>(size) {};
 
 void EventBus::push(const Envelope *msg)
 {
-    send(msg);
+    if (send(msg) == false)
+    {
+        ERROR("EventBus queue full, dropping message");
+        delete msg;
+    }
 }
 
 void EventBus::loop()
@@ -340,6 +344,7 @@ void EventBus::loop()
 
     while (true)
     {
+    //    INFO("EventBus waiting for messages or timeout %d ms", timeout);
         if (receive((const Envelope **)&pmsg, timeout))
         {
             for (const auto &handler : _message_handlers)

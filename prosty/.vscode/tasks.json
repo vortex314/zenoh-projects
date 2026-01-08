@@ -85,7 +85,7 @@
                 "run",
                 "--",
                 "--input", "syntax/message.proto",
-                "--output", "../limeross/src",
+                "--output", "../limeros/src",
                 "--lang", "rust",
                 "--format", "mix"
             ],

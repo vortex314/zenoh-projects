@@ -8,6 +8,8 @@ message Alive {
   // repeated string message_types = 1;
  // repeated string endpoints = 2;
   repeated string subscribe = 3;
+  repeated string publish = 4;
+  repeated string services = 5;
   //  string src = 4;
   //  string ip = 6;
   //  uint32 port = 7;

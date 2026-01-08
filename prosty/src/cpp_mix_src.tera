@@ -3,6 +3,7 @@
 {% for msg in messages %}
 Result<Bytes> {{msg.name}}::json_serialize(const {{msg.name}}& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         {% for field in msg.fields %}
             {%- if field.repeated -%}
                 if (msg.{{field.name}}.size()) {
@@ -70,25 +71,25 @@ Result<Bytes> {{msg.name}}::json_serialize(const {{msg.name}}& msg)  {
 // Helper macros for serialization and deserialization
 {% macro serialize_any( encoder, field_type, target) %}
     {%- if field_type == "std::string" -%}
-cbor_encode_text_stringz(&{{encoder}}, {{ target }}.c_str());
+RC_OK(cbor_encode_text_stringz(&{{encoder}}, {{ target }}.c_str()));
     {%- elif field_type == "Bytes" -%}
-cbor_encode_byte_string(&{{encoder}}, {{ target }}.data(), {{ target }}.size());
+RC_OK(cbor_encode_byte_string(&{{encoder}}, {{ target }}.data(), {{ target }}.size()));
     {%- elif field_type  == "uint32_t" -%}
-cbor_encode_int(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
     {%- elif field_type == "int32_t" -%}
-cbor_encode_int(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
     {%- elif field_type == "uint64_t" -%}
-cbor_encode_int(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
     {%- elif field_type == "int64_t" -%}
-cbor_encode_int(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
     {%- elif field_type == "float" -%}
-cbor_encode_float(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_float(&{{encoder}}, {{ target }}));
     {%- elif field_type == "double" -%}
-cbor_encode_double(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_double(&{{encoder}}, {{ target }}));
     {%- elif field_type == "bool" -%}
-cbor_encode_boolean(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_boolean(&{{encoder}}, {{ target }}));
     {%- else -%}
-cbor_encode_int(&{{encoder}}, {{ target }});
+RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
     {%- endif -%}
 {% endmacro %}
 
@@ -156,44 +157,45 @@ cbor_encode_int(&{{encoder}}, {{ target }});
 {% endmacro %}
 
 // CBOR Serialization/Deserialization
+#define RC_OK(rc) if ( (rc) != CborNoError ) { return Result<Bytes>::Err(-1,"CBOR serialization error"); }
 
 {% for msg in messages %}
 Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     {% for field in msg.fields %}
         {%- if field.repeated -%}
             {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.{{ field.name }}.size());
+            RC_OK(cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.{{ field.name }}.size()));
             for (const auto & item : msg.{{ field.name }}) {
                 {#- type-specific encode #}
                 {{ self::serialize_any(encoder="arrayEncoder", field_type=field.target_type, target="item") }}
             }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
             }
         {%- elif field.optional -%}
         if (msg.{{ field.name }}) {
-            cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX);
+            RC_OK(cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX));
             {{ self::serialize_any(encoder="mapEncoder", field_type=field.target_type, target="msg." ~ field.name ~ ".value()") }}
             }
         {%- else -%}
             // field: {{ field.name }}
-            cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX);
+            RC_OK(cbor_encode_int(&mapEncoder, {{msg.name}}::Field::{{ field.name | upper }}_INDEX));
             {{ self::serialize_any(encoder="mapEncoder", field_type=field.target_type, target="msg." ~ field.name) }}
         {%- endif %}
     {% endfor -%}
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<{{msg.name}}*> {{msg.name}}::cbor_deserialize(const Bytes& bytes) {

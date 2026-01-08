@@ -10,6 +10,18 @@ Result<Bytes> Alive::json_serialize(const Alive& msg)  {
                         arr.add(item);
                     }
                 }
+        if (msg.publish.size()) {
+                    JsonArray arr = doc["publish"].to<JsonArray>();
+                    for (const auto& item : msg.publish) {
+                        arr.add(item);
+                    }
+                }
+        if (msg.services.size()) {
+                    JsonArray arr = doc["services"].to<JsonArray>();
+                    for (const auto& item : msg.services) {
+                        arr.add(item);
+                    }
+                }
         std::string str;
         ArduinoJson::serializeJson(doc,str);
         return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
@@ -30,12 +42,27 @@ Result<Bytes> Alive::json_serialize(const Alive& msg)  {
                         msg->subscribe.push_back(v.as<std::string>());
                     }
                 }
+        if (doc["publish"].is<JsonArray>()) {
+                    JsonArray arr = doc["publish"].as<JsonArray>();
+                    msg->publish.clear();
+                    for (JsonVariant v : arr) {
+                        msg->publish.push_back(v.as<std::string>());
+                    }
+                }
+        if (doc["services"].is<JsonArray>()) {
+                    JsonArray arr = doc["services"].as<JsonArray>();
+                    msg->services.clear();
+                    for (JsonVariant v : arr) {
+                        msg->services.push_back(v.as<std::string>());
+                    }
+                }
         return Result<Alive*>::Ok(msg);
     }
 
 
 Result<Bytes> UdpMessage::json_serialize(const UdpMessage& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.dst)doc["dst"] = *msg.dst;
         if (msg.src)doc["src"] = *msg.src;
         if (msg.msg_type)doc["msg_type"] = *msg.msg_type;
@@ -68,6 +95,7 @@ Result<Bytes> UdpMessage::json_serialize(const UdpMessage& msg)  {
 
 Result<Bytes> UdpMessageCbor::json_serialize(const UdpMessageCbor& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.dst)doc["dst"] = *msg.dst;
         if (msg.src)doc["src"] = *msg.src;
         if (msg.msg_type)doc["msg_type"] = *msg.msg_type;
@@ -100,6 +128,7 @@ Result<Bytes> UdpMessageCbor::json_serialize(const UdpMessageCbor& msg)  {
 
 Result<Bytes> ZenohEvent::json_serialize(const ZenohEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.zid)doc["zid"] = *msg.zid;
         if (msg.what_am_i)doc["what_am_i"] = *msg.what_am_i;
         if (msg.peers.size()) {
@@ -160,6 +189,7 @@ Result<Bytes> ZenohEvent::json_serialize(const ZenohEvent& msg)  {
 
 Result<Bytes> LogEvent::json_serialize(const LogEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.level)doc["level"] = *msg.level;
         if (msg.message)doc["message"] = *msg.message;
         if (msg.error_code)doc["error_code"] = *msg.error_code;
@@ -197,6 +227,7 @@ Result<Bytes> LogEvent::json_serialize(const LogEvent& msg)  {
 
 Result<Bytes> SysCmd::json_serialize(const SysCmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         doc["src"] = msg.src;
         if (msg.set_time)doc["set_time"] = *msg.set_time;
         if (msg.reboot)doc["reboot"] = *msg.reboot;
@@ -228,6 +259,7 @@ Result<Bytes> SysCmd::json_serialize(const SysCmd& msg)  {
 
 Result<Bytes> SysEvent::json_serialize(const SysEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.utc)doc["utc"] = *msg.utc;
         if (msg.uptime)doc["uptime"] = *msg.uptime;
         if (msg.free_heap)doc["free_heap"] = *msg.free_heap;
@@ -265,6 +297,7 @@ Result<Bytes> SysEvent::json_serialize(const SysEvent& msg)  {
 
 Result<Bytes> WifiEvent::json_serialize(const WifiEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.ssid)doc["ssid"] = *msg.ssid;
         if (msg.bssid)doc["bssid"] = *msg.bssid;
         if (msg.rssi)doc["rssi"] = *msg.rssi;
@@ -308,6 +341,7 @@ Result<Bytes> WifiEvent::json_serialize(const WifiEvent& msg)  {
 
 Result<Bytes> MulticastEvent::json_serialize(const MulticastEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.group)doc["group"] = *msg.group;
         if (msg.port)doc["port"] = *msg.port;
         if (msg.mtu)doc["mtu"] = *msg.mtu;
@@ -336,6 +370,7 @@ Result<Bytes> MulticastEvent::json_serialize(const MulticastEvent& msg)  {
 
 Result<Bytes> PingReq::json_serialize(const PingReq& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.number)doc["number"] = *msg.number;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
@@ -358,6 +393,7 @@ Result<Bytes> PingReq::json_serialize(const PingReq& msg)  {
 
 Result<Bytes> PingRep::json_serialize(const PingRep& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.number)doc["number"] = *msg.number;
         std::string str;
         ArduinoJson::serializeJson(doc,str);
@@ -380,6 +416,7 @@ Result<Bytes> PingRep::json_serialize(const PingRep& msg)  {
 
 Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.ctrl_mod)doc["ctrl_mod"] = *msg.ctrl_mod;
         if (msg.ctrl_typ)doc["ctrl_typ"] = *msg.ctrl_typ;
         if (msg.cur_mot_max)doc["cur_mot_max"] = *msg.cur_mot_max;
@@ -537,6 +574,7 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
 
 Result<Bytes> HoverboardCmd::json_serialize(const HoverboardCmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.speed)doc["speed"] = *msg.speed;
         if (msg.steer)doc["steer"] = *msg.steer;
         std::string str;
@@ -562,6 +600,7 @@ Result<Bytes> HoverboardCmd::json_serialize(const HoverboardCmd& msg)  {
 
 Result<Bytes> HoverboardReply::json_serialize(const HoverboardReply& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.error_code)doc["error_code"] = *msg.error_code;
         if (msg.message)doc["message"] = *msg.message;
         std::string str;
@@ -587,6 +626,7 @@ Result<Bytes> HoverboardReply::json_serialize(const HoverboardReply& msg)  {
 
 Result<Bytes> TouchPoint::json_serialize(const TouchPoint& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.active)doc["active"] = *msg.active;
         if (msg.id)doc["id"] = *msg.id;
         if (msg.x)doc["x"] = *msg.x;
@@ -618,6 +658,7 @@ Result<Bytes> TouchPoint::json_serialize(const TouchPoint& msg)  {
 
 Result<Bytes> Ps4Event::json_serialize(const Ps4Event& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.button_left)doc["button_left"] = *msg.button_left;
         if (msg.button_right)doc["button_right"] = *msg.button_right;
         if (msg.button_up)doc["button_up"] = *msg.button_up;
@@ -736,6 +777,7 @@ Result<Bytes> Ps4Event::json_serialize(const Ps4Event& msg)  {
 
 Result<Bytes> Ps4Cmd::json_serialize(const Ps4Cmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.rumble_small)doc["rumble_small"] = *msg.rumble_small;
         if (msg.rumble_large)doc["rumble_large"] = *msg.rumble_large;
         if (msg.led_red)doc["led_red"] = *msg.led_red;
@@ -776,6 +818,7 @@ Result<Bytes> Ps4Cmd::json_serialize(const Ps4Cmd& msg)  {
 
 Result<Bytes> CameraEvent::json_serialize(const CameraEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.width)doc["width"] = *msg.width;
         if (msg.height)doc["height"] = *msg.height;
         if (msg.format)doc["format"] = *msg.format;
@@ -814,6 +857,7 @@ Result<Bytes> CameraEvent::json_serialize(const CameraEvent& msg)  {
 
 Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.led)doc["led"] = *msg.led;
         if (msg.capture_tcp_destination)doc["capture_tcp_destination"] = *msg.capture_tcp_destination;
         if (msg.quality)doc["quality"] = *msg.quality;
@@ -842,6 +886,7 @@ Result<Bytes> CameraCmd::json_serialize(const CameraCmd& msg)  {
 
 Result<Bytes> CameraReply::json_serialize(const CameraReply& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.error_code)doc["error_code"] = *msg.error_code;
         if (msg.message)doc["message"] = *msg.message;
         if (msg.data)
@@ -871,6 +916,7 @@ Result<Bytes> CameraReply::json_serialize(const CameraReply& msg)  {
 
 Result<Bytes> LawnmowerManualEvent::json_serialize(const LawnmowerManualEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.speed)doc["speed"] = *msg.speed;
         if (msg.steering)doc["steering"] = *msg.steering;
         if (msg.blade)doc["blade"] = *msg.blade;
@@ -899,6 +945,7 @@ Result<Bytes> LawnmowerManualEvent::json_serialize(const LawnmowerManualEvent& m
 
 Result<Bytes> LawnmowerManualCmd::json_serialize(const LawnmowerManualCmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.speed)doc["speed"] = *msg.speed;
         if (msg.steer)doc["steer"] = *msg.steer;
         if (msg.blade)doc["blade"] = *msg.blade;
@@ -942,6 +989,7 @@ Result<Bytes> LawnmowerManualCmd::json_serialize(const LawnmowerManualCmd& msg) 
 
 Result<Bytes> LawnmowerManualReply::json_serialize(const LawnmowerManualReply& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.error_code)doc["error_code"] = *msg.error_code;
         if (msg.message)doc["message"] = *msg.message;
         std::string str;
@@ -967,6 +1015,7 @@ Result<Bytes> LawnmowerManualReply::json_serialize(const LawnmowerManualReply& m
 
 Result<Bytes> LawnmowerAutoEvent::json_serialize(const LawnmowerAutoEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.started)doc["started"] = *msg.started;
         if (msg.stopped)doc["stopped"] = *msg.stopped;
         if (msg.paused)doc["paused"] = *msg.paused;
@@ -1004,6 +1053,7 @@ Result<Bytes> LawnmowerAutoEvent::json_serialize(const LawnmowerAutoEvent& msg) 
 
 Result<Bytes> LawnmowerAutoCmd::json_serialize(const LawnmowerAutoCmd& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.start)doc["start"] = *msg.start;
         if (msg.stop)doc["stop"] = *msg.stop;
         if (msg.pause)doc["pause"] = *msg.pause;
@@ -1041,6 +1091,7 @@ Result<Bytes> LawnmowerAutoCmd::json_serialize(const LawnmowerAutoCmd& msg)  {
 
 Result<Bytes> LawnmowerStatus::json_serialize(const LawnmowerStatus& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.battery_level)doc["battery_level"] = *msg.battery_level;
         if (msg.blade_status)doc["blade_status"] = *msg.blade_status;
         if (msg.current_mode)doc["current_mode"] = *msg.current_mode;
@@ -1072,6 +1123,7 @@ Result<Bytes> LawnmowerStatus::json_serialize(const LawnmowerStatus& msg)  {
 
 Result<Bytes> MotorEvent::json_serialize(const MotorEvent& msg)  {
         JsonDocument doc;
+        doc.to<JsonObject>();
         if (msg.motor_id)doc["motor_id"] = *msg.motor_id;
         if (msg.temperature)doc["temperature"] = *msg.temperature;
         if (msg.voltage)doc["voltage"] = *msg.voltage;
@@ -1114,30 +1166,49 @@ Result<Bytes> MotorEvent::json_serialize(const MotorEvent& msg)  {
 
 
 // CBOR Serialization/Deserialization
+#define RC_OK(rc) if ( (rc) != CborNoError ) { return Result<Bytes>::Err(-1,"CBOR serialization error"); }
 
 
 Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, Alive::Field::SUBSCRIBE_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.subscribe.size());
+            RC_OK(cbor_encode_int(&mapEncoder, Alive::Field::SUBSCRIBE_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.subscribe.size()));
             for (const auto & item : msg.subscribe) {
-                cbor_encode_text_stringz(&arrayEncoder, item.c_str());
+                RC_OK(cbor_encode_text_stringz(&arrayEncoder, item.c_str()));
             }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    {
+            CborEncoder arrayEncoder;
+            RC_OK(cbor_encode_int(&mapEncoder, Alive::Field::PUBLISH_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.publish.size()));
+            for (const auto & item : msg.publish) {
+                RC_OK(cbor_encode_text_stringz(&arrayEncoder, item.c_str()));
+            }
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
+            }
+    {
+            CborEncoder arrayEncoder;
+            RC_OK(cbor_encode_int(&mapEncoder, Alive::Field::SERVICES_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.services.size()));
+            for (const auto & item : msg.services) {
+                RC_OK(cbor_encode_text_stringz(&arrayEncoder, item.c_str()));
+            }
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
+            }
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<Alive*> Alive::cbor_deserialize(const Bytes& bytes) {
@@ -1201,6 +1272,50 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
                 break;
             }
             
+            case Alive::Field::PUBLISH_INDEX:{CborValue tmp;
+                cbor_value_enter_container(&mapIt,&tmp);
+                while (!cbor_value_at_end(&tmp)) {
+                    std::string v;
+                    {
+
+    if (cbor_value_is_text_string(&tmp)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&tmp, &vallen);        
+        cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
+        v = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&tmp);
+
+                    msg->publish.push_back(v);
+                };
+                cbor_value_leave_container(&mapIt,&tmp);
+                break;
+            }
+            
+            case Alive::Field::SERVICES_INDEX:{CborValue tmp;
+                cbor_value_enter_container(&mapIt,&tmp);
+                while (!cbor_value_at_end(&tmp)) {
+                    std::string v;
+                    {
+
+    if (cbor_value_is_text_string(&tmp)) {
+        char valbuf[256];
+        size_t vallen ;
+        cbor_value_calculate_string_length(&tmp, &vallen);        
+        cbor_value_copy_text_string(&tmp, valbuf, &vallen, NULL);
+        v = std::string(valbuf, vallen);
+    }
+};
+    cbor_value_advance(&tmp);
+
+                    msg->services.push_back(v);
+                };
+                cbor_value_leave_container(&mapIt,&tmp);
+                break;
+            }
+            
             default:
                 // skip unknown key
                 cbor_value_advance(&mapIt);
@@ -1219,31 +1334,31 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.dst) {
-            cbor_encode_int(&mapEncoder, UdpMessage::Field::DST_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.dst.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessage::Field::DST_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.dst.value().c_str()));
             }
     if (msg.src) {
-            cbor_encode_int(&mapEncoder, UdpMessage::Field::SRC_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.src.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessage::Field::SRC_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.src.value().c_str()));
             }
     if (msg.msg_type) {
-            cbor_encode_int(&mapEncoder, UdpMessage::Field::MSG_TYPE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.msg_type.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessage::Field::MSG_TYPE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.msg_type.value().c_str()));
             }
     if (msg.payload) {
-            cbor_encode_int(&mapEncoder, UdpMessage::Field::PAYLOAD_INDEX);
-            cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessage::Field::PAYLOAD_INDEX));
+            RC_OK(cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<UdpMessage*> UdpMessage::cbor_deserialize(const Bytes& bytes) {
@@ -1362,31 +1477,31 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.dst) {
-            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::DST_INDEX);
-            cbor_encode_int(&mapEncoder, msg.dst.value());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::DST_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.dst.value()));
             }
     if (msg.src) {
-            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::SRC_INDEX);
-            cbor_encode_int(&mapEncoder, msg.src.value());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::SRC_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.src.value()));
             }
     if (msg.msg_type) {
-            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::MSG_TYPE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.msg_type.value());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::MSG_TYPE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.msg_type.value()));
             }
     if (msg.payload) {
-            cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::PAYLOAD_INDEX);
-            cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size());
+            RC_OK(cbor_encode_int(&mapEncoder, UdpMessageCbor::Field::PAYLOAD_INDEX));
+            RC_OK(cbor_encode_byte_string(&mapEncoder, msg.payload.value().data(), msg.payload.value().size()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<UdpMessageCbor*> UdpMessageCbor::cbor_deserialize(const Bytes& bytes) {
@@ -1490,53 +1605,53 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.zid) {
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::ZID_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.zid.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::ZID_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.zid.value().c_str()));
             }
     if (msg.what_am_i) {
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::WHAT_AM_I_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.what_am_i.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::WHAT_AM_I_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.what_am_i.value().c_str()));
             }
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::PEERS_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.peers.size());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::PEERS_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.peers.size()));
             for (const auto & item : msg.peers) {
-                cbor_encode_text_stringz(&arrayEncoder, item.c_str());
+                RC_OK(cbor_encode_text_stringz(&arrayEncoder, item.c_str()));
             }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
             }
     if (msg.prefix) {
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::PREFIX_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.prefix.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::PREFIX_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.prefix.value().c_str()));
             }
     {
             CborEncoder arrayEncoder;
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::ROUTERS_INDEX );
-            cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.routers.size());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::ROUTERS_INDEX ));
+            RC_OK(cbor_encoder_create_array(&mapEncoder, &arrayEncoder, msg.routers.size()));
             for (const auto & item : msg.routers) {
-                cbor_encode_text_stringz(&arrayEncoder, item.c_str());
+                RC_OK(cbor_encode_text_stringz(&arrayEncoder, item.c_str()));
             }
-            cbor_encoder_close_container(&mapEncoder, &arrayEncoder);
+            RC_OK(cbor_encoder_close_container(&mapEncoder, &arrayEncoder));
             }
     if (msg.connect) {
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::CONNECT_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.connect.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::CONNECT_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.connect.value().c_str()));
             }
     if (msg.listen) {
-            cbor_encode_int(&mapEncoder, ZenohEvent::Field::LISTEN_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.listen.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, ZenohEvent::Field::LISTEN_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.listen.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<ZenohEvent*> ZenohEvent::cbor_deserialize(const Bytes& bytes) {
@@ -1715,39 +1830,39 @@ Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.level) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::LEVEL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.level.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::LEVEL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.level.value()));
             }
     if (msg.message) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::MESSAGE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::MESSAGE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str()));
             }
     if (msg.error_code) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::ERROR_CODE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::ERROR_CODE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.error_code.value()));
             }
     if (msg.file) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::FILE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.file.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::FILE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.file.value().c_str()));
             }
     if (msg.line) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::LINE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.line.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::LINE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.line.value()));
             }
     if (msg.timestamp) {
-            cbor_encode_int(&mapEncoder, LogEvent::Field::TIMESTAMP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.timestamp.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LogEvent::Field::TIMESTAMP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.timestamp.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LogEvent*> LogEvent::cbor_deserialize(const Bytes& bytes) {
@@ -1871,30 +1986,30 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     // field: src
-            cbor_encode_int(&mapEncoder, SysCmd::Field::SRC_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.src.c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, SysCmd::Field::SRC_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.src.c_str()));
     if (msg.set_time) {
-            cbor_encode_int(&mapEncoder, SysCmd::Field::SET_TIME_INDEX);
-            cbor_encode_int(&mapEncoder, msg.set_time.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysCmd::Field::SET_TIME_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.set_time.value()));
             }
     if (msg.reboot) {
-            cbor_encode_int(&mapEncoder, SysCmd::Field::REBOOT_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.reboot.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysCmd::Field::REBOOT_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.reboot.value()));
             }
     if (msg.console) {
-            cbor_encode_int(&mapEncoder, SysCmd::Field::CONSOLE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.console.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, SysCmd::Field::CONSOLE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.console.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<SysCmd*> SysCmd::cbor_deserialize(const Bytes& bytes) {
@@ -2000,39 +2115,39 @@ Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.utc) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::UTC_INDEX);
-            cbor_encode_int(&mapEncoder, msg.utc.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::UTC_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.utc.value()));
             }
     if (msg.uptime) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::UPTIME_INDEX);
-            cbor_encode_int(&mapEncoder, msg.uptime.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::UPTIME_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.uptime.value()));
             }
     if (msg.free_heap) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::FREE_HEAP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.free_heap.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::FREE_HEAP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.free_heap.value()));
             }
     if (msg.flash) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::FLASH_INDEX);
-            cbor_encode_int(&mapEncoder, msg.flash.value());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::FLASH_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.flash.value()));
             }
     if (msg.cpu_board) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::CPU_BOARD_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.cpu_board.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::CPU_BOARD_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.cpu_board.value().c_str()));
             }
     if (msg.build_date) {
-            cbor_encode_int(&mapEncoder, SysEvent::Field::BUILD_DATE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.build_date.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, SysEvent::Field::BUILD_DATE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.build_date.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<SysEvent*> SysEvent::cbor_deserialize(const Bytes& bytes) {
@@ -2154,47 +2269,47 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.ssid) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::SSID_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.ssid.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::SSID_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.ssid.value().c_str()));
             }
     if (msg.bssid) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::BSSID_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.bssid.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::BSSID_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.bssid.value().c_str()));
             }
     if (msg.rssi) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::RSSI_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rssi.value());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::RSSI_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rssi.value()));
             }
     if (msg.ip) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::IP_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.ip.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::IP_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.ip.value().c_str()));
             }
     if (msg.mac) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::MAC_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.mac.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::MAC_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.mac.value().c_str()));
             }
     if (msg.channel) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::CHANNEL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.channel.value());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::CHANNEL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.channel.value()));
             }
     if (msg.gateway) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::GATEWAY_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.gateway.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::GATEWAY_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.gateway.value().c_str()));
             }
     if (msg.netmask) {
-            cbor_encode_int(&mapEncoder, WifiEvent::Field::NETMASK_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.netmask.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, WifiEvent::Field::NETMASK_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.netmask.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<WifiEvent*> WifiEvent::cbor_deserialize(const Bytes& bytes) {
@@ -2360,27 +2475,27 @@ Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.group) {
-            cbor_encode_int(&mapEncoder, MulticastEvent::Field::GROUP_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.group.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, MulticastEvent::Field::GROUP_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.group.value().c_str()));
             }
     if (msg.port) {
-            cbor_encode_int(&mapEncoder, MulticastEvent::Field::PORT_INDEX);
-            cbor_encode_int(&mapEncoder, msg.port.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MulticastEvent::Field::PORT_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.port.value()));
             }
     if (msg.mtu) {
-            cbor_encode_int(&mapEncoder, MulticastEvent::Field::MTU_INDEX);
-            cbor_encode_int(&mapEncoder, msg.mtu.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MulticastEvent::Field::MTU_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.mtu.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<MulticastEvent*> MulticastEvent::cbor_deserialize(const Bytes& bytes) {
@@ -2473,19 +2588,19 @@ Result<Bytes> PingReq::cbor_serialize(const PingReq& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.number) {
-            cbor_encode_int(&mapEncoder, PingReq::Field::NUMBER_INDEX);
-            cbor_encode_int(&mapEncoder, msg.number.value());
+            RC_OK(cbor_encode_int(&mapEncoder, PingReq::Field::NUMBER_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.number.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<PingReq*> PingReq::cbor_deserialize(const Bytes& bytes) {
@@ -2555,19 +2670,19 @@ Result<Bytes> PingRep::cbor_serialize(const PingRep& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.number) {
-            cbor_encode_int(&mapEncoder, PingRep::Field::NUMBER_INDEX);
-            cbor_encode_int(&mapEncoder, msg.number.value());
+            RC_OK(cbor_encode_int(&mapEncoder, PingRep::Field::NUMBER_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.number.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<PingRep*> PingRep::cbor_deserialize(const Bytes& bytes) {
@@ -2637,199 +2752,199 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.ctrl_mod) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_MOD_INDEX);
-            cbor_encode_int(&mapEncoder, msg.ctrl_mod.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_MOD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ctrl_mod.value()));
             }
     if (msg.ctrl_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_TYP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.ctrl_typ.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CTRL_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ctrl_typ.value()));
             }
     if (msg.cur_mot_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CUR_MOT_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.cur_mot_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CUR_MOT_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cur_mot_max.value()));
             }
     if (msg.rpm_mot_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RPM_MOT_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rpm_mot_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RPM_MOT_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rpm_mot_max.value()));
             }
     if (msg.fi_weak_ena) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_ENA_INDEX);
-            cbor_encode_int(&mapEncoder, msg.fi_weak_ena.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_ENA_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_ena.value()));
             }
     if (msg.fi_weak_hi) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_HI_INDEX);
-            cbor_encode_int(&mapEncoder, msg.fi_weak_hi.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_HI_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_hi.value()));
             }
     if (msg.fi_weak_lo) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_LO_INDEX);
-            cbor_encode_int(&mapEncoder, msg.fi_weak_lo.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_LO_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_lo.value()));
             }
     if (msg.fi_weak_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.fi_weak_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FI_WEAK_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_max.value()));
             }
     if (msg.phase_adv_max_deg) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::PHASE_ADV_MAX_DEG_INDEX);
-            cbor_encode_int(&mapEncoder, msg.phase_adv_max_deg.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::PHASE_ADV_MAX_DEG_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.phase_adv_max_deg.value()));
             }
     if (msg.input1_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_RAW_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_raw.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_raw.value()));
             }
     if (msg.input1_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_TYP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_typ.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_typ.value()));
             }
     if (msg.input1_min) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MIN_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_min.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_min.value()));
             }
     if (msg.input1_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_mid.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_mid.value()));
             }
     if (msg.input1_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_max.value()));
             }
     if (msg.input1_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_CMD_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input1_cmd.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT1_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_cmd.value()));
             }
     if (msg.input2_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_RAW_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_raw.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_raw.value()));
             }
     if (msg.input2_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_TYP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_typ.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_typ.value()));
             }
     if (msg.input2_min) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MIN_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_min.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_min.value()));
             }
     if (msg.input2_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_mid.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_mid.value()));
             }
     if (msg.input2_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_max.value()));
             }
     if (msg.input2_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_CMD_INDEX);
-            cbor_encode_int(&mapEncoder, msg.input2_cmd.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::INPUT2_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_cmd.value()));
             }
     if (msg.aux_input1_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_RAW_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_raw.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_raw.value()));
             }
     if (msg.aux_input1_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_typ.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_typ.value()));
             }
     if (msg.aux_input1_min) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MIN_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_min.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_min.value()));
             }
     if (msg.aux_input1_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_mid.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_mid.value()));
             }
     if (msg.aux_input1_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_max.value()));
             }
     if (msg.aux_input1_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_CMD_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input1_cmd.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT1_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_cmd.value()));
             }
     if (msg.aux_input2_raw) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_RAW_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_raw.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_raw.value()));
             }
     if (msg.aux_input2_typ) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_typ.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_typ.value()));
             }
     if (msg.aux_input2_min) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MIN_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_min.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_min.value()));
             }
     if (msg.aux_input2_mid) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_mid.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_mid.value()));
             }
     if (msg.aux_input2_max) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MAX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_max.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_max.value()));
             }
     if (msg.aux_input2_cmd) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_CMD_INDEX);
-            cbor_encode_int(&mapEncoder, msg.aux_input2_cmd.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::AUX_INPUT2_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_cmd.value()));
             }
     if (msg.dc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::DC_CURR_INDEX);
-            cbor_encode_int(&mapEncoder, msg.dc_curr.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::DC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.dc_curr.value()));
             }
     if (msg.rdc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RDC_CURR_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rdc_curr.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RDC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rdc_curr.value()));
             }
     if (msg.ldc_curr) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::LDC_CURR_INDEX);
-            cbor_encode_int(&mapEncoder, msg.ldc_curr.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::LDC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ldc_curr.value()));
             }
     if (msg.cmdl) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.cmdl.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cmdl.value()));
             }
     if (msg.cmdr) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDR_INDEX);
-            cbor_encode_int(&mapEncoder, msg.cmdr.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cmdr.value()));
             }
     if (msg.spd_avg) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_AVG_INDEX);
-            cbor_encode_int(&mapEncoder, msg.spd_avg.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_AVG_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spd_avg.value()));
             }
     if (msg.spdl) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.spdl.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spdl.value()));
             }
     if (msg.spdr) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDR_INDEX);
-            cbor_encode_int(&mapEncoder, msg.spdr.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPDR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spdr.value()));
             }
     if (msg.filter_rate) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FILTER_RATE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.filter_rate.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::FILTER_RATE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.filter_rate.value()));
             }
     if (msg.spd_coef) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_COEF_INDEX);
-            cbor_encode_int(&mapEncoder, msg.spd_coef.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::SPD_COEF_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spd_coef.value()));
             }
     if (msg.str_coef) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::STR_COEF_INDEX);
-            cbor_encode_int(&mapEncoder, msg.str_coef.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::STR_COEF_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.str_coef.value()));
             }
     if (msg.batv) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::BATV_INDEX);
-            cbor_encode_int(&mapEncoder, msg.batv.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::BATV_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.batv.value()));
             }
     if (msg.temp) {
-            cbor_encode_int(&mapEncoder, HoverboardEvent::Field::TEMP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.temp.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::TEMP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.temp.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<HoverboardEvent*> HoverboardEvent::cbor_deserialize(const Bytes& bytes) {
@@ -3269,23 +3384,23 @@ Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.speed) {
-            cbor_encode_int(&mapEncoder, HoverboardCmd::Field::SPEED_INDEX);
-            cbor_encode_int(&mapEncoder, msg.speed.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardCmd::Field::SPEED_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.speed.value()));
             }
     if (msg.steer) {
-            cbor_encode_int(&mapEncoder, HoverboardCmd::Field::STEER_INDEX);
-            cbor_encode_int(&mapEncoder, msg.steer.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardCmd::Field::STEER_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.steer.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<HoverboardCmd*> HoverboardCmd::cbor_deserialize(const Bytes& bytes) {
@@ -3361,23 +3476,23 @@ Result<Bytes> HoverboardReply::cbor_serialize(const HoverboardReply& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.error_code) {
-            cbor_encode_int(&mapEncoder, HoverboardReply::Field::ERROR_CODE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardReply::Field::ERROR_CODE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.error_code.value()));
             }
     if (msg.message) {
-            cbor_encode_int(&mapEncoder, HoverboardReply::Field::MESSAGE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardReply::Field::MESSAGE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<HoverboardReply*> HoverboardReply::cbor_deserialize(const Bytes& bytes) {
@@ -3460,31 +3575,31 @@ Result<Bytes> TouchPoint::cbor_serialize(const TouchPoint& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.active) {
-            cbor_encode_int(&mapEncoder, TouchPoint::Field::ACTIVE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.active.value());
+            RC_OK(cbor_encode_int(&mapEncoder, TouchPoint::Field::ACTIVE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.active.value()));
             }
     if (msg.id) {
-            cbor_encode_int(&mapEncoder, TouchPoint::Field::ID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.id.value());
+            RC_OK(cbor_encode_int(&mapEncoder, TouchPoint::Field::ID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.id.value()));
             }
     if (msg.x) {
-            cbor_encode_int(&mapEncoder, TouchPoint::Field::X_INDEX);
-            cbor_encode_int(&mapEncoder, msg.x.value());
+            RC_OK(cbor_encode_int(&mapEncoder, TouchPoint::Field::X_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.x.value()));
             }
     if (msg.y) {
-            cbor_encode_int(&mapEncoder, TouchPoint::Field::Y_INDEX);
-            cbor_encode_int(&mapEncoder, msg.y.value());
+            RC_OK(cbor_encode_int(&mapEncoder, TouchPoint::Field::Y_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.y.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<TouchPoint*> TouchPoint::cbor_deserialize(const Bytes& bytes) {
@@ -3576,147 +3691,147 @@ Result<Bytes> Ps4Event::cbor_serialize(const Ps4Event& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.button_left) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_left.value()));
             }
     if (msg.button_right) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_right.value()));
             }
     if (msg.button_up) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_UP_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_up.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_UP_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_up.value()));
             }
     if (msg.button_down) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_DOWN_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_down.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_DOWN_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_down.value()));
             }
     if (msg.button_square) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SQUARE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_square.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SQUARE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_square.value()));
             }
     if (msg.button_cross) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CROSS_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_cross.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CROSS_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_cross.value()));
             }
     if (msg.button_circle) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CIRCLE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_circle.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_CIRCLE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_circle.value()));
             }
     if (msg.button_triangle) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TRIANGLE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_triangle.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TRIANGLE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_triangle.value()));
             }
     if (msg.button_left_shoulder) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_SHOULDER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_shoulder.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_SHOULDER_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_left_shoulder.value()));
             }
     if (msg.button_right_shoulder) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_SHOULDER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_shoulder.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_SHOULDER_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_right_shoulder.value()));
             }
     if (msg.button_left_trigger) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_TRIGGER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_trigger.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_TRIGGER_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_left_trigger.value()));
             }
     if (msg.button_right_trigger) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_TRIGGER_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_trigger.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_TRIGGER_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_right_trigger.value()));
             }
     if (msg.button_left_joystick) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_JOYSTICK_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_left_joystick.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_LEFT_JOYSTICK_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_left_joystick.value()));
             }
     if (msg.button_right_joystick) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_JOYSTICK_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_right_joystick.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_RIGHT_JOYSTICK_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_right_joystick.value()));
             }
     if (msg.button_share) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SHARE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_share.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_SHARE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_share.value()));
             }
     if (msg.button_options) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_OPTIONS_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_options.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_OPTIONS_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_options.value()));
             }
     if (msg.button_touchpad) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TOUCHPAD_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_touchpad.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_TOUCHPAD_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_touchpad.value()));
             }
     if (msg.button_ps) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_PS_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.button_ps.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BUTTON_PS_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.button_ps.value()));
             }
     if (msg.axis_lx) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_lx.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.axis_lx.value()));
             }
     if (msg.axis_ly) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_ly.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_LY_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.axis_ly.value()));
             }
     if (msg.axis_rx) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RX_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_rx.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.axis_rx.value()));
             }
     if (msg.axis_ry) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.axis_ry.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::AXIS_RY_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.axis_ry.value()));
             }
     if (msg.gyro_x) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_X_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_x.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_X_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.gyro_x.value()));
             }
     if (msg.gyro_y) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Y_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_y.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Y_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.gyro_y.value()));
             }
     if (msg.gyro_z) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Z_INDEX);
-            cbor_encode_int(&mapEncoder, msg.gyro_z.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::GYRO_Z_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.gyro_z.value()));
             }
     if (msg.accel_x) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_X_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_x.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_X_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.accel_x.value()));
             }
     if (msg.accel_y) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Y_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_y.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Y_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.accel_y.value()));
             }
     if (msg.accel_z) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Z_INDEX);
-            cbor_encode_int(&mapEncoder, msg.accel_z.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::ACCEL_Z_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.accel_z.value()));
             }
     if (msg.connected) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::CONNECTED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.connected.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::CONNECTED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.connected.value()));
             }
     if (msg.battery_level) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BATTERY_LEVEL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.battery_level.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BATTERY_LEVEL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.battery_level.value()));
             }
     if (msg.bluetooth) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::BLUETOOTH_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.bluetooth.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::BLUETOOTH_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.bluetooth.value()));
             }
     if (msg.debug) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::DEBUG_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.debug.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::DEBUG_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.debug.value().c_str()));
             }
     if (msg.temp) {
-            cbor_encode_int(&mapEncoder, Ps4Event::Field::TEMP_INDEX);
-            cbor_encode_int(&mapEncoder, msg.temp.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Event::Field::TEMP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.temp.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<Ps4Event*> Ps4Event::cbor_deserialize(const Bytes& bytes) {
@@ -4047,43 +4162,43 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.rumble_small) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_SMALL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rumble_small.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_SMALL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rumble_small.value()));
             }
     if (msg.rumble_large) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_LARGE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.rumble_large.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::RUMBLE_LARGE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rumble_large.value()));
             }
     if (msg.led_red) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_RED_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_red.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_RED_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.led_red.value()));
             }
     if (msg.led_green) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_GREEN_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_green.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_GREEN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.led_green.value()));
             }
     if (msg.led_blue) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_BLUE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_blue.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_BLUE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.led_blue.value()));
             }
     if (msg.led_flash_on) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_ON_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_flash_on.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_ON_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.led_flash_on.value()));
             }
     if (msg.led_flash_off) {
-            cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_OFF_INDEX);
-            cbor_encode_int(&mapEncoder, msg.led_flash_off.value());
+            RC_OK(cbor_encode_int(&mapEncoder, Ps4Cmd::Field::LED_FLASH_OFF_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.led_flash_off.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<Ps4Cmd*> Ps4Cmd::cbor_deserialize(const Bytes& bytes) {
@@ -4199,39 +4314,39 @@ Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.width) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::WIDTH_INDEX);
-            cbor_encode_int(&mapEncoder, msg.width.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::WIDTH_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.width.value()));
             }
     if (msg.height) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::HEIGHT_INDEX);
-            cbor_encode_int(&mapEncoder, msg.height.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::HEIGHT_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.height.value()));
             }
     if (msg.format) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::FORMAT_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.format.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::FORMAT_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.format.value().c_str()));
             }
     if (msg.data) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::DATA_INDEX);
-            cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::DATA_INDEX));
+            RC_OK(cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size()));
             }
     if (msg.led) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::LED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.led.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::LED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.led.value()));
             }
     if (msg.quality) {
-            cbor_encode_int(&mapEncoder, CameraEvent::Field::QUALITY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.quality.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraEvent::Field::QUALITY_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.quality.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<CameraEvent*> CameraEvent::cbor_deserialize(const Bytes& bytes) {
@@ -4352,27 +4467,27 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.led) {
-            cbor_encode_int(&mapEncoder, CameraCmd::Field::LED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.led.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraCmd::Field::LED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.led.value()));
             }
     if (msg.capture_tcp_destination) {
-            cbor_encode_int(&mapEncoder, CameraCmd::Field::CAPTURE_TCP_DESTINATION_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.capture_tcp_destination.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraCmd::Field::CAPTURE_TCP_DESTINATION_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.capture_tcp_destination.value().c_str()));
             }
     if (msg.quality) {
-            cbor_encode_int(&mapEncoder, CameraCmd::Field::QUALITY_INDEX);
-            cbor_encode_int(&mapEncoder, msg.quality.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraCmd::Field::QUALITY_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.quality.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<CameraCmd*> CameraCmd::cbor_deserialize(const Bytes& bytes) {
@@ -4463,27 +4578,27 @@ Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.error_code) {
-            cbor_encode_int(&mapEncoder, CameraReply::Field::ERROR_CODE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraReply::Field::ERROR_CODE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.error_code.value()));
             }
     if (msg.message) {
-            cbor_encode_int(&mapEncoder, CameraReply::Field::MESSAGE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraReply::Field::MESSAGE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str()));
             }
     if (msg.data) {
-            cbor_encode_int(&mapEncoder, CameraReply::Field::DATA_INDEX);
-            cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size());
+            RC_OK(cbor_encode_int(&mapEncoder, CameraReply::Field::DATA_INDEX));
+            RC_OK(cbor_encode_byte_string(&mapEncoder, msg.data.value().data(), msg.data.value().size()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<CameraReply*> CameraReply::cbor_deserialize(const Bytes& bytes) {
@@ -4580,27 +4695,27 @@ Result<Bytes> LawnmowerManualEvent::cbor_serialize(const LawnmowerManualEvent& m
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.speed) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::SPEED_INDEX);
-            cbor_encode_int(&mapEncoder, msg.speed.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::SPEED_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.speed.value()));
             }
     if (msg.steering) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::STEERING_INDEX);
-            cbor_encode_int(&mapEncoder, msg.steering.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::STEERING_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.steering.value()));
             }
     if (msg.blade) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::BLADE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.blade.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualEvent::Field::BLADE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.blade.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerManualEvent*> LawnmowerManualEvent::cbor_deserialize(const Bytes& bytes) {
@@ -4684,47 +4799,47 @@ Result<Bytes> LawnmowerManualCmd::cbor_serialize(const LawnmowerManualCmd& msg) 
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.speed) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::SPEED_INDEX);
-            cbor_encode_float(&mapEncoder, msg.speed.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::SPEED_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.speed.value()));
             }
     if (msg.steer) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STEER_INDEX);
-            cbor_encode_float(&mapEncoder, msg.steer.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STEER_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.steer.value()));
             }
     if (msg.blade) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::BLADE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.blade.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::BLADE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.blade.value()));
             }
     if (msg.start_manual_control) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_MANUAL_CONTROL_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.start_manual_control.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_MANUAL_CONTROL_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.start_manual_control.value()));
             }
     if (msg.stop_manual_control) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_MANUAL_CONTROL_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.stop_manual_control.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_MANUAL_CONTROL_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.stop_manual_control.value()));
             }
     if (msg.emergency_stop) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::EMERGENCY_STOP_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.emergency_stop.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::EMERGENCY_STOP_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.emergency_stop.value()));
             }
     if (msg.start_auto_mode) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_AUTO_MODE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.start_auto_mode.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::START_AUTO_MODE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.start_auto_mode.value()));
             }
     if (msg.stop_auto_mode) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_AUTO_MODE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.stop_auto_mode.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualCmd::Field::STOP_AUTO_MODE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.stop_auto_mode.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerManualCmd*> LawnmowerManualCmd::cbor_deserialize(const Bytes& bytes) {
@@ -4848,23 +4963,23 @@ Result<Bytes> LawnmowerManualReply::cbor_serialize(const LawnmowerManualReply& m
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.error_code) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::ERROR_CODE_INDEX);
-            cbor_encode_int(&mapEncoder, msg.error_code.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::ERROR_CODE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.error_code.value()));
             }
     if (msg.message) {
-            cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::MESSAGE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerManualReply::Field::MESSAGE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.message.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerManualReply*> LawnmowerManualReply::cbor_deserialize(const Bytes& bytes) {
@@ -4947,39 +5062,39 @@ Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg) 
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.started) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STARTED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.started.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STARTED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.started.value()));
             }
     if (msg.stopped) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STOPPED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.stopped.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::STOPPED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.stopped.value()));
             }
     if (msg.paused) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PAUSED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.paused.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PAUSED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.paused.value()));
             }
     if (msg.resumed) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::RESUMED_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.resumed.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::RESUMED_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.resumed.value()));
             }
     if (msg.mode) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::MODE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::MODE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str()));
             }
     if (msg.path) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PATH_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoEvent::Field::PATH_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerAutoEvent*> LawnmowerAutoEvent::cbor_deserialize(const Bytes& bytes) {
@@ -5101,39 +5216,39 @@ Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.start) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::START_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.start.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::START_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.start.value()));
             }
     if (msg.stop) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::STOP_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.stop.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::STOP_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.stop.value()));
             }
     if (msg.pause) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PAUSE_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.pause.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PAUSE_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.pause.value()));
             }
     if (msg.resume) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::RESUME_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.resume.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::RESUME_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.resume.value()));
             }
     if (msg.mode) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::MODE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::MODE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.mode.value().c_str()));
             }
     if (msg.path) {
-            cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PATH_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerAutoCmd::Field::PATH_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.path.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerAutoCmd*> LawnmowerAutoCmd::cbor_deserialize(const Bytes& bytes) {
@@ -5255,31 +5370,31 @@ Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.battery_level) {
-            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BATTERY_LEVEL_INDEX);
-            cbor_encode_int(&mapEncoder, msg.battery_level.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BATTERY_LEVEL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.battery_level.value()));
             }
     if (msg.blade_status) {
-            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BLADE_STATUS_INDEX);
-            cbor_encode_boolean(&mapEncoder, msg.blade_status.value());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::BLADE_STATUS_INDEX));
+            RC_OK(cbor_encode_boolean(&mapEncoder, msg.blade_status.value()));
             }
     if (msg.current_mode) {
-            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::CURRENT_MODE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.current_mode.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::CURRENT_MODE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.current_mode.value().c_str()));
             }
     if (msg.error_message) {
-            cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::ERROR_MESSAGE_INDEX);
-            cbor_encode_text_stringz(&mapEncoder, msg.error_message.value().c_str());
+            RC_OK(cbor_encode_int(&mapEncoder, LawnmowerStatus::Field::ERROR_MESSAGE_INDEX));
+            RC_OK(cbor_encode_text_stringz(&mapEncoder, msg.error_message.value().c_str()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<LawnmowerStatus*> LawnmowerStatus::cbor_deserialize(const Bytes& bytes) {
@@ -5385,39 +5500,39 @@ Result<Bytes> MotorEvent::cbor_serialize(const MotorEvent& msg)  {
     // buffer: grow if needed by changing initial size
     std::vector<uint8_t> buffer(512);
     CborEncoder encoder, mapEncoder;
-    cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
     // Start top-level map
-    cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength);
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
 
     if (msg.motor_id) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::MOTOR_ID_INDEX);
-            cbor_encode_int(&mapEncoder, msg.motor_id.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::MOTOR_ID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.motor_id.value()));
             }
     if (msg.temperature) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::TEMPERATURE_INDEX);
-            cbor_encode_float(&mapEncoder, msg.temperature.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::TEMPERATURE_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.temperature.value()));
             }
     if (msg.voltage) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::VOLTAGE_INDEX);
-            cbor_encode_float(&mapEncoder, msg.voltage.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::VOLTAGE_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.voltage.value()));
             }
     if (msg.current) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::CURRENT_INDEX);
-            cbor_encode_float(&mapEncoder, msg.current.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::CURRENT_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.current.value()));
             }
     if (msg.speed) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::SPEED_INDEX);
-            cbor_encode_float(&mapEncoder, msg.speed.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::SPEED_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.speed.value()));
             }
     if (msg.position) {
-            cbor_encode_int(&mapEncoder, MotorEvent::Field::POSITION_INDEX);
-            cbor_encode_float(&mapEncoder, msg.position.value());
+            RC_OK(cbor_encode_int(&mapEncoder, MotorEvent::Field::POSITION_INDEX));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.position.value()));
             }
-    cbor_encoder_close_container(&encoder, &mapEncoder);
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
     size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
-    return Bytes(buffer.begin(), buffer.begin() + used);
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
 }
 
  Result<MotorEvent*> MotorEvent::cbor_deserialize(const Bytes& bytes) {
