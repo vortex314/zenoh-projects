@@ -1,12 +1,17 @@
 use dashmap::DashMap;
 use eframe::egui;
+use egui::Widget;
 use egui_plot::{Line, Plot, PlotPoints};
+use ehmi::{Bar, Gauge, ToggleStyle, ToggleSwitch};
+use gtk::{atk::Range, gdk::keys::constants::w};
 use limeros::{
-    Endpoint, UdpMessage, UdpMessageHandler, UdpNode, logger, msgs::{HoverboardEvent, SysEvent, TypedMessage, WifiEvent}
+    logger,
+    msgs::{HoverboardEvent, SysEvent, TypedMessage, WifiEvent},
+    Endpoint, UdpMessage, UdpMessageHandler, UdpNode,
 };
 use log::info;
 use socket2::Socket;
-use std::time::SystemTime;
+use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
 use std::{sync::Arc, time::Instant};
 
 // --- 1. Shared Data Structure ---
@@ -24,7 +29,6 @@ struct Record {
 enum Tab {
     Endpoints,
     Events,
-    Graphs,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -35,6 +39,11 @@ enum SortColumn {
     Field,
 }
 
+struct MetricData {
+    name: String,
+    points: Vec<[f64; 2]>,
+    start_time: std::time::Instant,
+}
 // --- 2. The egui Application State ---
 
 struct UdpMonitorApp {
@@ -47,8 +56,11 @@ struct UdpMonitorApp {
     // Local copy of endpoints to avoid async blocking in UI thread
     endpoints: Arc<DashMap<String, Endpoint>>,
     // Graph data: Map from field name to Vec<(x, y)>
-    graph_data: Arc<DashMap<String, Vec<[f64; 2]>>>,
     start_time: std::time::Instant,
+
+    widget_windows: DashMap<String, HashSet<String>>,
+    graph_data: Arc<DashMap<String, MetricData>>,
+    selected_fields: HashSet<String>,
 }
 
 impl UdpMonitorApp {
@@ -57,7 +69,7 @@ impl UdpMonitorApp {
         node: Arc<UdpNode>,
         cache: Arc<DashMap<String, Record>>,
         endpoints: Arc<DashMap<String, Endpoint>>,
-        graph_data: Arc<DashMap<String, Vec<[f64; 2]>>>,
+        graph_data: Arc<DashMap<String, MetricData>>,
     ) -> Self {
         Self {
             node,
@@ -66,8 +78,10 @@ impl UdpMonitorApp {
             sort_col: SortColumn::Time,
             sort_desc: true,
             endpoints,
-            graph_data,
+            widget_windows: DashMap::new(),
             start_time: std::time::Instant::now(),
+            graph_data,
+            selected_fields: HashSet::new(),
         }
     }
 }
@@ -86,8 +100,6 @@ impl eframe::App for UdpMonitorApp {
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.current_tab, Tab::Endpoints, "Endpoints");
                 ui.selectable_value(&mut self.current_tab, Tab::Events, "Live Events");
-                ui.selectable_value(&mut self.current_tab, Tab::Graphs, "Telemetry Graph");
-                // New
             });
 
             ui.separator();
@@ -95,7 +107,6 @@ impl eframe::App for UdpMonitorApp {
             match self.current_tab {
                 Tab::Endpoints => self.render_endpoints(ui),
                 Tab::Events => self.render_events(ui),
-                Tab::Graphs => self.render_graphs(ui), // New
             }
         });
 
@@ -120,7 +131,7 @@ impl UdpMonitorApp {
                 for entry in self.endpoints.iter() {
                     let ep = entry.value();
                     let secs_ago = Instant::now().duration_since(ep.last_seen).as_millis() / 1000;
-                    
+
                     ui.label(entry.key());
                     ui.label(ep.addr.to_string());
                     ui.label(format!("{:?}", ep.subscribe));
@@ -184,7 +195,7 @@ impl UdpMonitorApp {
                         ui.label("Value");
                     });
                     header.col(|ui| {
-                         ui.label("Functions");
+                        ui.label("Functions");
                     });
                 })
                 .body(|body| {
@@ -193,6 +204,7 @@ impl UdpMonitorApp {
                         let time_str = chrono::DateTime::<chrono::Local>::from(r.timestamp)
                             .format("%H:%M:%S")
                             .to_string();
+                        let key = format!("{}:{}:{}", r.src, r.msg_type, r.field_name);
 
                         row.col(|ui| {
                             ui.label(time_str);
@@ -206,49 +218,250 @@ impl UdpMonitorApp {
                         row.col(|ui| {
                             ui.label(&r.field_name);
                         });
+
+                        row.col(|ui| {
+                            ui.horizontal(|ui| {
+                                let mut selected = self.selected_fields.contains(key.as_str());
+                                if ui.checkbox(&mut selected, "").changed() {
+                                    if selected {
+                                        self.selected_fields.insert(key.clone());
+                                    } else {
+                                        self.selected_fields.remove(&key);
+                                    }
+                                    }
+                                
+                                if ui.button("📈").clicked() {
+                                    // Could implement functionality to highlight/select this field for graphing
+                                    self.widget_windows.entry("plot".to_string()).or_default().insert(key.clone());
+                                }
+                                if ui.button("⭕").clicked() {
+                                    self.widget_windows.entry("gauge".to_string()).or_default().insert(key.clone());
+                                }
+                                if ui.button("|").clicked() {
+                                    self.widget_windows.entry("bar".to_string()).or_default().insert(key.clone());
+                                }
+                                if ui.button("❌").clicked() {
+                                    self.widget_windows.entry("plot".to_string()).or_default().remove(&key);
+                                    self.widget_windows.entry("gauge".to_string()).or_default().remove(&key);
+                                    self.widget_windows.entry("bar".to_string()).or_default().remove(&key);
+                                }
+                            });
+                        });
                         row.col(|ui| {
                             ui.label(&r.value);
                         });
-                        row.col(|ui| {
-                            if ui.button("Graph").clicked() {
-                                // Could implement functionality to highlight/select this field for graphing
-                                // open new window with graph of this field
-                                
-
-
-                            }});
                     });
                 });
         });
-    }
-
-    fn render_graphs(&mut self, ui: &mut egui::Ui) {
-        ui.label("Real-time Telemetry (Numeric Fields)");
-
-        let plot = Plot::new("udp_plot")
-            .view_aspect(2.0)
-            .legend(egui_plot::Legend::default())
-            .x_axis_label("Seconds since start")
-            .y_axis_label("Value");
-
-        plot.show(ui, |plot_ui| {
-            for entry in self.graph_data.iter() {
-                let (name, points) = entry.pair();
-
-                // Convert your Vec<[f64; 2]> into PlotPoints
-                let plot_points = PlotPoints::from(points.clone());
-
-                // Pass the points twice: once for the data, once for the series definition
-                let line = Line::new(name.clone(), plot_points).name(name);
-
-                plot_ui.line(line);
+        // Render open graph windows
+        self.widget_windows.iter().for_each(|entry| {
+            let widget_type = entry.key();
+            let keys: Vec<String> = entry.value().iter().cloned().collect();
+            for key in keys {
+                if let Some(metric_data) = self.graph_data.get(&key) {
+                    match widget_type.as_str() {
+                        "plot" => self.show_plot_window(ui.ctx(), metric_data.value()),
+                        "gauge" => {
+                            let value = self.cache.get(&key);
+                            if let Some(record) = value {
+                                if let Ok(num) = record.value.parse::<f32>() {
+                                    self.show_ehmi_gauge(ui.ctx(), num, &metric_data);
+                                }
+                            }
+                        }
+                        "bar" => {
+                            let value = self.cache.get(&key);
+                            if let Some(record) = value {
+                                if let Ok(num) = record.value.parse::<f32>() {
+                                    self.show_ehmi_bar(ui.ctx(), num, &metric_data);
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
         });
-
-        if ui.button("Clear Graphs").clicked() {
-            self.graph_data.clear();
-        }
+        
     }
+
+    fn calculate_gauge_max_min(min: f64, max: f64) -> RangeInclusive<f64> {
+        let range = max - min;
+        let magnitude = 10f64.powf(range.log10().floor());
+        let nice_min = (min / magnitude).floor() * magnitude;
+        let nice_max = (max / magnitude).ceil() * magnitude;
+        nice_min..=nice_max
+    }
+
+    fn show_ehmi_bar(&self, ctx: &egui::Context, value: f32, metric_data: &MetricData) {
+         let window_name = metric_data.name.as_str();
+        let title = window_name.to_string();
+        let window_hash = format!("{}_bar", window_name);
+        let viewport_id = egui::ViewportId::from_hash_of(&window_hash);
+        let margin = 25.0;
+        let hsize = 400.0;
+        let vsize = 100.0;
+        let offset_rectangle = egui::Rect::from_min_size(
+            egui::pos2(margin, margin),
+            egui::vec2(hsize - margin, vsize - margin),
+        );
+        let (min, mut max) =
+            metric_data
+                .points
+                .iter()
+                .fold((f32::MAX, f32::MIN), |(min, max), p| {
+                    let v = p[1] as f32;
+                    (min.min(v), max.max(v))
+                });
+        if min == max {
+            max += 1.0;
+        }
+        let value_range = Self::calculate_gauge_max_min(min as f64 , max as f64);
+        let value_range = *value_range.start() as f32 ..= *value_range.end() as f32;
+
+        ctx.show_viewport_immediate(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title(title)
+                .with_inner_size([hsize, vsize]),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+                let value_range = value_range.clone();
+                let window_name = window_name.to_string();
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // 1. Logic to handle the window's close button (Native X)
+                    if ui.input(|i| i.viewport().close_requested()) {
+                        // Logic to remove this window from your 'open_windows' set
+                        self.widget_windows.entry("bar".to_string()).or_default().remove(&window_name);
+                    }
+                    // 2. Render the Gauge
+                    ui.put(
+                        offset_rectangle,
+                        ehmi::Bar::new(value)
+                         //   .bar_size(size - margin * 2.0)
+                            .range(value_range)
+                    );
+                });
+            },
+        );
+    }
+
+    fn show_ehmi_gauge(&self, ctx: &egui::Context, value: f32, metric_data: &MetricData) {
+        let window_name = metric_data.name.as_str();
+        let title = window_name.to_string();
+        let window_hash = format!("{}_gauge", window_name);
+        let viewport_id = egui::ViewportId::from_hash_of(&window_hash);
+        let margin = 25.0;
+        let size = 400.0;
+        let offset_rectangle = egui::Rect::from_min_size(
+            egui::pos2(margin, margin),
+            egui::vec2(size - margin, size - margin),
+        );
+        let (min, mut max) =
+            metric_data
+                .points
+                .iter()
+                .fold((f64::MAX, f64::MIN), |(min, max), p| {
+                    let v = p[1] as f64;
+                    (min.min(v), max.max(v))
+                });
+        if min == max {
+            max += 1.0;
+        }
+        let value_range = Self::calculate_gauge_max_min(min, max);
+
+        ctx.show_viewport_immediate(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title(title)
+                .with_inner_size([size, size]),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+                let value_range = value_range.clone();
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // 1. Logic to handle the window's close button (Native X)
+                    if ui.input(|i| i.viewport().close_requested()) {
+                        // Logic to remove this window from your 'open_windows' set
+                        // self.open_windows.remove(&window_name);
+                    }
+                    // 2. Render the Gauge
+                    ui.put(
+                        offset_rectangle,
+                        Gauge::new(value)
+                            .size(size - margin * 2.0)
+                            .range(value_range)
+                            .stroke_width(5.0)
+                            .angle_range(-45i16..=225i16),
+                    );
+                });
+            },
+        );
+    }
+
+    fn show_plot_window(
+        &self, // Changed to &mut to allow updating visibility state
+        ctx: &egui::Context,
+        metric_data: &MetricData,
+    ) {
+        let window_name = metric_data.name.as_str();
+        let window_hash = format!("{}_plot", window_name);
+        let title = window_name.to_string();
+        let viewport_id = egui::ViewportId::from_hash_of(&window_hash);
+
+        ctx.show_viewport_immediate(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title(&title)
+                .with_inner_size([600.0, 400.0]),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // 1. Logic to handle the window's close button (Native X)
+                    if ui.input(|i| i.viewport().close_requested()) {
+                        // Logic to remove this window from your 'open_windows' set
+                        // self.open_windows.remove(&window_name);
+                    }
+
+                    // 2. Render the Plot
+                    let points = metric_data.points.clone();
+                    let plot_points: PlotPoints = PlotPoints::from(points);
+                    let line = Line::new(plot_points).name(&window_name);
+
+                    Plot::new(&window_name)
+                        .view_aspect(2.0)
+                        .show(ui, |plot_ui| {
+                            plot_ui.line(line);
+                        });
+                });
+            },
+        );
+    }
+
+    /*fn show_plot_window(
+        &self,
+        ctx: &egui::Context,
+        metric_data: &MetricData,
+        start_time: std::time::Instant,
+    ) {
+        let window_name = metric_data.name.clone();
+        let mut is_visible = true;
+
+        egui::Window::new(&window_name)
+            .open(&mut is_visible) // "X" button sets is_visible to false
+            .show(ctx, |ui| {
+                let points = metric_data.points.clone();
+                let plot_points: PlotPoints = PlotPoints::from(points);
+                let line = Line::new(window_name.clone(), plot_points).name(&window_name);
+                Plot::new(&window_name)
+                    .view_aspect(2.0)
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(line);
+                    });
+            });
+    }*/
 
     fn toggle_sort(&mut self, col: SortColumn) {
         if self.sort_col == col {
@@ -264,7 +477,7 @@ impl UdpMonitorApp {
 
 struct GuiHandler {
     cache: Arc<DashMap<String, Record>>,
-    graph_data: Arc<DashMap<String, Vec<[f64; 2]>>>,
+    graph_data: Arc<DashMap<String, MetricData>>,
     start_time: std::time::Instant,
 }
 
@@ -324,13 +537,18 @@ impl UdpMessageHandler for GuiHandler {
 
                 self.graph_data
                     .entry(key)
-                    .or_insert_with(Vec::new)
+                    .or_insert_with(|| MetricData {
+                        name: key_clone.clone(),
+                        start_time: self.start_time,
+                        points: Vec::new(),
+                    })
+                    .points
                     .push([now, num]);
 
                 // Optional: Limit history to last 200 points to save memory
                 let mut entry = self.graph_data.get_mut(&key_clone).unwrap();
-                if entry.len() > 200 {
-                    entry.remove(0);
+                if entry.points.len() > 1000 {
+                    entry.points.remove(0);
                 }
             }
         }
@@ -350,7 +568,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .unwrap();
     n.add_subscription(SysEvent::MSG_TYPE).await;
-    n.add_subscription(WifiEvent::MSG_TYPE) .await;
+    n.add_subscription(WifiEvent::MSG_TYPE).await;
     n.add_subscription(HoverboardEvent::MSG_TYPE).await;
     n.add_generic_handler(GuiHandler {
         cache: cache.clone(),
@@ -361,7 +579,12 @@ async fn main() -> anyhow::Result<()> {
     let node = n.clone();
     let endpoints = node.get_endpoints().await;
 
-    let options = eframe::NativeOptions::default();
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([800.0, 600.0])
+            .with_position([100.0, 100.0]),
+        ..Default::default()
+    };
     let r = eframe::run_native(
         "Limeros UDP Monitor",
         options,

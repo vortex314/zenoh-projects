@@ -15,7 +15,7 @@ path = "src/bin/client.rs"
 tokio = { version = "1.49.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_cbor = "0.11"
-serde_json = "1.0.148"
+serde_json = "1.0.149"
 anyhow = "1.0"
 socket2 = { version = "0.6.1", features = ["all"] }
 dashmap = "6.1.0"
@@ -32,6 +32,7 @@ futures ="*"
 wry="*"
 winit="*"
 gtk="*"
-eframe="*"
-egui_extras="*"
-egui_plot="*"
+egui_extras={version ="0.31.1"}
+egui_plot={ version="0.31.0"}
+ehmi ={ version="0.31.1"}
+eframe = { version = "0.31.1", features = ["accesskit", "glow"] }
