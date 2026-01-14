@@ -29,7 +29,7 @@ pub struct TypedUdpMessage<T> where T: TypedMessage {
 }
 
 impl<T> TypedUdpMessage<T> where T: TypedMessage+Msg {
-    pub fn from_generic(udp_message: UdpMessage) -> Result<Self> {
+    pub fn from(udp_message: UdpMessage) -> Result<Self> {
         if T::MSG_TYPE != udp_message.msg_type.as_deref().unwrap_or("") {
             return Err(anyhow::anyhow!("Message type mismatch"));
         }

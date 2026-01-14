@@ -1,0 +1,226 @@
+use dashmap::DashMap;
+use eframe::egui::{self, Slider};
+use egui::Widget;
+use egui_plot::{Line, Plot, PlotPoints};
+use ehmi::{Bar, Gauge, ToggleStyle, ToggleSwitch};
+use gtk::{atk::Range, gdk::keys::constants::w};
+use limeros::{
+    logger,
+    msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent},
+    Endpoint, TypedUdpMessage, UdpMessage, UdpMessageHandler, UdpNode,
+};
+use log::info;
+use socket2::Socket;
+use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
+use std::{sync::Arc, time::Instant};
+
+mod my_window;
+use my_window::MyWindow;
+mod window_endpoints;
+mod window_events;
+use window_endpoints::WindowEndpoints;
+use window_events::WindowEvents;
+mod window_hoverboard;
+mod window_plot;
+use window_hoverboard::HoverboardWindow;
+
+// --- 1. Data Structures ---
+ struct MetricData {
+    name: String,
+    points: Vec<[f64; 2]>,
+    start_time: std::time::Instant,
+}
+
+// --- 1. Shared Data Structure ---
+
+#[derive(Clone)]
+struct Record {
+    pub timestamp: SystemTime,
+    pub src: String,
+    pub msg_type: String,
+    pub field_name: String,
+    pub value: String,
+}
+
+
+// --- 2. The egui Application State ---
+
+struct UdpMonitorApp {
+    cache: Arc<DashMap<String, Record>>,
+    node: Arc<UdpNode>,
+
+    graph_data: Arc<DashMap<String, MetricData>>,
+    selected_fields: HashSet<String>,
+    window_hoverboard: HoverboardWindow,
+    window_events: window_events::WindowEvents,
+    window_endpoints: window_endpoints::WindowEndpoints,
+}
+
+impl UdpMonitorApp {
+    fn new(
+        cc: &eframe::CreationContext<'_>,
+        node: Arc<UdpNode>,
+        cache: Arc<DashMap<String, Record>>,
+        endpoints: Arc<DashMap<String, Endpoint>>,
+        graph_data: Arc<DashMap<String, MetricData>>,
+    ) -> Self {
+        let node = node.clone();
+        let cache = cache.clone();
+        let endpoints = endpoints.clone();
+        let graph_data = graph_data.clone();
+        Self {
+            node: node.clone(),
+            cache: cache.clone(),
+            window_events: WindowEvents::new(cache.clone()),
+            window_endpoints: WindowEndpoints::new(node.clone(), endpoints.clone()),
+            graph_data: graph_data.clone(),
+            selected_fields: HashSet::new(),
+            window_hoverboard: HoverboardWindow::default(),
+        }
+    }
+}
+
+// --- 3. UI Rendering Logic ---
+
+impl eframe::App for UdpMonitorApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            self.window_endpoints.show(ui);
+            self.window_events.show (ui);
+            self.window_hoverboard.show(ui);
+        });
+
+        // Continuous refresh to see live UDP updates
+        ctx.request_repaint_after(std::time::Duration::from_millis(100));
+    }
+
+    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+        // Implement if you want to save app state
+    }
+}
+
+impl UdpMonitorApp {}
+
+// --- 4. Main Entry Point ---
+
+struct GuiHandler {
+    cache: Arc<DashMap<String, Record>>,
+    graph_data: Arc<DashMap<String, MetricData>>,
+    start_time: std::time::Instant,
+}
+
+#[async_trait::async_trait]
+impl UdpMessageHandler for GuiHandler {
+    async fn handle(&self, udp_message: &UdpMessage) -> anyhow::Result<()> {
+        // Parse the payload (assuming JSON as per your UdpNode implementation)
+        let fields = if let Some(payload) = &udp_message.payload {
+            let v: serde_json::Value = serde_json::from_slice(payload).unwrap_or_default();
+            if let serde_json::Value::Object(map) = v {
+                map.into_iter().map(|(k, v)| (k, v.to_string())).collect()
+            } else {
+                vec![(
+                    "raw".to_string(),
+                    String::from_utf8_lossy(payload).into_owned(),
+                )]
+            }
+        } else {
+            vec![]
+        };
+
+        for (field_name, value) in &fields {
+            let key = format!(
+                "{}:{}:{}",
+                udp_message.src.clone().unwrap_or_default(),
+                udp_message.msg_type.clone().unwrap_or_default(),
+                field_name
+            );
+            let record = Record {
+                timestamp: SystemTime::now(),
+                src: udp_message.src.clone().unwrap_or_default(),
+                msg_type: udp_message.msg_type.clone().unwrap_or_default(),
+                field_name: field_name.clone(),
+                value: value.clone(),
+            };
+            self.cache
+                .entry(key)
+                .and_modify(|e| {
+                    *e = record.clone();
+                })
+                .or_insert(record);
+        }
+        let now = std::time::Instant::now()
+            .duration_since(self.start_time)
+            .as_secs_f64();
+
+        for (field_name, value) in &fields {
+            // Try to parse value as a number for graphing
+            if let Ok(num) = value.parse::<f64>() {
+                let key = format!(
+                    "{}:{}:{}",
+                    udp_message.src.as_deref().unwrap_or("?"),
+                    udp_message.msg_type.as_deref().unwrap_or("?"),
+                    field_name
+                );
+                let key_clone = key.clone();
+
+                self.graph_data
+                    .entry(key)
+                    .or_insert_with(|| MetricData {
+                        name: key_clone.clone(),
+                        start_time: self.start_time,
+                        points: Vec::new(),
+                    })
+                    .points
+                    .push([now, num]);
+
+                // Optional: Limit history to last 200 points to save memory
+                let mut entry = self.graph_data.get_mut(&key_clone).unwrap();
+                if entry.points.len() > 1000 {
+                    entry.points.remove(0);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    logger::init();
+
+    let cache = Arc::new(DashMap::new());
+    let graph_data = Arc::new(DashMap::new());
+
+    // Initialize Node and Handler inside the runtime
+    let n = UdpNode::new("egui-monitor", "239.0.0.1:50000")
+        .await
+        .unwrap();
+    n.add_subscription(SysEvent::MSG_TYPE).await;
+    n.add_subscription(WifiEvent::MSG_TYPE).await;
+    n.add_subscription(HoverboardEvent::MSG_TYPE).await;
+    n.add_generic_handler(GuiHandler {
+        cache: cache.clone(),
+        graph_data: graph_data.clone(),
+        start_time: std::time::Instant::now(),
+    })
+    .await;
+    let node = n.clone();
+    let endpoints = node.get_endpoints().await;
+
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([1024.0, 768.0]), //            .with_position([100.0, 100.0])
+        ..Default::default()
+    };
+    let r = eframe::run_native(
+        "Limeros UDP Monitor",
+        options,
+        Box::new(|cc| {
+            Ok(Box::new(UdpMonitorApp::new(
+                cc, node, cache, endpoints, graph_data,
+            )))
+        }),
+    );
+    info!("UDP Monitor GUI Ended {:?}", r);
+
+    Ok(())
+}

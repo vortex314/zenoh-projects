@@ -34,11 +34,11 @@ impl UdpMessageHandler for Handler {
     async fn handle(& self, udp_message: & UdpMessage) -> anyhow::Result<()> {
         match udp_message.msg_type.as_deref() {
             Some(SysEvent::MSG_TYPE) => {
-                let typed_msg = TypedUdpMessage::<SysEvent>::from_generic(udp_message.clone())?;
+                let typed_msg = TypedUdpMessage::<SysEvent>::from(udp_message.clone())?;
                 info!("Generic Handler received SysEvent: {:?} ", typed_msg);
             },
             Some(PingRep::MSG_TYPE) => {
-                let typed_msg = TypedUdpMessage::<PingRep>::from_generic(udp_message.clone())?;
+                let typed_msg = TypedUdpMessage::<PingRep>::from(udp_message.clone())?;
                 info!("Generic Handler received PingRep: {:?} ", typed_msg);
                 self.node.send_msg_to(
                     typed_msg.src.as_deref().unwrap_or("unknown"),

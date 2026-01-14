@@ -1,0 +1,262 @@
+ fn render_graph_windows(&self, ui: &mut egui::Ui) {
+        // Render open graph windows
+        self.widget_windows.iter().for_each(|entry| {
+            let widget_type = entry.key();
+            let keys: Vec<String> = entry.value().iter().cloned().collect();
+            for key in keys {
+                if let Some(metric_data) = self.graph_data.get(&key) {
+                    match widget_type.as_str() {
+                        "plot" => self.show_plot_window(ui.ctx(), metric_data.value()),
+                        "gauge" => {
+                            let value = self.cache.get(&key);
+                            if let Some(record) = value {
+                                if let Ok(num) = record.value.parse::<f32>() {
+                                    self.show_ehmi_gauge(ui.ctx(), num, &metric_data);
+                                }
+                            }
+                        }
+                        "bar" => {
+                            let value = self.cache.get(&key);
+                            if let Some(record) = value {
+                                if let Ok(num) = record.value.parse::<f32>() {
+                                    self.show_ehmi_bar(ui.ctx(), num, &metric_data);
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        });
+    }
+
+    fn calculate_gauge_max_min(min: f64, max: f64) -> RangeInclusive<f64> {
+        let range = max - min;
+        let magnitude = 10f64.powf(range.log10().floor());
+        let nice_min = (min / magnitude).floor() * magnitude;
+        let nice_max = (max / magnitude).ceil() * magnitude;
+        nice_min..=nice_max
+    }
+
+     fn show_ehmi_gauge(&self, ctx: &egui::Context, value: f32, metric_data: &MetricData) {
+        let window_name = metric_data.name.as_str();
+        let title = window_name.to_string();
+        let window_hash = format!("{}_gauge", window_name);
+        let viewport_id = egui::ViewportId::from_hash_of(&window_hash);
+        let margin = 25.0;
+        let size = 400.0;
+        let offset_rectangle = egui::Rect::from_min_size(
+            egui::pos2(margin, margin),
+            egui::vec2(size - margin, size - margin),
+        );
+        let (min, mut max) =
+            metric_data
+                .points
+                .iter()
+                .fold((f64::MAX, f64::MIN), |(min, max), p| {
+                    let v = p[1] as f64;
+                    (min.min(v), max.max(v))
+                });
+        if min == max {
+            max += 1.0;
+        }
+        let value_range = Self::calculate_gauge_max_min(min, max);
+
+        ctx.show_viewport_immediate(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title(title)
+                .with_inner_size([size, size]),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+                let value_range = value_range.clone();
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // 1. Logic to handle the window's close button (Native X)
+                    if ui.input(|i| i.viewport().close_requested()) {
+                        // Logic to remove this window from your 'open_windows' set
+                        // self.open_windows.remove(&window_name);
+                    }
+                    // 2. Render the Gauge
+                    ui.put(
+                        offset_rectangle,
+                        Gauge::new(value)
+                            .size(size - margin * 2.0)
+                            .range(value_range)
+                            .stroke_width(5.0)
+                            .angle_range(-45i16..=225i16),
+                    );
+                });
+            },
+        );
+    }
+
+
+     fn toggle_sort(&mut self, col: SortColumn) {
+        if self.sort_col == col {
+            self.sort_desc = !self.sort_desc;
+        } else {
+            self.sort_col = col;
+            self.sort_desc = true;
+        }
+    }
+}
+
+   
+
+    fn show_ehmi_bar(&self, ctx: &egui::Context, value: f32, metric_data: &MetricData) {
+        let window_name = metric_data.name.as_str();
+        let title = window_name.to_string();
+        let window_hash = format!("{}_bar", window_name);
+        let viewport_id = egui::ViewportId::from_hash_of(&window_hash);
+        let margin = 25.0;
+        let hsize = 400.0;
+        let vsize = 100.0;
+        let offset_rectangle = egui::Rect::from_min_size(
+            egui::pos2(margin, margin),
+            egui::vec2(hsize - margin, vsize - margin),
+        );
+        let (min, mut max) =
+            metric_data
+                .points
+                .iter()
+                .fold((f32::MAX, f32::MIN), |(min, max), p| {
+                    let v = p[1] as f32;
+                    (min.min(v), max.max(v))
+                });
+        if min == max {
+            max += 1.0;
+        }
+        let value_range = Self::calculate_gauge_max_min(min as f64, max as f64);
+        let value_range = *value_range.start() as f32..=*value_range.end() as f32;
+
+        ctx.show_viewport_immediate(
+            viewport_id,
+            egui::ViewportBuilder::default()
+                .with_title(title)
+                .with_inner_size([hsize, vsize]),
+            |ctx, class| {
+                assert!(class == egui::ViewportClass::Immediate);
+                let value_range = value_range.clo fn window_events(&mut self, ui: &mut egui::Ui) {
+        egui::Window::new("Live Events")
+            .open(&mut true)
+            .resizable([true, true])
+            .constrain_to(ui.available_rect_before_wrap())
+            .show(ui.ctx(), |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    use egui_extras::{Column, TableBuilder};
+
+                    let mut records: Vec<Record> =
+                        self.cache.iter().map(|e| e.value().clone()).collect();
+
+                    // Sort logic
+                    records.sort_by(|a, b| {
+                        let ord = match self.sort_col {
+                            SortColumn::Time => a.timestamp.cmp(&b.timestamp),
+                            SortColumn::Source => a.src.cmp(&b.src),
+                            SortColumn::Type => a.msg_type.cmp(&b.msg_type),
+                            SortColumn::Field => a.field_name.cmp(&b.field_name),
+                        };
+                        if self.sort_desc {
+                            ord.reverse()
+                        } else {
+                            ord
+                        }
+                    });
+
+                    TableBuilder::new(ui)
+                        .striped(true)
+                        .column(Column::initial(80.0))
+                        .column(Column::initial(80.0))
+                        .column(Column::initial(80.0))
+                        .column(Column::initial(80.0))
+                        .column(Column::initial(80.0))
+                        .column(Column::initial(160.0))
+                        .header(20.0, |mut header| {
+                            header.col(|ui| {
+                                ui.label("Time");
+                            });
+                            header.col(|ui| {
+                                if ui.label("Source").clicked() {
+                                    self.toggle_sort(SortColumn::Source);
+                                }
+                            });
+                            header.col(|ui| {
+                                if ui.label("Type").clicked() {
+                                    self.toggle_sort(SortColumn::Type);
+                                }
+                            });
+                            header.col(|ui| {
+                                if ui.label("Field").clicked() {
+                                    self.toggle_sort(SortColumn::Field);
+                                }
+                            });
+                            header.col(|ui| {
+                                ui.label("Value");
+                            });
+                            header.col(|ui| {
+                                ui.label("Functions");
+                            });
+                        })
+                        .body(|body| {
+                            body.rows(20.0, records.len(), |mut row| {
+                                let r = &records[row.index()];
+                                let time_str = chrono::DateTime::<chrono::Local>::from(r.timestamp)
+                                    .format("%H:%M:%S")
+                                    .to_string();
+                                let key = format!("{}:{}:{}", r.src, r.msg_type, r.field_name);
+
+                                row.col(|ui| {
+                                    ui.label(time_str);
+                                });
+                                row.col(|ui| {
+                                    ui.label(&r.src);
+                                });
+                                row.col(|ui| {
+                                    ui.label(&r.msg_type);
+                                });
+                                row.col(|ui| {
+                                    ui.label(&r.field_name);
+                                });
+
+                                row.col(|ui| {
+                                    ui.horizontal(|ui| {
+                                        let mut selected =
+                                            self.selected_fields.contains(key.as_str());
+                                        if ui.checkbox(&mut selected, "").changed() {
+                                            if selected {
+                                                self.selected_fields.insert(key.clone());
+                                            } else {
+                                                self.selected_fields.remove(&key);
+                                            }
+                                        }
+
+                                        if ui.button("📈").clicked() {
+                                            // Could implement functionality to highlight/select this field for graphing
+                                            self.widget_windows
+                                                .entry("plot".to_string())
+                                                .or_default()
+                                                .insert(key.clone());
+                                        }ne();
+                let window_name = window_name.to_string();
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    // 1. Logic to handle the window's close button (Native X)
+                    if ui.input(|i| i.viewport().close_requested()) {
+                        // Logic to remove this window from your 'open_windows' set
+                        self.widget_windows
+                            .entry("bar".to_string())
+                            .or_default()
+                            .remove(&window_name);
+                    }
+                    // 2. Render the Gauge
+                    ui.put(
+                        offset_rectangle,
+                        ehmi::Bar::new(value)
+                            //   .bar_size(size - margin * 2.0)
+                            .range(value_range),
+                    );
+                });
+            },
+        );
+    }
