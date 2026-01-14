@@ -7,9 +7,9 @@ use limeros::{
 };
 use log::info;
 use socket2::Socket;
-use tokio::sync::Mutex;
 use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
-use std::{sync::{Arc}, time::Instant};
+use std::{sync::Arc, time::Instant};
+use tokio::sync::Mutex;
 
 mod my_window;
 use my_window::MyWindow;
@@ -17,15 +17,17 @@ mod window_endpoints;
 mod window_events;
 use window_endpoints::WindowEndpoints;
 use window_events::WindowEvents;
+mod window_gauge;
 mod window_hoverboard;
 mod window_plot;
-mod window_gauge;
 use window_hoverboard::HoverboardWindow;
 
 mod widget_alive;
+use rand::prelude::*;
+
 
 // --- 1. Data Structures ---
- struct MetricData {
+struct MetricData {
     name: String,
     points: Vec<[f64; 2]>,
     start_time: std::time::Instant,
@@ -42,7 +44,6 @@ struct Record {
     pub value: String,
 }
 
-
 // --- 2. The egui Application State ---
 
 struct UdpMonitorApp {
@@ -54,7 +55,7 @@ struct UdpMonitorApp {
     window_hoverboard: HoverboardWindow,
     window_events: window_events::WindowEvents,
     window_endpoints: window_endpoints::WindowEndpoints,
-    window_others : Arc<DashMap<String, Box<dyn MyWindow>>>,
+    window_others: Arc<DashMap<String, Box<dyn MyWindow>>>,
 }
 
 impl UdpMonitorApp {
@@ -69,16 +70,20 @@ impl UdpMonitorApp {
         let cache = cache.clone();
         let endpoints = endpoints.clone();
         let graph_data = graph_data.clone();
-        let window_others  = Arc::new(DashMap::new());
+        let window_others = Arc::new(DashMap::new());
         Self {
             node: node.clone(),
             cache: cache.clone(),
-            window_events: WindowEvents::new(cache.clone(),window_others.clone(), graph_data.clone()),
+            window_events: WindowEvents::new(
+                cache.clone(),
+                window_others.clone(),
+                graph_data.clone(),
+            ),
             window_endpoints: WindowEndpoints::new(node.clone(), endpoints.clone()),
             graph_data: graph_data.clone(),
             selected_fields: HashSet::new(),
             window_hoverboard: HoverboardWindow::default(),
-            window_others : window_others.clone(),
+            window_others: window_others.clone(),
         }
     }
 }
@@ -88,9 +93,15 @@ impl UdpMonitorApp {
 impl eframe::App for UdpMonitorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.window_endpoints.show(ui).expect("Failed to show Endpoints window");
-            self.window_events.show (ui).expect("Failed to show Events window");
-            self.window_hoverboard.show(ui).expect("Failed to show Hoverboard window");
+            self.window_endpoints
+                .show(ui)
+                .expect("Failed to show Endpoints window");
+            self.window_events
+                .show(ui)
+                .expect("Failed to show Events window");
+            self.window_hoverboard
+                .show(ui)
+                .expect("Failed to show Hoverboard window");
             for mut window in self.window_others.iter_mut() {
                 window.show(ui).expect("Failed to show other window");
                 if window.is_closed() {
@@ -193,6 +204,7 @@ impl UdpMessageHandler for GuiHandler {
     }
 }
 
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     logger::init();
@@ -200,8 +212,13 @@ async fn main() -> anyhow::Result<()> {
     let cache = Arc::new(DashMap::new());
     let graph_data = Arc::new(DashMap::new());
 
+    let mut rng = rand::rng();
+    let rand_u16: u16 = rng.gen();
+
+    let node_name = format!("egui-monitor-{}", rand_u16);
+
     // Initialize Node and Handler inside the runtime
-    let n = UdpNode::new("egui-monitor", "239.0.0.1:50000")
+    let n = UdpNode::new(node_name.as_str(), "239.0.0.1:50000")
         .await
         .unwrap();
     n.add_subscription(SysEvent::MSG_TYPE).await;
