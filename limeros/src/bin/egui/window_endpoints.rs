@@ -1,11 +1,11 @@
-use crate::my_window::MyWindow;
+use crate::my_window::{ MyWindow};
 use dashmap::DashMap;
 use eframe::egui;
 use limeros::{
-    Endpoint, UdpMessage, UdpMessageHandler, UdpNode,
+    Endpoint, UdpMessage, UdpNode,
 };
+use anyhow::Result;
 use log::info;
-use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
 use std::{sync::Arc, time::Instant};
 
 pub struct WindowEndpoints {
@@ -24,7 +24,7 @@ impl MyWindow for WindowEndpoints {
         "Endpoints"
     }
 
-    fn show(&mut self, ui: &mut egui::Ui) {
+    fn show(&mut self, ui: &mut egui::Ui) -> Result<()> {
         egui::Window::new("Endpoints")
             .open(&mut true)
             .resizable([true, true])
@@ -56,14 +56,12 @@ impl MyWindow for WindowEndpoints {
                         }
                     });
             });
+            Ok(())
     }
 
-    fn ui(&mut self, _ui: &mut egui::Ui) {
-        // No additional UI elements needed
+    fn is_closed(&self) -> bool {
+        false
     }
 
-    fn on_message(&mut self, udp_message: &UdpMessage) {
-        // No message handling needed for this window
-    }
 }
 

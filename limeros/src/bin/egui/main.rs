@@ -1,9 +1,5 @@
 use dashmap::DashMap;
-use eframe::egui::{self, Slider};
-use egui::Widget;
-use egui_plot::{Line, Plot, PlotPoints};
-use ehmi::{Bar, Gauge, ToggleStyle, ToggleSwitch};
-use gtk::{atk::Range, gdk::keys::constants::w};
+use eframe::egui::{self};
 use limeros::{
     logger,
     msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent},
@@ -11,8 +7,9 @@ use limeros::{
 };
 use log::info;
 use socket2::Socket;
+use tokio::sync::Mutex;
 use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
-use std::{sync::Arc, time::Instant};
+use std::{sync::{Arc}, time::Instant};
 
 mod my_window;
 use my_window::MyWindow;
@@ -22,7 +19,10 @@ use window_endpoints::WindowEndpoints;
 use window_events::WindowEvents;
 mod window_hoverboard;
 mod window_plot;
+mod window_gauge;
 use window_hoverboard::HoverboardWindow;
+
+mod widget_alive;
 
 // --- 1. Data Structures ---
  struct MetricData {
@@ -54,6 +54,7 @@ struct UdpMonitorApp {
     window_hoverboard: HoverboardWindow,
     window_events: window_events::WindowEvents,
     window_endpoints: window_endpoints::WindowEndpoints,
+    window_others : Arc<DashMap<String, Box<dyn MyWindow>>>,
 }
 
 impl UdpMonitorApp {
@@ -68,14 +69,16 @@ impl UdpMonitorApp {
         let cache = cache.clone();
         let endpoints = endpoints.clone();
         let graph_data = graph_data.clone();
+        let window_others  = Arc::new(DashMap::new());
         Self {
             node: node.clone(),
             cache: cache.clone(),
-            window_events: WindowEvents::new(cache.clone()),
+            window_events: WindowEvents::new(cache.clone(),window_others.clone(), graph_data.clone()),
             window_endpoints: WindowEndpoints::new(node.clone(), endpoints.clone()),
             graph_data: graph_data.clone(),
             selected_fields: HashSet::new(),
             window_hoverboard: HoverboardWindow::default(),
+            window_others : window_others.clone(),
         }
     }
 }
@@ -85,9 +88,15 @@ impl UdpMonitorApp {
 impl eframe::App for UdpMonitorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.window_endpoints.show(ui);
-            self.window_events.show (ui);
-            self.window_hoverboard.show(ui);
+            self.window_endpoints.show(ui).expect("Failed to show Endpoints window");
+            self.window_events.show (ui).expect("Failed to show Events window");
+            self.window_hoverboard.show(ui).expect("Failed to show Hoverboard window");
+            for mut window in self.window_others.iter_mut() {
+                window.show(ui).expect("Failed to show other window");
+                if window.is_closed() {
+                    self.window_others.remove(window.key());
+                }
+            }
         });
 
         // Continuous refresh to see live UDP updates

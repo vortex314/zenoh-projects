@@ -1,10 +1,12 @@
 use std::{collections::HashSet, sync::Arc};
 
+use anyhow::Result;
 use dashmap::DashMap;
 use eframe::egui;
 use limeros::UdpMessage;
+use tokio::sync::Mutex;
 
-use crate::{Record, my_window::MyWindow};
+use crate::{Record, my_window::{ MyWindow}};
 
 #[derive(PartialEq, Clone, Copy)]
 enum SortColumn {
@@ -19,19 +21,25 @@ pub struct WindowEvents {
     sort_col: SortColumn,
     sort_desc: bool,
     selected_fields: HashSet<String>,
-    widget_windows: DashMap<String, HashSet<String>>,
+    window_others: Arc<DashMap<String, Box<dyn MyWindow>>>,
+    graph_data: Arc<DashMap<String, crate::MetricData>>,
 }
 
 impl WindowEvents {
-    pub fn new(cache: Arc<DashMap<String, Record>>) -> Self {
+    pub fn new(
+        cache: Arc<DashMap<String, Record>>,
+        window_others: Arc<DashMap<String, Box<dyn MyWindow>>>,
+        graph_data: Arc<DashMap<String, crate::MetricData>>,
+    ) -> Self {
         Self {
             cache,
-            sort_col: SortColumn::Time,
+            sort_col: SortColumn::Field,
             sort_desc: true,
             selected_fields: HashSet::new(),
-            widget_windows: DashMap::new(),
+            window_others,
+            graph_data,
         }
-    }       
+    }
     fn toggle_sort(&mut self, col: SortColumn) {
         if self.sort_col == col {
             self.sort_desc = !self.sort_desc;
@@ -40,7 +48,6 @@ impl WindowEvents {
             self.sort_desc = false;
         }
     }
-
 
     fn render_events(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
@@ -127,23 +134,43 @@ impl WindowEvents {
                                     } else {
                                         self.selected_fields.remove(&key);
                                     }
-                                    }
-                                
+                                }
+
                                 if ui.button("📈").clicked() {
                                     // Could implement functionality to highlight/select this field for graphing
-                                    self.widget_windows.entry("plot".to_string()).or_default().insert(key.clone());
+                                    let mut keys = Vec::new();
+
+                                    if self.selected_fields.len() == 0 {
+                                        keys.push(key.clone());
+                                    } else {
+                                        for k in &self.selected_fields {
+                                            keys.push(k.clone());
+                                        }
+                                    }
+                                    let window_key = format!("{}_plot", key);
+                                    if !self.window_others.contains_key(&window_key) {
+                                        self.window_others.insert(
+                                            window_key.clone(),
+                                            Box::new(crate::window_plot::WindowPlot::new(
+                                                keys,
+                                                self.graph_data.clone(),
+                                            )),
+                                        );
+                                    }
                                 }
                                 if ui.button("⭕").clicked() {
-                                    self.widget_windows.entry("gauge".to_string()).or_default().insert(key.clone());
+                                    let window_key = format!("{}_gauge", key);
+                                    if !self.window_others.contains_key(&window_key) {
+                                        self.window_others.insert(
+                                            key.clone(),
+                                            Box::new(crate::window_gauge::WindowGauge::new(
+                                                key.clone(),
+                                                self.cache.clone(),
+                                            )),
+                                        );
+                                    }
                                 }
-                                if ui.button("|").clicked() {
-                                    self.widget_windows.entry("bar".to_string()).or_default().insert(key.clone());
-                                }
-                                if ui.button("❌").clicked() {
-                                    self.widget_windows.entry("plot".to_string()).or_default().remove(&key);
-                                    self.widget_windows.entry("gauge".to_string()).or_default().remove(&key);
-                                    self.widget_windows.entry("bar".to_string()).or_default().remove(&key);
-                                }
+                                if ui.button("|").clicked() {}
                             });
                         });
                         row.col(|ui| {
@@ -153,14 +180,14 @@ impl WindowEvents {
                 });
         });
     }
-}   
+}
 
 impl MyWindow for WindowEvents {
     fn name(&self) -> &'static str {
         "Events"
     }
 
-    fn show(&mut self, ui: &mut egui::Ui) {
+    fn show(&mut self, ui: &mut egui::Ui) -> Result<()> {
         egui::Window::new("Events")
             .open(&mut true)
             .resizable([true, true])
@@ -168,13 +195,9 @@ impl MyWindow for WindowEvents {
             .show(ui.ctx(), |ui| {
                 self.render_events(ui);
             });
+        Ok(())
     }
-
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        self.render_events(ui);
-    }
-
-    fn on_message(&mut self, _udp_message: &UdpMessage) {
-        // No message handling needed for this window
+    fn is_closed(&self) -> bool {
+        false
     }
 }

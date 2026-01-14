@@ -1,8 +1,8 @@
 use eframe::egui;
-use limeros::UdpMessage;
+use anyhow::Result;
+
 pub trait MyWindow {
      fn name(&self) -> &'static str;
-     fn show(&mut self, ui: &mut egui::Ui);
-     fn ui(&mut self, ui: &mut egui::Ui);
-     fn on_message(&mut self, udp_message: &UdpMessage);
+     fn show(&mut self, ui: &mut egui::Ui)-> Result<()>;
+     fn is_closed(&self) -> bool;
 }

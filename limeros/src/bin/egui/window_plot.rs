@@ -1,13 +1,31 @@
+use std::sync::Arc;
+use anyhow::Result;
+
+use dashmap::DashMap;
 use eframe::egui;
 use egui_plot::{Line, Plot, PlotPoints};
 
 use crate::my_window::MyWindow;
 
-use crate::{MetricData, Record};
+use crate::MetricData;
 
-struct WindowPlot {
+pub(crate) struct WindowPlot {
+    keys: Vec<String>,
+    graph_data: Arc<DashMap<String, MetricData>>,
     window_name: String,
-    metric_data: MetricData,
+    open: bool,
+}
+
+impl WindowPlot {
+    pub fn new(keys: Vec<String>, graph_data: Arc<DashMap<String, MetricData>>) -> Self {
+        let window_name = keys.iter().cloned().collect::<Vec<String>>().join(", ");
+        Self {
+            keys,
+            graph_data,
+            window_name,
+            open: true,
+        }
+    }
 }
 
 impl MyWindow for WindowPlot {
@@ -15,29 +33,37 @@ impl MyWindow for WindowPlot {
         "Plot Window"
     }
 
-    fn on_message(&mut self, udp_message: &limeros::UdpMessage) {
-        // Handle incoming UDP messages to update plot data
+    fn is_closed(&self) -> bool {
+        !self.open
     }
 
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("This is a placeholder for the Plot Window UI.");
-    }
+    fn show(&mut self, ui: &mut egui::Ui) -> Result<()> {
+        let mut lines = Vec::new();
+        for key in &self.keys {
+            let metric_data = self.graph_data.get(key);
+            if metric_data.is_none() {
+                ui.label(format!("No data available for metric key: {}", key));
+                return Ok(());
+            }
+            let points = &metric_data.unwrap().points;
+            let plot_points: PlotPoints = PlotPoints::from(points.clone());
+            let line = Line::new(plot_points).name(key);
+            lines.push(line);
+        }
 
-    fn show(&mut self, ui: &mut egui::Ui) {
-        egui::Window::new(self.name())
-            .open(&mut true)
+        egui::Window::new(self.window_name.clone())
+            .open(&mut self.open)
             .resizable([true, true])
             .default_size([600.0, 400.0])
             .show(ui.ctx(), |ui| {
-                let points = self.metric_data.points.clone();
-                let plot_points: PlotPoints = PlotPoints::from(points);
-                let line = Line::new(plot_points).name(&self.window_name);
-
                 Plot::new(&self.window_name)
                     .view_aspect(2.0)
                     .show(ui, |plot_ui| {
-                        plot_ui.line(line);
+                        for line in lines {
+                            plot_ui.line(line);
+                        }
                     });
             });
+        Ok(())
     }
 }

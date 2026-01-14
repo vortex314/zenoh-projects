@@ -1,25 +1,21 @@
-use dashmap::DashMap;
+use std::time::Instant;
+
+use anyhow::Result;
 use eframe::egui::{self, Slider};
-use egui::Widget;
-use egui_plot::{Line, Plot, PlotPoints};
-use ehmi::{Bar, Gauge, ToggleStyle, ToggleSwitch};
-use gtk::{atk::Range, gdk::keys::constants::w};
-use limeros::{
-    logger,
-    msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent},
-    Endpoint, TypedUdpMessage, UdpMessage, UdpMessageHandler, UdpNode,
-};
+use ehmi::{Bar, Gauge};
+use limeros::msgs::{HoverboardCmd, HoverboardEvent};
 use log::info;
-use socket2::Socket;
-use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
-use std::{sync::Arc, time::Instant};
 
-use crate::my_window::MyWindow;
+const MAX_UPDATE_INTERVAL_MS: u128 = 10000;
 
-    pub struct HoverboardWindow {
+use crate::{my_window::MyWindow, widget_alive::WidgetAlive};
+
+pub struct HoverboardWindow {
     open: bool,
+    enabled: bool,
     speed: f32,
     steer: f32,
+    last_update: Instant,
     last_event: Option<HoverboardEvent>,
     speed_left: f32,
     speed_right: f32,
@@ -32,8 +28,10 @@ impl Default for HoverboardWindow {
     fn default() -> Self {
         Self {
             open: true,
+            enabled: true,
             speed: 0.0,
             steer: 0.0,
+            last_update: Instant::now(),
             last_event: None,
             speed_left: 0.0,
             speed_right: 0.0,
@@ -43,26 +41,12 @@ impl Default for HoverboardWindow {
         }
     }
 }
-
-impl MyWindow for HoverboardWindow {
-    fn name(&self) -> &'static str {
-        "Hoverboard Control"
-    }
-
-    fn show(&mut self, ui: &mut egui::Ui) {
-        let mut open = self.open;
-        egui::Window::new(self.name())
-            .open(&mut open)
-            .resizable([true, true])
-            .default_size([200.0, 200.0])
-            .show(ui.ctx(), |ui| {
-                self.ui(ui);
-                ui.allocate_space(ui.available_size());
-            });
-        self.open = open;
-    }
-
+impl HoverboardWindow {
     fn ui(&mut self, ui: &mut egui::Ui) {
+        self.enabled = Instant::now().duration_since(self.last_update).as_millis()
+            < MAX_UPDATE_INTERVAL_MS as u128;
+        let alive_widget = WidgetAlive::new(self.enabled);
+        ui.add(alive_widget);
         ui.horizontal(|ui| {
             ui.spacing_mut().slider_width = 400.0;
             ui.add(
@@ -79,25 +63,28 @@ impl MyWindow for HoverboardWindow {
                     .step_by(1.0),
             );
         });
-        ui.horizontal(|ui| {
-            let text = format!("Left Wheel: \n{:.1} RPM", self.speed_left);
-            ui.add(
-                Gauge::new(self.speed_left)
-                    .size(200.0)
-                    .text(&text)
-                    .range(-400f64..=400f64)
-                    .stroke_width(5.0)
-                    .angle_range(-45i16..=225i16),
-            );
-            let text = format!("Right Wheel: \n{:.1} RPM", self.speed_right);
-            ui.add(
-                Gauge::new(self.speed_right)
-                    .size(200.0)
-                    .text(&text)
-                    .range(-400f64..=400f64)
-                    .stroke_width(5.0)
-                    .angle_range(-45i16..=225i16),
-            );
+        ui.vertical_centered(|ui| {
+            ui.horizontal(|ui| {
+                let text = format!("Left Wheel: \n{:.1} RPM", self.speed_left);
+                ui.add(
+                    Gauge::new(self.speed_left)
+                        .size(200.0)
+                        .text(&text)
+                        .range(-400f64..=400f64)
+                        .stroke_width(0.0)
+                        .angle_range(-45i16..=225i16),
+                );
+                ui.add(egui::Label::new("    "));
+                let text = format!("Right Wheel: \n{:.1} RPM", self.speed_right);
+                ui.add(
+                    Gauge::new(self.speed_right)
+                        .size(200.0)
+                        .text(&text)
+                        .range(-400f64..=400f64)
+                        .stroke_width(0.0)
+                        .angle_range(-45i16..=225i16),
+                );
+            });
         });
 
         ui.vertical(|ui| {
@@ -130,13 +117,28 @@ impl MyWindow for HoverboardWindow {
             ..Default::default()
         };
     }
+}
 
-    fn on_message(&mut self, udp_message: &UdpMessage) {
-        TypedUdpMessage::<HoverboardEvent>::from(udp_message.clone())
-            .map(|msg| {
-                info!("Received Hoverboard Event: {:?}", msg);
-            })
-            .ok();
-        // Handle incoming messages if needed
+impl MyWindow for HoverboardWindow {
+    fn name(&self) -> &'static str {
+        "Hoverboard Control"
+    }
+
+    fn show(&mut self, ui: &mut egui::Ui) -> Result<()> {
+        let mut open = self.open;
+        egui::Window::new(self.name())
+            .open(&mut open)
+            .resizable([true, true])
+            .default_size([200.0, 200.0])
+            .show(ui.ctx(), |ui| {
+                self.ui(ui);
+                ui.allocate_space(ui.available_size());
+            });
+        self.open = open;
+        Ok(())
+    }
+
+    fn is_closed(&self) -> bool {
+        !self.open
     }
 }
