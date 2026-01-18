@@ -300,11 +300,11 @@ class PingRep : public Msg {
     static Result<PingRep*> cbor_deserialize(const Bytes&);
 };
 
-class HoverboardEvent : public Msg {
-    MSG(HoverboardEvent);
+class HoverboardEventRaw : public Msg {
+    MSG(HoverboardEventRaw);
     public:
-    std::optional<CtrlMod> ctrl_mod;
-    std::optional<CtrlTyp> ctrl_typ;
+    std::optional<int32_t> ctrl_mod;
+    std::optional<int32_t> ctrl_typ;
     std::optional<int32_t> cur_mot_max;
     std::optional<int32_t> rpm_mot_max;
     std::optional<int32_t> fi_weak_ena;
@@ -313,25 +313,25 @@ class HoverboardEvent : public Msg {
     std::optional<int32_t> fi_weak_max;
     std::optional<int32_t> phase_adv_max_deg;
     std::optional<int32_t> input1_raw;
-    std::optional<InTyp> input1_typ;
+    std::optional<int32_t> input1_typ;
     std::optional<int32_t> input1_min;
     std::optional<int32_t> input1_mid;
     std::optional<int32_t> input1_max;
     std::optional<int32_t> input1_cmd;
     std::optional<int32_t> input2_raw;
-    std::optional<InTyp> input2_typ;
+    std::optional<int32_t> input2_typ;
     std::optional<int32_t> input2_min;
     std::optional<int32_t> input2_mid;
     std::optional<int32_t> input2_max;
     std::optional<int32_t> input2_cmd;
     std::optional<int32_t> aux_input1_raw;
-    std::optional<InTyp> aux_input1_typ;
+    std::optional<int32_t> aux_input1_typ;
     std::optional<int32_t> aux_input1_min;
     std::optional<int32_t> aux_input1_mid;
     std::optional<int32_t> aux_input1_max;
     std::optional<int32_t> aux_input1_cmd;
     std::optional<int32_t> aux_input2_raw;
-    std::optional<InTyp> aux_input2_typ;
+    std::optional<int32_t> aux_input2_typ;
     std::optional<int32_t> aux_input2_min;
     std::optional<int32_t> aux_input2_mid;
     std::optional<int32_t> aux_input2_max;
@@ -349,6 +349,111 @@ class HoverboardEvent : public Msg {
     std::optional<int32_t> str_coef;
     std::optional<int32_t> batv;
     std::optional<int32_t> temp;
+    
+    // Field indexes
+        typedef enum {
+        CTRL_MOD_INDEX = 0,
+        CTRL_TYP_INDEX = 1,
+        CUR_MOT_MAX_INDEX = 2,
+        RPM_MOT_MAX_INDEX = 3,
+        FI_WEAK_ENA_INDEX = 4,
+        FI_WEAK_HI_INDEX = 5,
+        FI_WEAK_LO_INDEX = 6,
+        FI_WEAK_MAX_INDEX = 7,
+        PHASE_ADV_MAX_DEG_INDEX = 8,
+        INPUT1_RAW_INDEX = 9,
+        INPUT1_TYP_INDEX = 10,
+        INPUT1_MIN_INDEX = 11,
+        INPUT1_MID_INDEX = 12,
+        INPUT1_MAX_INDEX = 13,
+        INPUT1_CMD_INDEX = 14,
+        INPUT2_RAW_INDEX = 15,
+        INPUT2_TYP_INDEX = 16,
+        INPUT2_MIN_INDEX = 17,
+        INPUT2_MID_INDEX = 18,
+        INPUT2_MAX_INDEX = 19,
+        INPUT2_CMD_INDEX = 20,
+        AUX_INPUT1_RAW_INDEX = 21,
+        AUX_INPUT1_TYP_INDEX = 22,
+        AUX_INPUT1_MIN_INDEX = 23,
+        AUX_INPUT1_MID_INDEX = 24,
+        AUX_INPUT1_MAX_INDEX = 25,
+        AUX_INPUT1_CMD_INDEX = 26,
+        AUX_INPUT2_RAW_INDEX = 27,
+        AUX_INPUT2_TYP_INDEX = 28,
+        AUX_INPUT2_MIN_INDEX = 29,
+        AUX_INPUT2_MID_INDEX = 30,
+        AUX_INPUT2_MAX_INDEX = 31,
+        AUX_INPUT2_CMD_INDEX = 32,
+        DC_CURR_INDEX = 33,
+        RDC_CURR_INDEX = 34,
+        LDC_CURR_INDEX = 35,
+        CMDL_INDEX = 36,
+        CMDR_INDEX = 37,
+        SPD_AVG_INDEX = 38,
+        SPDL_INDEX = 39,
+        SPDR_INDEX = 40,
+        FILTER_RATE_INDEX = 41,
+        SPD_COEF_INDEX = 42,
+        STR_COEF_INDEX = 43,
+        BATV_INDEX = 44,
+        TEMP_INDEX = 45,
+    } Field;
+    static Result<Bytes> json_serialize(const HoverboardEventRaw&);
+    static Result<HoverboardEventRaw*> json_deserialize(const Bytes&);
+    static Result<Bytes> cbor_serialize(const HoverboardEventRaw&);
+    static Result<HoverboardEventRaw*> cbor_deserialize(const Bytes&);
+};
+
+class HoverboardEvent : public Msg {
+    MSG(HoverboardEvent);
+    public:
+    std::optional<int32_t> ctrl_mod;
+    std::optional<int32_t> ctrl_typ;
+    std::optional<int32_t> cur_mot_max;
+    std::optional<int32_t> rpm_mot_max;
+    std::optional<int32_t> fi_weak_ena;
+    std::optional<int32_t> fi_weak_hi;
+    std::optional<int32_t> fi_weak_lo;
+    std::optional<int32_t> fi_weak_max;
+    std::optional<int32_t> phase_adv_max_deg;
+    std::optional<int32_t> input1_raw;
+    std::optional<int32_t> input1_typ;
+    std::optional<int32_t> input1_min;
+    std::optional<int32_t> input1_mid;
+    std::optional<int32_t> input1_max;
+    std::optional<int32_t> input1_cmd;
+    std::optional<int32_t> input2_raw;
+    std::optional<int32_t> input2_typ;
+    std::optional<int32_t> input2_min;
+    std::optional<int32_t> input2_mid;
+    std::optional<int32_t> input2_max;
+    std::optional<int32_t> input2_cmd;
+    std::optional<int32_t> aux_input1_raw;
+    std::optional<int32_t> aux_input1_typ;
+    std::optional<int32_t> aux_input1_min;
+    std::optional<int32_t> aux_input1_mid;
+    std::optional<int32_t> aux_input1_max;
+    std::optional<int32_t> aux_input1_cmd;
+    std::optional<int32_t> aux_input2_raw;
+    std::optional<int32_t> aux_input2_typ;
+    std::optional<int32_t> aux_input2_min;
+    std::optional<int32_t> aux_input2_mid;
+    std::optional<int32_t> aux_input2_max;
+    std::optional<int32_t> aux_input2_cmd;
+    std::optional<float> dc_curr;
+    std::optional<float> rdc_curr;
+    std::optional<float> ldc_curr;
+    std::optional<int32_t> cmdl;
+    std::optional<int32_t> cmdr;
+    std::optional<int32_t> spd_avg;
+    std::optional<int32_t> spdl;
+    std::optional<int32_t> spdr;
+    std::optional<int32_t> filter_rate;
+    std::optional<int32_t> spd_coef;
+    std::optional<int32_t> str_coef;
+    std::optional<float> batv;
+    std::optional<float> temp;
     
     // Field indexes
         typedef enum {

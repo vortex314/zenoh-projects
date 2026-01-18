@@ -414,6 +414,164 @@ Result<Bytes> PingRep::json_serialize(const PingRep& msg)  {
     }
 
 
+Result<Bytes> HoverboardEventRaw::json_serialize(const HoverboardEventRaw& msg)  {
+        JsonDocument doc;
+        doc.to<JsonObject>();
+        if (msg.ctrl_mod)doc["ctrl_mod"] = *msg.ctrl_mod;
+        if (msg.ctrl_typ)doc["ctrl_typ"] = *msg.ctrl_typ;
+        if (msg.cur_mot_max)doc["cur_mot_max"] = *msg.cur_mot_max;
+        if (msg.rpm_mot_max)doc["rpm_mot_max"] = *msg.rpm_mot_max;
+        if (msg.fi_weak_ena)doc["fi_weak_ena"] = *msg.fi_weak_ena;
+        if (msg.fi_weak_hi)doc["fi_weak_hi"] = *msg.fi_weak_hi;
+        if (msg.fi_weak_lo)doc["fi_weak_lo"] = *msg.fi_weak_lo;
+        if (msg.fi_weak_max)doc["fi_weak_max"] = *msg.fi_weak_max;
+        if (msg.phase_adv_max_deg)doc["phase_adv_max_deg"] = *msg.phase_adv_max_deg;
+        if (msg.input1_raw)doc["input1_raw"] = *msg.input1_raw;
+        if (msg.input1_typ)doc["input1_typ"] = *msg.input1_typ;
+        if (msg.input1_min)doc["input1_min"] = *msg.input1_min;
+        if (msg.input1_mid)doc["input1_mid"] = *msg.input1_mid;
+        if (msg.input1_max)doc["input1_max"] = *msg.input1_max;
+        if (msg.input1_cmd)doc["input1_cmd"] = *msg.input1_cmd;
+        if (msg.input2_raw)doc["input2_raw"] = *msg.input2_raw;
+        if (msg.input2_typ)doc["input2_typ"] = *msg.input2_typ;
+        if (msg.input2_min)doc["input2_min"] = *msg.input2_min;
+        if (msg.input2_mid)doc["input2_mid"] = *msg.input2_mid;
+        if (msg.input2_max)doc["input2_max"] = *msg.input2_max;
+        if (msg.input2_cmd)doc["input2_cmd"] = *msg.input2_cmd;
+        if (msg.aux_input1_raw)doc["aux_input1_raw"] = *msg.aux_input1_raw;
+        if (msg.aux_input1_typ)doc["aux_input1_typ"] = *msg.aux_input1_typ;
+        if (msg.aux_input1_min)doc["aux_input1_min"] = *msg.aux_input1_min;
+        if (msg.aux_input1_mid)doc["aux_input1_mid"] = *msg.aux_input1_mid;
+        if (msg.aux_input1_max)doc["aux_input1_max"] = *msg.aux_input1_max;
+        if (msg.aux_input1_cmd)doc["aux_input1_cmd"] = *msg.aux_input1_cmd;
+        if (msg.aux_input2_raw)doc["aux_input2_raw"] = *msg.aux_input2_raw;
+        if (msg.aux_input2_typ)doc["aux_input2_typ"] = *msg.aux_input2_typ;
+        if (msg.aux_input2_min)doc["aux_input2_min"] = *msg.aux_input2_min;
+        if (msg.aux_input2_mid)doc["aux_input2_mid"] = *msg.aux_input2_mid;
+        if (msg.aux_input2_max)doc["aux_input2_max"] = *msg.aux_input2_max;
+        if (msg.aux_input2_cmd)doc["aux_input2_cmd"] = *msg.aux_input2_cmd;
+        if (msg.dc_curr)doc["dc_curr"] = *msg.dc_curr;
+        if (msg.rdc_curr)doc["rdc_curr"] = *msg.rdc_curr;
+        if (msg.ldc_curr)doc["ldc_curr"] = *msg.ldc_curr;
+        if (msg.cmdl)doc["cmdl"] = *msg.cmdl;
+        if (msg.cmdr)doc["cmdr"] = *msg.cmdr;
+        if (msg.spd_avg)doc["spd_avg"] = *msg.spd_avg;
+        if (msg.spdl)doc["spdl"] = *msg.spdl;
+        if (msg.spdr)doc["spdr"] = *msg.spdr;
+        if (msg.filter_rate)doc["filter_rate"] = *msg.filter_rate;
+        if (msg.spd_coef)doc["spd_coef"] = *msg.spd_coef;
+        if (msg.str_coef)doc["str_coef"] = *msg.str_coef;
+        if (msg.batv)doc["batv"] = *msg.batv;
+        if (msg.temp)doc["temp"] = *msg.temp;
+        std::string str;
+        ArduinoJson::serializeJson(doc,str);
+        return Result<Bytes>::Ok(Bytes(str.begin(),str.end()));
+    }
+
+    Result<HoverboardEventRaw*> HoverboardEventRaw::json_deserialize(const Bytes& bytes) {
+        JsonDocument doc;
+        HoverboardEventRaw* msg = new HoverboardEventRaw();
+        auto err = deserializeJson(doc,bytes);
+        if ( err != DeserializationError::Ok || doc.is<JsonObject>() == false ) {
+            delete msg;
+            return Result<HoverboardEventRaw*>::Err(-1,"Cannot deserialize as object") ;
+        };        
+        if (doc["ctrl_mod"].is<int32_t>() )  
+                        msg->ctrl_mod = doc["ctrl_mod"].as<int32_t>();
+        if (doc["ctrl_typ"].is<int32_t>() )  
+                        msg->ctrl_typ = doc["ctrl_typ"].as<int32_t>();
+        if (doc["cur_mot_max"].is<int32_t>() )  
+                        msg->cur_mot_max = doc["cur_mot_max"].as<int32_t>();
+        if (doc["rpm_mot_max"].is<int32_t>() )  
+                        msg->rpm_mot_max = doc["rpm_mot_max"].as<int32_t>();
+        if (doc["fi_weak_ena"].is<int32_t>() )  
+                        msg->fi_weak_ena = doc["fi_weak_ena"].as<int32_t>();
+        if (doc["fi_weak_hi"].is<int32_t>() )  
+                        msg->fi_weak_hi = doc["fi_weak_hi"].as<int32_t>();
+        if (doc["fi_weak_lo"].is<int32_t>() )  
+                        msg->fi_weak_lo = doc["fi_weak_lo"].as<int32_t>();
+        if (doc["fi_weak_max"].is<int32_t>() )  
+                        msg->fi_weak_max = doc["fi_weak_max"].as<int32_t>();
+        if (doc["phase_adv_max_deg"].is<int32_t>() )  
+                        msg->phase_adv_max_deg = doc["phase_adv_max_deg"].as<int32_t>();
+        if (doc["input1_raw"].is<int32_t>() )  
+                        msg->input1_raw = doc["input1_raw"].as<int32_t>();
+        if (doc["input1_typ"].is<int32_t>() )  
+                        msg->input1_typ = doc["input1_typ"].as<int32_t>();
+        if (doc["input1_min"].is<int32_t>() )  
+                        msg->input1_min = doc["input1_min"].as<int32_t>();
+        if (doc["input1_mid"].is<int32_t>() )  
+                        msg->input1_mid = doc["input1_mid"].as<int32_t>();
+        if (doc["input1_max"].is<int32_t>() )  
+                        msg->input1_max = doc["input1_max"].as<int32_t>();
+        if (doc["input1_cmd"].is<int32_t>() )  
+                        msg->input1_cmd = doc["input1_cmd"].as<int32_t>();
+        if (doc["input2_raw"].is<int32_t>() )  
+                        msg->input2_raw = doc["input2_raw"].as<int32_t>();
+        if (doc["input2_typ"].is<int32_t>() )  
+                        msg->input2_typ = doc["input2_typ"].as<int32_t>();
+        if (doc["input2_min"].is<int32_t>() )  
+                        msg->input2_min = doc["input2_min"].as<int32_t>();
+        if (doc["input2_mid"].is<int32_t>() )  
+                        msg->input2_mid = doc["input2_mid"].as<int32_t>();
+        if (doc["input2_max"].is<int32_t>() )  
+                        msg->input2_max = doc["input2_max"].as<int32_t>();
+        if (doc["input2_cmd"].is<int32_t>() )  
+                        msg->input2_cmd = doc["input2_cmd"].as<int32_t>();
+        if (doc["aux_input1_raw"].is<int32_t>() )  
+                        msg->aux_input1_raw = doc["aux_input1_raw"].as<int32_t>();
+        if (doc["aux_input1_typ"].is<int32_t>() )  
+                        msg->aux_input1_typ = doc["aux_input1_typ"].as<int32_t>();
+        if (doc["aux_input1_min"].is<int32_t>() )  
+                        msg->aux_input1_min = doc["aux_input1_min"].as<int32_t>();
+        if (doc["aux_input1_mid"].is<int32_t>() )  
+                        msg->aux_input1_mid = doc["aux_input1_mid"].as<int32_t>();
+        if (doc["aux_input1_max"].is<int32_t>() )  
+                        msg->aux_input1_max = doc["aux_input1_max"].as<int32_t>();
+        if (doc["aux_input1_cmd"].is<int32_t>() )  
+                        msg->aux_input1_cmd = doc["aux_input1_cmd"].as<int32_t>();
+        if (doc["aux_input2_raw"].is<int32_t>() )  
+                        msg->aux_input2_raw = doc["aux_input2_raw"].as<int32_t>();
+        if (doc["aux_input2_typ"].is<int32_t>() )  
+                        msg->aux_input2_typ = doc["aux_input2_typ"].as<int32_t>();
+        if (doc["aux_input2_min"].is<int32_t>() )  
+                        msg->aux_input2_min = doc["aux_input2_min"].as<int32_t>();
+        if (doc["aux_input2_mid"].is<int32_t>() )  
+                        msg->aux_input2_mid = doc["aux_input2_mid"].as<int32_t>();
+        if (doc["aux_input2_max"].is<int32_t>() )  
+                        msg->aux_input2_max = doc["aux_input2_max"].as<int32_t>();
+        if (doc["aux_input2_cmd"].is<int32_t>() )  
+                        msg->aux_input2_cmd = doc["aux_input2_cmd"].as<int32_t>();
+        if (doc["dc_curr"].is<int32_t>() )  
+                        msg->dc_curr = doc["dc_curr"].as<int32_t>();
+        if (doc["rdc_curr"].is<int32_t>() )  
+                        msg->rdc_curr = doc["rdc_curr"].as<int32_t>();
+        if (doc["ldc_curr"].is<int32_t>() )  
+                        msg->ldc_curr = doc["ldc_curr"].as<int32_t>();
+        if (doc["cmdl"].is<int32_t>() )  
+                        msg->cmdl = doc["cmdl"].as<int32_t>();
+        if (doc["cmdr"].is<int32_t>() )  
+                        msg->cmdr = doc["cmdr"].as<int32_t>();
+        if (doc["spd_avg"].is<int32_t>() )  
+                        msg->spd_avg = doc["spd_avg"].as<int32_t>();
+        if (doc["spdl"].is<int32_t>() )  
+                        msg->spdl = doc["spdl"].as<int32_t>();
+        if (doc["spdr"].is<int32_t>() )  
+                        msg->spdr = doc["spdr"].as<int32_t>();
+        if (doc["filter_rate"].is<int32_t>() )  
+                        msg->filter_rate = doc["filter_rate"].as<int32_t>();
+        if (doc["spd_coef"].is<int32_t>() )  
+                        msg->spd_coef = doc["spd_coef"].as<int32_t>();
+        if (doc["str_coef"].is<int32_t>() )  
+                        msg->str_coef = doc["str_coef"].as<int32_t>();
+        if (doc["batv"].is<int32_t>() )  
+                        msg->batv = doc["batv"].as<int32_t>();
+        if (doc["temp"].is<int32_t>() )  
+                        msg->temp = doc["temp"].as<int32_t>();
+        return Result<HoverboardEventRaw*>::Ok(msg);
+    }
+
+
 Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
         JsonDocument doc;
         doc.to<JsonObject>();
@@ -476,10 +634,10 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
             delete msg;
             return Result<HoverboardEvent*>::Err(-1,"Cannot deserialize as object") ;
         };        
-        if (doc["ctrl_mod"].is<CtrlMod>() )  
-                        msg->ctrl_mod = doc["ctrl_mod"].as<CtrlMod>();
-        if (doc["ctrl_typ"].is<CtrlTyp>() )  
-                        msg->ctrl_typ = doc["ctrl_typ"].as<CtrlTyp>();
+        if (doc["ctrl_mod"].is<int32_t>() )  
+                        msg->ctrl_mod = doc["ctrl_mod"].as<int32_t>();
+        if (doc["ctrl_typ"].is<int32_t>() )  
+                        msg->ctrl_typ = doc["ctrl_typ"].as<int32_t>();
         if (doc["cur_mot_max"].is<int32_t>() )  
                         msg->cur_mot_max = doc["cur_mot_max"].as<int32_t>();
         if (doc["rpm_mot_max"].is<int32_t>() )  
@@ -496,8 +654,8 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->phase_adv_max_deg = doc["phase_adv_max_deg"].as<int32_t>();
         if (doc["input1_raw"].is<int32_t>() )  
                         msg->input1_raw = doc["input1_raw"].as<int32_t>();
-        if (doc["input1_typ"].is<InTyp>() )  
-                        msg->input1_typ = doc["input1_typ"].as<InTyp>();
+        if (doc["input1_typ"].is<int32_t>() )  
+                        msg->input1_typ = doc["input1_typ"].as<int32_t>();
         if (doc["input1_min"].is<int32_t>() )  
                         msg->input1_min = doc["input1_min"].as<int32_t>();
         if (doc["input1_mid"].is<int32_t>() )  
@@ -508,8 +666,8 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->input1_cmd = doc["input1_cmd"].as<int32_t>();
         if (doc["input2_raw"].is<int32_t>() )  
                         msg->input2_raw = doc["input2_raw"].as<int32_t>();
-        if (doc["input2_typ"].is<InTyp>() )  
-                        msg->input2_typ = doc["input2_typ"].as<InTyp>();
+        if (doc["input2_typ"].is<int32_t>() )  
+                        msg->input2_typ = doc["input2_typ"].as<int32_t>();
         if (doc["input2_min"].is<int32_t>() )  
                         msg->input2_min = doc["input2_min"].as<int32_t>();
         if (doc["input2_mid"].is<int32_t>() )  
@@ -520,8 +678,8 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->input2_cmd = doc["input2_cmd"].as<int32_t>();
         if (doc["aux_input1_raw"].is<int32_t>() )  
                         msg->aux_input1_raw = doc["aux_input1_raw"].as<int32_t>();
-        if (doc["aux_input1_typ"].is<InTyp>() )  
-                        msg->aux_input1_typ = doc["aux_input1_typ"].as<InTyp>();
+        if (doc["aux_input1_typ"].is<int32_t>() )  
+                        msg->aux_input1_typ = doc["aux_input1_typ"].as<int32_t>();
         if (doc["aux_input1_min"].is<int32_t>() )  
                         msg->aux_input1_min = doc["aux_input1_min"].as<int32_t>();
         if (doc["aux_input1_mid"].is<int32_t>() )  
@@ -532,8 +690,8 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->aux_input1_cmd = doc["aux_input1_cmd"].as<int32_t>();
         if (doc["aux_input2_raw"].is<int32_t>() )  
                         msg->aux_input2_raw = doc["aux_input2_raw"].as<int32_t>();
-        if (doc["aux_input2_typ"].is<InTyp>() )  
-                        msg->aux_input2_typ = doc["aux_input2_typ"].as<InTyp>();
+        if (doc["aux_input2_typ"].is<int32_t>() )  
+                        msg->aux_input2_typ = doc["aux_input2_typ"].as<int32_t>();
         if (doc["aux_input2_min"].is<int32_t>() )  
                         msg->aux_input2_min = doc["aux_input2_min"].as<int32_t>();
         if (doc["aux_input2_mid"].is<int32_t>() )  
@@ -542,12 +700,12 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->aux_input2_max = doc["aux_input2_max"].as<int32_t>();
         if (doc["aux_input2_cmd"].is<int32_t>() )  
                         msg->aux_input2_cmd = doc["aux_input2_cmd"].as<int32_t>();
-        if (doc["dc_curr"].is<int32_t>() )  
-                        msg->dc_curr = doc["dc_curr"].as<int32_t>();
-        if (doc["rdc_curr"].is<int32_t>() )  
-                        msg->rdc_curr = doc["rdc_curr"].as<int32_t>();
-        if (doc["ldc_curr"].is<int32_t>() )  
-                        msg->ldc_curr = doc["ldc_curr"].as<int32_t>();
+        if (doc["dc_curr"].is<float>() )  
+                        msg->dc_curr = doc["dc_curr"].as<float>();
+        if (doc["rdc_curr"].is<float>() )  
+                        msg->rdc_curr = doc["rdc_curr"].as<float>();
+        if (doc["ldc_curr"].is<float>() )  
+                        msg->ldc_curr = doc["ldc_curr"].as<float>();
         if (doc["cmdl"].is<int32_t>() )  
                         msg->cmdl = doc["cmdl"].as<int32_t>();
         if (doc["cmdr"].is<int32_t>() )  
@@ -564,10 +722,10 @@ Result<Bytes> HoverboardEvent::json_serialize(const HoverboardEvent& msg)  {
                         msg->spd_coef = doc["spd_coef"].as<int32_t>();
         if (doc["str_coef"].is<int32_t>() )  
                         msg->str_coef = doc["str_coef"].as<int32_t>();
-        if (doc["batv"].is<int32_t>() )  
-                        msg->batv = doc["batv"].as<int32_t>();
-        if (doc["temp"].is<int32_t>() )  
-                        msg->temp = doc["temp"].as<int32_t>();
+        if (doc["batv"].is<float>() )  
+                        msg->batv = doc["batv"].as<float>();
+        if (doc["temp"].is<float>() )  
+                        msg->temp = doc["temp"].as<float>();
         return Result<HoverboardEvent*>::Ok(msg);
     }
 
@@ -1171,7 +1329,7 @@ Result<Bytes> MotorEvent::json_serialize(const MotorEvent& msg)  {
 
 Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -1332,7 +1490,7 @@ Result<Bytes> Alive::cbor_serialize(const Alive& msg)  {
 
 Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -1447,7 +1605,7 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
             
             case UdpMessage::Field::PAYLOAD_INDEX:{{
     if (cbor_value_is_byte_string(&mapIt)) {
-        uint8_t tmpbuf[512];
+        uint8_t tmpbuf[1024];
         size_t tmplen ;
         cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
@@ -1475,7 +1633,7 @@ Result<Bytes> UdpMessage::cbor_serialize(const UdpMessage& msg)  {
 
 Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -1575,7 +1733,7 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
             
             case UdpMessageCbor::Field::PAYLOAD_INDEX:{{
     if (cbor_value_is_byte_string(&mapIt)) {
-        uint8_t tmpbuf[512];
+        uint8_t tmpbuf[1024];
         size_t tmplen ;
         cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
@@ -1603,7 +1761,7 @@ Result<Bytes> UdpMessageCbor::cbor_serialize(const UdpMessageCbor& msg)  {
 
 Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -1828,7 +1986,7 @@ Result<Bytes> ZenohEvent::cbor_serialize(const ZenohEvent& msg)  {
 
 Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -1984,7 +2142,7 @@ Result<Bytes> LogEvent::cbor_serialize(const LogEvent& msg)  {
 
 Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2113,7 +2271,7 @@ Result<Bytes> SysCmd::cbor_serialize(const SysCmd& msg)  {
 
 Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2267,7 +2425,7 @@ Result<Bytes> SysEvent::cbor_serialize(const SysEvent& msg)  {
 
 Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2473,7 +2631,7 @@ Result<Bytes> WifiEvent::cbor_serialize(const WifiEvent& msg)  {
 
 Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2586,7 +2744,7 @@ Result<Bytes> MulticastEvent::cbor_serialize(const MulticastEvent& msg)  {
 
 Result<Bytes> PingReq::cbor_serialize(const PingReq& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2668,7 +2826,7 @@ Result<Bytes> PingReq::cbor_serialize(const PingReq& msg)  {
 
 Result<Bytes> PingRep::cbor_serialize(const PingRep& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2748,9 +2906,629 @@ Result<Bytes> PingRep::cbor_serialize(const PingRep& msg)  {
     return Result<PingRep*>::Ok(msg);
 }
 
+Result<Bytes> HoverboardEventRaw::cbor_serialize(const HoverboardEventRaw& msg)  {
+    // buffer: grow if needed by changing initial size
+    std::vector<uint8_t> buffer(1024);
+    CborEncoder encoder, mapEncoder;
+     cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
+
+    // Start top-level map
+    RC_OK(cbor_encoder_create_map(&encoder, &mapEncoder, CborIndefiniteLength));
+
+    if (msg.ctrl_mod) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::CTRL_MOD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ctrl_mod.value()));
+            }
+    if (msg.ctrl_typ) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::CTRL_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ctrl_typ.value()));
+            }
+    if (msg.cur_mot_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::CUR_MOT_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cur_mot_max.value()));
+            }
+    if (msg.rpm_mot_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::RPM_MOT_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rpm_mot_max.value()));
+            }
+    if (msg.fi_weak_ena) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::FI_WEAK_ENA_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_ena.value()));
+            }
+    if (msg.fi_weak_hi) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::FI_WEAK_HI_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_hi.value()));
+            }
+    if (msg.fi_weak_lo) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::FI_WEAK_LO_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_lo.value()));
+            }
+    if (msg.fi_weak_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::FI_WEAK_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.fi_weak_max.value()));
+            }
+    if (msg.phase_adv_max_deg) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::PHASE_ADV_MAX_DEG_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.phase_adv_max_deg.value()));
+            }
+    if (msg.input1_raw) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_raw.value()));
+            }
+    if (msg.input1_typ) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_typ.value()));
+            }
+    if (msg.input1_min) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_min.value()));
+            }
+    if (msg.input1_mid) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_mid.value()));
+            }
+    if (msg.input1_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_max.value()));
+            }
+    if (msg.input1_cmd) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT1_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input1_cmd.value()));
+            }
+    if (msg.input2_raw) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_raw.value()));
+            }
+    if (msg.input2_typ) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_typ.value()));
+            }
+    if (msg.input2_min) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_min.value()));
+            }
+    if (msg.input2_mid) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_mid.value()));
+            }
+    if (msg.input2_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_max.value()));
+            }
+    if (msg.input2_cmd) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::INPUT2_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.input2_cmd.value()));
+            }
+    if (msg.aux_input1_raw) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_raw.value()));
+            }
+    if (msg.aux_input1_typ) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_typ.value()));
+            }
+    if (msg.aux_input1_min) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_min.value()));
+            }
+    if (msg.aux_input1_mid) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_mid.value()));
+            }
+    if (msg.aux_input1_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_max.value()));
+            }
+    if (msg.aux_input1_cmd) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT1_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input1_cmd.value()));
+            }
+    if (msg.aux_input2_raw) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_RAW_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_raw.value()));
+            }
+    if (msg.aux_input2_typ) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_TYP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_typ.value()));
+            }
+    if (msg.aux_input2_min) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_MIN_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_min.value()));
+            }
+    if (msg.aux_input2_mid) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_MID_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_mid.value()));
+            }
+    if (msg.aux_input2_max) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_MAX_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_max.value()));
+            }
+    if (msg.aux_input2_cmd) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::AUX_INPUT2_CMD_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.aux_input2_cmd.value()));
+            }
+    if (msg.dc_curr) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::DC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.dc_curr.value()));
+            }
+    if (msg.rdc_curr) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::RDC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.rdc_curr.value()));
+            }
+    if (msg.ldc_curr) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::LDC_CURR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.ldc_curr.value()));
+            }
+    if (msg.cmdl) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::CMDL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cmdl.value()));
+            }
+    if (msg.cmdr) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::CMDR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.cmdr.value()));
+            }
+    if (msg.spd_avg) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::SPD_AVG_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spd_avg.value()));
+            }
+    if (msg.spdl) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::SPDL_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spdl.value()));
+            }
+    if (msg.spdr) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::SPDR_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spdr.value()));
+            }
+    if (msg.filter_rate) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::FILTER_RATE_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.filter_rate.value()));
+            }
+    if (msg.spd_coef) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::SPD_COEF_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.spd_coef.value()));
+            }
+    if (msg.str_coef) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::STR_COEF_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.str_coef.value()));
+            }
+    if (msg.batv) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::BATV_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.batv.value()));
+            }
+    if (msg.temp) {
+            RC_OK(cbor_encode_int(&mapEncoder, HoverboardEventRaw::Field::TEMP_INDEX));
+            RC_OK(cbor_encode_int(&mapEncoder, msg.temp.value()));
+            }
+    RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
+    // get used size
+    size_t used = cbor_encoder_get_buffer_size(&encoder, buffer.data());
+    return Result<Bytes>::Ok(Bytes(buffer.begin(), buffer.begin() + used));
+}
+
+ Result<HoverboardEventRaw*> HoverboardEventRaw::cbor_deserialize(const Bytes& bytes) {
+    CborParser parser;
+    CborValue it, mapIt;
+    HoverboardEventRaw* msg = new HoverboardEventRaw();
+
+    CborError err = cbor_parser_init(bytes.data(), bytes.size(), 0, &parser, &it);
+    if (err != CborNoError) {
+        delete msg;
+        return Result<HoverboardEventRaw*>::Err(-1,"CBOR parse error");
+    }
+
+    if (!cbor_value_is_map(&it)) {
+        delete msg;
+        INFO("CBOR deserialization error: not a map");
+        return Result<HoverboardEventRaw*>::Err(-2,"CBOR deserialization error: not a map");
+    }
+
+    // enter map
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        delete msg;
+        INFO("CBOR deserialization error: failed to enter container");
+        return Result<HoverboardEventRaw*>::Err(-3,"CBOR deserialization error: failed to enter container");
+    }
+
+    // iterate key/value pairs
+    while (!cbor_value_at_end(&mapIt)) {
+        uint64_t key = 0;
+        if (cbor_value_is_unsigned_integer(&mapIt)) {
+            cbor_value_get_uint64(&mapIt, &key);
+            cbor_value_advance(&mapIt);
+        } else {
+            // invalid key type
+            INFO("CBOR deserialization error: invalid key type");
+            delete msg;
+            return Result<HoverboardEventRaw*>::Err(-4,"CBOR deserialization error: invalid key type");
+        }
+        switch (key) {
+            
+            case HoverboardEventRaw::Field::CTRL_MOD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->ctrl_mod = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::CTRL_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->ctrl_typ = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::CUR_MOT_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->cur_mot_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::RPM_MOT_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->rpm_mot_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::FI_WEAK_ENA_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->fi_weak_ena = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::FI_WEAK_HI_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->fi_weak_hi = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::FI_WEAK_LO_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->fi_weak_lo = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::FI_WEAK_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->fi_weak_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::PHASE_ADV_MAX_DEG_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->phase_adv_max_deg = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_RAW_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_raw = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_typ = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_MIN_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_min = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_MID_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_mid = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT1_CMD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_cmd = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_RAW_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_raw = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_typ = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_MIN_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_min = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_MID_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_mid = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::INPUT2_CMD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_cmd = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_RAW_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_raw = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_typ = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_MIN_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_min = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_MID_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_mid = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT1_CMD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_cmd = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_RAW_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_raw = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_typ = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_MIN_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_min = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_MID_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_mid = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_MAX_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_max = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::AUX_INPUT2_CMD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_cmd = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::DC_CURR_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->dc_curr = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::RDC_CURR_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->rdc_curr = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::LDC_CURR_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->ldc_curr = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::CMDL_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->cmdl = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::CMDR_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->cmdr = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::SPD_AVG_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->spd_avg = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::SPDL_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->spdl = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::SPDR_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->spdr = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::FILTER_RATE_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->filter_rate = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::SPD_COEF_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->spd_coef = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::STR_COEF_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->str_coef = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::BATV_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->batv = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            case HoverboardEventRaw::Field::TEMP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->temp = v;
+    cbor_value_advance(&mapIt);
+
+                break;
+            }
+            
+            default:
+                // skip unknown key
+                cbor_value_advance(&mapIt);
+                break;
+        }
+
+    }
+
+    // leave container
+    cbor_value_leave_container(&it, &mapIt);
+
+    return Result<HoverboardEventRaw*>::Ok(msg);
+}
+
 Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -2891,15 +3669,15 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
             }
     if (msg.dc_curr) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::DC_CURR_INDEX));
-            RC_OK(cbor_encode_int(&mapEncoder, msg.dc_curr.value()));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.dc_curr.value()));
             }
     if (msg.rdc_curr) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::RDC_CURR_INDEX));
-            RC_OK(cbor_encode_int(&mapEncoder, msg.rdc_curr.value()));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.rdc_curr.value()));
             }
     if (msg.ldc_curr) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::LDC_CURR_INDEX));
-            RC_OK(cbor_encode_int(&mapEncoder, msg.ldc_curr.value()));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.ldc_curr.value()));
             }
     if (msg.cmdl) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::CMDL_INDEX));
@@ -2935,11 +3713,11 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
             }
     if (msg.batv) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::BATV_INDEX));
-            RC_OK(cbor_encode_int(&mapEncoder, msg.batv.value()));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.batv.value()));
             }
     if (msg.temp) {
             RC_OK(cbor_encode_int(&mapEncoder, HoverboardEvent::Field::TEMP_INDEX));
-            RC_OK(cbor_encode_int(&mapEncoder, msg.temp.value()));
+            RC_OK(cbor_encode_float(&mapEncoder, msg.temp.value()));
             }
     RC_OK(cbor_encoder_close_container(&encoder, &mapEncoder));
     // get used size
@@ -2986,21 +3764,17 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
         }
         switch (key) {
             
-            case HoverboardEvent::Field::CTRL_MOD_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->ctrl_mod = static_cast<CtrlMod>(v);
-};
+            case HoverboardEvent::Field::CTRL_MOD_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->ctrl_mod = v;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case HoverboardEvent::Field::CTRL_TYP_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->ctrl_typ = static_cast<CtrlTyp>(v);
-};
+            case HoverboardEvent::Field::CTRL_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->ctrl_typ = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3070,11 +3844,9 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::INPUT1_TYP_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->input1_typ = static_cast<InTyp>(v);
-};
+            case HoverboardEvent::Field::INPUT1_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input1_typ = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3120,11 +3892,9 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::INPUT2_TYP_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->input2_typ = static_cast<InTyp>(v);
-};
+            case HoverboardEvent::Field::INPUT2_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->input2_typ = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3170,11 +3940,9 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->aux_input1_typ = static_cast<InTyp>(v);
-};
+            case HoverboardEvent::Field::AUX_INPUT1_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input1_typ = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3220,11 +3988,9 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX:{{
-    long long v;
-    cbor_value_get_int64(&mapIt, &(v));
-    msg->aux_input2_typ = static_cast<InTyp>(v);
-};
+            case HoverboardEvent::Field::AUX_INPUT2_TYP_INDEX:{int64_t v;
+    cbor_value_get_int64(&mapIt, &v);
+    msg->aux_input2_typ = v;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3262,25 +4028,25 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::DC_CURR_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->dc_curr = v;
+            case HoverboardEvent::Field::DC_CURR_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->dc_curr = f;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case HoverboardEvent::Field::RDC_CURR_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->rdc_curr = v;
+            case HoverboardEvent::Field::RDC_CURR_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->rdc_curr = f;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case HoverboardEvent::Field::LDC_CURR_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->ldc_curr = v;
+            case HoverboardEvent::Field::LDC_CURR_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->ldc_curr = f;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3350,17 +4116,17 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
                 break;
             }
             
-            case HoverboardEvent::Field::BATV_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->batv = v;
+            case HoverboardEvent::Field::BATV_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->batv = f;
     cbor_value_advance(&mapIt);
 
                 break;
             }
             
-            case HoverboardEvent::Field::TEMP_INDEX:{int64_t v;
-    cbor_value_get_int64(&mapIt, &v);
-    msg->temp = v;
+            case HoverboardEvent::Field::TEMP_INDEX:{float f;
+    cbor_value_get_float(&mapIt, &f);
+    msg->temp = f;
     cbor_value_advance(&mapIt);
 
                 break;
@@ -3382,7 +4148,7 @@ Result<Bytes> HoverboardEvent::cbor_serialize(const HoverboardEvent& msg)  {
 
 Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -3474,7 +4240,7 @@ Result<Bytes> HoverboardCmd::cbor_serialize(const HoverboardCmd& msg)  {
 
 Result<Bytes> HoverboardReply::cbor_serialize(const HoverboardReply& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -3573,7 +4339,7 @@ Result<Bytes> HoverboardReply::cbor_serialize(const HoverboardReply& msg)  {
 
 Result<Bytes> TouchPoint::cbor_serialize(const TouchPoint& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -3689,7 +4455,7 @@ Result<Bytes> TouchPoint::cbor_serialize(const TouchPoint& msg)  {
 
 Result<Bytes> Ps4Event::cbor_serialize(const Ps4Event& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4160,7 +4926,7 @@ Result<Bytes> Ps4Event::cbor_serialize(const Ps4Event& msg)  {
 
 Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4312,7 +5078,7 @@ Result<Bytes> Ps4Cmd::cbor_serialize(const Ps4Cmd& msg)  {
 
 Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4421,7 +5187,7 @@ Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
             
             case CameraEvent::Field::DATA_INDEX:{{
     if (cbor_value_is_byte_string(&mapIt)) {
-        uint8_t tmpbuf[512];
+        uint8_t tmpbuf[1024];
         size_t tmplen ;
         cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
@@ -4465,7 +5231,7 @@ Result<Bytes> CameraEvent::cbor_serialize(const CameraEvent& msg)  {
 
 Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4576,7 +5342,7 @@ Result<Bytes> CameraCmd::cbor_serialize(const CameraCmd& msg)  {
 
 Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4665,7 +5431,7 @@ Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
             
             case CameraReply::Field::DATA_INDEX:{{
     if (cbor_value_is_byte_string(&mapIt)) {
-        uint8_t tmpbuf[512];
+        uint8_t tmpbuf[1024];
         size_t tmplen ;
         cbor_value_calculate_string_length(&mapIt, &tmplen);
         cbor_value_copy_byte_string(&mapIt, tmpbuf, &tmplen, NULL);
@@ -4693,7 +5459,7 @@ Result<Bytes> CameraReply::cbor_serialize(const CameraReply& msg)  {
 
 Result<Bytes> LawnmowerManualEvent::cbor_serialize(const LawnmowerManualEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4797,7 +5563,7 @@ Result<Bytes> LawnmowerManualEvent::cbor_serialize(const LawnmowerManualEvent& m
 
 Result<Bytes> LawnmowerManualCmd::cbor_serialize(const LawnmowerManualCmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -4961,7 +5727,7 @@ Result<Bytes> LawnmowerManualCmd::cbor_serialize(const LawnmowerManualCmd& msg) 
 
 Result<Bytes> LawnmowerManualReply::cbor_serialize(const LawnmowerManualReply& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -5060,7 +5826,7 @@ Result<Bytes> LawnmowerManualReply::cbor_serialize(const LawnmowerManualReply& m
 
 Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -5214,7 +5980,7 @@ Result<Bytes> LawnmowerAutoEvent::cbor_serialize(const LawnmowerAutoEvent& msg) 
 
 Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -5368,7 +6134,7 @@ Result<Bytes> LawnmowerAutoCmd::cbor_serialize(const LawnmowerAutoCmd& msg)  {
 
 Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 
@@ -5498,7 +6264,7 @@ Result<Bytes> LawnmowerStatus::cbor_serialize(const LawnmowerStatus& msg)  {
 
 Result<Bytes> MotorEvent::cbor_serialize(const MotorEvent& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 

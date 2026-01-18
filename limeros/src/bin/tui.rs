@@ -6,13 +6,12 @@ use crossterm::{
 };
 use dashmap::DashMap;
 use limeros::{
-    Endpoint, UdpMessage, UdpMessageHandler, UdpNode, msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent}
+    Endpoint, UdpMessage, UdpMessageHandler, UdpNode, msgs::{ HoverboardEvent, SysEvent, TypedMessage, WifiEvent}
 }; // Assuming the code you provided is in the same crate
-use log::info;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table, Tabs},
+    widgets::{Block, Borders, Cell, Row, Table, Tabs},
     Frame, Terminal,
 };
 use std::{
@@ -78,7 +77,7 @@ impl App {
             titles: vec!["Endpoints", "Live Events"],
             index: 0,
             cache: Arc::new(DashMap::new()),
-            sort_column: SortColumn::Time,
+            sort_column: SortColumn::Field,
             sort_desc: true,
             endpoints: Vec::new(),
         }
@@ -107,7 +106,7 @@ struct TuiHandler {
 #[async_trait::async_trait]
 impl UdpMessageHandler for TuiHandler {
     async fn handle(&self, udp_message: &UdpMessage) -> anyhow::Result<()> {
-        let mut app = self.state.lock().await;
+        let  app = self.state.lock().await;
 
         // Parse the payload (assuming JSON as per your UdpNode implementation)
         let fields = if let Some(payload) = &udp_message.payload {

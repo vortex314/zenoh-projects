@@ -25,6 +25,7 @@ sudo apt install libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev
  1977  sudo apt install libsoup2.4-dev
  1978  sudo apt install libwebkit2gtk-4.1
  1979  sudo apt install libwebkit2gtk-4.1-dev
+ ## System requirements for building applications with egui
 ```sh
  sudo apt-get install -y pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev
 ```

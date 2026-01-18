@@ -74,7 +74,8 @@ impl WindowEvents {
                 .striped(true)
                 .column(Column::initial(80.0))
                 .column(Column::initial(80.0))
-                .column(Column::initial(80.0))
+                .column(Column::initial(100.0))
+                .column(Column::initial(120.0))
                 .column(Column::initial(80.0))
                 .column(Column::initial(80.0))
                 .column(Column::initial(200.0))
@@ -172,6 +173,9 @@ impl WindowEvents {
                                 }
                                 if ui.button("|").clicked() {}
                             });
+                        });
+                        row.col(|ui| {
+                            ui.label(r.counter.to_string());
                         });
                         row.col(|ui| {
                             ui.label(&r.value);

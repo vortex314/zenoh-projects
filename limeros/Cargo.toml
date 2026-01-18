@@ -25,7 +25,7 @@ env_logger = "0.11.8"
 log = "0.4"
 chrono ="*"
 clap = { version = "4.5.54", features = ["derive"] }
-glob ="*"
+regex ="*"
 ratatui = "0.30.0" # Or latest
 crossterm = "0.29.0"
 futures ="*"

@@ -464,13 +464,13 @@ impl Msg for PingRep {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
 #[cbor(map)]
-pub struct HoverboardEvent {
+pub struct HoverboardEventRaw {
     #[n(0)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ctrl_mod: Option<CtrlMod>,
+    pub ctrl_mod: Option<i32>,
     #[n(1)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ctrl_typ: Option<CtrlTyp>,
+    pub ctrl_typ: Option<i32>,
     #[n(2)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cur_mot_max: Option<i32>,
@@ -497,7 +497,7 @@ pub struct HoverboardEvent {
     pub input1_raw: Option<i32>,
     #[n(10)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input1_typ: Option<InTyp>,
+    pub input1_typ: Option<i32>,
     #[n(11)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input1_min: Option<i32>,
@@ -515,7 +515,7 @@ pub struct HoverboardEvent {
     pub input2_raw: Option<i32>,
     #[n(16)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input2_typ: Option<InTyp>,
+    pub input2_typ: Option<i32>,
     #[n(17)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input2_min: Option<i32>,
@@ -533,7 +533,7 @@ pub struct HoverboardEvent {
     pub aux_input1_raw: Option<i32>,
     #[n(22)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub aux_input1_typ: Option<InTyp>,
+    pub aux_input1_typ: Option<i32>,
     #[n(23)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aux_input1_min: Option<i32>,
@@ -551,7 +551,7 @@ pub struct HoverboardEvent {
     pub aux_input2_raw: Option<i32>,
     #[n(28)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub aux_input2_typ: Option<InTyp>,
+    pub aux_input2_typ: Option<i32>,
     #[n(29)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aux_input2_min: Option<i32>,
@@ -603,6 +603,164 @@ pub struct HoverboardEvent {
     #[n(45)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temp: Option<i32>,
+}
+
+impl TypedMessage for HoverboardEventRaw {
+    const ID: u32 = 16168;
+    const MSG_TYPE: &'static str = "HoverboardEventRaw";
+}
+
+impl Msg for HoverboardEventRaw {
+    fn type_name(&self) -> &'static str {<Self as TypedMessage>::MSG_TYPE}
+    fn type_id(&self) -> u32 {<Self as TypedMessage>::ID}
+    fn cbor_serialize(&self) -> Result<Vec<u8>> {Ok(minicbor::to_vec(self)?)}
+    fn cbor_deserialize(v:&Vec<u8>) -> Result<Self> where Self : Sized {Ok(minicbor::decode::<Self>(v.as_slice())?)}
+    fn json_serialize(&self) -> Result<Vec<u8>> {Ok(serde_json::to_vec(self) ?)}
+    fn json_deserialize(v:& Vec<u8>) -> Result<Self> where Self : Sized {Ok(serde_json::from_slice(v.as_slice()) ?)}
+}
+    
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default,Encode, Decode)]
+#[cbor(map)]
+pub struct HoverboardEvent {
+    #[n(0)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ctrl_mod: Option<i32>,
+    #[n(1)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ctrl_typ: Option<i32>,
+    #[n(2)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cur_mot_max: Option<i32>,
+    #[n(3)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rpm_mot_max: Option<i32>,
+    #[n(4)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_ena: Option<i32>,
+    #[n(5)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_hi: Option<i32>,
+    #[n(6)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_lo: Option<i32>,
+    #[n(7)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fi_weak_max: Option<i32>,
+    #[n(8)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phase_adv_max_deg: Option<i32>,
+    #[n(9)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_raw: Option<i32>,
+    #[n(10)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_typ: Option<i32>,
+    #[n(11)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_min: Option<i32>,
+    #[n(12)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_mid: Option<i32>,
+    #[n(13)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_max: Option<i32>,
+    #[n(14)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input1_cmd: Option<i32>,
+    #[n(15)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_raw: Option<i32>,
+    #[n(16)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_typ: Option<i32>,
+    #[n(17)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_min: Option<i32>,
+    #[n(18)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_mid: Option<i32>,
+    #[n(19)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_max: Option<i32>,
+    #[n(20)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input2_cmd: Option<i32>,
+    #[n(21)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_raw: Option<i32>,
+    #[n(22)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_typ: Option<i32>,
+    #[n(23)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_min: Option<i32>,
+    #[n(24)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_mid: Option<i32>,
+    #[n(25)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_max: Option<i32>,
+    #[n(26)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input1_cmd: Option<i32>,
+    #[n(27)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_raw: Option<i32>,
+    #[n(28)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_typ: Option<i32>,
+    #[n(29)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_min: Option<i32>,
+    #[n(30)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_mid: Option<i32>,
+    #[n(31)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_max: Option<i32>,
+    #[n(32)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_input2_cmd: Option<i32>,
+    #[n(33)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dc_curr: Option<f32>,
+    #[n(34)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rdc_curr: Option<f32>,
+    #[n(35)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ldc_curr: Option<f32>,
+    #[n(36)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmdl: Option<i32>,
+    #[n(37)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmdr: Option<i32>,
+    #[n(38)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spd_avg: Option<i32>,
+    #[n(39)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spdl: Option<i32>,
+    #[n(40)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spdr: Option<i32>,
+    #[n(41)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter_rate: Option<i32>,
+    #[n(42)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spd_coef: Option<i32>,
+    #[n(43)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub str_coef: Option<i32>,
+    #[n(44)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub batv: Option<f32>,
+    #[n(45)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temp: Option<f32>,
 }
 
 impl TypedMessage for HoverboardEvent {

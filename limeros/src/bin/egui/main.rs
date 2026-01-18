@@ -1,13 +1,11 @@
 use dashmap::DashMap;
 use eframe::egui::{self};
 use limeros::{
-    logger,
-    msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent},
-    Endpoint, TypedUdpMessage, UdpMessage, UdpMessageHandler, UdpNode,
+    Alive, Endpoint, Msg, TypedUdpMessage, UdpMessage, UdpMessageHandler, UdpNode, eventbus::{Bus, as_message}, logger, msgs::{HoverboardCmd, HoverboardEvent, SysEvent, TypedMessage, WifiEvent}
 };
 use log::info;
 use socket2::Socket;
-use std::{collections::HashSet, ops::RangeInclusive, time::SystemTime};
+use std::{any::Any, collections::HashSet, ops::RangeInclusive, time::SystemTime};
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Mutex;
 
@@ -21,6 +19,8 @@ mod window_gauge;
 mod window_hoverboard;
 mod window_plot;
 use window_hoverboard::HoverboardWindow;
+use limeros::eventbus::Eventbus;
+use limeros::eventbus::ActorImpl;
 
 mod widget_alive;
 use rand::prelude::*;
@@ -42,6 +42,7 @@ struct Record {
     pub msg_type: String,
     pub field_name: String,
     pub value: String,
+    pub counter : u64,
 }
 
 // --- 2. The egui Application State ---
@@ -49,6 +50,7 @@ struct Record {
 struct UdpMonitorApp {
     cache: Arc<DashMap<String, Record>>,
     node: Arc<UdpNode>,
+    bus : Bus,
 
     graph_data: Arc<DashMap<String, MetricData>>,
     selected_fields: HashSet<String>,
@@ -62,6 +64,7 @@ impl UdpMonitorApp {
     fn new(
         cc: &eframe::CreationContext<'_>,
         node: Arc<UdpNode>,
+        bus : Bus,
         cache: Arc<DashMap<String, Record>>,
         endpoints: Arc<DashMap<String, Endpoint>>,
         graph_data: Arc<DashMap<String, MetricData>>,
@@ -73,6 +76,7 @@ impl UdpMonitorApp {
         let window_others = Arc::new(DashMap::new());
         Self {
             node: node.clone(),
+            bus: bus.clone(),
             cache: cache.clone(),
             window_events: WindowEvents::new(
                 cache.clone(),
@@ -82,7 +86,7 @@ impl UdpMonitorApp {
             window_endpoints: WindowEndpoints::new(node.clone(), endpoints.clone()),
             graph_data: graph_data.clone(),
             selected_fields: HashSet::new(),
-            window_hoverboard: HoverboardWindow::default(),
+            window_hoverboard: HoverboardWindow::new(node.clone()),
             window_others: window_others.clone(),
         }
     }
@@ -154,16 +158,18 @@ impl UdpMessageHandler for GuiHandler {
                 udp_message.msg_type.clone().unwrap_or_default(),
                 field_name
             );
-            let record = Record {
+            let mut record = Record {
                 timestamp: SystemTime::now(),
                 src: udp_message.src.clone().unwrap_or_default(),
                 msg_type: udp_message.msg_type.clone().unwrap_or_default(),
                 field_name: field_name.clone(),
                 value: value.clone(),
+                counter : 1,
             };
             self.cache
                 .entry(key)
                 .and_modify(|e| {
+                    record.counter += e.counter ;
                     *e = record.clone();
                 })
                 .or_insert(record);
@@ -204,16 +210,43 @@ impl UdpMessageHandler for GuiHandler {
     }
 }
 
+struct EventbusActor {
+    eb: Bus,
+    node : Arc<UdpNode>,
+}
+#[async_trait::async_trait]
+impl ActorImpl for EventbusActor {
+    async fn handle(&mut self, msg: &Arc<dyn Any + Send + Sync>)  {
+        info!("EventbusActor received a message: {:?}", msg);
+        // serialize message and send over UDP if needed
+    }
+}
+
+#[async_trait::async_trait]
+impl UdpMessageHandler for EventbusActor {
+    async fn handle(&self, udp_message: &UdpMessage) -> anyhow::Result<()> {
+        // deserialize UDP message and emit to eventbus
+        self.eb.emit(udp_message.clone());
+        Ok(())
+    }
+}
+
+unsafe impl Send for EventbusActor {}
+unsafe impl Sync for EventbusActor {}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     logger::init();
 
+    let eb = Eventbus::new();
+
+    eb.bus().emit(Alive::default());
+
     let cache = Arc::new(DashMap::new());
     let graph_data = Arc::new(DashMap::new());
 
     let mut rng = rand::rng();
-    let rand_u16: u16 = rng.gen();
+    let rand_u16: u16 = rng.random();
 
     let node_name = format!("egui-monitor-{}", rand_u16);
 
@@ -221,9 +254,10 @@ async fn main() -> anyhow::Result<()> {
     let n = UdpNode::new(node_name.as_str(), "239.0.0.1:50000")
         .await
         .unwrap();
-    n.add_subscription(SysEvent::MSG_TYPE).await;
+    /*n.add_subscription(SysEvent::MSG_TYPE).await;
     n.add_subscription(WifiEvent::MSG_TYPE).await;
-    n.add_subscription(HoverboardEvent::MSG_TYPE).await;
+    n.add_subscription(HoverboardEvent::MSG_TYPE).await;*/
+    n.add_subscription("*").await;
     n.add_generic_handler(GuiHandler {
         cache: cache.clone(),
         graph_data: graph_data.clone(),
@@ -242,7 +276,7 @@ async fn main() -> anyhow::Result<()> {
         options,
         Box::new(|cc| {
             Ok(Box::new(UdpMonitorApp::new(
-                cc, node, cache, endpoints, graph_data,
+                cc, node,eb.bus(), cache, endpoints, graph_data,
             )))
         }),
     );

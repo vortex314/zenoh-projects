@@ -131,12 +131,9 @@ message PingRep {
   uint32 number = 1;
 }
 
-
-// Hoverboard Message
-
-message HoverboardEvent {
-  CtrlMod ctrl_mod = 0; // 1:Voltage 2:Speed 3:Torque
-  CtrlTyp ctrl_typ = 1; // 0:Commutation 1:Sinusoidal 2:FOC
+message HoverboardEventRaw {
+  int32 ctrl_mod = 0; // 1:Voltage 2:Speed 3:Torque
+  int32 ctrl_typ = 1; // 0:Commutation 1:Sinusoidal 2:FOC
   int32 cur_mot_max = 2; // Max phase current A
   int32 rpm_mot_max = 3; // Max motor RPM
   int32 fi_weak_ena = 4; // Enable field weak 0:OFF 1:ON
@@ -145,25 +142,25 @@ message HoverboardEvent {
   int32 fi_weak_max = 7; // Field weak max current A (FOC only)
   int32 phase_adv_max_deg = 8; // Max Phase Adv angle Deg (SIN only)
   int32 input1_raw = 9; // Input1 raw value
-  InTyp input1_typ = 10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input1_typ = 10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
   int32 input1_min = 11; // Input1 minimum value
   int32 input1_mid = 12; // Input1 middle value
   int32 input1_max = 13; // Input1 maximum value
   int32 input1_cmd = 14; // Input1 command value
   int32 input2_raw = 15; // Input2 raw value
-  InTyp input2_typ = 16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input2_typ = 16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
   int32 input2_min = 17; // Input2 minimum value
   int32 input2_mid = 18; // Input2 middle value
   int32 input2_max = 19; // Input2 maximum value
   int32 input2_cmd = 20; // Input2 command value
   int32 aux_input1_raw = 21; // Input1 raw value
-  InTyp aux_input1_typ = 22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input1_typ = 22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
   int32 aux_input1_min = 23; // Input1 minimum value
   int32 aux_input1_mid = 24; // Input1 middle value
   int32 aux_input1_max = 25; // Input1 maximum value
   int32 aux_input1_cmd = 26; // Input1 command value
   int32 aux_input2_raw = 27; // Input2 raw value
-  InTyp aux_input2_typ = 28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input2_typ = 28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
   int32 aux_input2_min = 29; // Input2 minimum value
   int32 aux_input2_mid = 30; // Input2 middle value
   int32 aux_input2_max = 31; // Input2 maximum value
@@ -181,6 +178,58 @@ message HoverboardEvent {
   int32 str_coef = 43; // Steer Coefficient *10
   int32 batv = 44; // Calibrated Battery Voltage *100
   int32 temp = 45; // Calibrated Temperature °C *10
+}
+
+
+// Hoverboard Message
+
+message HoverboardEvent {
+  int32 ctrl_mod = 0; // 1:Voltage 2:Speed 3:Torque
+  int32 ctrl_typ = 1; // 0:Commutation 1:Sinusoidal 2:FOC
+  int32 cur_mot_max = 2; // Max phase current A
+  int32 rpm_mot_max = 3; // Max motor RPM
+  int32 fi_weak_ena = 4; // Enable field weak 0:OFF 1:ON
+  int32 fi_weak_hi = 5; // Field weak high RPM
+  int32 fi_weak_lo = 6; // Field weak low RPM
+  int32 fi_weak_max = 7; // Field weak max current A (FOC only)
+  int32 phase_adv_max_deg = 8; // Max Phase Adv angle Deg (SIN only)
+  int32 input1_raw = 9; // Input1 raw value
+  int32 input1_typ = 10; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input1_min = 11; // Input1 minimum value
+  int32 input1_mid = 12; // Input1 middle value
+  int32 input1_max = 13; // Input1 maximum value
+  int32 input1_cmd = 14; // Input1 command value
+  int32 input2_raw = 15; // Input2 raw value
+  int32 input2_typ = 16; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 input2_min = 17; // Input2 minimum value
+  int32 input2_mid = 18; // Input2 middle value
+  int32 input2_max = 19; // Input2 maximum value
+  int32 input2_cmd = 20; // Input2 command value
+  int32 aux_input1_raw = 21; // Input1 raw value
+  int32 aux_input1_typ = 22; // Input1 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input1_min = 23; // Input1 minimum value
+  int32 aux_input1_mid = 24; // Input1 middle value
+  int32 aux_input1_max = 25; // Input1 maximum value
+  int32 aux_input1_cmd = 26; // Input1 command value
+  int32 aux_input2_raw = 27; // Input2 raw value
+  int32 aux_input2_typ = 28; // Input2 type 0:Disabled, 1:Normal Pot, 2:Middle Resting Pot, 3:Auto-detect
+  int32 aux_input2_min = 29; // Input2 minimum value
+  int32 aux_input2_mid = 30; // Input2 middle value
+  int32 aux_input2_max = 31; // Input2 maximum value
+  int32 aux_input2_cmd = 32; // Input2 command value
+  float dc_curr = 33; // Total DC Link current A *100
+  float rdc_curr = 34; // Right DC Link current A *100
+  float ldc_curr = 35; // Left DC Link current A *100
+  int32 cmdl = 36; // Left Motor Command RPM
+  int32 cmdr = 37; // Right Motor Command RPM
+  int32 spd_avg = 38; // Motor Measured Avg RPM
+  int32 spdl = 39; // Left Motor Measured RPM
+  int32 spdr = 40; // Right Motor Measured RPM
+  int32 filter_rate = 41; // Rate *10
+  int32 spd_coef = 42; // Speed Coefficient *10
+  int32 str_coef = 43; // Steer Coefficient *10
+  float batv = 44; // Calibrated Battery Voltage *100
+  float temp = 45; // Calibrated Temperature °C *10
 }
 
 message HoverboardCmd {

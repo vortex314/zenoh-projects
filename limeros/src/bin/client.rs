@@ -73,9 +73,11 @@ async fn main() -> anyhow::Result<()> {
     let handler = Handler { node: node.clone() };      
     node.add_generic_handler(handler).await;
 
-    let node_name = args.node_name.clone();
-    let node_name_clone = node_name.clone();
 /* 
+    let node_name = args.node_name.clone();
+
+    let node_name_clone = node_name.clone();
+
     node.on::<SysEvent, _, _>(move |s, event| {
         let node_name = node_name.clone();
         async move {

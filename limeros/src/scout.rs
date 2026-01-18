@@ -1,17 +1,13 @@
 use anyhow::Result;
 use dashmap::DashMap;
 use log::{debug, error, info};
-use serde::{Deserialize, Serialize};
 use socket2::{Domain, Protocol, Socket, Type};
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
-use std::ops::Mul;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
 
-use crate::msgs::TypedMessage;
 
 use crate::msgs::{Alive, Msg, UdpMessage};
 
@@ -97,7 +93,7 @@ impl Scout {
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Alive message missing payload"))?;
 
-        let subscriptions = self.subscriptions.clone();
+    //    let subscriptions = self.subscriptions.clone();
 
         let alive = Alive::json_deserialize(payload)?;
         let subscribe = alive.subscribe.clone().unwrap_or_default();
@@ -140,17 +136,6 @@ impl Scout {
         }
 
         Ok(())
-    }
-
-    #[cfg(test)]
-    pub(crate) async fn new_test(multicast_addr: SocketAddr) -> Result<Arc<Self>> {
-        let multicast_socket = UdpSocket::bind("127.0.0.1:0").await?;
-        Ok(Arc::new(Self {
-            multicast_addr,
-            multicast_socket: Arc::new(multicast_socket),
-            endpoints: Arc::new(DashMap::new()),
-            subscriptions: Arc::new(DashMap::new()),
-        }))
     }
 
     fn start_multicast_receiver(node: Arc<Self>) -> JoinHandle<()> {

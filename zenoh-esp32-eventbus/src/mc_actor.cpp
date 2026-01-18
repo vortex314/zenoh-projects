@@ -138,8 +138,16 @@ void McActor::send_unicast(const char *dst, const char *src, const char *type, c
         return;
     }
 
-    encode_message(dst, src, type, payload).just([&](const Bytes &buffer)
-                                                 {  
+    auto r = encode_message(dst, src, type, payload);
+    if (r.is_err())
+    {
+        ERROR("Failed to encode unicast message: [%d] %s", r.unwrap_err().rc, r.unwrap_err().msg);
+        return;
+    }
+    r.just([&](const Bytes &buffer)
+           {  
+    DEBUG("Send message_type '%s' to %s", type, dst ? dst : "-");
+
  int sent = sendto(_unicast_socket, buffer.data(), buffer.size(), 0, (sockaddr *)&dst_addr, sizeof(dst_addr));
     if (sent < 0)
     {
@@ -163,6 +171,7 @@ void McActor::on_message(const Envelope &envelope)
     const Msg &msg = *envelope.msg;
     msg.handle<TimerMsg>([&](const TimerMsg &msg)
                          { Alive alive;
+                            alive.subscribe.push_back(HoverboardCmd::name_value);
                             alive.publish.push_back(SysEvent::name_value);
                             alive.publish.push_back(WifiEvent::name_value);
                             alive.publish.push_back(HoverboardEvent::name_value);
@@ -171,13 +180,14 @@ void McActor::on_message(const Envelope &envelope)
                             send_multicast(NULL,DEVICE_NAME,Alive::name_value,bytes);
                             send_ping_req(NULL,0); });
 
-    msg.handle<PingReq>([&](const auto &m)
-                        { /*INFO("Received PingReq from '%s' number %d", 
-                            envelope.src.has_value() ? envelope.src->name() : "-",
-                            m.number.has_value() ? *(m.number) : -1 );*/
-                          if (m.number.has_value()) {
-                                send_ping_rep(envelope.src->name(), *(m.number));
-                          } });
+    msg.handle<PingReq>([&](const auto &m) { /*INFO("Received PingReq from '%s' number %d",
+                                               envelope.src.has_value() ? envelope.src->name() : "-",
+                                               m.number.has_value() ? *(m.number) : -1 );*/
+                                             if (m.number.has_value())
+                                             {
+                                                 send_ping_rep(envelope.src->name(), *(m.number));
+                                             }
+    });
 
     msg.handle<WifiConnected>([&](const auto &msg)
                               { _connected = true; 
@@ -197,7 +207,8 @@ void McActor::on_message(const Envelope &envelope)
                                                                 { send_unicast(NULL, DEVICE_NAME, msg.type_name(), serialized_msg); }); });
     msg.handle<HoverboardEvent>([&](const auto &msg)
                                 { HoverboardEvent::json_serialize(msg).just([&](const auto &serialized_msg)
-                                                                            { send_unicast(NULL, DEVICE_NAME, msg.type_name(), serialized_msg); }); });
+                                                                            { 
+                                                                                send_unicast(NULL, DEVICE_NAME, msg.type_name(), serialized_msg); }); });
 }
 
 void McActor::start_unicast_listener()
@@ -307,7 +318,23 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
                                                     req
                                                 );
                                                 emit(env); 
-                                            delete msg;});
+                                            delete msg; });
+    }
+    else if (strcmp(msg_type, HoverboardCmd::name_value) == 0)
+    {
+        HoverboardCmd::json_deserialize(payload).just([&](const HoverboardCmd *msg)
+                                                      {
+            DEBUG(" MC Actor received HoverboardCmd");
+            HoverboardCmd* cmd = new HoverboardCmd;
+            cmd->speed = msg->speed;
+            cmd->steer = msg->steer;
+            Envelope* env = new Envelope(
+                udp_msg.src.has_value() ? ActorRef(udp_msg.src->c_str()) : NULL_ACTOR,
+                udp_msg.dst.has_value() ? ActorRef(udp_msg.dst->c_str()) : NULL_ACTOR,
+                cmd
+            );
+            emit(env);
+            delete msg; });
     }
 
     else if (strcmp(msg_type, PingRep::name_value) == 0)
@@ -325,7 +352,7 @@ void McActor::on_udp_message(UdpMessage &udp_msg, const sockaddr_in &sender_addr
                 }
                 std::string etp = *(udp_msg.src);
 
-                INFO("  Endpoint: %s @ %s ", etp.c_str(), socketAddrToString((sockaddr_in*)&sender_addr).c_str());
+//                INFO("  Endpoint: %s @ %s ", etp.c_str(), socketAddrToString((sockaddr_in*)&sender_addr).c_str());
                 _source_map[etp] = std::pair<sockaddr_in,uint64_t>(sender_addr,esp_timer_get_time());
                 if ( etp == "broker" )
                 {

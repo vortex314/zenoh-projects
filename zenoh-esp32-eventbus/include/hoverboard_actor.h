@@ -43,7 +43,7 @@ public:
     void handle_uart_bytes(const Bytes &);
     static Result<Bytes> cobs_decode(const Bytes &input);
     static Result<Bytes> check_crc(const Bytes &input);
-    static Result<HoverboardEvent*> parse_info_msg(const Bytes &input);
+    static Result<HoverboardEventRaw*> parse_info_msg(const Bytes &input);
 };
 
 #endif

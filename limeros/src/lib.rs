@@ -9,6 +9,7 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
 
+pub mod eventbus;
 pub mod logger;
 pub mod msgs;
 use msgs::TypedMessage;
@@ -66,6 +67,7 @@ impl<T, F> HandlerWrapper<T, F> {
 pub trait UdpMessageHandler: Send + Sync {
     async fn handle(&self, udp_message: &UdpMessage) -> anyhow::Result<()>;
 }
+/* 
 pub struct UdpHandlerWrapper<T, F> {
     callback: F,
     message_types: Vec<String>,
@@ -91,6 +93,7 @@ impl<T, F> UdpHandlerWrapper<T, F> {
         self
     }
 }
+    */
 
 #[async_trait::async_trait]
 impl<T, F, Fut> MessageHandler for HandlerWrapper<T, F>
@@ -117,6 +120,7 @@ pub struct UdpNode {
     tx_queue_sender: mpsc::Sender<UdpMessage>,
     tx_queue_receiver: Arc<Mutex<mpsc::Receiver<UdpMessage>>>,
     generic_handlers: Arc<Mutex<Vec<Box<dyn UdpMessageHandler>>>>,
+    generic_senders : Arc<Mutex<Vec<mpsc::Sender<UdpMessage>>>>,
     tasks: Mutex<Vec<JoinHandle<()>>>,
 }
 
@@ -141,6 +145,7 @@ impl UdpNode {
             tx_queue_sender,
             tx_queue_receiver: Arc::new(Mutex::new(tx_queue_receiver)),
             generic_handlers: Arc::new(Mutex::new(Vec::new())),
+            generic_senders: Arc::new(Mutex::new(Vec::new())),
             tasks: Mutex::new(Vec::new()),
         });
 
@@ -250,15 +255,10 @@ impl UdpNode {
                             });
                         }
                         drop(handlers_guard);
-                        // Data packet handling
-                        if let Some(handler) = handlers.get(&packet.msg_type.unwrap()) {
-                            if let Err(e) = handler
-                                .handle(&packet.src.unwrap(), &packet.payload.unwrap())
-                                .await
-                            {
-                                error!("Handler error: {}", e);
-                            }
+                        for sender in node.generic_senders.lock().await.iter() {
+                            let _ = sender.send(packet.clone()).await;
                         }
+                        
                     } else {
                         info!("Failed to decode CBOR packet from {}", addr);
                     }
@@ -292,13 +292,20 @@ impl UdpNode {
         };
         self.tx_queue_sender.send(udp_message).await.unwrap()
     }
-
+// add a generic U
     pub fn add_handler<H>(&self, msg_type: &str, handler: H)
     where
         H: MessageHandler + 'static,
     {
         self.handlers
             .insert(msg_type.to_string(), Box::new(handler));
+    }
+
+    pub fn add_sender(&self, sender: mpsc::Sender<UdpMessage>) {
+        let mut senders = self.generic_senders.try_lock();
+        if let Ok(ref mut senders) = senders {
+            senders.push(sender);
+        }
     }
 
     pub fn on<T, F, Fut>(&self, callback: F)

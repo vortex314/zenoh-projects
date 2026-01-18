@@ -17,6 +17,7 @@ impl UdpMessageHandler for Forwarder {
             "Forwarder received message of type {:?} from {:?}",
             udp_message.msg_type, udp_message.src
         );
+        
         if let Some(msg_type) = &udp_message.msg_type {
             if let Some(dsts) = self.subscriptions.get(msg_type) {
                 for dst in dsts.iter() {
@@ -33,14 +34,23 @@ impl UdpMessageHandler for Forwarder {
                         dst.destination.clone()
                     );
                 }
-            } else {
-                debug!(
-                    "No subscriptions for message type {:?} from {:?} {}",
-                    udp_message.msg_type,
-                    udp_message.src,
-                    self.subscriptions.len()
-                );
-            }
+            } ;
+            if let Some(dsts) = self.subscriptions.get("*")  {
+                for dst in dsts.iter() {
+                    self.sender
+                        .send(UdpMessage {
+                            dst: Some(dst.destination.clone()),
+                            ..udp_message.clone()
+                        })
+                        .await?;
+                    debug!(
+                        "(*)Forwarded message of type {:?} from {:?} to {:?}",
+                        udp_message.msg_type,
+                        udp_message.src,
+                        dst.destination.clone()
+                    );
+                }
+            };
         } else {
             warn!(
                 "Forwarder received message with no type from {:?}",

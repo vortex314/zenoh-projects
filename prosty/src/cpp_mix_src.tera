@@ -108,7 +108,7 @@ RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
 {%- elif field_type == "Bytes" -%}
 {
     if (cbor_value_is_byte_string(&{{decoder}})) {
-        uint8_t tmpbuf[512];
+        uint8_t tmpbuf[1024];
         size_t tmplen ;
         cbor_value_calculate_string_length(&{{decoder}}, &tmplen);
         cbor_value_copy_byte_string(&{{decoder}}, tmpbuf, &tmplen, NULL);
@@ -162,7 +162,7 @@ RC_OK(cbor_encode_int(&{{encoder}}, {{ target }}));
 {% for msg in messages %}
 Result<Bytes> {{msg.name}}::cbor_serialize(const {{msg.name}}& msg)  {
     // buffer: grow if needed by changing initial size
-    std::vector<uint8_t> buffer(512);
+    std::vector<uint8_t> buffer(1024);
     CborEncoder encoder, mapEncoder;
      cbor_encoder_init(&encoder, buffer.data(), buffer.size(), 0);
 

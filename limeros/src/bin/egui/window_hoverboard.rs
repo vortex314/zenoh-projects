@@ -1,47 +1,119 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use anyhow::Result;
 use eframe::egui::{self, Slider};
 use ehmi::{Bar, Gauge};
-use limeros::msgs::{HoverboardCmd, HoverboardEvent};
+use futures::executor::block_on;
+use limeros::{
+    Msg, TypedUdpMessage, UdpMessage, UdpMessageHandler, UdpNode, eventbus::Bus, msgs::{HoverboardCmd, HoverboardEvent, TypedMessage}
+};
 use log::info;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 const MAX_UPDATE_INTERVAL_MS: u128 = 10000;
 
 use crate::{my_window::MyWindow, widget_alive::WidgetAlive};
 
 pub struct HoverboardWindow {
+    node: Arc<UdpNode>,
     open: bool,
     enabled: bool,
-    speed: f32,
-    steer: f32,
+    speed_slider: f32,
+    steer_slider: f32,
+    speed_previous: f32,
+    steer_previous: f32,
     last_update: Instant,
-    last_event: Option<HoverboardEvent>,
     speed_left: f32,
     speed_right: f32,
     temperature: f32,
     voltage: f32,
     current: f32,
+    sender: Sender<UdpMessage>,
+    receiver: Receiver<UdpMessage>,
 }
 
-impl Default for HoverboardWindow {
-    fn default() -> Self {
+
+impl HoverboardWindow {
+    pub fn new(node: Arc<UdpNode>) -> Self {
+        let (sender, receiver) = tokio::sync::mpsc::channel(100);
+        let sender_clone = sender.clone();
+        node.add_sender(sender_clone);
         Self {
+            node,
             open: true,
             enabled: true,
-            speed: 0.0,
-            steer: 0.0,
+            speed_slider: 0.0,
+            steer_slider: 0.0,
+            speed_previous: 0.0,
+            steer_previous: 0.0,
             last_update: Instant::now(),
-            last_event: None,
             speed_left: 0.0,
             speed_right: 0.0,
             temperature: 0.0,
             voltage: 0.0,
             current: 0.0,
+            sender,
+            receiver,
         }
     }
 }
+
 impl HoverboardWindow {
+    fn handle_event(&mut self) -> Result<()> {
+        let udp_msg = self.receiver.try_recv()?;
+        if udp_msg.msg_type.as_deref() != Some(HoverboardEvent::MSG_TYPE) {
+            return Ok(());
+        }
+   //     info!("HoverboardWindow received HoverboardEvent: {}", String::from_utf8_lossy(udp_msg.payload.as_ref().unwrap()));
+        let r = serde_json::from_slice::<HoverboardEvent>(&udp_msg.payload.unwrap());
+        if r.is_err() {
+            info!("HoverboardWindow failed to deserialize HoverboardEvent: {}", r.err().unwrap());
+            return Ok(());
+        }
+        let event = r?;
+      //  info!("HoverboardWindow deserialized HoverboardEvent: {:?}", &event);
+        self.last_update = Instant::now();
+        if let Some(speed_left) = event.spdl {
+            self.speed_left = speed_left as f32;
+        }
+        if let Some(speed_right) = event.spdr {
+            self.speed_right = speed_right as f32;
+        }
+        if let Some(temperature) = event.temp {
+            self.temperature = temperature as f32 ;
+        }
+        if let Some(voltage) = event.batv {
+            self.voltage = voltage as f32 ;
+        }
+        if let Some(current) = event.dc_curr {
+            self.current = current as f32 ;
+        }
+        Ok(())
+    }
+    fn send_cmd(&mut self) {
+        if self.speed_slider == self.speed_previous && self.steer_slider == self.steer_previous {
+            return;
+        }
+        let _ = self.node.sender().try_send(UdpMessage {
+            dst: Some("broker".to_string()),
+            src: Some("egui-monitor".to_string()),
+            msg_type: Some(HoverboardCmd::MSG_TYPE.to_string()),
+            payload: Some(
+                serde_json::to_vec(&HoverboardCmd {
+                    speed: Some(self.speed_slider as i32),
+                    steer: Some(self.steer_slider as i32),
+                    ..Default::default()
+                })
+                .unwrap(),
+            ),
+        });
+        info!(
+            "Sent HoverboardCmd: speed={} steer={}",
+            self.speed_slider, self.steer_slider
+        );
+        self.speed_previous = self.speed_slider;
+        self.steer_previous = self.steer_slider;
+    }
     fn ui(&mut self, ui: &mut egui::Ui) {
         self.enabled = Instant::now().duration_since(self.last_update).as_millis()
             < MAX_UPDATE_INTERVAL_MS as u128;
@@ -50,7 +122,7 @@ impl HoverboardWindow {
         ui.horizontal(|ui| {
             ui.spacing_mut().slider_width = 400.0;
             ui.add(
-                Slider::new(&mut self.speed, -400.0..=400.0)
+                Slider::new(&mut self.speed_slider, -400.0..=400.0)
                     .suffix(" Speed")
                     .step_by(1.0),
             );
@@ -58,7 +130,7 @@ impl HoverboardWindow {
         ui.horizontal(|ui| {
             ui.spacing_mut().slider_width = 400.0;
             ui.add(
-                Slider::new(&mut self.steer, -100.0..=100.0)
+                Slider::new(&mut self.steer_slider, -100.0..=100.0)
                     .suffix(" Steer")
                     .step_by(1.0),
             );
@@ -110,12 +182,7 @@ impl HoverboardWindow {
                     .text(&text),
             );
         });
-
-        let msg = HoverboardCmd {
-            speed: Some(self.speed as i32),
-            steer: Some(self.steer as i32),
-            ..Default::default()
-        };
+        self.send_cmd();
     }
 }
 
@@ -125,6 +192,7 @@ impl MyWindow for HoverboardWindow {
     }
 
     fn show(&mut self, ui: &mut egui::Ui) -> Result<()> {
+        let _ = self.handle_event();
         let mut open = self.open;
         egui::Window::new(self.name())
             .open(&mut open)
