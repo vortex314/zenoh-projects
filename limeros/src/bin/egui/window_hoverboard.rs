@@ -64,32 +64,16 @@ impl HoverboardWindow {
         if udp_msg.msg_type.as_deref() != Some(HoverboardEvent::MSG_TYPE) {
             return Ok(());
         }
-   //     info!("HoverboardWindow received HoverboardEvent: {}", String::from_utf8_lossy(udp_msg.payload.as_ref().unwrap()));
-        let r = serde_json::from_slice::<HoverboardEvent>(&udp_msg.payload.unwrap());
-        if r.is_err() {
-            info!("HoverboardWindow failed to deserialize HoverboardEvent: {}", r.err().unwrap());
-            return Ok(());
-        }
-        let event = r?;
-      //  info!("HoverboardWindow deserialized HoverboardEvent: {:?}", &event);
+        let event = serde_json::from_slice::<HoverboardEvent>(&udp_msg.payload.unwrap())?;
         self.last_update = Instant::now();
-        if let Some(speed_left) = event.spdl {
-            self.speed_left = speed_left as f32;
-        }
-        if let Some(speed_right) = event.spdr {
-            self.speed_right = speed_right as f32;
-        }
-        if let Some(temperature) = event.temp {
-            self.temperature = temperature as f32 ;
-        }
-        if let Some(voltage) = event.batv {
-            self.voltage = voltage as f32 ;
-        }
-        if let Some(current) = event.dc_curr {
-            self.current = current as f32 ;
-        }
+        event.spdl.map(|v| self.speed_left = v as f32);
+        event.spdr.map(|v| self.speed_right = v as f32);
+        event.temp.map(|v| self.temperature = v as f32);
+        event.batv.map(|v| self.voltage = v as f32);
+        event.dc_curr.map(|v| self.current = v as f32); 
         Ok(())
     }
+
     fn send_cmd(&mut self) {
         if self.speed_slider == self.speed_previous && self.steer_slider == self.steer_previous {
             return;

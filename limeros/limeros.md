@@ -1,0 +1,2 @@
+- a very lightweight robotic middleware based on UDP and Multicast that enables small devices based on microcontrollers to be part of a bigger robot .
+- he UDP multicast is used for discovery, events are sent to a central broker for publish subscribe pattern. The messages request can be send directly to the peer or go via the broker
